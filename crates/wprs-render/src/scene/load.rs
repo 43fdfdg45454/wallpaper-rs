@@ -92,8 +92,8 @@ impl Renderer {
         let format = match (srgb, usable) {
             (true, _) if deep => Format::Rgba16Float,
             (true, _) => Format::Rgba8Unorm,
-            (false, true) => Format::Rgba16Float,
-            (false, false) => Format::Rgba8UnormSrgb,
+            (false, _) if deep => Format::Rgba16Float,
+            (false, _) => Format::Rgba8UnormSrgb,
         };
         let state_format = if usable { Format::Rgba16Float } else { format };
         let id = super::stops::view();
