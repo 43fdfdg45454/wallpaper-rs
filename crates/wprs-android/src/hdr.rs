@@ -60,25 +60,25 @@ pub(crate) fn light(
     surface: &mut Surface,
     charging: bool,
     top: bool,
-) -> Result<f32, RenderError> {
+) -> Result<(f32, bool), RenderError> {
     let (want, reason) = wanted(surface.hdr_offered(), charging, top);
-    r.light(surface, want)?;
+    let changed = r.light(surface, want)?;
     let (active, offered) = (surface.hdr(), surface.hdr_offered());
     let reason = if want && !active { "display" } else { reason };
     let headroom = if active { headroom(get(&SCREEN)) } else { 1.0 };
     put(&LIT, Lit { active, offered, reason, headroom });
-    Ok(headroom)
+    Ok((headroom, changed))
 }
 
 pub(crate) fn unlit() -> &'static str {
     if get(&CHOICE) == HdrChoice::Off { "off" } else { "quality" }
 }
 
-pub(crate) fn dark(r: &Renderer, surface: &mut Surface) -> Result<(), RenderError> {
-    r.light(surface, false)?;
+pub(crate) fn dark(r: &Renderer, surface: &mut Surface) -> Result<bool, RenderError> {
+    let changed = r.light(surface, false)?;
     let (active, offered) = (surface.hdr(), surface.hdr_offered());
     put(&LIT, Lit { active, offered, reason: unlit(), headroom: 1.0 });
-    Ok(())
+    Ok(changed)
 }
 
 pub(crate) fn report() -> Value {

@@ -105,7 +105,7 @@ impl Engine {
             return Ok(None);
         };
         let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute()).min(gpu.renderer.tier());
-        stage.light(crate::hdr::light(&gpu.renderer, surface, power.charging, stage.top())?);
+        stage.light(crate::hdr::light(&gpu.renderer, surface, power.charging, stage.top())?.0);
         stage.turn();
         stage.reports = (!self.preview).then_some(usize::from(self.lock));
         let wanted = stage.videos();

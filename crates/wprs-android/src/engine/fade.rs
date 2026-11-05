@@ -107,11 +107,12 @@ impl Engine {
         let reels = self.reels();
         let Some((gpu, surface)) = self.target.as_mut() else { return Ok((0, 0)) };
         let (r, film) = (&gpu.renderer, self.film.as_deref());
-        let headroom = match (film, &self.stage) {
+        let (headroom, relit) = match (film, &self.stage) {
             (Some(film), _) => crate::hdr::light(r, surface, power.charging, crate::media::bright(film))?,
-            (None, None) => crate::hdr::dark(r, surface).map(|()| 1.0)?,
-            (None, Some(_)) => 1.0,
+            (None, None) => (1.0, crate::hdr::dark(r, surface)?),
+            (None, Some(_)) => (1.0, false),
         };
+        self.dirty |= relit;
         self.clips.take(r, (gpu.epoch, headroom));
         let new = reels.iter().any(|(_, path)| self.clips.fresh(path));
         let since = match self.still {
