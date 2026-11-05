@@ -98,7 +98,16 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
                 let removed = keys.remove(i);
                 reach(pointer, old, &keys)?;
                 let base = current.and_then(|c| c.get("base")).filter(|_| !e.absolute);
-                let last = base.map_or_else(|| removed[1].clone(), |b| added(b, &removed[1]));
+                let last = match base {
+                    Some(b) => added(b, &removed[1]).ok_or_else(|| {
+                        anyhow!(said(
+                            "editor.base_unadded",
+                            "the base of %1 does not add to its last keyframe; remove it with absolute to keep the keyframe value",
+                            &[&pointer]
+                        ))
+                    })?,
+                    None => removed[1].clone(),
+                };
                 return Ok(match keys.is_empty() {
                     true => set(doc, pointer, last),
                     false => set(doc, &format!("{pointer}/keys"), Value::Array(keys)),

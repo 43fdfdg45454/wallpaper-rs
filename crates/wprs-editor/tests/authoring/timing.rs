@@ -118,6 +118,22 @@ fn removing_the_last_relative_keyframe_keeps_the_value_it_showed() {
     act(&mut p, color(json!({"base": "#010101"}))).unwrap();
     act(&mut p, color(json!({"remove": true}))).unwrap();
     assert_eq!(at(&p, "/scene/layers/0/color"), "#112131");
+    act(&mut p, color(json!({"value": "#000000", "base": "#ff0000"}))).unwrap();
+    act(&mut p, color(json!({"time": 1, "value": [0, 0.25, 0, 1]}))).unwrap();
+    act(&mut p, color(json!({"remove": true}))).unwrap();
+    act(&mut p, color(json!({"time": 1, "remove": true}))).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/color"), json!([1.0, 0.25, 0.0, 1.0]));
+    let scale = "/scene/layers/0/transform/scale";
+    let scaled = |time: f64, extra: serde_json::Value| {
+        let mut k = json!({"pointer": scale, "time": time});
+        k.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        json!({ "keyframe": k })
+    };
+    act(&mut p, scaled(0.0, json!({"value": 0.5, "base": 1}))).unwrap();
+    act(&mut p, scaled(1.0, json!({"value": [0.2, 0.1]}))).unwrap();
+    act(&mut p, scaled(0.0, json!({"remove": true}))).unwrap();
+    act(&mut p, scaled(1.0, json!({"remove": true}))).unwrap();
+    assert_eq!(at(&p, scale), json!([1.2, 1.1]));
 }
 
 #[test]

@@ -691,6 +691,14 @@ msgstr "%1 no tiene ningún fotograma clave en %2 s"
 msgid "%1 already has a keyframe at %2 s"
 msgstr "%1 ya tiene un fotograma clave en %2 s"
 
+#: crates/wprs-editor/src/keys.rs
+msgid ""
+"the base of %1 does not add to its last keyframe; remove it with absolute to "
+"keep the keyframe value"
+msgstr ""
+"la base de %1 no se suma a su último fotograma clave; quítalo con absolute "
+"para quedarte con el valor del fotograma clave"
+
 #: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/straight.rs
 msgid "%1 has no keyframes"
 msgstr "%1 no tiene fotogramas clave"
