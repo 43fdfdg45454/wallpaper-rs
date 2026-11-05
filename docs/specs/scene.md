@@ -219,7 +219,9 @@ that frames may drop and battery use rise, and whether the automatic choice woul
 or keep the scene still. Only the automatic choice stops a scene: a scene over budget even at the
 lowest level, or with more model triangles than the tier draws, stays at `poster_time` under `auto`
 and plays at the chosen level under `q0` to `q3`, and at the floor (or higher, when it fits) under
-`min-q1` and `min-q2`; clients say so too. Only the hard limits that protect memory and the driver
+`min-q1` and `min-q2`; clients say so too, and for a scene heavy only in model triangles, whose
+cost fits, they warn that it draws more model triangles than the device holds and that the
+automatic choice would keep it still. Only the hard limits that protect memory and the driver
 stay with every choice: the model data and triangles a scene may load, texture sizes, and the
 effects left out by the hard budget below or after they stopped the GPU, which the warning counts.
 The phone keeps its own value, and stopping on battery saver or at a critical temperature still

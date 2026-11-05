@@ -9,6 +9,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
+fun costWords(stops: Boolean, chosen: Boolean, over: Boolean): Int? = when {
+    over -> if (stops) R.string.auto_would_stop else R.string.auto_would_lower
+    stops && chosen -> R.string.level_triangles
+    stops -> R.string.level_stopped
+    else -> null
+}
+
 @Composable
 fun costNote(report: JSONObject): String? {
     val stops = report.optString("auto") == "stop"
@@ -17,12 +24,8 @@ fun costNote(report: JSONObject): String? {
     val over = report.optJSONArray("over")?.let {
         stringResource(R.string.level_over, "%.1f".format(it.optDouble(0)), "%.0f".format(it.optDouble(1)))
     }
-    val note = when {
-        over != null -> over + " " + stringResource(if (stops) R.string.auto_would_stop else R.string.auto_would_lower)
-        stops -> stringResource(R.string.level_stopped)
-        else -> return null
-    }
-    return listOfNotNull(note, kept).joinToString(" ")
+    val words = costWords(stops, report.optString("reason") == "user", over != null) ?: return null
+    return listOfNotNull(over, stringResource(words), kept).joinToString(" ")
 }
 
 @Composable

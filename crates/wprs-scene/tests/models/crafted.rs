@@ -162,6 +162,12 @@ fn a_tier_shows_the_poster_of_models_past_its_triangles_counting_fur_shells() {
     assert!(!Budget::new(Tier::T2, false, 60).still(&furry));
     let fixed = Budget { choice: wprs_core::QualityChoice::Fixed(0), ..Budget::new(Tier::T0, false, 60) };
     assert!(fixed.heavy(&plain) && !fixed.still(&plain), "a fixed level plays it anyway");
+    for choice in ["q0", "q3", "min-q1"] {
+        let chosen = Budget { choice: wprs_core::QualityChoice::parse(choice).unwrap(), ..fixed };
+        let level = chosen.level(&plain).0;
+        assert_eq!(chosen.over(&plain, Quality::Q0), None, "{choice}");
+        assert_eq!(chosen.automatic(&plain, level), "stop", "{choice} hid that automatic stops it");
+    }
 }
 
 #[test]

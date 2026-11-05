@@ -30,10 +30,9 @@ impl Budget {
     }
 
     pub fn automatic(&self, runtime: &Runtime, quality: Quality) -> &'static str {
-        let over = self.over(runtime, quality).is_some();
         match () {
-            _ if (over || self.choice.is_auto()) && self.heavy(runtime) => "stop",
-            _ if over => "lower",
+            _ if self.heavy(runtime) => "stop",
+            _ if self.over(runtime, quality).is_some() => "lower",
             _ => "",
         }
     }

@@ -1985,6 +1985,16 @@ msgstr "La calidad automática la bajaría."
 
 #: apps/wprs-app/qml/LeftOut.qml
 msgid ""
+"This scene draws more model triangles than this device holds: frames may "
+"drop and battery use rise. Automatic quality would keep it still at its "
+"poster."
+msgstr ""
+"Esta escena dibuja más triángulos de modelos de los que aguanta este equipo: "
+"puede perder fotogramas y gastar más batería. La calidad automática la "
+"dejaría quieta en su póster."
+
+#: apps/wprs-app/qml/LeftOut.qml
+msgid ""
 "This scene is too heavy for this device, so automatic quality keeps it still "
 "at its poster. A fixed level plays it anyway, with fewer frames per second "
 "and more battery use."
@@ -6102,8 +6112,8 @@ msgid ""
 "While the covered wallpaper pauses, nothing is sent and nothing runs for the "
 "lights until it shows again."
 msgstr ""
-"Mientras el fondo tapado está en pausa, no se manda nada ni se hace nada para "
-"las luces hasta que vuelve a verse."
+"Mientras el fondo tapado está en pausa, no se manda nada ni se hace nada "
+"para las luces hasta que vuelve a verse."
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""

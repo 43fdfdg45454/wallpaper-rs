@@ -38,6 +38,7 @@ fn hdr(o: &OutputState) -> String {
 pub fn note(o: &OutputState) -> Option<String> {
     let over = o.quality_budget > 0.0 && o.quality_cost > o.quality_budget;
     let note = match o.quality_auto.as_str() {
+        "stop" if !over && o.quality_reason == "user" => TRIANGLES.to_owned(),
         "stop" if !over => STOPPED.to_owned(),
         auto if over => format!(
             "this scene costs {:.1} units a frame at {}, more than the {:.0} this device is estimated to hold: frames may drop and battery use rise; automatic quality would {}",
@@ -59,6 +60,7 @@ pub fn note(o: &OutputState) -> Option<String> {
 }
 
 const STOPPED: &str = "this scene is too heavy for this device and automatic quality keeps it still at its poster; a fixed level such as wprs-ctl quality q0 plays it anyway, with fewer frames per second and more battery use";
+const TRIANGLES: &str = "this scene draws more model triangles than this device holds: frames may drop and battery use rise; automatic quality would keep it still at its poster";
 const WORDS: [&str; 2] = ["effect stays", "effects stay"];
 
 pub fn notes(state: &str) {
@@ -150,3 +152,6 @@ pub async fn notice(client: &Client, key: &str) -> Result<()> {
         .for_each(|(name, n)| println!("{name}: {n}"));
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

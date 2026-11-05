@@ -358,6 +358,17 @@ msgstr "La calidad automática la bajaría."
 #: integrations/plasma-tray/contents/ui/LeftOut.qml
 #, kde-format
 msgid ""
+"This scene draws more model triangles than this device holds: frames may "
+"drop and battery use rise. Automatic quality would keep it still at its "
+"poster."
+msgstr ""
+"Esta escena dibuja más triángulos de modelos de los que aguanta este equipo: "
+"puede perder fotogramas y gastar más batería. La calidad automática la "
+"dejaría quieta en su póster."
+
+#: integrations/plasma-tray/contents/ui/LeftOut.qml
+#, kde-format
+msgid ""
 "This scene is too heavy for this device, so automatic quality keeps it still "
 "at its poster. A fixed level plays it anyway, with fewer frames per second "
 "and more battery use."

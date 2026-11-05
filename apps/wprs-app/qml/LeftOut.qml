@@ -41,6 +41,8 @@ QtObject {
         const would = auto === "stop" ? daemon.tr("Automatic quality would keep it still at its poster.") : daemon.tr("Automatic quality would lower it.");
         if (over)
             return [cost, would, kept].filter(t => t).join(" ");
+        if (auto === "stop" && info.quality_reason === "user")
+            return [daemon.tr("This scene draws more model triangles than this device holds: frames may drop and battery use rise. Automatic quality would keep it still at its poster."), kept].filter(t => t).join(" ");
         if (auto === "stop")
             return [daemon.tr("This scene is too heavy for this device, so automatic quality keeps it still at its poster. A fixed level plays it anyway, with fewer frames per second and more battery use."), kept].filter(t => t).join(" ");
         return "";
