@@ -1458,7 +1458,7 @@ La misma sección tiene *Conectar*, la lista de dispositivos con sus luces y *Pr
 arcoíris de 3 segundos); `wprs-ctl rgb status`, `rgb devices`, `rgb test [N]` y `rgb strip -o
 SALIDA` hacen lo mismo desde la terminal. Mientras una ventana tapa el fondo que manda los colores y
 el fondo se pausa por eso (`pause.when_covered`, lo predeterminado), eliges qué hacen las luces
-(*Mientras una ventana tapa el fondo* en la misma sección, `wprs-ctl rgb covered follow|pause` o
+(*Mientras una ventana tapa el fondo y este se pausa* en la misma sección, `wprs-ctl rgb covered follow|pause` o
 `rgb.when_covered`): *Pausar y dejar las luces como están* (lo predeterminado) no manda nada, no
 dibuja ni capta nada para las luces y deja los dispositivos con sus últimos colores hasta que el
 fondo vuelve a verse, sin devolverlos a su propio modo para no hacerlos parpadear; *Seguir el fondo*
