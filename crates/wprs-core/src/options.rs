@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::layout::Layout;
 use crate::quality::QualityChoice;
 use crate::settings::fps;
 use std::collections::BTreeMap;
@@ -24,6 +25,9 @@ impl Config {
     pub fn set_option(&mut self, key: &str, value: &str) -> Result<(), String> {
         if let Some(id) = key.strip_prefix("layout.monitors.") {
             return self.layout.place(id, value);
+        }
+        if let Some(output) = key.strip_prefix(Layout::FOLLOW) {
+            return self.layout.follow(output, value);
         }
         if let Some(output) = key.strip_prefix(QualityChoice::OWN) {
             return self.set_own_quality(output, value);

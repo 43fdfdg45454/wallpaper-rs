@@ -74,7 +74,7 @@ pub enum Command {
         json: bool,
     },
     #[command(
-        about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand"
+        about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand and layout.follow.<output> to another output shows the same part"
     )]
     Calibrate {
         #[arg(value_parser = ["on", "off"])]

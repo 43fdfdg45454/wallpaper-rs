@@ -131,6 +131,7 @@ impl Daemon {
                 edited: info.edited(),
                 screen: info.screen.clone(),
                 mm: placed.iter().find(|m| m.id == *name).map(|m| m.mm),
+                follows: st.config.layout.follow.get(name).cloned(),
                 parallax: s.parallax,
                 frames: s.frames,
                 refresh: st.refresh(name),

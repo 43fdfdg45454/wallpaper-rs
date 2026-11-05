@@ -580,6 +580,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `repos.vote_counts` | fetch and show vote counts from the linked server in the catalog (`GetVotes`); voting itself stays possible | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
+| `layout.follow.<output>` | another output name: `<output>` shows the part of a `span` wallpaper or spread scene that the named output shows, also when `<output>` has no place on the desktop (streams, previews); one step only, an output never follows itself; `none` or an empty value clears it; at most 64; not listed in `options`, `GetState().outputs[x].follows` tells it | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 | `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
 | `rgb.when_covered` | what the lights do while a window covers the output they follow and the wallpaper pauses for it: `pause` sends nothing, samples nothing and leaves the devices with their last colors until the output shows again (with `pause.when_covered` off the covered wallpaper keeps drawing and the lights keep following it, as before this key existed); `follow` keeps the lights following the scene or page while covered: a scene paused by `pause.when_covered` keeps running at most 30 times a second, drawn at most 320 pixels a side for the strip and never to the screen or the stream, without those frames changing its quality level, and a page keeps running at the same rate without being shown, both only while the server is connected and has devices (otherwise the covered wallpaper stays paused and, while it holds the `rgb` grant, sends colors and nothing else pauses it, the daemon tries the server again every 10 seconds); synced like the other `rgb` keys | `pause` |
@@ -2156,10 +2157,14 @@ outside 2 to 20 px/mm). Screens that touch in the logical layout touch on the ca
 the shared edge and `2 × layout.bezel_mm` apart; `[layout.monitors."<identity or output>"]` with
 `mm = [x, y, w, h]` places a screen by hand. The edited image covers the canvas, moved by
 `span.zoom` and `span.center`, and every output shows its part of it, so a picture keeps its
-physical size across screens of different densities. An output without `SetOutputInfo` shows
-`span` like `fill`. `GetState().outputs[x].mm` tells where each screen sits on the canvas; the
+physical size across screens of different densities. An output without `SetOutputInfo` (a
+stream, a preview or a screen the desktop does not place) shows `span` like `fill` until the user
+places it: `layout.monitors.<output>` puts it on the canvas like any screen, and
+`layout.follow.<output>` makes it show the part of the output it follows. The same holds for the
+parts of a spread scene. `GetState().outputs[x].mm` tells where each screen sits on the canvas; the
 *Screens* section of the image editor draws them to scale, a screen dragged there is placed with
-`layout.monitors`, and `ShowCalibration` shows a pattern to check the result on the real screens.
+`layout.monitors`, the outputs without a place get a choice there (the whole picture, placed by
+hand on the board, or the same part as another output), and `ShowCalibration` shows a pattern to check the result on the real screens.
 
 ## Scenes
 

@@ -588,7 +588,11 @@ extendida se dibuja en cada pantalla solo en su parte, con su propio nivel de ca
 reloj para todas, así que sus animaciones siguen a la par de una pantalla a otra. Si el autor la
 hizo para varias pantallas (`display.span: "all-outputs"`), la app propone `span` al aplicarla y
 muestra dónde están las pantallas; cada fila de pantalla lo deja cambiar y abre el mismo esquema.
-`wprs-ctl lib apply ID --span` hace lo mismo desde la terminal. Las pantallas que muestran la misma
+`wprs-ctl lib apply ID --span` hace lo mismo desde la terminal. Las salidas que no dicen dónde
+están (transmisiones, vistas previas o pantallas que el escritorio no ubica) muestran la imagen o la
+escena entera, salvo que el esquema de pantallas de la app las coloque a mano sobre el tablero o
+les haga mostrar la misma parte que otra salida (`layout.monitors.<salida>` y
+`layout.follow.<salida>` en la terminal). Las pantallas que muestran la misma
 imagen con la misma edición, como las de `span` o las que tienen su propio recorte, comparten una
 sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido. Con una
 escena pasa lo mismo: cada imagen del paquete se sube una vez y la usan todas las pantallas que la
@@ -906,6 +910,7 @@ wprs-ctl edit fit foto.jpg center                    # su propio ajuste; none vu
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 wprs-ctl config layout.monitors.DP-1 0,0,597,336     # colocar una pantalla a mano, en milímetros
+wprs-ctl config layout.follow.STREAM-1 DP-1         # una salida sin ubicación muestra la parte de DP-1
 wprs-ctl calibrate on                                # patrón para comprobarlo; off lo quita
 ```
 

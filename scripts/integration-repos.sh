@@ -142,6 +142,16 @@ ctl edit crop "$WORK/bands.png" 0.7,0,0.3,1 --output TEST-10
 shown "$right" 0 0 255
 ctl edit reset "$WORK/bands.png"
 shown "$left" 255 0 0 && shown "$right" 0 0 255
+read -r _ _ _ loose < <(ctl stream TEST-11 160 90)
+shown "$loose" 0 255 0
+ctl config layout.follow.TEST-11 TEST-10
+shown "$loose" 0 0 255 && expect "s['outputs']['TEST-11']['follows']" "TEST-10"
+ctl config layout.follow.TEST-11 TEST-11 && fail "an output followed itself"
+ctl config layout.follow.TEST-11 none && ctl config layout.monitors.TEST-11 80,0,40,22.5
+shown "$left" 255 0 0 && shown "$right" 0 255 0 && shown "$loose" 0 0 255
+expect "s['outputs']['TEST-11']['follows'], s['outputs']['TEST-11']['mm']" "(None, [80.0, 0.0, 40.0, 22.5])"
+ctl config layout.monitors.TEST-11 none && ctl release TEST-11
+shown "$left" 255 0 0 && shown "$right" 0 0 255
 kill -KILL "$spanned"
 wait "$spanned" 2>/dev/null || true
 shown "$right" 0 255 0

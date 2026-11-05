@@ -1164,6 +1164,36 @@ msgstr "Mostrar un patrón en las pantallas para comprobarlas"
 msgid "Place the screens automatically"
 msgstr "Colocar las pantallas automáticamente"
 
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "The whole wallpaper"
+msgstr "El fondo entero"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Placed by hand on the board"
+msgstr "Colocada a mano en el tablero"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "The same part as %1"
+msgstr "La misma parte que %1"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Outputs that do not say where they are"
+msgstr "Salidas que no dicen dónde están"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid ""
+"Streams, previews and some screens have no place on the desktop. Choose what "
+"part of a spread wallpaper they show; one placed by hand appears on the "
+"board above to be dragged."
+msgstr ""
+"Las transmisiones, las vistas previas y algunas pantallas no tienen lugar "
+"en el escritorio. Elige qué parte de un fondo extendido muestran; una "
+"colocada a mano aparece en el tablero de arriba para arrastrarla."
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Part shown by %1"
+msgstr "Parte que muestra %1"
+
 #: apps/wprs-app/qml/EditLight.qml
 msgid "Exposure (EV)"
 msgstr "Exposición (EV)"

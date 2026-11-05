@@ -96,6 +96,11 @@ ColumnLayout {
         font: Kirigami.Theme.smallFont
     }
 
+    EditLayoutLoose {
+        Layout.fillWidth: true
+        bounds: layout.bounds
+    }
+
     EditSlider {
         text: App.tr("Width of each screen frame (mm)")
         to: 100

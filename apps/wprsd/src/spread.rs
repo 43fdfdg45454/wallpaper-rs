@@ -10,12 +10,15 @@ impl OutputInfo {
 
 impl Daemon {
     pub(crate) fn scene_span(&self, output: &str, fit: Fit, canvas: [u32; 2]) -> Option<[f32; 4]> {
-        if fit != Fit::Span || crate::drafts::virtual_output(output) {
+        let follows = self.state().config.layout.follow.contains_key(output);
+        if fit != Fit::Span || (crate::drafts::virtual_output(output) && !follows) {
             return None;
         }
-        let Place::Span { monitors, .. } = self.place(output, Fit::Span, None) else { return None };
+        let Place::Span { monitors, output: lead, .. } = self.place(output, Fit::Span, None) else {
+            return None;
+        };
         let parts = wprs_core::spread::rects(&monitors, canvas);
-        parts.into_iter().find(|(id, _)| id == output).map(|(_, rect)| rect)
+        parts.into_iter().find(|(id, _)| *id == lead).map(|(_, rect)| rect)
     }
 
     pub(crate) fn spreading(&self) -> Vec<String> {

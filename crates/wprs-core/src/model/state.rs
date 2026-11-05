@@ -70,6 +70,8 @@ model! {
         #[serde(default)]
         pub mm: Option<[f64; 4]>,
         #[serde(default)]
+        pub follows: Option<String>,
+        #[serde(default)]
         pub parallax: bool,
         #[serde(default)]
         pub frames: u64,
