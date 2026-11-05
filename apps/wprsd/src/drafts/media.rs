@@ -2,11 +2,11 @@
 mod tests;
 
 use crate::error::invalid;
-use crate::media::Frame;
+use crate::media::{Frame, covers};
 use anyhow::{Result, ensure};
 use serde::Deserialize;
 use serde_json::Value;
-use std::path::Path;
+use std::path::{Component, Path};
 use wprs_scene::MediaState;
 
 const MAX_TEXT: usize = 512;
@@ -34,6 +34,7 @@ struct Simulated {
     position: f32,
     duration: f32,
     rate: Option<f32>,
+    cover: Option<String>,
 }
 
 fn text(name: &str, words: Words) -> Result<String> {
@@ -56,6 +57,11 @@ fn seconds(name: &str, value: f32) -> Result<f32> {
     Ok(value)
 }
 
+fn inside(path: &str) -> bool {
+    let p = Path::new(path);
+    !path.is_empty() && p.components().all(|c| matches!(c, Component::Normal(_)))
+}
+
 pub(crate) fn split(document: &str) -> (String, Option<Value>) {
     if !document.contains("\"media\"") {
         return (document.to_owned(), None);
@@ -68,7 +74,7 @@ pub(crate) fn split(document: &str) -> (String, Option<Value>) {
     }
 }
 
-pub(crate) fn frame(_dir: &Path, media: Value) -> Result<Frame> {
+pub(crate) fn frame(dir: &Path, media: Value) -> Result<Frame> {
     let s: Simulated =
         serde_json::from_value(media).map_err(|e| invalid(format!("the simulated media player: {e}")))?;
     let rate = s.rate.unwrap_or(1.0);
@@ -78,9 +84,23 @@ pub(crate) fn frame(_dir: &Path, media: Value) -> Result<Frame> {
     );
     let duration = seconds("duration", s.duration)?;
     let position = seconds("position", s.position)?;
+    let cover = match s.cover.filter(|c| !c.is_empty()) {
+        None => None,
+        Some(path) => {
+            ensure!(inside(&path), invalid("media.cover is a picture inside the scene folder"));
+            let bytes = std::fs::read(dir.join(&path)).ok().filter(|b| b.len() as u64 <= covers::MAX_FILE);
+            let decoded = bytes.and_then(|b| covers::decode(&b));
+            Some(
+                decoded.ok_or_else(|| {
+                    invalid(format!("media.cover {path} is not a picture that can be read"))
+                })?,
+            )
+        }
+    };
     let state = MediaState {
         enabled: true,
         track: 1,
+        cover: cover.as_ref().map_or(0, |c| c.serial),
         title: text("title", Words::One(s.title))?,
         artist: text("artist", s.artist)?,
         album: text("album", Words::One(s.album))?,
@@ -93,7 +113,6 @@ pub(crate) fn frame(_dir: &Path, media: Value) -> Result<Frame> {
         duration,
         rate,
         colors: None,
-        cover: 0,
     };
-    Ok(Frame::new(state))
+    Ok(Frame { cover, ..Frame::new(state) })
 }

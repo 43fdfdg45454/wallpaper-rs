@@ -9,6 +9,7 @@ QQC2.ScrollView {
 
     required property var page
     readonly property var media: SceneLook.media ?? SceneLook.sample
+    readonly property var pictures: (page.view.assets ?? []).filter(a => a.kind === "image" && !a.media)
 
     function change(key, value) {
         const next = Object.assign({}, player.media);
@@ -50,6 +51,13 @@ QQC2.ScrollView {
                     maximumLength: 512
                     onEditingFinished: player.change(modelData[0], text)
                 }
+            }
+
+            QQC2.ComboBox {
+                Kirigami.FormData.label: App.tr("Cover")
+                model: [App.tr("None")].concat(player.pictures.map(p => p.id))
+                currentIndex: 1 + player.pictures.findIndex(p => p.path === player.media.cover)
+                onActivated: index => player.change("cover", index > 0 ? player.pictures[index - 1].path : "")
             }
         }
     }

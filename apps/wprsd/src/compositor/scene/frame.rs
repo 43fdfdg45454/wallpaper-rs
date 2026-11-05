@@ -34,12 +34,15 @@ impl SceneState {
             (self.quality, self.uses) = (quality, self.needs(quality));
         }
         if let Some(view) = self.view.as_mut().filter(|_| std::mem::take(&mut self.restock)) {
-            let assets = assets(&self.spec);
+            let assets = assets(&self.spec, &self.media.covers);
             renderer.refresh_scene(view, (&self.spec.pack.scene, self.runtime.props()), &assets)?;
         }
         if self.view.is_none() {
-            let view =
-                renderer.scene_view(&self.spec.pack.scene, &assets(&self.spec), self.runtime.props())?;
+            let view = renderer.scene_view(
+                &self.spec.pack.scene,
+                &assets(&self.spec, &self.media.covers),
+                self.runtime.props(),
+            )?;
             if view.gpu_particles() == Some(false) {
                 tracing::debug!("particles run on the CPU with a smaller budget");
             }

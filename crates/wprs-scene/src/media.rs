@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub const COVER_SIDE: u32 = 256;
 pub const MEDIA_TRIGGERS: [&str; 4] = ["play", "pause", "track", "cover"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

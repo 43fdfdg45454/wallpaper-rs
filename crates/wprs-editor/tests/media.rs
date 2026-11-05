@@ -48,3 +48,40 @@ fn the_preview_carries_a_made_up_track_with_its_quality() {
     assert!(only["quality"].is_null() && only["media"].is_object());
     assert!(wprs_editor::rigs::staged(&json!({ "media": "x" })).is_none());
 }
+
+#[test]
+fn a_picture_becomes_the_cover_with_its_placeholder_and_back() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let file = root.path().join("dark.png");
+    image::RgbImage::from_pixel(32, 32, image::Rgb([20, 20, 30])).save(&file).unwrap();
+    act(&mut p, json!({ "import": { "file": file, "id": "dark" } })).unwrap();
+    let path = p.doc["scene"]["assets"]["dark"]["path"].clone();
+    act(&mut p, json!({ "asset": { "asset": "cover", "cover": "current", "placeholder": "dark" } })).unwrap();
+    assert_eq!(p.doc["scene"]["assets"]["cover"], json!({ "path": path, "media": "current" }));
+    act(&mut p, json!({ "asset": { "asset": "before", "cover": "previous", "placeholder": path } })).unwrap();
+    assert_eq!(p.doc["scene"]["assets"]["before"]["media"], "previous");
+    let refused = |p: &mut Project, v: Value| act(p, json!({ "asset": v })).unwrap_err().to_string();
+    assert!(refused(&mut p, json!({ "asset": "x", "cover": "current" })).contains("placeholder"));
+    assert!(
+        refused(&mut p, json!({ "asset": "cover", "cover": "next" })).contains("current, previous or none")
+    );
+    assert!(
+        refused(&mut p, json!({ "asset": "cover", "placeholder": "song.ogg" })).contains("still picture")
+    );
+    assert!(
+        refused(&mut p, json!({ "asset": "cover", "placeholder": "../dark.png" })).contains("still picture")
+    );
+    act(
+        &mut p,
+        json!({ "set": { "pointer": "/scene/layers/0", "value":
+        { "id": "art", "type": "image", "image": "cover", "size": [200, 200] } } }),
+    )
+    .unwrap();
+    let problems = wprs_editor::package::problems(&p.dir, &p.doc);
+    assert!(problems.iter().all(|c| c.warning || !c.pointer.contains("assets")), "{problems:?}");
+    act(&mut p, json!({ "asset": { "asset": "cover", "cover": "none" } })).unwrap();
+    assert!(p.doc["scene"]["assets"]["cover"].get("media").is_none());
+    act(&mut p, json!({ "undo": {} })).unwrap();
+    assert_eq!(p.doc["scene"]["assets"]["cover"]["media"], "current");
+}

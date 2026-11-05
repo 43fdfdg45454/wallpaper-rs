@@ -1,4 +1,8 @@
+pub(crate) mod covers;
 mod listen;
+#[cfg(test)]
+mod pictured;
+mod pictures;
 mod players;
 #[cfg(test)]
 mod tests;
@@ -13,6 +17,7 @@ use tokio::task::JoinHandle;
 use wprs_core::model::MediaStatus;
 use wprs_scene::MediaState;
 
+pub(crate) use covers::Cover;
 pub(crate) use players::{Player, Status, chosen};
 pub(crate) use track::Track;
 
@@ -26,6 +31,8 @@ pub(crate) struct Frame {
     pub(crate) serial: u64,
     pub(crate) state: MediaState,
     pub(crate) read: Instant,
+    pub(crate) cover: Option<Arc<Cover>>,
+    pub(crate) previous: Option<Arc<Cover>>,
 }
 
 struct Listener {
@@ -42,7 +49,8 @@ struct Listener {
 
 impl Frame {
     pub(crate) fn new(state: MediaState) -> Frame {
-        Frame { serial: SERIAL.fetch_add(1, Ordering::Relaxed), state, read: Instant::now() }
+        let (serial, read) = (SERIAL.fetch_add(1, Ordering::Relaxed), Instant::now());
+        Frame { serial, state, read, cover: None, previous: None }
     }
 
     pub(crate) fn at(&self, now: Instant) -> MediaState {
@@ -82,6 +90,10 @@ pub(crate) fn follow(on: bool) {
     drop(task);
     (l.wake)();
     (l.changed)();
+}
+
+pub(crate) fn remote_on() -> bool {
+    LISTENER.get().is_some_and(|l| l.remote.load(Ordering::Relaxed))
 }
 
 pub(crate) fn remote_covers(on: bool) {

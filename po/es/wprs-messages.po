@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-02 00:00+0000\n"
+"POT-Creation-Date: 2026-11-03 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -460,6 +460,22 @@ msgstr "la clave tiene un valor fuera de su rango"
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "the clip has no key there at %1 s"
 msgstr "el clip no tiene ninguna clave ahí en %1 s"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "%1 is not a still picture of the scene"
+msgstr "%1 no es una imagen fija de la escena"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "a new cover %1 needs a placeholder picture"
+msgstr "una carátula nueva %1 necesita una imagen de reemplazo"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "%1 is not current, previous or none"
+msgstr "%1 no es current, previous ni none"
+
+#: crates/wprs-editor/src/covers.rs
+msgid "%1 is animated, and a cover is a still picture"
+msgstr "%1 está animada, y una carátula es una imagen fija"
 
 #: crates/wprs-editor/src/credit.rs
 msgid "a package has at most 64 credits; credit folders instead of files"

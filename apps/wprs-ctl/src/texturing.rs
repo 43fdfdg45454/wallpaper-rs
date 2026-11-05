@@ -8,6 +8,8 @@ use wprs_editor::actions::{Action, AssetEdit, RgbEdit};
 use wprs_editor::{Project, packing, pictures};
 use wprs_ktx2::TARGETS;
 
+const COVER: &str = "current or previous makes the picture the cover of what the media player plays or played before; none makes it a plain picture again";
+
 #[derive(Subcommand, Debug)]
 pub enum Texturing {
     #[command(
@@ -37,6 +39,14 @@ pub enum Texturing {
             help = "Write a crop of the picture as each class shows it"
         )]
         looks: Option<PathBuf>,
+        #[arg(long, conflicts_with = "ktx2", value_parser = wprs_editor::covers::KINDS, help = COVER)]
+        cover: Option<String>,
+        #[arg(
+            long,
+            conflicts_with = "ktx2",
+            help = "Picture shown while nothing plays: an asset id or a picture of the folder"
+        )]
+        placeholder: Option<String>,
         #[arg(long, help = crate::cli::JSON)]
         json: bool,
     },
@@ -111,9 +121,9 @@ fn told(v: &Value) -> String {
 }
 
 pub fn run(command: Texturing) -> Result<()> {
-    let (dir, asset, ktx2, codec, quality, dry_run, looks, json) = match command {
-        Texturing::Asset { dir, asset, ktx2, codec, quality, dry_run, looks, json } => {
-            (dir, asset, ktx2, codec, quality, dry_run, looks, json)
+    let (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder) = match command {
+        Texturing::Asset { dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder } => {
+            (dir, asset, ktx2, codec, quality, dry_run, looks, json, cover, placeholder)
         }
         Texturing::Rgb { dir, layer, on, size, whole } => {
             let size = size.map(|s| crate::editing::dimensions(&s)).transpose()?;
@@ -121,7 +131,11 @@ pub fn run(command: Texturing) -> Result<()> {
             return crate::steps::edit(&dir, Action::Rgb(RgbEdit { layer, on, size, whole }));
         }
     };
-    let wanted = AssetEdit { asset: asset.clone(), ktx2, codec, quality };
+    let covered = cover.is_some() || placeholder.is_some();
+    let wanted = AssetEdit { asset: asset.clone(), ktx2, codec, quality, cover, placeholder };
+    if covered {
+        return crate::steps::edit(&dir, Action::Asset(wanted));
+    }
     let report = match (ktx2, dry_run) {
         (true, false) => return crate::steps::edit(&dir, Action::Asset(wanted)),
         (true, true) => {

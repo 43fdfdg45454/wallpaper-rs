@@ -24,7 +24,7 @@ ColumnLayout {
                 required property var modelData
 
                 width: ListView.view.width
-                text: modelData.id + " · " + SceneWords.kind(modelData.kind) + " · " + App.bytes(modelData.size)
+                text: modelData.id + " · " + SceneWords.kind(modelData.kind) + " · " + App.bytes(modelData.size) + (modelData.media ? " · " + (modelData.media === "current" ? App.tr("cover of what plays") : App.tr("previous cover")) : "")
                 highlighted: panel.page.editor.selected === modelData.pointer
                 onClicked: panel.page.editor.select(modelData.pointer)
 

@@ -1463,9 +1463,16 @@ puede saber que esa pista suena aquí; las carátulas solo viven en memoria.
 En el editor, el menú de enlace de cada campo tiene *Seguir al reproductor multimedia* con los
 datos que le caben: el título, el artista, el álbum, el artista del álbum, el subtítulo, los
 géneros y el tipo para un texto, cada uno con lo que mostraría ahora. La pestaña *Reproductor*
-simula una pista (título, artista y álbum) para diseñar sin música sonando; solo la ve la vista
+simula una pista (título, artista, álbum y carátula) para diseñar sin música sonando; solo la ve la vista
 previa, sin pedir permiso ni leer los reproductores. Desde la terminal, `wprs-ctl scene preview
 CARPETA --media pista.json` hace lo mismo con un JSON de esos campos.
+
+La carátula es un recurso de imagen con `media: current` (la de lo que suena) o `media: previous`
+(la anterior), que vale donde vale una imagen; su archivo es lo que se ve mientras no suena nada o
+sin permiso. El selector de imagen del editor ofrece *Carátula de lo que suena* y *Carátula
+anterior*, hechas a partir de la imagen elegida, y deja elegir esa imagen de reemplazo; desde la
+terminal, `wprs-ctl scene asset CARPETA cover --cover current --placeholder IMAGEN`. Las carátulas
+se leen una vez por pista, se reducen a 256 píxeles como mucho y solo viven en memoria.
 
 ## Servidor propio
 

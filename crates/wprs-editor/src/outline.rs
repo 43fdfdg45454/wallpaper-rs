@@ -56,7 +56,7 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         .map(|(id, a)| {
             let path = a["path"].as_str().unwrap_or_default();
             let size = std::fs::metadata(project.dir.join(path)).map_or(0, |m| m.len());
-            json!({"id": id, "path": path, "kind": asset_kind(path), "size": size, "pointer": format!("/scene/assets/{}", escape(id))})
+            json!({"id": id, "path": path, "kind": asset_kind(path), "size": size, "media": a["media"], "pointer": format!("/scene/assets/{}", escape(id))})
         })
         .collect();
     let timelines = doc["scene"]["timelines"].as_array().into_iter().flatten().enumerate();

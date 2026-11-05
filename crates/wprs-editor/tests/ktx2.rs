@@ -29,7 +29,8 @@ fn act(p: &mut Project, action: Value) -> anyhow::Result<()> {
 }
 
 fn wanted(codec: Option<&str>, quality: Option<u32>) -> AssetEdit {
-    AssetEdit { asset: "sky".into(), ktx2: true, codec: codec.map(String::from), quality }
+    let (codec, cover, placeholder) = (codec.map(String::from), None, None);
+    AssetEdit { asset: "sky".into(), ktx2: true, codec, quality, cover, placeholder }
 }
 
 #[test]

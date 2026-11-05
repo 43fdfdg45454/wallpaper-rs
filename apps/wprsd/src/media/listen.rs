@@ -1,3 +1,4 @@
+use super::pictures::{Arrival, Pictures};
 use super::track::number;
 use super::{Frame, Player, Status, Track, chosen};
 use futures_util::StreamExt;
@@ -17,12 +18,12 @@ const PATIENCE: Duration = Duration::from_secs(2);
 
 type Props = HashMap<String, OwnedVariant>;
 
-#[derive(Default)]
 pub(super) struct Reading {
     pub(super) players: HashMap<String, Player>,
     names: HashMap<String, String>,
     track: u64,
     last: Option<Track>,
+    pictures: Pictures,
 }
 
 pub(super) async fn listen(bus: Connection) {
@@ -43,7 +44,8 @@ async fn run(bus: &Connection) -> zbus::Result<()> {
     let mut changes = MessageStream::for_match_rule(changes, bus, None).await?;
     let mut seeks = MessageStream::for_match_rule(seeks, bus, None).await?;
     let dbus = DBusProxy::new(bus).await?;
-    let mut r = Reading::default();
+    let (sender, mut arrivals) = tokio::sync::mpsc::unbounded_channel::<Arrival>();
+    let mut r = Reading::new(Pictures::new(sender));
     for name in dbus.list_names().await? {
         let name = name.to_string();
         if name.strip_prefix(SPACE).is_some_and(|rest| rest.starts_with('.'))
@@ -77,6 +79,7 @@ async fn run(bus: &Connection) -> zbus::Result<()> {
                     p.seek(at as f64, Instant::now());
                 }
             }
+            Some(arrival) = arrivals.recv() => r.pictures.arrived(arrival),
             else => return Ok(()),
         }
         r.publish();
@@ -98,6 +101,11 @@ async fn all(bus: &Connection, owner: &str) -> Option<Props> {
 }
 
 impl Reading {
+    pub(super) fn new(pictures: Pictures) -> Reading {
+        let (players, names, last) = Default::default();
+        Reading { players, names, track: 0, last, pictures }
+    }
+
     async fn add(&mut self, bus: &Connection, name: String, owner: String) {
         let props = all(bus, &owner).await.unwrap_or_default();
         let mut player = Player::new(Instant::now());
@@ -134,14 +142,18 @@ impl Reading {
             (state.playing, state.position, state.rate) =
                 (p.status == Status::Playing, p.now(now) as f32, p.rate as f32);
         }
-        let playing = state.playing;
+        self.pictures.ask(active.as_ref().map_or("", |p| p.track.art.as_str()));
+        state.cover = self.pictures.serial();
+        let (playing, cover) = (state.playing, state.cover != 0);
         let status = MediaStatus {
             listening: true,
             players: self.players.len() as u32,
             playing,
             track: active.is_some(),
+            cover,
             ..MediaStatus::default()
         };
-        super::publish(Some(Frame { read: now, ..Frame::new(state) }), status);
+        let (cover, previous) = (self.pictures.cover.clone(), self.pictures.previous.clone());
+        super::publish(Some(Frame { read: now, cover, previous, ..Frame::new(state) }), status);
     }
 }

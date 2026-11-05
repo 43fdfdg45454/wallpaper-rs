@@ -38,3 +38,20 @@ fn the_simulated_player_refuses_bad_values_and_caps() {
     assert!(refused(json!("Night Drive")).contains("simulated media player"));
     assert!(frame(Path::new("."), json!({"artist": vec!["x"; 4]})).is_ok());
 }
+
+#[test]
+fn a_simulated_cover_is_a_picture_inside_the_scene_folder() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("assets")).unwrap();
+    image::RgbaImage::from_pixel(300, 300, image::Rgba([0, 0, 255, 255]))
+        .save(dir.path().join("assets/cover.png"))
+        .unwrap();
+    let f = frame(dir.path(), json!({"title": "x", "cover": "assets/cover.png"})).unwrap();
+    let cover = f.cover.as_ref().unwrap();
+    assert_eq!((cover.pixels.size(), f.state.cover), ((256, 256), cover.serial));
+    for wrong in ["../cover.png", "/etc/passwd", "assets/missing.png"] {
+        let refused = frame(dir.path(), json!({"cover": wrong})).map(drop).unwrap_err().to_string();
+        assert!(refused.contains("media.cover"), "{wrong}: {refused}");
+    }
+    assert!(frame(dir.path(), json!({"cover": ""})).unwrap().cover.is_none());
+}

@@ -10,6 +10,7 @@ pub mod canvas;
 pub mod check;
 mod clips;
 mod contents;
+pub mod covers;
 mod credit;
 pub mod curves;
 mod cutouts;

@@ -81,6 +81,10 @@ pub struct AssetEdit {
     pub codec: Option<String>,
     #[serde(default)]
     pub quality: Option<u32>,
+    #[serde(default)]
+    pub cover: Option<String>,
+    #[serde(default)]
+    pub placeholder: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

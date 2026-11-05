@@ -137,6 +137,9 @@ pub fn adopt(doc: &Value, id: &str, path: &str) -> Vec<Op> {
 }
 
 pub(crate) fn act(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Vec<Op>> {
+    if wanted.cover.is_some() || wanted.placeholder.is_some() {
+        return crate::covers::act(doc, wanted);
+    }
     ensure!(
         wanted.ktx2,
         said("editor.asset_change", "say what to change in %1, such as ktx2", &[&wanted.asset])

@@ -72,7 +72,7 @@ pub use crate::look::{Bloom, Camera, Glare, Glide, Playback, Shake, Tonemap};
 pub use crate::loops::{MAX_INLINED, MAX_LOOP, MAX_OPS, MAX_SHADER_NODES, MAX_WORK};
 pub use crate::measure::MAX_BUILD;
 pub use crate::measured::{Calibration, calibrate};
-pub use crate::media::{Cover, MEDIA_TRIGGERS, Media, Reading};
+pub use crate::media::{COVER_SIDE, Cover, MEDIA_TRIGGERS, Media, Reading};
 pub use crate::memory::MAX_MEMORY;
 pub use crate::model::{
     Alpha, Finish, Forge, ForgeMaterial, ForgeRig, ForgeShape, MAX_MODEL_TEXELS, MAX_MODEL_VERTICES,

@@ -792,7 +792,15 @@ the package declares `media` and the user allows it: the texts `title`, `artist`
 `album_artist`, `subtitle`, `genres` and `kind`; the numbers `position`, `duration` (seconds) and
 `progress` (0 to 1); `playing` as a flag or number; and the colors `primary`, `secondary` and
 `tertiary` of the cover, `text` (readable over the primary color) and `contrast` (black or white).
-Texts are empty and colors those of the placeholder while nothing plays.
+Texts are empty and colors those of the placeholder while nothing plays. An asset with `media: current` shows the
+cover of the track and one with `media: previous` the cover of the track before it (both still
+pictures, usable wherever a picture is: image layers, masks, effects, particles); `path` is the
+placeholder shown until a cover arrives, while nothing plays, without the grant and when the
+cover cannot be read. Covers are read once per track from `file://` addresses of at most 16 MiB
+or, only with `media.remote_covers` on (`dbus.md`), from `http` and `https` addresses of at most
+4 MiB within 5 seconds; they are reduced in memory to at most 256 pixels on the longer side in
+sRGB, keeping their shape, and never written to disk. A layer that shows a cover keeps its `size`,
+so a square `size` suits most covers.
 
 ## Effects
 

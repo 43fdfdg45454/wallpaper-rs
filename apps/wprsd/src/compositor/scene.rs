@@ -80,7 +80,7 @@ pub(super) struct SceneState {
     keeper: Option<wprs_core::stash::Keeper>,
     shared: Option<clock::Clock>,
     pub(super) lit: f32,
-    media: u64,
+    media: media::Shown,
 }
 
 fn after(seconds: f64) -> Duration {
@@ -165,23 +165,27 @@ impl SceneState {
             keeper: None,
             shared: None,
             lit: 1.0,
-            media: 0,
+            media: Default::default(),
         };
         scene.uses = scene.needs(quality);
         scene
     }
 
     fn needs(&self, quality: Quality) -> Uses {
-        if self.still {
-            return Uses::default();
-        }
         let uses = self.runtime.uses_at(quality);
+        if self.still {
+            return Uses { media: uses.media, ..Uses::default() };
+        }
         Uses { audio: uses.audio || self.reads.0, cursor: uses.cursor || self.reads.1, ..uses }
     }
 }
 
-fn assets(spec: &SceneSpec) -> wprs_render::SceneAssets {
+fn assets(
+    spec: &SceneSpec,
+    covers: &[(String, std::sync::Arc<wprs_render::Pixels>)],
+) -> wprs_render::SceneAssets {
     let mut assets = spec.pack.assets.clone();
     assets.images.extend(spec.extra.iter().cloned());
+    assets.images.extend(covers.iter().cloned());
     assets
 }

@@ -594,9 +594,9 @@ msgid "Preset:"
 msgstr "Preajuste:"
 
 #: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
-#: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSwarmKin.qml
-#: apps/wprs-app/qml/SceneSwarmLight.qml apps/wprs-app/qml/SceneTones.qml
-#: apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/SceneMedia.qml apps/wprs-app/qml/SceneRig.qml
+#: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/SceneSwarmLight.qml
+#: apps/wprs-app/qml/SceneTones.qml apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "None"
@@ -2727,6 +2727,14 @@ msgid "Add a layer playing…"
 msgstr "Añadir una capa que reproduzca…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "cover of what plays"
+msgstr "carátula de lo que suena"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "previous cover"
+msgstr "carátula anterior"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Convert to KTX2…"
 msgstr "Convertir a KTX2…"
 
@@ -3138,6 +3146,19 @@ msgid ""
 msgstr ""
 "Aquí los clics y toques no llegan al fondo de esta pantalla, así que esta "
 "escena no reacciona a ellos."
+
+#: apps/wprs-app/qml/SceneCoverPick.qml
+msgid "Cover of what plays"
+msgstr "Carátula de lo que suena"
+
+#: apps/wprs-app/qml/SceneCoverPick.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Previous cover"
+msgstr "Carátula anterior"
+
+#: apps/wprs-app/qml/SceneCoverPick.qml
+msgid "Shown while nothing plays"
+msgstr "Se ve mientras no suena nada"
 
 #: apps/wprs-app/qml/SceneCurve.qml
 msgid ""
@@ -3846,6 +3867,10 @@ msgstr "Artista"
 msgid "Album"
 msgstr "Álbum"
 
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid "Cover"
+msgstr "Carátula"
+
 #: apps/wprs-app/qml/SceneMeshCut.qml
 msgid "Mesh from a picture"
 msgstr "Malla desde una imagen"
@@ -4408,6 +4433,14 @@ msgstr "Un punto"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "The pointer"
 msgstr "El puntero"
+
+#: apps/wprs-app/qml/SceneRefs.qml
+msgid "Cover of what plays (%1)"
+msgstr "Carátula de lo que suena (%1)"
+
+#: apps/wprs-app/qml/SceneRefs.qml
+msgid "Previous cover (%1)"
+msgstr "Carátula anterior (%1)"
 
 #: apps/wprs-app/qml/SceneRefs.qml
 msgid "Bone %1"
@@ -8984,10 +9017,6 @@ msgstr "Fénix"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Pin light"
 msgstr "Luz focal"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Previous cover"
-msgstr "Carátula anterior"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Main color"

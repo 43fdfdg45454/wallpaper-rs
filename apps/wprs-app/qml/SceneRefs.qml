@@ -17,6 +17,9 @@ ColumnLayout {
             return App.tr("A point");
         if (option === "cursor")
             return App.tr("The pointer");
+        const media = ((refs.input.page.view.assets ?? []).find(a => a.id === option) ?? {}).media;
+        if (media)
+            return (media === "current" ? App.tr("Cover of what plays (%1)", option) : App.tr("Previous cover (%1)", option));
         const text = String(option);
         if (text.startsWith("bone:"))
             return App.tr("Bone %1", text.slice(5));
@@ -31,6 +34,12 @@ ColumnLayout {
         model: options.map(o => refs.label(o))
         currentIndex: refs.input.at(options, refs.value)
         onActivated: index => refs.input.commit(options[index])
+    }
+
+    SceneCoverPick {
+        Layout.fillWidth: true
+        visible: refs.field.widget === "ref:image"
+        input: refs.input
     }
 
     Flow {
