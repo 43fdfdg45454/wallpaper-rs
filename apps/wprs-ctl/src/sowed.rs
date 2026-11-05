@@ -110,21 +110,20 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             replace,
             lock: (!lock.is_empty()).then_some(lock),
         },
-        Sowing::Start {
-            life,
-            speed,
-            angle,
-            size,
-            rotation,
-            spin,
-            frame,
-            color,
-            alpha,
-            velocity,
-            radial,
-            tint,
-            clear,
-        } => {
+        Sowing::Start { spread, tint, clear } => {
+            let crate::sowing::Spread {
+                life,
+                speed,
+                angle,
+                size,
+                rotation,
+                spin,
+                frame,
+                color,
+                alpha,
+                velocity,
+                radial,
+            } = *spread;
             let mut ranges = Map::new();
             let numbers =
                 [("life", life), ("speed", speed), ("angle", angle), ("size", size), ("rotation", rotation)];

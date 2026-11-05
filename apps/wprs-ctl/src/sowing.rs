@@ -1,5 +1,5 @@
 use crate::sowed::sweep;
-use clap::{ArgAction, Subcommand};
+use clap::{ArgAction, Args, Subcommand};
 use serde_json::{Value, json};
 
 const MOMENTS: [&str; 4] = ["static", "spawn", "death", "follow"];
@@ -30,6 +30,32 @@ pub(crate) fn range(text: &str) -> Result<Value, String> {
         true => Ok(json!([low, high, curve])),
         false => Err(bad()),
     }
+}
+
+#[derive(Args, Debug)]
+pub struct Spread {
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Seconds")]
+    pub life: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second")]
+    pub speed: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees of the direction")]
+    pub angle: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels")]
+    pub size: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees")]
+    pub rotation: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees a second")]
+    pub spin: Option<Value>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Frame of the atlas")]
+    pub frame: Option<Value>,
+    #[arg(long, value_name = "COLOR,COLOR", value_parser = crate::sowed::colors, help = "Two colors such as #ffffff,#a0c8ff")]
+    pub color: Option<String>,
+    #[arg(allow_hyphen_values = true, long, value_name = RANGE, value_parser = range, help = "From 0 to 1")]
+    pub alpha: Option<Value>,
+    #[arg(long, value_name = "X,Y:X,Y", value_parser = sweep, allow_hyphen_values = true, help = "Pixels a second, instead of speed and angle")]
+    pub velocity: Option<[[f64; 2]; 2]>,
+    #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second away from the center of the emitter")]
+    pub radial: Option<Value>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -70,28 +96,8 @@ pub enum Sowing {
         about = "Set the ranges new particles start from; the next value is picked between the two ends, leaning by CURVE (above 1 near MIN more often; kept when left out, 1 picks evenly), and an end may be prop:ID to follow a slider setting or _ to keep it"
     )]
     Start {
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Seconds")]
-        life: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second")]
-        speed: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees of the direction")]
-        angle: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels")]
-        size: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees")]
-        rotation: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees a second")]
-        spin: Option<Value>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Frame of the atlas")]
-        frame: Option<Value>,
-        #[arg(long, value_name = "COLOR,COLOR", value_parser = crate::sowed::colors, help = "Two colors such as #ffffff,#a0c8ff")]
-        color: Option<String>,
-        #[arg(allow_hyphen_values = true, long, value_name = RANGE, value_parser = range, help = "From 0 to 1")]
-        alpha: Option<Value>,
-        #[arg(long, value_name = "X,Y:X,Y", value_parser = sweep, allow_hyphen_values = true, help = "Pixels a second, instead of speed and angle")]
-        velocity: Option<[[f64; 2]; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second away from the center of the emitter")]
-        radial: Option<Value>,
+        #[command(flatten)]
+        spread: Box<Spread>,
         #[command(flatten)]
         tint: Box<crate::seeding::Tint>,
         #[arg(long, value_parser = ["alpha", "velocity", "radial", "hsv", "palette", "gradient"], help = "Remove a range or a way of picking colors")]
