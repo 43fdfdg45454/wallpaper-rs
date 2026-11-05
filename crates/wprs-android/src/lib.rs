@@ -13,6 +13,7 @@ mod choice;
 mod chosen;
 #[cfg(target_os = "android")]
 mod clips;
+mod converted;
 mod counted;
 mod cycle;
 mod depth;

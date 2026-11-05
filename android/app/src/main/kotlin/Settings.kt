@@ -37,6 +37,7 @@ private val QUALITIES = listOf(
     "q3" to R.string.quality_q3, "q2" to R.string.quality_q2, "q1" to R.string.quality_q1, "q0" to R.string.quality_q0,
 )
 private val HDRS = listOf("auto" to R.string.hdr_auto, "on" to R.string.hdr_on, "off" to R.string.hdr_off)
+private val CONVERTS = listOf("auto" to R.string.convert_auto, "keep" to R.string.convert_keep, "off" to R.string.never)
 private val CHOICES = listOf(
     Triple(R.string.fit, "fit", FIT),
     Triple(R.string.battery_fps, "playback.max_fps", listOf("30", "15", "10").map { it to R.string.fps }),
@@ -45,6 +46,7 @@ private val CHOICES = listOf(
     Triple(R.string.backend, "backend", BACKENDS),
     Triple(R.string.scene_quality, "playback.quality", QUALITIES),
     Triple(R.string.hdr_output, "playback.hdr", HDRS),
+    Triple(R.string.convert_videos, Convert.SETTING, CONVERTS),
 )
 private val TOGGLES = listOf(
     Triple(R.string.fade, "transition.kind", "fade" to "none"),

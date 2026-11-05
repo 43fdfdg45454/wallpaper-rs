@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.unit.IntSize
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -44,6 +45,8 @@ class Main : ComponentActivity() {
     private val folder = registerForActivityResult(OpenDocumentTree()) { uri -> uri?.let(::importFolder) }
     private val packages = registerForActivityResult(OpenDocument()) { uri -> uri?.let { store(listOf(it)) } }
     val placing = mutableStateOf(false)
+    private val saverSkipped = AtomicBoolean()
+    private val conversions = { _: String -> runOnUiThread { revision.intValue++ } }
     val preview = registerForActivityResult(StartActivityForResult()) { placed(it.resultCode == Activity.RESULT_OK) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +55,7 @@ class Main : ComponentActivity() {
         Native.prepare(noBackupFilesDir.path)
         Unveil.load()
         Heard.applied = synced
+        Converting.finished = conversions
         if (savedInstanceState == null) {
             Sync.soon(this, 0)
             thread(isDaemon = true) { remirror() }
@@ -78,6 +82,7 @@ class Main : ComponentActivity() {
     override fun onDestroy() {
         scope.cancel()
         if (Heard.applied === synced) Heard.applied = null
+        if (Converting.finished === conversions) Converting.finished = null
         forget()
         super.onDestroy()
     }
@@ -147,6 +152,7 @@ class Main : ComponentActivity() {
                 !stored
             }
             if (failed > 0) runOnUiThread { toast(resources.getQuantityString(R.plurals.unreadable, failed, failed)) }
+            if (saverSkipped.getAndSet(false)) runOnUiThread { toast(getString(R.string.convert_saver)) }
         }
     }
 
@@ -161,6 +167,7 @@ class Main : ComponentActivity() {
             else -> true
         }
         if (!played) Native.library(JSONObject().put("op", "remove").put("uids", JSONArray(listOf(uid))).toString())
+        if (played && item.getString("kind") == "video" && convert(uid, name(uri), false) == Convert.SAVER) saverSkipped.set(true)
         notice(strings(item.optJSONArray("exposes")))?.let { told -> runOnUiThread { toast(told) } }
         return played
     }

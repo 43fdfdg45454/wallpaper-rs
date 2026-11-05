@@ -103,6 +103,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 Relief(main, uid, state)
             }
             if (item?.scene == false) Kept(main, uid)
+            item?.takeIf { it.video && !it.reel }?.let { ConvertVideo(main, it) }
             item?.takeIf { it.scene && !it.web && !it.flashes }?.let { shown ->
                 Toggle(stringResource(R.string.keep_moving), shown.moving) {
                     main.act { ask(if (it) "confirm" else "unconfirm", "uid" to uid, "what" to "motion") }

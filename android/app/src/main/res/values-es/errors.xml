@@ -114,4 +114,6 @@
     <string name="error_android_version_range">%1$s no es un rango de versiones: %2$s</string>
     <string name="error_android_preset_needs">Este preajuste necesita %1$s %2$s; instálalo antes</string>
     <string name="error_android_no_release">Ninguna versión de %1$s cumple %2$s</string>
+    <string name="error_android_convert_item">%1$s no es un vídeo de la biblioteca</string>
+    <string name="error_android_convert_failed">No se puede leer el vídeo convertido de %1$s</string>
 </resources>

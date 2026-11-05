@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="convert_videos">Convert videos this phone cannot play smoothly</string>
+    <string name="convert_auto">Convert them</string>
+    <string name="convert_keep">Convert and keep the original</string>
+    <string name="convert_now">Convert for this phone</string>
+    <string name="convert_stop">Stop</string>
+    <string name="converting">Converting %1$s · %2$d %%</string>
+    <string name="converted_name">%1$s for this phone</string>
+    <string name="convert_note">This phone has no hardware decoder for this video at its size and speed, so it plays it with the processor and spends more battery. Converting makes an H.264 copy that the phone decodes in hardware.</string>
+    <string name="convert_saver">Battery saver is on, so new videos were not converted. Their pages can convert them.</string>
+</resources>

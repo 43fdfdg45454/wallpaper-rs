@@ -380,7 +380,18 @@ vídeo entra o sale por la GPU durante el fundido y después vuelve a la ruta di
 volver a empezar. Al añadir un vídeo, la app comprueba que el teléfono tiene un decodificador para
 su pista de vídeo y saca su primer fotograma, como el escritorio comprueba que GStreamer puede
 abrirlo; si no puede, no lo añade y lo cuenta en el aviso de los archivos que no se pudieron abrir.
-Los vídeos no se convierten al añadirlos: se reproducen tal cual.
+Si el teléfono solo puede decodificar un vídeo con el procesador (no tiene un decodificador por
+hardware para su formato, su tamaño o su velocidad) pero sí decodifica por hardware H.264 a ese
+tamaño o a 1080p o 720p, la app lo convierte al añadirlo a una copia H.264 con el codificador del
+propio Android (Media3 Transformer, sin codificadores añadidos al APK), mostrando el avance con un
+botón *Detener* que deja el vídeo como estaba. *Convertir los vídeos que el teléfono no reproduce
+con fluidez* en *Ajustes* elige entre *Convertirlos* (la copia toma el lugar del original, que se
+borra, y conserva sus listas y su elección), *Convertir y conservar el original* (la copia se
+añade como otro vídeo) y *Nunca*. Con el ahorro de energía no convierte nada al añadir y lo avisa;
+la página de ese vídeo dice por qué conviene convertirlo y ofrece *Convertir para este teléfono* y
+*Convertir y conservar el original*, que funcionan también con el ahorro de energía porque lo
+pides tú. La conversión sigue mientras la app esté en marcha; si Android la cierra antes, el vídeo
+queda como estaba. Los vídeos que el teléfono ya decodifica por hardware se reproducen tal cual.
 
 En la página de una imagen, *Moverse con el teléfono* activa el paralaje. Sigue el giro del teléfono
 con el sensor de rotación que no usa la brújula o, si no lo hay, con el normal: girarlo hacia un

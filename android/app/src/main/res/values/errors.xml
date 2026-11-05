@@ -114,4 +114,6 @@
     <string name="error_android_version_range">%1$s is not a version range: %2$s</string>
     <string name="error_android_preset_needs">This preset needs %1$s %2$s; install it first</string>
     <string name="error_android_no_release">No release of %1$s matches %2$s</string>
+    <string name="error_android_convert_item">%1$s is not a video of the library</string>
+    <string name="error_android_convert_failed">The converted video of %1$s cannot be read</string>
 </resources>

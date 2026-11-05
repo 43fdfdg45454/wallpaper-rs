@@ -12,12 +12,13 @@ pub(crate) const BACKEND: &str = "backend";
 const CHARGER: &str = "charger_fps";
 const FIT: &str = "fit";
 const BATTERY: &str = "playback.max_fps";
-const CHOICES: [(&str, &[&str]); 5] = [
+const CHOICES: [(&str, &[&str]); 6] = [
     (COLORS, &["chosen", "always", "never"]),
     (CHARGER, &["60", "30"]),
     (BACKEND, &["auto", "vulkan", "gl"]),
     (NETWORK, &["unmetered", "any"]),
     (LISTEN, &["shown", "app"]),
+    ("video_convert", &["auto", "keep", "off"]),
 ];
 const SHARED: &str = "config.toml";
 const OWN: &str = "settings.toml";

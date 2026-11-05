@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="convert_videos">Convertir los vídeos que el teléfono no reproduce con fluidez</string>
+    <string name="convert_auto">Convertirlos</string>
+    <string name="convert_keep">Convertir y conservar el original</string>
+    <string name="convert_now">Convertir para este teléfono</string>
+    <string name="convert_stop">Detener</string>
+    <string name="converting">Convirtiendo %1$s · %2$d %%</string>
+    <string name="converted_name">%1$s para este teléfono</string>
+    <string name="convert_note">Este teléfono no tiene un decodificador por hardware para este vídeo a su tamaño y velocidad, así que lo reproduce con el procesador y gasta más batería. Convertirlo crea una copia H.264 que el teléfono decodifica por hardware.</string>
+    <string name="convert_saver">El ahorro de energía está activado, así que los vídeos nuevos no se convirtieron. Sus páginas pueden convertirlos.</string>
+</resources>

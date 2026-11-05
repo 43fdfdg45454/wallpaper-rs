@@ -9,7 +9,7 @@ use wprs_format::Kind as PackKind;
 use wprs_library::{Item, Kind, Library, Meta, qhash};
 use wprs_render::{decode_image, image_size, palette, thumbnails};
 
-const MEDIA: &str = "media";
+pub(crate) const MEDIA: &str = "media";
 const THUMBS: &str = "thumbs";
 const EDGE: u32 = 512;
 const DARK_TEXT: i32 = 1;

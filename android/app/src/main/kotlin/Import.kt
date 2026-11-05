@@ -41,6 +41,7 @@ fun Adding(main: Main, modifier: Modifier) = Box(modifier) {
 @Composable
 fun Importing(main: Main) {
     val (left, total) = main.importing.intValue to main.imports.intValue
+    Conversions()
     if (left <= 0) return
     val bar = Modifier.fillMaxWidth().padding(16.dp, 8.dp)
     if (total <= 0) LinearProgressIndicator(bar) else {

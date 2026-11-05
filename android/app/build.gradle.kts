@@ -71,6 +71,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.icons)
     implementation(libs.media3.exoplayer)
+    implementation(libs.media3.transformer)
+    implementation(libs.media3.effect)
     implementation(libs.work.runtime)
     implementation(libs.webkit)
     testImplementation(libs.junit)
