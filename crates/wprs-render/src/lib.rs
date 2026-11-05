@@ -24,6 +24,7 @@ mod filled;
 pub mod hdr;
 #[cfg(target_os = "linux")]
 mod import;
+mod looked;
 mod lost;
 mod luma;
 mod packed;

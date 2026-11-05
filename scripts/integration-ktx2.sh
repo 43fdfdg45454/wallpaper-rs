@@ -7,6 +7,8 @@ ctl scene set "$packed/scene" /scene/canvas/size '[64, 32]'
 ctl scene set "$packed/scene" /scene/canvas/fit stretch
 ctl scene import "$packed/scene" "$ROOT/tests/fixtures/green-64x32.png" --id meadow >/dev/null
 ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --json | grep -q '"size":\[64,32\]' || fail "no KTX2 trial"
+ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --looks "$WORK/looks" --json | grep -q '"drawn":"plain"' ||
+  fail "the KTX2 crops do not say how they were drawn"
 [ "$(ctl scene asset "$packed/scene" meadow --ktx2)" = assets/green-64x32.ktx2 ] || fail "the picture did not become KTX2"
 ctl scene add-layer "$packed/scene" image --source meadow >/dev/null
 ctl scene normals "$packed/scene" meadow --generate --id meadow_normals >/dev/null || fail "no normal map of KTX2"

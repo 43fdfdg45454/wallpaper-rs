@@ -151,6 +151,12 @@ when the CPU needs them (pointer tests against its alpha, particles shaped by it
 KTX2 pictures takes about a quarter of the video memory of the same pictures in PNG. The 512 MiB that
 the pictures of a scene may take once decoded counts them as uncompressed, as on cards that get
 RGBA. Picture packages may use a `.ktx2` entry too; it is shown uncompressed.
+
+KTX2 files are made where scenes are made: Convert to KTX2 in the desktop editor and `wprs-ctl
+scene asset --ktx2`, with the Basis Universal encoder. The phone only reads them: it has no scene
+editor, and its app carries the transcoder written in Rust but not the C++ encoder, which would add
+a C++ toolchain to the phone build and several megabytes to the app for a tool it has no screen
+for. Packages made on the desktop play on the phone with the same files.
 ## Cost and frame rate
 
 The engine estimates what each frame of a scene costs before it draws it, without the GPU. A unit

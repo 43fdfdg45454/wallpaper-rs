@@ -90,9 +90,16 @@ fn tag(wanted: &AssetEdit, source: &Source) -> String {
     format!("{}-{codec}-{}", wanted.asset.replace(['/', '\\'], "_"), source.options.quality)
 }
 
-type Looks = (String, Vec<(Target, String)>);
+type Looks = (String, Vec<(Target, String, &'static str)>);
 
-fn looks(id: String, original: &RgbaImage, bytes: &[u8], cache: &Path) -> Result<Looks> {
+pub type Gpu<'a> = &'a dyn Fn(&[u8], Target) -> Option<RgbaImage>;
+
+fn looks(
+    id: String,
+    original: &RgbaImage,
+    bytes: &[u8],
+    (cache, gpu): (&Path, Option<Gpu>),
+) -> Result<Looks> {
     fs::create_dir_all(cache)?;
     let name = |what: &str| cache.join(format!("{id}-{what}.png"));
     let info = wprs_ktx2::info(bytes)?;
@@ -103,24 +110,35 @@ fn looks(id: String, original: &RgbaImage, bytes: &[u8], cache: &Path) -> Result
     crop(&fitted).save(name("source"))?;
     let mut made = Vec::new();
     for target in TARGETS {
-        let seen = wprs_ktx2::look(bytes, target)?;
+        let drawn = gpu.and_then(|g| g(bytes, target));
+        let by = match (drawn.is_some(), target.compressed()) {
+            (true, _) => "gpu",
+            (_, true) => "cpu",
+            _ => "plain",
+        };
+        let seen = drawn.map_or_else(|| wprs_ktx2::look(bytes, target), Ok)?;
         let first = image::imageops::crop_imm(&seen, 0, 0, info.width, info.height).to_image();
         crop(&first).save(name(target.name()))?;
-        made.push((target, name(target.name()).to_string_lossy().into_owned()));
+        made.push((target, name(target.name()).to_string_lossy().into_owned(), by));
     }
     Ok((name("source").to_string_lossy().into_owned(), made))
 }
 
-pub fn trial(dir: &Path, doc: &Value, wanted: &AssetEdit, cache: Option<&Path>) -> Result<Value> {
+pub fn trial(
+    dir: &Path,
+    doc: &Value,
+    wanted: &AssetEdit,
+    cache: Option<(&Path, Option<Gpu>)>,
+) -> Result<Value> {
     let source = source(dir, doc, wanted)?;
     let bytes = encoded(&source)?;
     let info = wprs_ktx2::info(&bytes)?;
     let (original, shown) =
         cache.map(|c| looks(tag(wanted, &source), &source.image, &bytes, c)).transpose()?.unzip();
-    let look = |t: Target| shown.iter().flatten().find(|(s, _)| *s == t).map(|(_, p)| p.clone());
+    let look = |t: Target| shown.iter().flatten().find(|(s, ..)| *s == t).map(|(_, p, by)| (p.clone(), *by));
     let classes = TARGETS.map(|t| {
         json!({ "target": t.name(), "class": t.class(), "gpu": wprs_ktx2::gpu_bytes(&info, t, source.options.mips),
-            "look": look(t) })
+            "look": look(t).map(|l| l.0), "drawn": look(t).map(|l| l.1) })
     });
     let (w, h) = source.image.dimensions();
     Ok(json!({

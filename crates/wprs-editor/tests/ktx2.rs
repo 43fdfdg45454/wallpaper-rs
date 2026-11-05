@@ -54,7 +54,16 @@ fn the_trial_reports_both_sizes_and_what_each_class_of_card_gets() {
     let root = tempfile::tempdir().unwrap();
     let p = project(&root);
     let looks = root.path().join("looks");
-    let report = packing::trial(&p.dir, &p.doc, &wanted(Some("etc1s"), Some(40)), Some(&looks)).unwrap();
+    let red = |_: &[u8], t: wprs_ktx2::Target| {
+        (t == wprs_ktx2::Target::Bc7).then(|| RgbaImage::from_pixel(70, 30, Rgba([255, 0, 0, 255])))
+    };
+    let gpu: packing::Gpu = &red;
+    let report =
+        packing::trial(&p.dir, &p.doc, &wanted(Some("etc1s"), Some(40)), Some((&looks, Some(gpu)))).unwrap();
+    let drawn: Vec<_> = report["classes"].as_array().unwrap().iter().map(|c| c["drawn"].clone()).collect();
+    assert_eq!(drawn, [json!("gpu"), json!("cpu"), json!("cpu"), json!("plain")]);
+    let bc7 = image::open(report["classes"][0]["look"].as_str().unwrap()).unwrap().into_rgba8();
+    assert_eq!(bc7.get_pixel(5, 5).0, [255, 0, 0, 255], "the crop of the card is the one the card drew");
     assert_eq!(report["source"], json!([70, 30]));
     assert_eq!((report["size"].clone(), report.get("resized")), (json!([70, 30]), None));
     assert_eq!((report["codec"].as_str(), report["quality"].as_u64()), (Some("etc1s"), Some(40)));

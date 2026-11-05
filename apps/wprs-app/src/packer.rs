@@ -43,7 +43,9 @@ fn weighed(folder: PathBuf, args: Value) -> anyhow::Result<Value> {
     }))?;
     let doc = json!({ "scene": { "assets": { wanted.asset.clone(): args["entry"] } } });
     let cache = dirs::cache_dir().unwrap_or_else(std::env::temp_dir).join("wallpaper-rs").join("ktx2");
-    wprs_editor::packing::trial(&folder, &doc, &wanted, Some(&cache))
+    let renderer = wprs_render::Renderer::shared().ok();
+    let gpu = |bytes: &[u8], target| renderer.and_then(|r| r.look_ktx2(bytes, target));
+    wprs_editor::packing::trial(&folder, &doc, &wanted, Some((&cache, Some(&gpu))))
 }
 
 impl Packer {

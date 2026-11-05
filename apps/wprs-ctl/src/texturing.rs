@@ -99,8 +99,13 @@ fn shown(dir: &std::path::Path, doc: &Value, id: &str) -> Result<Value> {
 
 fn told(v: &Value) -> String {
     let classes = v["classes"].as_array().into_iter().flatten().map(|c| {
+        let by = match c["drawn"].as_str() {
+            Some("gpu") => " (crop drawn by this card)",
+            Some("cpu") => " (crop decoded on the processor)",
+            _ => "",
+        };
         format!(
-            "{} {} {}",
+            "{} {} {}{by}",
             c["class"].as_str().unwrap_or("?"),
             c["target"].as_str().unwrap_or("?"),
             bytes(c["gpu"].as_u64().unwrap_or(0))
@@ -163,7 +168,14 @@ pub fn run(command: Texturing) -> Result<()> {
         (true, false) => return crate::steps::edit(&dir, Action::Asset(wanted)),
         (true, true) => {
             let project = Project::open(&dir)?;
-            packing::trial(&project.dir, &project.doc, &wanted, looks.as_deref())?
+            let renderer = looks.as_ref().and_then(|_| wprs_render::Renderer::shared().ok());
+            let gpu = |bytes: &[u8], target| renderer.and_then(|r| r.look_ktx2(bytes, target));
+            packing::trial(
+                &project.dir,
+                &project.doc,
+                &wanted,
+                looks.as_deref().map(|l| (l, Some(&gpu as packing::Gpu))),
+            )?
         }
         _ => shown(&dir, &Project::open(&dir)?.doc, &asset)?,
     };

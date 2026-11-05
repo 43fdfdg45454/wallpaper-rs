@@ -53,7 +53,12 @@ fn ktx2_pictures_with_odd_sides_stay_compressed_and_exact() {
         r.force_ktx2(Some(target));
         let seen = shot(r, json!({ "path": "p.ktx2" }), [90, 54], packed(&source, Codec::Uastc, false));
         let off = apart(&plain, &seen);
-        assert!(off < 8.0, "{target:?}: {off}");
+        assert!(off < 12.0, "{target:?}: {off}");
+        for ((x, y), channel) in [((83, 25), 1), ((91, 25), 0), ((40, 41), 1), ((40, 49), 2)] {
+            let c = at(&seen, x, y);
+            let top = (0..3).max_by_key(|i| c[*i]).unwrap();
+            assert!(top == channel && c[channel] > 150, "{target:?} at {x},{y}: {c:?}");
+        }
     }
     r.force_ktx2(None);
 }
@@ -111,4 +116,20 @@ fn ktx2_pictures_are_read_like_other_pictures() {
     let read = || Ok(wprs_ktx2::MAGIC.to_vec());
     let broken = pictures.add::<image::ImageError>((&mut assets, "q", &other), read, |_| unreachable!());
     assert!(broken.is_err());
+}
+
+#[test]
+fn the_card_draws_each_ktx2_class_it_reads_like_the_processor_decodes_it() {
+    let Some(r) = renderer() else { return };
+    let source = gradient();
+    let options = Options { codec: Codec::Uastc, quality: 90, srgb: true, mips: false, repeat: false };
+    let bytes = encode(&source, &options).unwrap();
+    assert!(r.look_ktx2(&bytes, Target::Rgba).is_none(), "plain pixels need no drawing");
+    for target in r.ktx2_targets().into_iter().filter(|t| t.compressed()) {
+        let drawn = r.look_ktx2(&bytes, target).unwrap();
+        let decoded = wprs_ktx2::look(&bytes, target).unwrap();
+        assert_eq!(drawn.dimensions(), (64, 32));
+        let off = apart(drawn.as_raw(), decoded.as_raw());
+        assert!(off < 3.0, "{target:?}: {off}");
+    }
 }

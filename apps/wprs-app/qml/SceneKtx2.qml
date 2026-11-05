@@ -147,7 +147,10 @@ Kirigami.Dialog {
 
                     source: modelData.look ?? ""
                     label: dialog.classes[modelData.target] ?? modelData.target
-                    detail: App.tr("%1 on the card", App.bytes(modelData.gpu))
+                    detail: [App.tr("%1 on the card", App.bytes(modelData.gpu)), ({
+                                "gpu": App.tr("drawn by this graphics card"),
+                                "cpu": App.tr("decoded on the processor: this card does not read it")
+                            })[modelData.drawn] ?? ""].filter(t => t).join("\n")
                 }
             }
         }

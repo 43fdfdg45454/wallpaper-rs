@@ -2056,7 +2056,11 @@ otra página no cierra un editor con cambios sin guardar.
   ganan rango en lienzos `hdr`; arreglos de cuadros, que se ven como hojas de sprites y se animan
   con `animated`; y mapas cúbicos, que se ven como panoramas equirectangulares. El panel de
   recursos indica en cada KTX2 si es HDR, cuántos cuadros tiene o si es un cubo, y `wprs-ctl scene
-  asset` lo dice igual.
+  asset` lo dice igual. Los recortes de cada clase de tarjeta los dibuja la propia tarjeta gráfica
+  cuando lee ese formato y el procesador los decodifica cuando no, y cada recorte dice cuál fue. El
+  teléfono no convierte a KTX2: no tiene editor de escenas y solo lleva el transcodificador en Rust,
+  no el codificador en C++ de Basis Universal; los paquetes hechos en el escritorio se ven igual en
+  él.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
   argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la

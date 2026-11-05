@@ -131,13 +131,22 @@ impl Renderer {
             if info.hdr { wprs_ktx2::levels(bytes, Target::Half, edge, mipped) } else { Err(e) }
         });
         let made = made.ok().filter(|m| m.target.compressed() || info.hdr)?;
+        let (w, h) = info.picture(0);
+        let image = Arc::new((self.packed_image(&made, linear), [w as f32, h as f32]));
+        self.keep(pixels, [linear, mipped], &image);
+        Some(image)
+    }
+}
+
+impl Renderer {
+    pub(crate) fn packed_image(&self, made: &wprs_ktx2::Levels, linear: bool) -> crate::GpuImage {
         let descriptor = wgpu::TextureDescriptor {
             label: Some("wprs-render ktx2"),
             size: wgpu::Extent3d { width: made.padded.0, height: made.padded.1, depth_or_array_layers: 1 },
             mip_level_count: made.count,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: format(target, linear),
+            format: format(made.target, linear),
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         };
@@ -148,9 +157,6 @@ impl Renderer {
             &made.data,
         );
         let crop = [made.width as f32 / made.padded.0 as f32, made.height as f32 / made.padded.1 as f32];
-        let (w, h) = info.picture(0);
-        let image = Arc::new((cropped(texture, crop), [w as f32, h as f32]));
-        self.keep(pixels, [linear, mipped], &image);
-        Some(image)
+        cropped(texture, crop)
     }
 }

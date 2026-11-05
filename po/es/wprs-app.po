@@ -3701,6 +3701,14 @@ msgstr "La imagen ahora"
 msgid "%1 on the card"
 msgstr "%1 en la tarjeta"
 
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "drawn by this graphics card"
+msgstr "dibujado por esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "decoded on the processor: this card does not read it"
+msgstr "decodificado en el procesador: esta tarjeta no lo lee"
+
 #: apps/wprs-app/qml/SceneLayerLook.qml
 msgid "Blend mode:"
 msgstr "Modo de fusión:"
