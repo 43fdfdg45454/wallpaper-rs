@@ -4,6 +4,7 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.NetworkType
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import org.json.JSONArray
@@ -43,13 +44,29 @@ class MirrorsTest {
     }
 
     @Test
+    fun foldersOfACloudWaitForAnUnmeteredNetworkInTheBackground() {
+        val (phone, far) = plan("image") to plan("image", at = cloud)
+        assertEquals("mobile data copies only the folders of the phone", listOf(phone), Mirrors.now(listOf(phone, far), unmetered = false))
+        assertEquals(listOf(phone, far), Mirrors.now(listOf(phone, far), unmetered = true))
+        val work = WorkManager.getInstance(context)
+        work.enqueueUniqueWork(TEST, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.waiting()).result.get()
+        val info = work.getWorkInfosForUniqueWork(TEST).get().single()
+        assertEquals(NetworkType.UNMETERED, info.constraints.requiredNetworkType)
+        assertTrue(info.constraints.requiresBatteryNotLow())
+        work.cancelUniqueWork(TEST).result.get()
+    }
+
+    @Test
     fun withoutChosenFoldersNothingWaitsForChanges() {
         storage()
         val work = WorkManager.getInstance(context)
         val triggers = listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         work.enqueueUniqueWork(Mirrors.WORK, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.request(triggers)).result.get()
+        work.enqueueUniqueWork(Mirrors.CLOUD, androidx.work.ExistingWorkPolicy.REPLACE, Mirrors.waiting()).result.get()
         Mirrors.watch(context)
-        assertTrue(waitFor { work.getWorkInfosForUniqueWork(Mirrors.WORK).get().all { it.state == WorkInfo.State.CANCELLED } })
+        listOf(Mirrors.WORK, Mirrors.CLOUD).forEach { name ->
+            assertTrue(waitFor { work.getWorkInfosForUniqueWork(name).get().all { it.state == WorkInfo.State.CANCELLED } })
+        }
         assertFalse(context.remirror())
     }
 

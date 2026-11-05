@@ -1,29 +1,40 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
 
 class Remirror(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
-        runCatching { applicationContext.remirror() }
-        Mirrors.watch(applicationContext, ExistingWorkPolicy.APPEND_OR_REPLACE)
+        val context = applicationContext
+        val kept = runCatching { Mirrors.kept(context, Mirrors.plans()) }.getOrDefault(emptyList())
+        val waiting = inputData.getBoolean(Mirrors.WAITING, false)
+        val free = waiting || Mirrors.unmetered(context)
+        runCatching { context.remirror(if (waiting) kept.filterNot(Mirrors::local) else Mirrors.now(kept, free)) }
+        if (!free && kept.any { !Mirrors.local(it) }) Mirrors.later(context)
+        if (!waiting) Mirrors.watch(context, ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
     }
 }
 
 object Mirrors {
     const val WORK = "mirror"
+    const val CLOUD = "mirror-cloud"
+    const val WAITING = "waiting"
     private const val SETTLE_S = 10L
     private const val LONGEST_S = 120L
     private val LOCAL = setOf("com.android.externalstorage.documents", "com.android.providers.media.documents")
@@ -38,9 +49,17 @@ object Mirrors {
         return plans.filter { it.getString("tree") in kept }
     }
 
+    fun local(plan: JSONObject) = Uri.parse(plan.getString("tree")).authority in LOCAL
+
+    fun now(plans: List<JSONObject>, unmetered: Boolean) = plans.filter { unmetered || local(it) }
+
+    fun unmetered(context: Context) = context.getSystemService(ConnectivityManager::class.java)?.run {
+        getNetworkCapabilities(activeNetwork)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    } == true
+
     fun triggers(plans: List<JSONObject>): List<Uri> {
         val trees = plans.map { Uri.parse(it.getString("tree")) }.distinct()
-        val local = plans.filter { Uri.parse(it.getString("tree")).authority in LOCAL }
+        val local = plans.filter(::local)
         val kinds = local.flatMap { it.getJSONArray("accept").strings() }.toSet()
         val shared = listOfNotNull(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI.takeIf { "image" in kinds },
@@ -57,15 +76,22 @@ object Mirrors {
         return OneTimeWorkRequest.Builder(Remirror::class.java).setConstraints(constraints.build()).build()
     }
 
+    fun waiting(): OneTimeWorkRequest {
+        val constraints = Constraints.Builder().setRequiresBatteryNotLow(true).setRequiredNetworkType(NetworkType.UNMETERED).build()
+        return OneTimeWorkRequest.Builder(Remirror::class.java).setConstraints(constraints).setInputData(workDataOf(WAITING to true)).build()
+    }
+
+    fun later(context: Context) = WorkManager.getInstance(context).enqueueUniqueWork(CLOUD, ExistingWorkPolicy.KEEP, waiting())
+
     fun watch(context: Context, policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE) {
         val triggers = triggers(kept(context, plans()))
         val work = WorkManager.getInstance(context)
-        if (triggers.isEmpty()) work.cancelUniqueWork(WORK) else work.enqueueUniqueWork(WORK, policy, request(triggers))
+        if (triggers.isEmpty()) listOf(WORK, CLOUD).forEach(work::cancelUniqueWork) else work.enqueueUniqueWork(WORK, policy, request(triggers))
     }
 }
 
-fun Context.remirror(): Boolean {
-    val changed = Mirrors.kept(this, Mirrors.plans()).count { plan -> runCatching { mirror(Uri.parse(plan.getString("tree")), plan) }.getOrDefault(false) }
+fun Context.remirror(plans: List<JSONObject> = Mirrors.kept(this, Mirrors.plans())): Boolean {
+    val changed = plans.count { plan -> runCatching { mirror(Uri.parse(plan.getString("tree")), plan) }.getOrDefault(false) }
     if (changed > 0) {
         Native.library(JSONObject().put("op", "mirrored").toString())
         Render.post { Wallpaper.reload(false) }
