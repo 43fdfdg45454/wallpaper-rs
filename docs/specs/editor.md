@@ -619,7 +619,9 @@ media player. The document of a preview may carry `preview: { quality, restart, 
 daemon reads only for previews; `media` is refused, naming the field, when a value is out of
 range, and never reads the media players or needs the `media` grant.
 
-The canvas draws the outline of each layer with handles to turn and scale the selected one, and
+The canvas draws the outline of each layer with handles to turn, scale, tilt in depth
+(`transform.tilt`, a round handle on the left edge: up and down tilt around the width, sideways
+around the height) and lift (`transform.z`, a diamond below) the selected one, and
 guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. *Screens* previews the scene spread over
 several screens: two or three side by side, two stacked, or the user's own layout as the daemon
 reports it (`GetState().outputs[x].mm`). It frames the part of the canvas that each screen shows
@@ -632,7 +634,10 @@ size (at most 64). `wprs-ctl scene preview DIR --layout dual|triple|vertical|min
 [--time S]` writes the same view as a picture, without a desktop: the scene at its poster time, or
 at second `S` of the scene clock when `--time` is 0 or more (as the editor shows the moment its
 preview is at), each screen's part at its physical place and the frames between them. Dragging a layer that is not locked
-selects it and moves it, as one gesture. A drag that starts outside the layers, or any drag with
+selects it and moves it, as one gesture. The handles write with the `layer` action, as
+`wprs-ctl scene layer DIR LAYER transform` does; a value with keyframes takes a keyframe at the
+playhead instead, and *Write over keyframes* in the canvas toolbar makes them write a fixed value
+over keyframes and links (`replace`). A drag that starts outside the layers, or any drag with
 Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
 layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or
 right button pans.

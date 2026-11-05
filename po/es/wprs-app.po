@@ -3487,6 +3487,22 @@ msgstr "Vídeos"
 msgid "Hide"
 msgstr "Ocultar"
 
+#: apps/wprs-app/qml/SceneGizmoKnobs.qml
+msgid ""
+"Tilt %1°, %2°: drag up or down to tilt around the width, sideways around the "
+"height"
+msgstr ""
+"Inclinación %1°, %2°: arrastra arriba o abajo para inclinar alrededor del "
+"ancho, de lado alrededor del alto"
+
+#: apps/wprs-app/qml/SceneGizmoKnobs.qml
+msgid ""
+"Depth %1 px: drag up to bring the layer towards the viewer, down to push it "
+"back"
+msgstr ""
+"Profundidad %1 px: arrastra hacia arriba para acercar la capa a quien mira, "
+"hacia abajo para alejarla"
+
 #: apps/wprs-app/qml/SceneGradientBar.qml
 msgid "Remove the stop"
 msgstr "Quitar la parada"
@@ -4633,6 +4649,23 @@ msgstr "Título de la parte"
 #: apps/wprs-app/qml/SceneOfferPart.qml
 msgid "Thumbnail…"
 msgstr "Miniatura…"
+
+#: apps/wprs-app/qml/SceneOverwrite.qml
+msgid "Write over keyframes"
+msgstr "Escribir sobre las claves"
+
+#: apps/wprs-app/qml/SceneOverwrite.qml
+msgid "Handles on the canvas write a fixed value over keyframes and links"
+msgstr ""
+"Las asas del lienzo escriben un valor fijo encima de las claves y los enlaces"
+
+#: apps/wprs-app/qml/SceneOverwrite.qml
+msgid ""
+"Handles on the canvas add a keyframe at the playhead to animated values and "
+"leave linked values alone"
+msgstr ""
+"Las asas del lienzo añaden una clave en el cabezal a los valores animados y "
+"no tocan los valores enlazados"
 
 #: apps/wprs-app/qml/ScenePage.qml
 msgid "Scene: %1"

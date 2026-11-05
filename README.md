@@ -1959,7 +1959,11 @@ otra página no cierra un editor con cambios sin guardar.
 - **Lienzo**: la vista previa la dibuja el propio daemon en una salida virtual que llega por
   PipeWire, como el fondo de Plasma, así que necesita el módulo QML de KPipeWire. Ctrl y la rueda
   amplían, la rueda o un arrastre con el botón central o el derecho desplazan. Una capa sin
-  bloquear se arrastra directamente, y la elegida gira y escala con sus asas; un arrastre que
+  bloquear se arrastra directamente, y la elegida gira, escala, se inclina en profundidad (asa
+  redonda del borde izquierdo, `transform.tilt`) y se acerca o aleja (rombo de abajo,
+  `transform.z`) con sus asas, que escriben con la acción `layer` como `wprs-ctl scene layer`; en
+  un valor animado ponen una clave en el cabezal, y con *Escribir sobre las claves* de la barra
+  dejan un valor fijo encima de las claves o enlaces (`--replace`); un arrastre que
   empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas
   que toca, como Ctrl en la lista, listas para agruparlas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
   4:3, 16:10 y 9:16. *Pantallas* muestra la escena extendida sobre dos o tres pantallas en fila,

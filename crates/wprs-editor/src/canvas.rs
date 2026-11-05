@@ -15,6 +15,8 @@ pub struct Gizmo {
     pub size: [f64; 2],
     pub rotation: f64,
     pub scale: [f64; 2],
+    pub tilt: [f64; 2],
+    pub z: f64,
     pub locked: bool,
     pub kind: String,
 }
@@ -101,6 +103,8 @@ pub fn gizmos(dir: &Path, doc: &Value, t: f64) -> Vec<Gizmo> {
                 size: size(dir, doc, layer, canvas, t),
                 rotation: value_at(&transform["rotation"], t).as_f64().unwrap_or(0.0),
                 scale: pair(&value_at(&transform["scale"], t), [1.0; 2]),
+                tilt: pair(&value_at(&transform["tilt"], t), [0.0; 2]),
+                z: value_at(&transform["z"], t).as_f64().unwrap_or(0.0),
                 id,
                 pointer,
                 offset,

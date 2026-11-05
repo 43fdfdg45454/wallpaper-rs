@@ -97,6 +97,10 @@ ColumnLayout {
                 model: canvas.aspects.map(aspect => aspect || App.tr("No guide"))
             }
 
+            SceneOverwrite {
+                page: canvas.page
+            }
+
             SceneSpanPick {
                 id: spans
 
