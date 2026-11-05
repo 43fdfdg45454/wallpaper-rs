@@ -1005,7 +1005,8 @@ en el ordenador. Una vez al día, con las mismas reglas de red y batería que la
 cada hora (al cambiar *Sincronizar también con datos móviles* cambia también la comprobación que
 espera), solo si hay repositorios y mientras *Buscar actualizaciones en los repositorios cada día*
 (`repos.auto_refresh`, activado de serie como en el escritorio, en los ajustes del teléfono) siga
-activado (también cuando se cambia en el ordenador y llega por la sincronización), el teléfono actualiza sus índices como el escritorio: la
+activado (también cuando se cambia en el ordenador y llega por la sincronización, sea la de cada hora,
+*Sincronizar ahora*, una restauración o un emparejamiento), el teléfono actualiza sus índices como el escritorio: la
 pestaña muestra un aviso con cuántos paquetes tienen versión nueva, *Actualizaciones* los lista con
 *Actualizar* (la versión nueva ocupa el lugar de la vieja, con sus listas y ajustes) y *Buscar
 actualizaciones* lo hace al momento.
