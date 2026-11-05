@@ -198,8 +198,9 @@ up to four times, and every raise that holds for 30 seconds halves them again. T
 above the one that the tier, the cost, the power source and the temperature allow, and never rises on battery,
 with power saving or while the GPU or CPU is warm (on phones, only while charging and cool). The
 budget of a level is half of its frame interval on mains power and a quarter on battery, with power
-saving and on phones; since a lower level may also draw fewer frames a second, its budget is larger,
-and comparing the cost measured at the level above keeps a scene from bouncing between two levels.
+saving and on phones. A lower level draws fewer pixels and effects but keeps the frame rate, which
+only the tier, the power source, the temperature and the user set, and comparing the cost measured
+at the level above keeps a scene from bouncing between two levels.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
 which all do, with timestamps or by waiting (see below). `GetState().outputs[x].quality` and
 `quality_reason` tell the level and why it is below the highest; the app, the tray and the phone

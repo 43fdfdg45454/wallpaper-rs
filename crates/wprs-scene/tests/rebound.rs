@@ -37,9 +37,9 @@ fn scaled(q: Quality) -> f32 {
 }
 
 #[test]
-fn a_lower_level_that_also_lowers_the_frame_rate_does_not_bounce_back() {
+fn lower_levels_keep_the_frame_rate_and_do_not_bounce_back() {
     let flat = levels(144, |_| 1.0, |_, _| 3.8, 120.0);
-    assert_eq!(path(&flat), [Quality::Q3, Quality::Q2], "{flat:?}");
+    assert_eq!(path(&flat), [Quality::Q3, Quality::Q2, Quality::Q1, Quality::Q0], "{flat:?}");
     let shrunk = levels(60, scaled, |q, _| scaled(q), 120.0);
     assert_eq!(shrunk.last().map(|s| s.1), Some(Quality::Q1), "{shrunk:?}");
     assert!(shrunk.windows(2).all(|w| w[1].1 < w[0].1), "the level went back up: {shrunk:?}");

@@ -77,7 +77,7 @@ impl Budget {
             fps => fps,
         };
         let rate = self.rate(refresh, Some(runtime.cost(quality)));
-        rate.min(clock).min(quality.max_fps()).min(runtime.pace()).max(1)
+        rate.min(clock).min(runtime.pace()).max(1)
     }
 }
 
@@ -149,7 +149,7 @@ mod tests {
             Runtime::new(Arc::new(scene), Default::default())
         };
         let fps = |max_fps, quality| power.fps(&clocked(max_fps), quality, 120);
-        assert_eq!([fps(0, Quality::Q3), fps(24, Quality::Q3), fps(0, Quality::Q2)], [120, 24, 60]);
+        assert_eq!([fps(0, Quality::Q3), fps(24, Quality::Q3), fps(0, Quality::Q0)], [120, 24, 120]);
     }
 
     #[test]
