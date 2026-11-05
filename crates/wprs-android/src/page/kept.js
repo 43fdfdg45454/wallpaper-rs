@@ -1,4 +1,31 @@
 (allowed, post) => {
+  const mark = Symbol.for("wprs.kept");
+  if (window[mark]) return;
+  window[mark] = true;
+  let pending = false;
+  const later = typeof setTimeout === "function" ? setTimeout : (run) => run();
+  const wrote = () => {
+    if (pending) return;
+    pending = true;
+    later(() => {
+      pending = false;
+      post({ wrote: true });
+    }, 2000);
+  };
+  const watch = (made, names) => {
+    if (typeof made !== "function") return;
+    for (const name of names) {
+      const real = made.prototype[name];
+      if (typeof real !== "function") continue;
+      made.prototype[name] = function (...args) {
+        wrote();
+        return real.apply(this, args);
+      };
+    }
+  };
+  watch(window.IDBObjectStore, ["put", "add"]);
+  watch(window.IDBCursor, ["update"]);
+  watch(window.Cache, ["put", "add", "addAll"]);
   let store = null;
   try {
     store = window.localStorage;
@@ -34,4 +61,24 @@
     if (this === store) total = 0;
     return clear.call(this);
   };
+  const own = new Set(Object.getOwnPropertyNames(proto));
+  const named = (key) => typeof key === "string" && !own.has(key);
+  const shown = new Proxy(store, {
+    get: (target, key) => {
+      const value = Reflect.get(target, key, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+    set: (target, key, value) => {
+      if (!named(key)) return Reflect.set(target, key, value, target);
+      target.setItem(key, value);
+      return true;
+    },
+    deleteProperty: (target, key) => {
+      if (named(key)) target.removeItem(key);
+      return true;
+    },
+  });
+  try {
+    Object.defineProperty(window, "localStorage", { get: () => shown, configurable: true, enumerable: true });
+  } catch (e) {}
 }

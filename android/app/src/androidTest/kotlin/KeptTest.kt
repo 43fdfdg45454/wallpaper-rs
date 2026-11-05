@@ -72,11 +72,12 @@ class KeptTest {
         val first = until("the page tries to keep data") { it.has("big") && it.has("stored") }
         assertEquals("kept", first.getString("small"))
         assertEquals("QuotaExceededError", first.getString("big"))
+        assertEquals("QuotaExceededError", first.getString("named"))
         assertEquals(true, first.get("stored"))
-        assertTrue(!full() && !first.getString("origin").endsWith(".e.wpak.invalid"))
-        instrumentation.runOnMainSync { pages.drop(painter) }
-        Render.call { painter.refresh() }
-        val passing = until("a page over its cap starts without its data") { it.optString("origin").endsWith(".e.wpak.invalid") }
+        assertTrue(!first.getString("origin").endsWith(".e.wpak.invalid"))
+        val passing = until("a page that grows past its cap while it runs starts again without its data") {
+            it.optString("origin").endsWith(".e.wpak.invalid")
+        }
         assertEquals("kept", passing.getString("small"))
         assertTrue(full())
         runBlocking { ask("clear_data", "uid" to uid) }
@@ -95,6 +96,7 @@ const probe = (window.probe = { origin: location.origin });
 const keep = (name, value) => { try { localStorage.setItem(name, value); probe[name] = "kept"; } catch (e) { probe[name] = e.name; } };
 keep("small", "s");
 keep("big", "x".repeat(600000));
+try { localStorage.named = "x".repeat(600000); probe.named = "kept"; } catch (e) { probe.named = e.name; }
 const data = new Uint8Array(3 << 20);
 for (let i = 0; i < data.length; i += 65536) crypto.getRandomValues(data.subarray(i, i + 65536));
 const open = indexedDB.open("kept", 1);

@@ -1480,8 +1480,10 @@ usa (zona horaria, idioma, modelo del chip gráfico y datos que guarda en el tel
 *Privacidad* tiene un interruptor para cada cosa, otro para la red si la declara y *Borrar datos*;
 el mismo aviso sale al importarla. El límite de lo que guarda es el del escritorio: el teléfono lo
 mide cada vez que la página arranca (lo que cuenta el WebView para su origen más su
-`localStorage`) y, mientras corre, rechaza con `QuotaExceededError` lo que `localStorage.setItem`
-quiera guardar de más; si al arrancar ya pasa del límite, la página corre sin guardar nada y su
+`localStorage`) y, mientras corre, rechaza con `QuotaExceededError` lo que `localStorage` quiera
+guardar de más (con `setItem` o como propiedad, en la página y en sus marcos); tras escribir en
+IndexedDB o Cache Storage, y al dejar de verse, mide el origen de nuevo, y si pasa del límite la
+página arranca otra vez sin guardar nada. Si al arrancar ya pasa del límite, la página corre sin guardar nada y su
 sección *Privacidad* lo avisa hasta *Borrar datos*. Ocultar la zona horaria y el idioma lo hace un script que corre
 antes que los de la página (en ella y sus marcos, no en sus workers). *Reaccionar al tacto* le da
 el puntero y *Reaccionar a los toques* los clics, solo desde toques reales y solo en la pantalla de

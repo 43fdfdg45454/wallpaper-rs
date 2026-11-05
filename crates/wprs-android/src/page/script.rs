@@ -33,6 +33,10 @@ pub(super) fn source(view: &mut View) -> String {
     parts.into_iter().flatten().collect::<Vec<_>>().join("\n")
 }
 
+pub(super) fn started(view: &View) -> String {
+    [Some(guard(view)), super::kept::script(view, POST)].into_iter().flatten().collect::<Vec<_>>().join("\n")
+}
+
 pub(super) fn guard(view: &View) -> String {
     let p = view.privacy;
     guarded(

@@ -20,6 +20,8 @@ class Storage {
   clear() { this.m.clear(); }
 }
 globalThis.window = globalThis;
+globalThis.setTimeout = (run) => run();
+globalThis.IDBObjectStore = class { put(v) { return `put ${v}`; } };
 globalThis.localStorage = new Storage();
 localStorage.setItem("old", "ab");
 globalThis.posted = [];
@@ -35,6 +37,11 @@ const PROBE: &str = r#"[
   tried(() => localStorage.setItem("b", "y".repeat(10))),
   tried(() => new Storage().setItem("z", "z".repeat(500))),
   tried(() => { localStorage.clear(); localStorage.setItem("c", "c".repeat(30)); }),
+  tried(() => { localStorage.d = "dd"; }),
+  tried(() => { delete localStorage.c; localStorage.e = "ee"; }),
+  String(localStorage.getItem("e")),
+  new IDBObjectStore().put(1),
+  posted.join(),
 ].join(" ")"#;
 
 #[test]
@@ -42,8 +49,10 @@ fn writes_past_the_cap_are_refused() {
     let runtime = Runtime::new().unwrap();
     let context = Context::full(&runtime).unwrap();
     let capped = kept::capped(64, "(m) => posted.push(JSON.stringify(m))");
-    let seen = context.with(|ctx| ctx.eval::<String, _>(format!("{FAKE}\n{capped}\n{PROBE}")).unwrap());
-    assert_eq!(seen, r#"{"kept":10} ok QuotaExceededError null ok ok ok ok"#);
+    let seen =
+        context.with(|ctx| ctx.eval::<String, _>(format!("{FAKE}\n{capped}\n{capped}\n{PROBE}")).unwrap());
+    let refused = r#"{"kept":10} ok QuotaExceededError null ok ok ok ok QuotaExceededError ok ee put 1"#;
+    assert_eq!(seen, format!(r#"{refused} {{"kept":10}},{{"wrote":true}}"#));
 }
 
 fn installed() -> (String, PathBuf) {
@@ -72,6 +81,7 @@ pub(super) fn pages_keep_no_more_than_they_declared() {
     let allowed = wprs_format::kept_allowance(4);
     assert_eq!((spec["storage"].clone(), full()), (json!(true), json!(false)));
     assert!(api(&spec).contains("QuotaExceededError") && api(&spec).contains(&format!("({allowed}, ")));
+    assert!(spec["guard"].as_str().unwrap().contains("QuotaExceededError"), "frames are not held to the cap");
     for ignored in [r#"{"kept":"lots"}"#, r#"{"used":-1}"#, r#"{"kept":4096}"#] {
         assert!(script::heard(HANDLE, ignored).is_none());
         assert_eq!(page::spec(HANDLE, &uid, &path, false).unwrap()["key"], spec["key"], "{ignored}");
@@ -82,6 +92,7 @@ pub(super) fn pages_keep_no_more_than_they_declared() {
     assert!(
         over["origin"].as_str().unwrap().ends_with(".e.wpak.invalid")
             && !api(&over).contains("QuotaExceeded")
+            && !over["guard"].as_str().unwrap().contains("QuotaExceeded")
     );
     assert_eq!(ask(json!({ "op": "clear_data", "uid": uid })), Value::Null);
     assert!(ask(json!({ "op": "cleared" })).as_array().unwrap().contains(&spec["origin"]));

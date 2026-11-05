@@ -131,7 +131,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
         "background": web.background, "network": privacy.network, "storage": privacy.storage,
         "fps": fps(&pack, preview), "audio": audio && granted[0] && view.audio,
         "pointer": pointer && granted[1], "clicks": clicks && granted[2], "tell": tell,
-        "guard": script::guard(view),
+        "guard": script::started(view),
     }))
 }
 

@@ -73,7 +73,7 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         presentation.show()
         follow(spec)
         val url = spec.getString("url")
-        if (storage) WebStorage.getInstance().getUsageForOrigin(origin) { used -> told("{\"used\": ${used ?: 0}}") }
+        measure()
         web.post { web.loadUrl(url) }
     }
 
@@ -81,7 +81,15 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
 
     fun tell(script: String) = web.evaluateJavascript(script, null)
 
-    fun visible(on: Boolean) = if (on) web.onResume() else web.onPause()
+    fun visible(on: Boolean) {
+        if (on) return web.onResume()
+        web.onPause()
+        measure()
+    }
+
+    private fun measure() {
+        if (storage) WebStorage.getInstance().getUsageForOrigin(origin) { used -> told("{\"used\": ${used ?: 0}}") }
+    }
 
     fun resize(width: Int, height: Int) = display.resize(width, height, dpi)
 
@@ -115,6 +123,7 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         if (message.startsWith(OPEN)) Shortcuts.each(Native.opened(handle)) { Shortcuts.open(context, it) }
         if (message.startsWith(AUDIO) || message.startsWith(MEDIA)) heard()
         if (message.startsWith(KEPT) || message.startsWith(USED)) measured()
+        if (message.startsWith(WROTE)) web.post(::measure)
         reply ?: return
         web.post { web.evaluateJavascript(reply, null) }
     }
@@ -132,6 +141,7 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
         private const val MEDIA = "{\"media\""
         private const val KEPT = "{\"kept\""
         private const val USED = "{\"used\""
+        private const val WROTE = "{\"wrote\""
 
         fun answer(text: String): WebResourceResponse? {
             val reply = JSONObject(text)

@@ -67,8 +67,11 @@ always opaque.
   current interface: a running page can keep more until its next start. On the phone the WebView
   has no quota per origin either, so each start of a page measures what its origin keeps (the
   WebView's own count for IndexedDB, Cache Storage and the like, plus `localStorage`, which a script
-  that runs before the page counts) against the same limit, and while it runs `localStorage.setItem`
-  past the limit throws `QuotaExceededError`; the other stores are measured at the next start. A
+  that runs before the page counts) against the same limit. While it runs, a `localStorage` write
+  past the limit, with `setItem` or as a property, in the page or its frames, throws
+  `QuotaExceededError`; a write to IndexedDB or Cache Storage has the origin measured again two
+  seconds later, and so does hiding the page (which also counts what its workers wrote), so a page
+  that grows past the limit while it runs starts again at once on the passing origin. A
   page over the limit runs on a passing origin that keeps nothing, and its page in the app says so
   until *Clear data*, which also starts a new origin.
 - Changing a property sends only the changed values to the running page; changing what the page may
