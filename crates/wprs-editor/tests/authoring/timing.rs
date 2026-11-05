@@ -91,3 +91,31 @@ fn a_timeline_that_drives_a_tracked_binding_is_renamed_and_removed_with_it() {
     let problems = wprs_editor::check::review(&p.doc, Some(&p.dir));
     assert!(problems.iter().all(|p| p.warning), "{problems:?}");
 }
+
+#[test]
+fn removing_the_last_relative_keyframe_keeps_the_value_it_showed() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let at_position = "/scene/layers/0/transform/position";
+    let keyed = |extra: serde_json::Value| {
+        let mut k = json!({"pointer": at_position, "time": 0});
+        k.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        json!({ "keyframe": k })
+    };
+    act(&mut p, keyed(json!({"value": [10, 0], "base": [960, 540]}))).unwrap();
+    act(&mut p, keyed(json!({"remove": true}))).unwrap();
+    assert_eq!(at(&p, at_position), json!([970.0, 540.0]));
+    act(&mut p, key(json!({"time": 0, "value": 0.5, "base": 0.25}))).unwrap();
+    act(&mut p, key(json!({"time": 0, "remove": true, "absolute": true}))).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/opacity"), json!(0.5));
+    act(&mut p, json!({"keyframe": {"pointer": "/scene/layers/0/color", "time": 0, "value": "#102030"}}))
+        .unwrap();
+    let color = |extra: serde_json::Value| {
+        let mut k = json!({"pointer": "/scene/layers/0/color", "time": 0});
+        k.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        json!({ "keyframe": k })
+    };
+    act(&mut p, color(json!({"base": "#010101"}))).unwrap();
+    act(&mut p, color(json!({"remove": true}))).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/color"), "#112131");
+}

@@ -3,6 +3,7 @@ use crate::ops::{Op, set};
 use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
+use wprs_scene::Color;
 
 const SPAN: f64 = 1e6;
 
@@ -104,6 +105,22 @@ pub(crate) fn end(old: Option<&Value>, e: &KeyframeEdit, value: &Value) -> Resul
         }
     }
     Ok(Some(Value::Object(sides)))
+}
+
+pub(crate) fn added(base: &Value, value: &Value) -> Value {
+    match (base, value) {
+        (Value::Number(a), Value::Number(b)) => {
+            json!(((a.as_f64().unwrap_or(0.0) + b.as_f64().unwrap_or(0.0)) * 1e6).round() / 1e6)
+        }
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => {
+            a.iter().zip(b).map(|(a, b)| added(a, b)).collect()
+        }
+        (Value::String(a), Value::String(b)) => match (Color::parse(a), Color::parse(b)) {
+            (Some(a), Some(b)) => json!(Color(std::array::from_fn(|i| a.0[i] + b.0[i])).hex()),
+            _ => value.clone(),
+        },
+        _ => value.clone(),
+    }
 }
 
 pub(crate) fn key(time: f64, value: Value, third: Option<Value>) -> Value {

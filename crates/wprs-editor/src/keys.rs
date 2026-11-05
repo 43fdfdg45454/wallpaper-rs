@@ -1,5 +1,5 @@
 use crate::action::KeyframeEdit;
-use crate::handles::{based, end, key, reach, shaped};
+use crate::handles::{added, based, end, key, reach, shaped};
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, bail, ensure};
 use serde_json::{Value, json};
@@ -94,8 +94,10 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
                 })?;
                 let removed = keys.remove(i);
                 reach(pointer, old, &keys)?;
+                let base = current.and_then(|c| c.get("base")).filter(|_| !e.absolute);
+                let last = base.map_or_else(|| removed[1].clone(), |b| added(b, &removed[1]));
                 return Ok(match keys.is_empty() {
-                    true => set(doc, pointer, removed[1].clone()),
+                    true => set(doc, pointer, last),
                     false => set(doc, &format!("{pointer}/keys"), Value::Array(keys)),
                 });
             }
