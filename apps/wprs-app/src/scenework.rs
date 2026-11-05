@@ -51,7 +51,7 @@ impl SceneEditor {
                 let recorded = {
                     let mut this = editor.as_mut().rust_mut();
                     let Some(project) = this.project.as_mut() else { return };
-                    crate::landing::settle(project, landed).and_then(|ops| project.record(&label, ops))
+                    crate::landing::settle(project, landed, &label)
                 };
                 match recorded {
                     Ok(_) => {

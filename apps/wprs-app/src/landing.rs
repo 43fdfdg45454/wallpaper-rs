@@ -15,6 +15,7 @@ pub struct Landed {
     path: String,
     doc: Value,
     ops: Option<Vec<Op>>,
+    fresh: bool,
 }
 
 fn ops(dir: &Path, doc: &Value, placed: &Placed, path: &str) -> anyhow::Result<Vec<Op>> {
@@ -27,34 +28,40 @@ fn ops(dir: &Path, doc: &Value, placed: &Placed, path: &str) -> anyhow::Result<V
 }
 
 pub fn land(dir: &Path, doc: Value, action: Action) -> anyhow::Result<Landed> {
-    let (placed, path) = match action {
+    let (placed, path, fresh) = match action {
         Action::Thumbnail { file, animated } => {
-            (Placed::Preview(animated), previews::store(dir, &doc, &file, animated)?)
+            (Placed::Preview(animated), previews::store(dir, &doc, &file, animated)?, false)
         }
         Action::Import { file, id, linear, atlas } => {
             assets::cuttable(&file.to_string_lossy(), (linear, atlas))?;
-            let (id, path) = assets::import(dir, &doc, &file, id.as_deref())?;
-            (Placed::Asset(id, (linear, atlas)), path)
+            let (id, path, fresh) = assets::imported(dir, &doc, &file, id.as_deref())?;
+            (Placed::Asset(id, (linear, atlas)), path, fresh)
         }
-        Action::Asset(wanted) => (Placed::Packed(wanted.asset.clone()), packing::store(dir, &doc, &wanted)?),
+        Action::Asset(wanted) => {
+            (Placed::Packed(wanted.asset.clone()), packing::store(dir, &doc, &wanted)?, false)
+        }
         placing @ Action::AddLayer { file: Some(_), .. } => {
-            let (asset, path) = placing::import(dir, &doc, &placing)?;
-            (Placed::Layer(asset, Box::new(placing)), path)
+            let (asset, path, fresh) = placing::import(dir, &doc, &placing)?;
+            (Placed::Layer(asset, Box::new(placing)), path, fresh)
         }
         other => return Err(anyhow::anyhow!("{} is not a file action", other.name())),
     };
     let ops = match &placed {
-        Placed::Asset(..) | Placed::Layer(..) => Some(ops(dir, &doc, &placed, &path)?),
+        Placed::Asset(..) | Placed::Layer(..) => {
+            Some(assets::undone(dir, (&path, fresh), ops(dir, &doc, &placed, &path))?)
+        }
         Placed::Preview(_) | Placed::Packed(_) => None,
     };
-    Ok(Landed { placed, path, doc, ops })
+    Ok(Landed { placed, path, doc, ops, fresh })
 }
 
-pub fn settle(project: &Project, landed: Landed) -> anyhow::Result<Vec<Op>> {
-    let Landed { placed, path, doc, ops: ready } = landed;
+pub fn settle(project: &mut Project, landed: Landed, label: &str) -> anyhow::Result<Vec<Op>> {
+    let Landed { placed, path, doc, ops: ready, fresh } = landed;
     let same = |key: &str| project.doc[key] == doc[key];
-    match ready.filter(|_| same("scene") && same("manifest")) {
+    let ops = match ready.filter(|_| same("scene") && same("manifest")) {
         Some(ready) => Ok(ready),
         None => ops(&project.dir, &project.doc, &placed, &path),
-    }
+    };
+    let dir = project.dir.clone();
+    assets::undone(&dir, (&path, fresh), ops.and_then(|ops| project.record(label, ops)))
 }

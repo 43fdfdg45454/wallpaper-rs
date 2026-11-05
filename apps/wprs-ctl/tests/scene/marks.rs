@@ -104,4 +104,9 @@ fn layers_the_manifest_properties_and_the_canvas_are_authored_from_the_command_l
         fails(dir, &["scene", "import", "glow", "sheet.png", "--id", "flat", "--atlas", "0,4"])
             .contains("256")
     );
+    assert!(dir.join("glow/assets/sheet.png").is_file());
+    RgbaImage::from_pixel(4, 4, Rgba([9, 9, 9, 255])).save(dir.join("dots.png")).unwrap();
+    fails(dir, &["scene", "import", "glow", "dots.png", "--atlas", "0,4"]);
+    fails(dir, &["scene", "add-layer", "glow", "image", "--id", "card", "--file", "dots.png"]);
+    assert!(!dir.join("glow/assets/dots.png").exists(), "a refused file was left in assets/");
 }

@@ -60,3 +60,24 @@ fn a_script_that_moves_the_camera_or_the_parallax_declares_camera() {
         assert!(!uses(&source).to_string().contains("camera"), "{other}");
     }
 }
+
+#[test]
+fn a_refused_import_leaves_no_copy_in_the_assets_folder() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let picture = root.path().join("pic.png");
+    image::RgbaImage::new(4, 4).save(&picture).unwrap();
+    let rows = refused(&mut p, json!({"import": {"file": picture, "atlas": [0, 4]}}));
+    assert!(rows.contains("256"), "{rows}");
+    assert!(!p.dir.join("assets/pic.png").exists());
+    refused(&mut p, json!({"add_layer": {"kind": "model", "file": fixture("toy.glb"), "id": "card"}}));
+    refused(&mut p, json!({"add_layer": {"kind": "image", "file": picture, "into": "nowhere"}}));
+    let broken = root.path().join("broken.glb");
+    std::fs::write(&broken, b"glTF nothing").unwrap();
+    refused(&mut p, json!({"add_layer": {"kind": "model", "file": broken}}));
+    assert!(!p.dir.join("assets/toy.glb").exists() && !p.dir.join("assets/broken.glb").exists());
+    assert!(!p.dir.join("assets/pic.png").exists());
+    act(&mut p, json!({"import": {"file": picture}})).unwrap();
+    refused(&mut p, json!({"import": {"file": picture, "id": "again", "atlas": [0, 4]}}));
+    assert!(p.dir.join("assets/pic.png").is_file(), "a copy the scene uses stays");
+}
