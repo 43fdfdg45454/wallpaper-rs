@@ -76,7 +76,7 @@ ctl scene clip "$draft" puppet swing --add --length 2 --loop pingpong || fail "n
 ctl scene key "$draft" puppet swing 1 --bone arm --rotation 30 --position 4,0 --scale 1.2 --ease cubic || fail "the arm was not keyed"
 ctl scene key "$draft" puppet swing 1.5 --bone arm --from 1 --copy || fail "the key was not copied"
 ctl scene key "$draft" puppet swing 0 --order body --value 3 || fail "the order of a part was not keyed"
-ctl scene keys "$draft" puppet swing | grep -q '"cubic"' || fail "the keys of the clip were not listed"
+ctl scene keys "$draft" puppet swing | grep '"cubic"' >/dev/null || fail "the keys of the clip were not listed"
 ctl scene clip "$draft" puppet swing --rename sway || fail "the clip was not renamed"
 ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "sway"}]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a keyed and painted mesh was not previewed"
