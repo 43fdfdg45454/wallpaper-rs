@@ -20,7 +20,14 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 object Listening {
+    const val FIRST_MS = 30_000L
+    const val LAST_MS = 900_000L
+
     fun allowed(online: Boolean, unmetered: Boolean, any: Boolean, low: Boolean) = online && !low && (unmetered || any)
+
+    fun goes(active: Boolean, outdated: Boolean) = active && !outdated
+
+    fun after(wait: Long, failed: Boolean) = if (failed) (wait * 2).coerceAtMost(LAST_MS) else FIRST_MS
 }
 
 object Heard {
@@ -38,9 +45,7 @@ object Heard {
     private var unmetered = false
     private var low = false
     private const val SETTLE_MS = 2_000L
-    private const val FIRST_MS = 30_000L
     private const val AGAIN_MS = 5_000L
-    private const val LAST_MS = 900_000L
     private const val NETWORK = "sync_network"
     private const val ANY = "any"
 
@@ -134,35 +139,33 @@ object Heard {
         resting = false
         job = scope.launch {
             delay(SETTLE_MS)
-            var wait = FIRST_MS
-            while (isActive && Sync.active()) {
+            var wait = Listening.FIRST_MS
+            while (isActive && goes()) {
                 val heard = ask("listen", mine) ?: break
-                when {
-                    heard.optBoolean("changed") -> {
-                        wait = FIRST_MS
-                        sync()
-                    }
-                    heard.optBoolean("opened") -> {
-                        wait = FIRST_MS
-                        delay(AGAIN_MS)
-                    }
-                    heard.has("error") || heard.optBoolean("ended") -> {
-                        resting = true
-                        delay(wait)
-                        resting = false
-                        wait = (wait * 2).coerceAtMost(LAST_MS)
-                    }
+                val failed = when {
+                    heard.optBoolean("changed") -> !sync()
+                    heard.optBoolean("opened") -> false.also { delay(AGAIN_MS) }
+                    heard.has("error") || heard.optBoolean("ended") -> true
                     else -> break
                 }
+                if (failed) {
+                    resting = true
+                    delay(wait)
+                    resting = false
+                }
+                wait = Listening.after(wait, failed)
             }
         }
     }
 
-    private fun sync() {
+    private fun goes() = runCatching { Sync.status() }.getOrNull()?.let { Listening.goes(it.optBoolean("active"), it.optBoolean("outdated")) } == true
+
+    private fun sync(): Boolean {
         val request = JSONObject().put("op", "sync").put("conflict", conflict)
         val synced = runCatching { JSONObject(Native.account(request.toString())) }.getOrNull()
-        if ((synced?.optInt("applied") ?: 0) == 0) return
-        applied?.invoke() ?: Render.post { Wallpaper.reload(false) }
+        if (synced == null || synced.has("error")) return false
+        if (synced.optInt("applied") > 0) applied?.invoke() ?: Render.post { Wallpaper.reload(false) }
+        return true
     }
 
     private fun stop() {

@@ -967,8 +967,10 @@ cada hora: solo con Wi-Fi u otra red sin límite de datos (salvo *Sincronizar ta
 móviles*) y nunca con batería baja; se cierra al pasar a datos móviles o al bajar la batería y se
 abre de nuevo al volver la red sin límite o la carga. Si el canal se corta después de abrirse vuelve a
 conectarse a los 5 segundos, solo espera cada vez más (hasta 15 minutos) cuando el servidor no
-responde, y si se cortó porque faltaba la red vuelve en cuanto Android avisa de que hay red de
-nuevo. Cuando no se ve nada cierra el canal, y con la pantalla apagada no queda nada abierto ni
+responde o cuando la sincronización que pidió un aviso falla (por ejemplo, mientras otra tarea de
+la cuenta está en marcha), y si se cortó porque faltaba la red vuelve en cuanto Android avisa de que
+hay red de nuevo. Mientras una versión más nueva de la app sincroniza la cuenta deja de escuchar
+hasta que actualices esta. Cuando no se ve nada cierra el canal, y con la pantalla apagada no queda nada abierto ni
 ningún despertar nuevo: los cambios llegan con la sincronización de cada hora o al volver a verse
 el fondo. Al desactivar *Escuchar los cambios mientras se ve el fondo* (activado de serie) solo
 escucha con la app abierta. No hay servicio en primer plano ni avisos push de terceros. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
