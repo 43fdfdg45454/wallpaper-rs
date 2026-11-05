@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.display.DisplayManager
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
@@ -20,6 +22,8 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
     private val visible = mutableSetOf<Any>()
     private var headroom = 0f
     private var sampled = -HEADROOM_MS
+    private val handler = Handler(Looper.getMainLooper())
+    private val again = Runnable { update() }
 
     fun show(engine: Any, shown: Boolean) {
         val before = visible.isNotEmpty()
@@ -43,6 +47,7 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
     }
 
     private fun stop() {
+        handler.removeCallbacks(again)
         context.unregisterReceiver(this)
         manager().removeThermalStatusListener(this)
     }
@@ -70,6 +75,8 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             !ValueAnimator.areAnimatorsEnabled(),
         )
         display()
+        handler.removeCallbacks(again)
+        if (visible.isNotEmpty()) handler.postDelayed(again, HEADROOM_MS)
         powered.intValue++
         Render.post { Wallpaper.wake() }
     }
