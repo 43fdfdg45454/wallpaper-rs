@@ -9,11 +9,20 @@ pub(in crate::compositor) struct Shown {
     serials: [u64; 2],
     pub(super) covers: Vec<(String, Arc<Pixels>)>,
     placeholder: Option<Option<[[f32; 4]; 5]>>,
+    pub(super) told: f64,
+    pub(super) hears: Option<bool>,
 }
 
 impl Default for Shown {
     fn default() -> Shown {
-        Shown { serial: u64::MAX, serials: [0; 2], covers: Vec::new(), placeholder: None }
+        Shown {
+            serial: u64::MAX,
+            serials: [0; 2],
+            covers: Vec::new(),
+            placeholder: None,
+            told: -1.0,
+            hears: None,
+        }
     }
 }
 

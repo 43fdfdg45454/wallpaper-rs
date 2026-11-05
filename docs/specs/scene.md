@@ -1777,6 +1777,11 @@ that declares nothing only gets `update` and `timelineEvent`:
 | `properties(changed)` | at the first frame with every user setting, then with the ones that changed |
 | `settings({ language, fps, quality })` | at the first frame, then when the frame rate or the quality changes |
 | `timelineEvent(e)` | for each `{ timeline, name, t }` of timeline and clip events |
+| `mediaStatus({ enabled })` | at the first frame, then when the user grants or takes back `media` for the package (modules that declare `media`) |
+| `mediaPlayback({ state })` | when the player starts (`playing`), pauses (`paused`) or stops or goes away (`stopped`) |
+| `mediaProperties({ title, artist, album, album_artist, subtitle, genres, kind })` | when a new track arrives or its texts change, also to empty texts when it ends |
+| `mediaThumbnail({ has_cover, colors })` | when a new cover arrives or goes away; `colors` holds `primary`, `secondary`, `tertiary`, `text` and `contrast` as `{ r, g, b, a }` (those of the placeholder while there is no cover, `null` without them) and never the picture itself |
+| `mediaTimeline({ position, duration, rate })` | when a track starts, its length or rate changes, or the player jumps (the position is not where it would have run on to); seconds |
 
 A scene whose modules export no `update` and bind no value with `fn` to an `update` only runs its
 scripts for events: timers, settings, properties, timeline events and pointer events, and draws no
@@ -1821,6 +1826,7 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)`, and `mesh(pool)`, `camera`, `parallax`, `bloom` and `background` (see below) |
 | `storage` | `get`, `set`, `delete`, `clear` and `keys` of what the scripts keep (see below) |
 | `folder(prop)` | the pictures of a folder the user chose (see below) |
+| `media` | what the media player plays (`uses: ["media"]` or a media event, input `media`): `enabled`, `state` (`playing`, `paused` or `stopped`), `playing`, the texts `title`, `artist`, `album`, `album_artist`, `subtitle`, `genres` and `kind`, `has_cover`, `colors` (as in `mediaThumbnail`), `position` (running on from the last reading at its `rate`, without new frames), `duration`, `rate`, `progress` (0 to 1) and `snapshot()`, a frozen copy of all of them. Without the grant it reads `enabled: false`, `stopped` and empty texts; it never carries the cover or the name of the player, and the engine never logs it. Reading it from a module that does not declare it throws |
 | `timeline(id)` | `play()`, `pause()`, `reverse()`, `stop()`, `seek(t)`, `speed` (−100 to 100; below zero the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `time`, `duration`, `playing` and `on(name, handler)` for its events and `ended` |
 | `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])` and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
 | `shared` | an object shared by all the modules of the scene: at most 256 values, each a frozen copy of what was set (numbers, strings, booleans, arrays, typed arrays and objects of them, at most 65536 items and 32 levels in all), so a value changes by setting it again; getters, functions and other prototypes are refused; modules may also `import` each other with relative paths (`./lib/bands.js`), among the files of `scripts` |

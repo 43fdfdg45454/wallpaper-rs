@@ -76,7 +76,13 @@ impl SceneState {
             self.clicked[0] = Some(Instant::now());
         }
         let (view, screen, fps) = (self.sent.1, self.sent.2, self.sent.3);
-        let eventful = listed
+        let pack = &self.spec.pack;
+        let hears = *self.media.hears.get_or_insert_with(|| wprs_script::hears_media(&pack.scene));
+        let media = hears.then(|| self.runtime.media());
+        let heard = media.is_some_and(|(_, at)| at != self.media.told);
+        let rt = &self.runtime;
+        let eventful = heard
+            || listed
             || !self.fired.is_empty()
             || !actions.is_empty()
             || !touches.is_empty()
@@ -106,6 +112,7 @@ impl SceneState {
             ended: &self.ended,
             folders: &self.listed.text,
             storage,
+            media,
         };
         let link = self.host.as_mut()?;
         let before = link.progress().0;
@@ -113,6 +120,7 @@ impl SceneState {
         let frames = link.progress().0;
         match frames > before {
             true => {
+                self.media.told = media.map_or(self.media.told, |(_, at)| at);
                 self.fired.clear();
                 self.ended.clear();
                 if eventful {

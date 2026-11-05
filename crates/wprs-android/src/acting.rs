@@ -43,6 +43,8 @@ pub(crate) struct Acting {
     ended: Vec<String>,
     pub(crate) keeping: crate::keeping::Keeping,
     pub(crate) moved: bool,
+    hears: bool,
+    told: Option<f64>,
 }
 
 impl Acting {
@@ -56,7 +58,8 @@ impl Acting {
             let setup = Setup { mobile: true, storage, folders, ..made };
             Local::new(&setup, Limits::default())
         });
-        Acting { local, keeping, ..Acting::default() }
+        let hears = wprs_script::hears_media(&pack.scene);
+        Acting { local, keeping, hears, ..Acting::default() }
     }
 
     pub(crate) fn reprops(&mut self) {
@@ -85,7 +88,9 @@ impl Acting {
         let props = &*self.props.get_or_insert_with(|| wprs_scene::exposed(sent.properties, rt.props()));
         let timer = self.timer.is_some_and(|t| t <= rt.time());
         let quiet = self.fired.is_empty() && self.actions.is_empty() && self.touches.is_empty();
-        let eventful = !quiet || timer || self.exposed.as_ref() != Some(props);
+        let media = self.hears.then(|| rt.media());
+        let heard = media.is_some_and(|(_, at)| Some(at) != self.told);
+        let eventful = !quiet || timer || heard || self.exposed.as_ref() != Some(props);
         let frame = Frame {
             time: rt.time(),
             dt: rt.dt(),
@@ -109,10 +114,12 @@ impl Acting {
             ended: &self.ended,
             folders: &self.keeping.text,
             storage,
+            media,
         };
         let before = local.progress().0;
         let answer = local.update(&frame);
         if local.progress().0 > before {
+            self.told = media.map(|(_, at)| at).or(self.told);
             self.fired.clear();
             self.ended.clear();
             self.actions.clear();

@@ -54,6 +54,7 @@ fn api(name: &str) -> Option<ScriptApi> {
         "sound" => ScriptApi::Sounds,
         "storage" => ScriptApi::Storage,
         "folder" => ScriptApi::Folders,
+        "media" => ScriptApi::Media,
         _ => return None,
     })
 }

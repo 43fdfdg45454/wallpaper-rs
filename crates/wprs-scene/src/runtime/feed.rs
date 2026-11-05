@@ -66,6 +66,10 @@ impl Runtime {
         changed
     }
 
+    pub fn media(&self) -> (&MediaState, f64) {
+        (&self.media.0, self.media.1)
+    }
+
     pub fn set_pointer(&mut self, pointer: PointerState) -> bool {
         let changed = self.uses().cursor && pointer != self.pointer;
         if pointer.moving() || pointer.buttons & !self.pointer.buttons != 0 {

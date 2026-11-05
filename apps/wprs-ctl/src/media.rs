@@ -14,6 +14,17 @@ pub enum Media {
         #[arg(long, help = JSON)]
         json: bool,
     },
+    #[command(
+        about = "Show a made-up track on the wallpaper of a screen instead of what a media player plays, to try media values, triggers and scripts; --stop ends it"
+    )]
+    Simulate {
+        #[arg(help = "The screen")]
+        output: String,
+        #[arg(required_unless_present = "stop", help = MEDIA)]
+        file: Option<std::path::PathBuf>,
+        #[arg(long, conflicts_with = "file")]
+        stop: bool,
+    },
 }
 
 fn status(s: &MediaStatus) -> String {
@@ -32,7 +43,24 @@ fn status(s: &MediaStatus) -> String {
 }
 
 pub async fn run(client: &Client, command: Media) -> Result<()> {
-    let Media::Status { json } = command;
+    let json = match command {
+        Media::Status { json } => json,
+        Media::Simulate { output, file: None, .. } => {
+            return Ok(client.inputs.simulate_media(&output, "", &[]).await?);
+        }
+        Media::Simulate { output, file: Some(file), .. } => {
+            let mut track = simulated(&file)?;
+            let cover = match track.as_object_mut().and_then(|t| t.remove("cover")) {
+                Some(serde_json::Value::String(path)) if !path.is_empty() => {
+                    let path = file.parent().unwrap_or(std::path::Path::new(".")).join(path);
+                    std::fs::read(&path)
+                        .map_err(|e| anyhow::anyhow!("cannot read {}: {e}", path.display()))?
+                }
+                _ => Vec::new(),
+            };
+            return Ok(client.inputs.simulate_media(&output, &track.to_string(), &cover).await?);
+        }
+    };
     let reply: InputsReply = parse(&client.inputs.get_inputs().await?)?;
     match json {
         true => println!("{}", serde_json::to_string(&reply.media)?),

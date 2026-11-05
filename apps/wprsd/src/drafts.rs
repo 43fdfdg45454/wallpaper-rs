@@ -7,7 +7,7 @@ use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
 mod again;
-mod media;
+pub(crate) mod media;
 mod pack;
 
 const LIFE: Duration = Duration::from_secs(60);

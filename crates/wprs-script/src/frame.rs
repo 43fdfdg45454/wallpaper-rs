@@ -1,5 +1,5 @@
 use crate::wire::Wire;
-use wprs_scene::{AudioFrame, Course, Extent, Fired, LayerRead, PointerState, Touch, Values};
+use wprs_scene::{AudioFrame, Course, Extent, Fired, LayerRead, MediaState, PointerState, Touch, Values};
 
 static NO_PROPS: Values = Values::new();
 static IDLE: PointerState = PointerState {
@@ -44,6 +44,7 @@ pub struct Frame<'a> {
     pub ended: &'a [String],
     pub folders: &'a str,
     pub storage: (u64, &'a str),
+    pub media: Option<(&'a MediaState, f64)>,
 }
 
 impl Frame<'static> {
@@ -71,6 +72,7 @@ impl Frame<'static> {
             ended: &[],
             folders: "",
             storage: (0, ""),
+            media: None,
         }
     }
 }
@@ -83,12 +85,14 @@ pub struct Encoder {
     audio: Option<AudioFrame>,
     folders: Option<String>,
     storage: Option<u64>,
+    media: Option<(MediaState, f64)>,
     pub(crate) resend: bool,
 }
 
 impl Encoder {
     pub fn reset(&mut self) {
         (self.props, self.zone, self.audio, self.folders, self.storage) = (None, None, None, None, None);
+        self.media = None;
     }
 
     pub fn encode(&mut self, f: &Frame) -> &[u8] {
@@ -161,6 +165,12 @@ impl Encoder {
         if w.flag(!f.storage.1.is_empty() && self.storage != Some(f.storage.0)) {
             w.str(f.storage.1);
             self.storage = Some(f.storage.0);
+        }
+        let media = f.media.filter(|(s, at)| self.media.as_ref().is_none_or(|(m, t)| m != *s || t != at));
+        w.flag(media.is_some());
+        if let Some((state, at)) = media {
+            w.str(&crate::heard::snapshot(state, at));
+            self.media = Some((state.clone(), at));
         }
         w.flag(std::mem::take(&mut self.resend));
         self.buf = std::mem::take(&mut w.0);

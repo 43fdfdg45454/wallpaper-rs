@@ -4,10 +4,11 @@ import { own, layer, touches } from "wprs:layers";
 import { handlers, particleState, soundState, videoHandlers } from "wprs:media";
 import { takeStorage, storageFrom } from "wprs:keep";
 import { folderEvents } from "wprs:folders";
+import { mediaEvents } from "wprs:player";
 import { stage } from "wprs:stage";
 import { rigsOut } from "wprs:rigs";
 
-const lifecycle = ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent"];
+const lifecycle = ["init", "update", "destroy", "resize", "properties", "settings", "timelineEvent", "mediaStatus", "mediaPlayback", "mediaProperties", "mediaThumbnail", "mediaTimeline"];
 const [listeners, sites] = [[], []];
 const seen = { screen: "", fps: -1, quality: -1, props: {} };
 let [lastTime, legacy] = [0, null];
@@ -135,6 +136,7 @@ state.tick = () => {
     storageFrom(f.storage);
     lifecycleEvents(f);
     folderEvents(f.folders);
+    mediaEvents(state.heard);
     for (const [id, t] of [...timers].filter(([, t]) => t.due <= f.time).sort((a, b) => a[1].due - b[1].due)) {
         if (t.period) t.due = f.time + t.period;
         else timers.delete(id);

@@ -22,9 +22,7 @@ pub enum Author {
         #[arg(long, help = "Language of the title, such as es or pt-BR; the desktop language when omitted")]
         locale: Option<String>,
     },
-    #[command(
-        about = "Describe a scene folder, or first extract a .wpak scene package into it as an unsigned copy with the id <id>.copy"
-    )]
+    #[command(about = crate::steps::OPEN)]
     Open {
         #[arg(help = DIR)]
         dir: PathBuf,
@@ -98,12 +96,14 @@ pub enum Author {
         #[arg(long, help = "The shader; the .wgsl file next to the descriptor when omitted")]
         wgsl: Option<PathBuf>,
     },
-    #[command(about = "Copy a JavaScript module into the scripts and declare the events and parts it uses")]
+    #[command(about = crate::steps::SCRIPT)]
     ImportScript {
         #[arg(help = DIR)]
         dir: PathBuf,
-        #[arg(help = "The module, a .js file")]
+        #[arg(help = "The module, a .js file; with --template the name of the new one")]
         file: PathBuf,
+        #[arg(long, value_parser = wprs_editor::molds::SCRIPT_TEMPLATES, help = crate::steps::TEMPLATE)]
+        template: Option<String>,
     },
     #[command(
         about = "Paint a stroke into the picture of a mask parameter of an effect, on one channel or on all colors, kept as a new linear picture in masks/ so that undo returns to the previous one"

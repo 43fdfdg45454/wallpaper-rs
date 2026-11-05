@@ -1491,6 +1491,14 @@ con su nombre, el botón *Pista siguiente* de la pestaña *Reproductor* los prue
 desde la terminal `wprs-ctl scene trigger CARPETA ID media:track` los pone (`--list` muestra los que
 hay).
 
+Los scripts que declaran `media` leen el objeto `media` del módulo `wprs` (estado, textos de la
+pista, si hay carátula y sus colores, posición, duración y progreso) y reciben `mediaStatus`,
+`mediaPlayback`, `mediaProperties`, `mediaThumbnail` y `mediaTimeline` cuando algo cambia; sin
+permiso solo ven `enabled: false`, y nunca reciben la imagen de la carátula. *Nuevo script…* en el
+panel de recursos (o `wprs-ctl scene import-script CARPETA reproductor.js --template media`) crea un
+módulo con todos esos eventos y valores para enlazar. Para probarlos sin música, `wprs-ctl media
+simulate PANTALLA pista.json` muestra una pista inventada en cualquier pantalla (`--stop` la quita).
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas

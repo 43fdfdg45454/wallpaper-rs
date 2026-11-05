@@ -29,3 +29,21 @@ fn timelines_and_sounds_start_on_media_triggers_from_the_command_line() {
     ok(dir, &["scene", "undo", "snow"]);
     assert_eq!(show(dir, "/scene/timelines/0/trigger"), "media:track");
 }
+
+#[test]
+fn a_media_script_is_made_from_a_template_from_the_command_line() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    ok(dir, &["scene", "new", "snow", "--from", "empty"]);
+    ok(dir, &["scene", "import-script", "snow", "player.js", "--template", "media"]);
+    let scripts = show(dir, "/scene/scripts");
+    assert_eq!(scripts[0]["path"], "scripts/player.js");
+    assert_eq!(scripts[0]["uses"], json!(["media"]));
+    assert!(dir.join("snow/scripts/player.js").is_file());
+    assert!(
+        fails(dir, &["scene", "import-script", "snow", "player.js", "--template", "media"])
+            .contains("exists")
+    );
+    let refused = super::run(dir, &["scene", "import-script", "snow", "x.js", "--template", "nope"]);
+    assert!(!refused.status.success());
+}

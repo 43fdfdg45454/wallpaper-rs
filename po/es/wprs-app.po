@@ -2748,6 +2748,19 @@ msgid "Import a script…"
 msgstr "Importar un script…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "New script…"
+msgstr "Nuevo script…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "Empty module"
+msgstr "Módulo vacío"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid ""
+"Module that follows the media player, with its events and values to follow"
+msgstr "Módulo que sigue al reproductor multimedia, con sus eventos y valores para enlazar"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "Import from an assets package…"
 msgstr "Importar de un paquete de recursos…"
 
@@ -3884,7 +3897,9 @@ msgstr "Pista siguiente"
 msgid ""
 "Starts what waits for a new track and, when the scene has pictures, for a "
 "new cover; Playing starts what waits for play or pause."
-msgstr "Inicia lo que espera una pista nueva y, si la escena tiene imágenes, una carátula nueva; Reproduciendo inicia lo que espera reproducir o pausar."
+msgstr ""
+"Inicia lo que espera una pista nueva y, si la escena tiene imágenes, una "
+"carátula nueva; Reproduciendo inicia lo que espera reproducir o pausar."
 
 #: apps/wprs-app/qml/SceneMedia.qml
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml

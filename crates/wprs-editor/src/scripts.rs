@@ -54,15 +54,26 @@ pub fn declaration(source: &str) -> Value {
     entry
 }
 
-pub fn import(dir: &Path, doc: &Value, file: &Path) -> Result<Vec<Op>> {
+pub fn import(dir: &Path, doc: &Value, file: &Path, template: Option<&str>) -> Result<Vec<Op>> {
+    let free = template.filter(|_| file.as_os_str().is_empty()).map(|t| crate::molds::free_name(dir, t));
+    let file = free.as_deref().map_or(file, Path::new);
     let name = file
         .file_name()
         .and_then(|n| n.to_str())
         .ok_or_else(|| said("editor.script_name", "the script has no file name", &[]))?;
     ensure!(name.ends_with(".js"), said("editor.not_js_file", "%1 is not a .js file", &[&name]));
-    let size = fs::metadata(file)
-        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
-        .len();
+    let made = template.map(|t| crate::molds::script_template(t).ok_or(t)).transpose();
+    let made = made.map_err(|t| said("editor.no_template", "there is no script template %1", &[&t]))?;
+    ensure!(
+        made.is_none() || !dir.join("scripts").join(name).exists(),
+        said("editor.script_taken", "scripts/%1 already exists", &[&name])
+    );
+    let size = match made {
+        Some(source) => source.len() as u64,
+        None => fs::metadata(file)
+            .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
+            .len(),
+    };
     let list = doc.pointer("/scene/scripts").and_then(Value::as_array).cloned().unwrap_or_default();
     let path = format!("scripts/{name}");
     let others = list.iter().filter_map(|s| s["path"].as_str()).filter(|p| *p != path);
@@ -75,8 +86,11 @@ pub fn import(dir: &Path, doc: &Value, file: &Path) -> Result<Vec<Op>> {
         others.count() < MAX_SCRIPTS2,
         said("editor.scene_most_scripts", "a scene has at most %1 scripts", &[&MAX_SCRIPTS2])
     );
-    let source = fs::read_to_string(file)
-        .map_err(|e| said("editor.not_text", "%1 is not a text file: %2", &[&file.display(), &e]))?;
+    let source = match made {
+        Some(source) => source.to_owned(),
+        None => fs::read_to_string(file)
+            .map_err(|e| said("editor.not_text", "%1 is not a text file: %2", &[&file.display(), &e]))?,
+    };
     fs::create_dir_all(dir.join("scripts"))?;
     fs::write(dir.join(&path), &source)
         .map_err(|e| said("editor.cannot_write", "cannot write %1: %2", &[&path, &e]))?;

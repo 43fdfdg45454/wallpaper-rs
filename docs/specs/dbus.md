@@ -1501,6 +1501,21 @@ output and drops the setting of each one. The setting is kept in `config.toml` (
 `wprs-ctl` (identified as for `Grant`) may turn it on; other callers get `AccessDenied`, and anyone
 may turn it off. A scene still needs the `clicks` grant of its package.
 
+### `SimulateMedia(s output, s track, ay cover)`
+
+Shows a made-up track on the wallpaper of `output` instead of what a media player plays, so that
+`media` values, covers, `media:` triggers and script events can be tried without music playing, as
+the `media` of a preview does (`editor.md`): `track` is a JSON object of at most 64 KiB with
+`title`, `artist`, `album`, `album_artist`, `subtitle`, `genres`, `playing`, `position`, `duration`
+and `rate`, checked with the same limits, and `cover` the bytes of a picture (at most 16 MiB, empty
+for none), reduced and coloured like a real cover. The track and its cover keep their identity
+while only `playing`, `position`, `duration` or `rate` change; another title, artist or album makes
+a new track and another picture a new cover, the one before becoming the previous cover. An empty
+`track` ends it. It needs no `media` grant and never reads the players, and while it lasts the
+listener does not read them for that output either. Only the app, the tray and `wprs-ctl`
+(identified as for `Grant`) may call it; other callers get `AccessDenied`. `wprs-ctl media simulate
+OUTPUT FILE.json` (the `cover` of the file is a picture beside it) and `--stop` call it.
+
 ### `Touch(s output, d x, d y, u buttons)`
 
 A press or a release on the wallpaper of `output` in Plasma, at `x`, `y` in fractions of the

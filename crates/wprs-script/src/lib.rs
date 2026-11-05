@@ -1,6 +1,7 @@
 mod apply;
 mod clock;
 mod frame;
+mod heard;
 #[cfg(not(target_os = "android"))]
 mod host;
 mod limits;
@@ -13,6 +14,7 @@ mod setup;
 mod wire;
 
 pub use frame::{Encoder, Frame, Mode};
+pub use heard::hears_media;
 #[cfg(not(target_os = "android"))]
 pub use host::{Host, serve};
 pub use limits::Limits;

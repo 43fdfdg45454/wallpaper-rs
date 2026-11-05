@@ -76,6 +76,30 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            text: App.tr("New script…")
+            icon.name: "document-new"
+            onClicked: molds.popup()
+
+            QQC2.Menu {
+                id: molds
+
+                Repeater {
+                    model: [["empty", App.tr("Empty module")], ["media", App.tr("Module that follows the media player, with its events and values to follow")]]
+
+                    delegate: QQC2.MenuItem {
+                        required property var modelData
+
+                        text: modelData[1]
+                        onTriggered: panel.page.run("import_script", {
+                            "file": "",
+                            "template": modelData[0]
+                        })
+                    }
+                }
+            }
+        }
+
+        QQC2.ToolButton {
             text: App.tr("Import from an assets package…")
             icon.name: "package-x-generic"
             onClicked: shared.open()

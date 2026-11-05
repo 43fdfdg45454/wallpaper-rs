@@ -12,6 +12,7 @@ pub trait Inputs1 {
     fn get_inputs(&self) -> Result<String>;
     fn set_pointer(&self, x: i32, y: i32) -> Result<()>;
     fn set_clicks(&self, output: &str, on: bool) -> Result<()>;
+    fn simulate_media(&self, output: &str, track: &str, cover: &[u8]) -> Result<()>;
 }
 
 #[proxy(

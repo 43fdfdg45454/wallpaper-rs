@@ -12,6 +12,7 @@ mod inputs;
 mod keep;
 mod layers;
 mod lifecycle;
+mod media;
 mod modules;
 mod shortcuts;
 mod stage;

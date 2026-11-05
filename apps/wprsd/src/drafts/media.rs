@@ -77,6 +77,36 @@ pub(crate) fn split(document: &str) -> (String, Option<Value>) {
 pub(crate) fn frame(dir: &Path, media: Value) -> Result<Frame> {
     let s: Simulated =
         serde_json::from_value(media).map_err(|e| invalid(format!("the simulated media player: {e}")))?;
+    let cover =
+        match s.cover.as_deref().filter(|c| !c.is_empty()) {
+            None => None,
+            Some(path) => {
+                ensure!(inside(path), invalid("media.cover is a picture inside the scene folder"));
+                let bytes = std::fs::read(dir.join(path)).ok().filter(|b| b.len() as u64 <= covers::MAX_FILE);
+                let decoded = bytes.and_then(|b| covers::decode(&b));
+                Some(decoded.ok_or_else(|| {
+                    invalid(format!("media.cover {path} is not a picture that can be read"))
+                })?)
+            }
+        };
+    made(s, cover)
+}
+
+pub(crate) fn simulated(track: &str, cover: &[u8]) -> Result<Frame> {
+    let s: Simulated =
+        serde_json::from_str(track).map_err(|e| invalid(format!("the simulated media player: {e}")))?;
+    ensure!(s.cover.is_none(), invalid("send the cover as bytes, not as media.cover"));
+    ensure!(cover.len() as u64 <= covers::MAX_FILE, invalid("the cover is larger than 16 MiB"));
+    let cover = match cover.is_empty() {
+        true => None,
+        false => Some(
+            covers::decode(cover).ok_or_else(|| invalid("the cover is not a picture that can be read"))?,
+        ),
+    };
+    made(s, cover)
+}
+
+fn made(s: Simulated, cover: Option<std::sync::Arc<covers::Cover>>) -> Result<Frame> {
     let rate = s.rate.unwrap_or(1.0);
     ensure!(
         rate.is_finite() && (-100.0..=100.0).contains(&rate),
@@ -84,19 +114,6 @@ pub(crate) fn frame(dir: &Path, media: Value) -> Result<Frame> {
     );
     let duration = seconds("duration", s.duration)?;
     let position = seconds("position", s.position)?;
-    let cover = match s.cover.filter(|c| !c.is_empty()) {
-        None => None,
-        Some(path) => {
-            ensure!(inside(&path), invalid("media.cover is a picture inside the scene folder"));
-            let bytes = std::fs::read(dir.join(&path)).ok().filter(|b| b.len() as u64 <= covers::MAX_FILE);
-            let decoded = bytes.and_then(|b| covers::decode(&b));
-            Some(
-                decoded.ok_or_else(|| {
-                    invalid(format!("media.cover {path} is not a picture that can be read"))
-                })?,
-            )
-        }
-    };
     let state = MediaState {
         enabled: true,
         track: 1,

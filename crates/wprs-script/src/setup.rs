@@ -26,6 +26,7 @@ pub struct Setup {
     pub pools: BTreeMap<String, Json>,
     pub storage: Json,
     pub folders: Vec<String>,
+    pub media: Vec<String>,
 }
 
 fn info(layer: &Layer, scene: &Scene) -> Json {
@@ -111,6 +112,7 @@ impl Setup {
                 .collect(),
             storage: Json::Null,
             folders: Vec::new(),
+            media: crate::heard::listeners(scene),
         }
     }
 
