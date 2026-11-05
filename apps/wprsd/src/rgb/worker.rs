@@ -45,7 +45,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 }
             }
             Ok(Ask::Forget(source)) => s.forget(Some(&source)),
-            Ok(Ask::Covered) => {}
+            Ok(Ask::Covered) => s.retry(),
             Ok(Ask::Frame(source, strip)) => {
                 lock(&s.status).source = Some(source.clone());
                 s.last = Some((source, strip.clone()));
