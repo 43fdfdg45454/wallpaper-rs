@@ -35,7 +35,7 @@ impl Pixels {
         let (packed, source) = (Arc::new(bytes), Mutex::new(None));
         let held = packed.clone();
         let reload: Reload = Box::new(move || wprs_ktx2::rgba(&held, wprs_ktx2::MAX_SIDE).ok());
-        let size = (info.width, info.height);
+        let size = info.picture(0);
         Ok(Arc::new(Pixels { size, kept: source, reload: Some(reload), packed: Some(packed) }))
     }
 

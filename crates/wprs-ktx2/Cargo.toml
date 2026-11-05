@@ -11,6 +11,7 @@ encode = ["dep:basisu_c_sys", "dep:texture2ddecoder"]
 
 [dependencies]
 basisu.workspace = true
+half.workspace = true
 image.workspace = true
 thiserror.workspace = true
 basisu_c_sys = { workspace = true, optional = true }

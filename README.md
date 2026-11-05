@@ -2050,7 +2050,13 @@ otra página no cierra un editor con cambios sin guardar.
   informa con `--dry-run [--looks CARPETA]`. Al cargar, la escena pasa cada textura KTX2 al formato
   comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps;
   la imagen conserva su tamaño exacto aunque un lado no sea múltiplo de 4 píxeles, porque la textura
-  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales.
+  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales. Una imagen animada
+  (GIF o WebP) se convierte en un arreglo de cuadros que conserva su ritmo. También se leen KTX2
+  HDR (BC6H en escritorio, ASTC HDR donde la tarjeta lo lee y medios flotantes en las demás), que
+  ganan rango en lienzos `hdr`; arreglos de cuadros, que se ven como hojas de sprites y se animan
+  con `animated`; y mapas cúbicos, que se ven como panoramas equirectangulares. El panel de
+  recursos indica en cada KTX2 si es HDR, cuántos cuadros tiene o si es un cubo, y `wprs-ctl scene
+  asset` lo dice igual.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
   argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la

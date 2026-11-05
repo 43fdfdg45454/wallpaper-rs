@@ -6873,6 +6873,7 @@ version = "0.3.0"
 dependencies = [
  "basisu",
  "basisu_c_sys",
+ "half",
  "image",
  "texture2ddecoder",
  "thiserror 2.0.21",

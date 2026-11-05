@@ -9,6 +9,11 @@ ctl scene import "$packed/scene" "$ROOT/tests/fixtures/green-64x32.png" --id mea
 ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --json | grep -q '"size":\[64,32\]' || fail "no KTX2 trial"
 [ "$(ctl scene asset "$packed/scene" meadow --ktx2)" = assets/green-64x32.ktx2 ] || fail "the picture did not become KTX2"
 ctl scene add-layer "$packed/scene" image --source meadow >/dev/null
+ctl scene import "$packed/scene" "$ROOT/tests/fixtures/blink-16x8.gif" --id blink >/dev/null
+ctl scene set "$packed/scene" /scene/assets/blink/animated true
+[ "$(ctl scene asset "$packed/scene" blink --ktx2)" = assets/blink-16x8.ktx2 ] || fail "the animation did not become KTX2"
+ctl scene asset "$packed/scene" blink --json | grep -q '"frames":3' || fail "the KTX2 frames were not told"
+ctl scene asset "$packed/scene" blink | grep -q "3 frames in a grid" || fail "the KTX2 frames were not said"
 ctl scene build "$packed/scene" -o "$packed/scene.wpak" >/dev/null || fail "the KTX2 scene was not built"
 ctl pack check "$packed/scene.wpak" --json | grep -q ktx2 || fail "the KTX2 feature was not listed"
 mkdir -p "$packed/picture"

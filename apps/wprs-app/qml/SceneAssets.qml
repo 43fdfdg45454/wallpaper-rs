@@ -10,6 +10,12 @@ ColumnLayout {
 
     required property var page
 
+    function texture(t) {
+        if (!t)
+            return [];
+        return [t.hdr ? App.tr("HDR") : "", t.cube ? App.tr("cube map, shown as a panorama") : "", t.frames > 1 ? App.tr("%1 frames", t.frames) : ""].filter(w => w);
+    }
+
     QQC2.ScrollView {
         Layout.fillWidth: true
         Layout.fillHeight: true
@@ -24,7 +30,7 @@ ColumnLayout {
                 required property var modelData
 
                 width: ListView.view.width
-                text: modelData.id + " · " + SceneWords.kind(modelData.kind) + " · " + App.bytes(modelData.size) + (modelData.media ? " · " + (modelData.media === "current" ? App.tr("cover of what plays") : App.tr("previous cover")) : "")
+                text: [modelData.id, SceneWords.kind(modelData.kind), App.bytes(modelData.size)].concat(panel.texture(modelData.texture)).join(" · ") + (modelData.media ? " · " + (modelData.media === "current" ? App.tr("cover of what plays") : App.tr("previous cover")) : "")
                 highlighted: panel.page.editor.selected === modelData.pointer
                 onClicked: panel.page.editor.select(modelData.pointer)
 

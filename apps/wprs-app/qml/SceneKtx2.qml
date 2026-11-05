@@ -121,6 +121,13 @@ Kirigami.Dialog {
             text: dialog.trial?.error ?? App.tr("File: %1 now, %2 as KTX2, with %3 levels of detail.", App.bytes(dialog.trial?.before ?? 0), App.bytes(dialog.trial?.after ?? 0), dialog.trial?.levels ?? 0)
         }
 
+        QQC2.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            visible: (dialog.trial?.frames ?? 1) > 1
+            text: App.tr("The %1 frames become one texture array that keeps their timing; the crops show the first frame.", dialog.trial?.frames ?? 0)
+        }
+
         GridLayout {
             Layout.fillWidth: true
             columns: 3

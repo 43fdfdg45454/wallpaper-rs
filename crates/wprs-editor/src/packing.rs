@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
 use wprs_core::message::said;
-use wprs_ktx2::{Codec, Options, TARGETS, Target};
+use wprs_ktx2::{Codec, Options, Shape, TARGETS, Target};
 
 pub const QUALITY: u8 = 80;
 const LOOK: u32 = 256;
@@ -16,6 +16,7 @@ const LOOK: u32 = 256;
 struct Source {
     path: String,
     image: RgbaImage,
+    frames: Option<(Vec<RgbaImage>, f32)>,
     bytes: u64,
     options: Options,
 }
@@ -27,7 +28,7 @@ fn source(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Source> {
     let path = asset["path"].as_str().unwrap_or_default().to_string();
     let ext = path.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
     ensure!(
-        asset_kind(&path) == "image" && ext != "ktx2" && asset["animated"] != true,
+        asset_kind(&path) == "image" && ext != "ktx2",
         said("editor.ktx2_picture", "%1 is not a still picture that can become KTX2", &[id])
     );
     let codec = wanted.codec.as_deref().unwrap_or("uastc");
@@ -42,18 +43,40 @@ fn source(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Source> {
     let bytes = fs::metadata(&file)
         .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
         .len();
-    let image = crate::pictures::open(&file)
-        .map_err(|e| said("editor.unreadable_picture", "the picture cannot be read: %1", &[&e]))?
-        .into_rgba8();
+    let unreadable =
+        |e: &dyn std::fmt::Display| said("editor.unreadable_picture", "the picture cannot be read: %1", &[e]);
+    let frames = match asset["animated"] == true {
+        true => Some(moving(&fs::read(&file).map_err(|e| unreadable(&e))?).map_err(|e| unreadable(&e))?),
+        false => None,
+    };
+    let image = match &frames {
+        Some((list, _)) => list[0].clone(),
+        None => crate::pictures::open(&file).map_err(|e| unreadable(&e))?.into_rgba8(),
+    };
     let repeat = matches!(asset["wrap"].as_str(), Some("repeat" | "mirror"));
     let srgb = asset["linear"] != true;
     let options = Options { codec, quality: quality as u8, srgb, mips: asset["mipmaps"] != false, repeat };
-    Ok(Source { path, image, bytes, options })
+    Ok(Source { path, image, frames, bytes, options })
+}
+
+fn moving(bytes: &[u8]) -> Result<(Vec<RgbaImage>, f32), image::ImageError> {
+    let list = wprs_ktx2::moving::frames(bytes, image::Limits::default())?;
+    let seconds = list.iter().map(|(_, s)| s).sum::<f32>() / list.len().max(1) as f32;
+    let first = list.first().map(|(i, _)| i.dimensions());
+    let frames = list.into_iter().map(|(i, _)| i).filter(|i| Some(i.dimensions()) == first).collect();
+    Ok((frames, seconds))
 }
 
 fn encoded(source: &Source) -> Result<Vec<u8>> {
-    wprs_ktx2::encode(&source.image, &source.options)
-        .map_err(|e| anyhow!(said("editor.ktx2_failed", "the picture cannot become KTX2: %1", &[&e])))
+    let failed = |e: wprs_ktx2::Error| {
+        anyhow!(said("editor.ktx2_failed", "the picture cannot become KTX2: %1", &[&e]))
+    };
+    match &source.frames {
+        Some((frames, seconds)) => wprs_ktx2::encode_frames(frames, &source.options, Shape::Frames)
+            .map(|b| wprs_ktx2::timed(&b, *seconds))
+            .map_err(failed),
+        None => wprs_ktx2::encode(&source.image, &source.options).map_err(failed),
+    }
 }
 
 fn crop(image: &RgbaImage) -> RgbaImage {
@@ -80,7 +103,9 @@ fn looks(id: String, original: &RgbaImage, bytes: &[u8], cache: &Path) -> Result
     crop(&fitted).save(name("source"))?;
     let mut made = Vec::new();
     for target in TARGETS {
-        crop(&wprs_ktx2::look(bytes, target)?).save(name(target.name()))?;
+        let seen = wprs_ktx2::look(bytes, target)?;
+        let first = image::imageops::crop_imm(&seen, 0, 0, info.width, info.height).to_image();
+        crop(&first).save(name(target.name()))?;
         made.push((target, name(target.name()).to_string_lossy().into_owned()));
     }
     Ok((name("source").to_string_lossy().into_owned(), made))
@@ -101,7 +126,7 @@ pub fn trial(dir: &Path, doc: &Value, wanted: &AssetEdit, cache: Option<&Path>) 
     Ok(json!({
         "asset": wanted.asset, "path": source.path, "before": source.bytes, "after": bytes.len(),
         "source": [w, h], "size": [info.width, info.height],
-        "levels": info.levels, "codec": info.codec, "quality": source.options.quality,
+        "levels": info.levels, "codec": info.codec, "quality": source.options.quality, "frames": info.frames,
         "original": original, "classes": classes,
     }))
 }

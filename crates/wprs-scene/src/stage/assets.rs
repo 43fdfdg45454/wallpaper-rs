@@ -28,7 +28,7 @@ impl Check<'_> {
             let wrong = [
                 (sampled.unwrap_or_default(), !picture),
                 ("face", face),
-                ("animated", a.animated && !["gif", "webp"].contains(&ext.as_str())),
+                ("animated", a.animated && !["gif", "webp", "ktx2"].contains(&ext.as_str())),
                 ("rects", !a.rects.is_empty() && (a.atlas.is_some() || !picture)),
                 (timed.unwrap_or_default(), !sheet || !picture),
                 ("durations", a.fps.is_some() && !a.durations.is_empty()),

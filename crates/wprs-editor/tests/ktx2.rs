@@ -93,3 +93,31 @@ fn bad_conversions_are_refused_and_change_nothing() {
     let again = act(&mut p, json!({ "asset": { "asset": "sky", "ktx2": true } })).unwrap_err();
     assert!(again.to_string().contains("not a still picture"), "{again}");
 }
+
+#[test]
+fn an_animated_picture_becomes_a_ktx2_array_that_keeps_its_timing() {
+    use image::codecs::gif::GifEncoder;
+    let root = tempfile::tempdir().unwrap();
+    let p = project(&root);
+    let file = p.dir.join("assets").join("blink.gif");
+    std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+    let mut gif = GifEncoder::new(std::fs::File::create(&file).unwrap());
+    for c in [[255, 0, 0], [0, 255, 0], [0, 0, 255]] {
+        let frame = RgbaImage::from_pixel(16, 8, Rgba([c[0], c[1], c[2], 255]));
+        let delay = image::Delay::from_numer_denom_ms(200, 1);
+        gif.encode_frame(image::Frame::from_parts(frame, 0, 0, delay)).unwrap();
+    }
+    drop(gif);
+    let doc = json!({ "scene": { "assets": { "blink": { "path": "assets/blink.gif", "animated": true } } } });
+    let wanted = AssetEdit { asset: "blink".into(), ..wanted(None, Some(70)) };
+    let report = packing::trial(&p.dir, &doc, &wanted, None).unwrap();
+    assert_eq!((report["frames"].as_u64(), report["size"].clone()), (Some(3), json!([16, 8])));
+    let path = packing::store(&p.dir, &doc, &wanted).unwrap();
+    let bytes = std::fs::read(p.dir.join(&path)).unwrap();
+    let info = wprs_ktx2::info(&bytes).unwrap();
+    assert_eq!((info.frames, info.picture(0), wprs_ktx2::quality(&bytes)), (3, (32, 16), Some(70)));
+    assert_eq!(wprs_ktx2::durations(&bytes).unwrap(), vec![0.2; 3]);
+    let glance = wprs_editor::pictures::glance(&p.dir.join(&path)).unwrap();
+    assert_eq!((glance.frames, glance.cube, glance.hdr), (3, false, false));
+    assert_eq!(wprs_editor::pictures::glance(&file), None);
+}

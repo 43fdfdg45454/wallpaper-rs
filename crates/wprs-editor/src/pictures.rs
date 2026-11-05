@@ -24,6 +24,12 @@ pub fn dimensions(path: impl AsRef<Path>) -> ImageResult<(u32, u32)> {
     if !ktx2(path) {
         return image::image_dimensions(path);
     }
-    let info = wprs_ktx2::info(&std::fs::read(path)?).map_err(failure)?;
-    Ok((info.width, info.height))
+    Ok(wprs_ktx2::info(&std::fs::read(path)?).map_err(failure)?.picture(0))
+}
+
+pub fn glance(path: &Path) -> Option<wprs_ktx2::kv::Glance> {
+    use std::io::Read;
+    let mut head = Vec::new();
+    std::fs::File::open(path).ok().filter(|_| ktx2(path))?.take(4096).read_to_end(&mut head).ok()?;
+    wprs_ktx2::kv::glance(&head)
 }

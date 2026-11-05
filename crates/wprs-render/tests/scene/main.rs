@@ -15,6 +15,7 @@ mod compose;
 mod covers;
 mod packed;
 mod passes;
+mod shaped;
 mod stage;
 mod strips;
 

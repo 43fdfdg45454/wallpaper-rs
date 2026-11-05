@@ -1,26 +1,32 @@
-use basisu::{DecodeFlags, SourceFormat, TargetFormat, Transcoder};
+use basisu::{DecodeFlags, SourceFormat, Transcoder};
 use image::RgbaImage;
 
 #[cfg(feature = "encode")]
 mod encode;
+pub mod kv;
+pub mod moving;
+mod shapes;
 mod target;
 
 #[cfg(feature = "encode")]
-pub use encode::{Codec, Options, encode, look};
-pub use target::{TARGETS, Target};
+pub use encode::{Codec, Options, Shape, encode, encode_frames, encode_hdr, look};
+pub use kv::{durations, quality, timed};
+pub use shapes::grid;
+pub use target::{HDR_TARGETS, TARGETS, Target};
 
 pub const MAGIC: [u8; 12] = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
 pub const MAX_SIDE: u32 = 16_384;
 pub const MAX_LEVELS: u32 = 15;
 pub const MAX_BYTES: u64 = 256 << 20;
+pub const MAX_FRAMES: u32 = 256;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
     #[error("it is not a KTX2 texture")]
     NotKtx2,
-    #[error("the KTX2 texture is not one Basis Universal picture that the engine reads")]
+    #[error("the KTX2 texture is not a Basis Universal picture, cube map or array that the engine reads")]
     Unsupported,
-    #[error("the KTX2 texture is larger than {MAX_SIDE} pixels a side or {} MiB", MAX_BYTES >> 20)]
+    #[error("the KTX2 texture is larger than {MAX_SIDE} pixels a side, {MAX_FRAMES} frames or {} MiB", MAX_BYTES >> 20)]
     TooLarge,
     #[error("the KTX2 texture has more than {MAX_LEVELS} levels")]
     Levels,
@@ -35,6 +41,23 @@ pub struct Info {
     pub levels: u32,
     pub codec: &'static str,
     pub alpha: bool,
+    pub hdr: bool,
+    pub frames: u32,
+    pub cube: bool,
+}
+
+impl Info {
+    pub fn picture(&self, level: u32) -> (u32, u32) {
+        let (w, h) = sized(self, level);
+        match (self.cube, grid(self.frames)) {
+            (true, _) => (w * 4, w * 2),
+            (false, (rows, columns)) => (w * columns, h * rows),
+        }
+    }
+
+    pub fn shaped(&self) -> bool {
+        self.cube || self.frames > 1
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +74,17 @@ pub fn is_ktx2(bytes: &[u8]) -> bool {
     bytes.starts_with(&MAGIC)
 }
 
+fn source(t: &Transcoder<'_>) -> Result<(&'static str, bool), Error> {
+    match t.source_format() {
+        SourceFormat::Etc1s => Ok(("etc1s", false)),
+        SourceFormat::UastcLdr => Ok(("uastc", false)),
+        SourceFormat::XuastcLdr(_) => Ok(("xuastc", false)),
+        SourceFormat::UastcHdr4x4 => Ok(("uastc-hdr", true)),
+        SourceFormat::UastcHdr6x6 | SourceFormat::AstcHdr6x6 => Ok(("astc-hdr", true)),
+        _ => Err(Error::Unsupported),
+    }
+}
+
 fn open(bytes: &[u8]) -> Result<(Transcoder<'_>, Info), Error> {
     if !is_ktx2(bytes) {
         return Err(Error::NotKtx2);
@@ -59,23 +93,24 @@ fn open(bytes: &[u8]) -> Result<(Transcoder<'_>, Info), Error> {
         return Err(Error::TooLarge);
     }
     let t = Transcoder::new(bytes).map_err(|_| Error::Unsupported)?;
-    let codec = match t.source_format() {
-        SourceFormat::Etc1s => "etc1s",
-        SourceFormat::UastcLdr => "uastc",
-        SourceFormat::XuastcLdr(_) => "xuastc",
-        _ => return Err(Error::Unsupported),
-    };
-    if t.is_video() || t.layer_count() > 1 || t.face_count() != 1 {
+    let (codec, hdr) = source(&t)?;
+    let (width, height) = t.base_dimensions();
+    let (frames, cube) = (t.layer_count().max(1), t.face_count() == 6);
+    if !matches!(t.face_count(), 1 | 6) || (cube && (frames > 1 || width != height)) {
         return Err(Error::Unsupported);
     }
-    let (width, height) = t.base_dimensions();
-    if width.max(height) > MAX_SIDE {
+    if width.max(height) > MAX_SIDE || frames > MAX_FRAMES {
         return Err(Error::TooLarge);
     }
     if t.level_count() > MAX_LEVELS {
         return Err(Error::Levels);
     }
-    let info = Info { width, height, levels: t.level_count(), codec, alpha: t.has_alpha() };
+    let levels = t.level_count();
+    let info = Info { width, height, levels, codec, alpha: t.has_alpha(), hdr, frames, cube };
+    let smallest = info.picture(levels.saturating_sub(1));
+    if smallest.0.max(smallest.1) > MAX_SIDE {
+        return Err(Error::TooLarge);
+    }
     Ok((t, info))
 }
 
@@ -84,7 +119,8 @@ pub fn info(bytes: &[u8]) -> Result<Info, Error> {
 }
 
 fn first(info: &Info, max_edge: u32) -> u32 {
-    (0..info.levels).find(|l| (info.width >> l).max(info.height >> l).max(1) <= max_edge.max(1)).unwrap_or(0)
+    let fits = |l: &u32| info.picture(*l).0.max(info.picture(*l).1) <= max_edge.max(1);
+    (0..info.levels).find(fits).unwrap_or(0)
 }
 
 fn sized(info: &Info, level: u32) -> (u32, u32) {
@@ -92,7 +128,7 @@ fn sized(info: &Info, level: u32) -> (u32, u32) {
 }
 
 pub fn supports(bytes: &[u8], target: Target) -> bool {
-    open(bytes).is_ok_and(|(t, _)| t.supports(target.basis()))
+    open(bytes).is_ok_and(|(t, info)| info.hdr == target.hdr() && t.supports(target.basis()))
 }
 
 fn blocks(side: u32) -> u32 {
@@ -107,10 +143,18 @@ fn whole(sized: (u32, u32), padded: (u32, u32), level: u32) -> bool {
 pub fn levels(bytes: &[u8], target: Target, max_edge: u32, mips: bool) -> Result<Levels, Error> {
     let (t, info) = open(bytes)?;
     let start = first(&info, max_edge);
-    let (width, height) = sized(&info, start);
-    if (width.max(height) > max_edge.max(1)) || !t.supports(target.basis()) {
+    let shown = info.picture(start);
+    let fits = shown.0.max(shown.1) <= max_edge.max(1) && info.hdr == target.hdr();
+    if !fits || !t.supports(target.basis()) {
         return Err(Error::Unsupported);
     }
+    if info.cube {
+        return shapes::panorama(&t, &info, start, target);
+    }
+    if info.frames > 1 {
+        return shapes::sheet(&t, &info, start, target);
+    }
+    let (width, height) = sized(&info, start);
     let padded = match target.compressed() {
         true => (blocks(width) * 4, blocks(height) * 4),
         false => (width, height),
@@ -127,15 +171,17 @@ pub fn levels(bytes: &[u8], target: Target, max_edge: u32, mips: bool) -> Result
 }
 
 pub fn rgba(bytes: &[u8], max_edge: u32) -> Result<RgbaImage, Error> {
-    let (t, info) = open(bytes)?;
-    let level = first(&info, max_edge);
-    let (w, h) = sized(&info, level);
-    let data =
-        t.transcode(level, TargetFormat::Rgba32, DecodeFlags::HIGH_QUALITY).map_err(|_| Error::Broken)?;
-    RgbaImage::from_raw(w, h, data).ok_or(Error::Broken)
+    let hdr = info(bytes)?.hdr;
+    let made = levels(bytes, if hdr { Target::Half } else { Target::Rgba }, max_edge, false)?;
+    let data = if hdr { shapes::clamped(&made.data) } else { made.data };
+    RgbaImage::from_raw(made.width, made.height, data).ok_or(Error::Broken)
 }
 
 pub fn gpu_bytes(info: &Info, target: Target, mips: bool) -> u64 {
+    let target = if info.hdr { target.lit() } else { target };
+    if info.shaped() {
+        return target.bytes(info.picture(0));
+    }
     let count = if mips { info.levels } else { 1 };
     (0..count).map(|l| target.bytes(sized(info, l))).sum()
 }

@@ -93,7 +93,8 @@ fn shown(dir: &std::path::Path, doc: &Value, id: &str) -> Result<Value> {
     };
     let classes = TARGETS.map(|t| json!({ "target": t.name(), "class": t.class(), "gpu": gpu(t) }));
     Ok(json!({ "asset": id, "path": path, "bytes": size, "size": [w, h], "codec": packed.map(|i| i.codec),
-        "levels": packed.map(|i| i.levels), "classes": classes }))
+        "levels": packed.map(|i| i.levels), "hdr": packed.map(|i| i.hdr), "frames": packed.map(|i| i.frames),
+        "cube": packed.map(|i| i.cube), "classes": classes }))
 }
 
 fn told(v: &Value) -> String {
@@ -105,8 +106,13 @@ fn told(v: &Value) -> String {
             bytes(c["gpu"].as_u64().unwrap_or(0))
         )
     });
+    let shape = match (v["cube"] == true, v["frames"].as_u64().unwrap_or(1)) {
+        (true, _) => ", a cube map shown as a panorama".to_string(),
+        (_, 2..) => format!(", {} frames in a grid", v["frames"]),
+        _ => String::new(),
+    };
     let codec = match v["codec"].as_str() {
-        Some(c) => format!(", KTX2 {c} with {} levels", v["levels"]),
+        Some(c) => format!(", KTX2 {c} with {} levels{shape}", v["levels"]),
         None => String::new(),
     };
     let size = format!("{}x{}", v["size"][0], v["size"][1]);

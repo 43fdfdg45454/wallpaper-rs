@@ -23,8 +23,7 @@ fn grid(rows: u32, columns: u32, count: u32) -> Vec<[f32; 4]> {
 }
 
 pub(crate) fn layout(frames: usize) -> (u32, u32) {
-    let columns = (frames as f32).sqrt().ceil().max(1.0) as u32;
-    (frames.div_ceil(columns as usize) as u32, columns)
+    wprs_ktx2::grid(frames.min(u32::MAX as usize) as u32)
 }
 
 pub(crate) fn samplings(scene: &Scene, assets: &SceneAssets) -> HashMap<String, Sampling> {

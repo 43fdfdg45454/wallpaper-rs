@@ -1650,7 +1650,7 @@ msgstr "La pantalla llega a %1 nits y muestra el blanco a %2 nits."
 msgid "HDR of %1"
 msgstr "HDR de %1"
 
-#: apps/wprs-app/qml/HdrPicker.qml
+#: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/SceneAssets.qml
 msgid "HDR"
 msgstr "HDR"
 
@@ -2955,6 +2955,14 @@ msgid "Add a layer playing…"
 msgstr "Añadir una capa que reproduzca…"
 
 #: apps/wprs-app/qml/SceneAssets.qml
+msgid "cube map, shown as a panorama"
+msgstr "mapa cúbico, visto como panorama"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "%1 frames"
+msgstr "%1 cuadros"
+
+#: apps/wprs-app/qml/SceneAssets.qml
 msgid "cover of what plays"
 msgstr "carátula de lo que suena"
 
@@ -3676,6 +3684,14 @@ msgstr "Calidad"
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "File: %1 now, %2 as KTX2, with %3 levels of detail."
 msgstr "Archivo: %1 ahora, %2 como KTX2, con %3 niveles de detalle."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid ""
+"The %1 frames become one texture array that keeps their timing; the crops "
+"show the first frame."
+msgstr ""
+"Los %1 cuadros pasan a ser un arreglo de texturas que conserva su ritmo; los "
+"recortes muestran el primer cuadro."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "The picture now"
