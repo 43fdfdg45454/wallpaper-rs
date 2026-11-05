@@ -38,7 +38,7 @@ class Main : ComponentActivity() {
     val pages by lazy { Pages(applicationContext) }
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()
-    private val heard by lazy { Heard(this, scope) }
+    private val synced = { runOnUiThread { changed(false) } }
     private val pick = registerForActivityResult(PickMultipleVisualMedia()) { store(it) }
     private val files = registerForActivityResult(OpenMultipleDocuments()) { store(it) }
     private val folder = registerForActivityResult(OpenDocumentTree()) { uri -> uri?.let(::importFolder) }
@@ -51,6 +51,7 @@ class Main : ComponentActivity() {
         enableEdgeToEdge()
         Native.prepare(noBackupFilesDir.path)
         Unveil.load()
+        Heard.applied = synced
         if (savedInstanceState == null) {
             Sync.soon(this, 0)
             thread(isDaemon = true) { remirror() }
@@ -65,17 +66,18 @@ class Main : ComponentActivity() {
             window.colorMode = if (lit) ActivityInfo.COLOR_MODE_HDR else ActivityInfo.COLOR_MODE_DEFAULT
         }
         power.show(this, true)
-        heard.start()
+        Heard.want(this, this, true)
     }
 
     override fun onStop() {
-        heard.stop()
+        Heard.want(this, this, false)
         power.show(this, false)
         super.onStop()
     }
 
     override fun onDestroy() {
         scope.cancel()
+        if (Heard.applied === synced) Heard.applied = null
         forget()
         super.onDestroy()
     }

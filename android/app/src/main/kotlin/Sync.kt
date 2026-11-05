@@ -39,6 +39,7 @@ class Wprs : Application(), Configuration.Provider {
         Native.prepare(noBackupFilesDir.path)
         val small = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
         Native.device(small, Build.VERSION.MEDIA_PERFORMANCE_CLASS)
+        Heard.conflict = getString(R.string.conflict, "%1")
         if (Sync.active()) Sync.schedule(this)
         thread(isDaemon = true) { Mirrors.watch(this, ExistingWorkPolicy.KEEP) }
     }

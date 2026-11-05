@@ -1,4 +1,4 @@
-use crate::account::NETWORK;
+use crate::account::{LISTEN, NETWORK};
 use crate::said;
 use crate::{Error, power, store};
 use std::fs;
@@ -12,11 +12,12 @@ pub(crate) const BACKEND: &str = "backend";
 const CHARGER: &str = "charger_fps";
 const FIT: &str = "fit";
 const BATTERY: &str = "playback.max_fps";
-const CHOICES: [(&str, &[&str]); 4] = [
+const CHOICES: [(&str, &[&str]); 5] = [
     (COLORS, &["chosen", "always", "never"]),
     (CHARGER, &["60", "30"]),
     (BACKEND, &["auto", "vulkan", "gl"]),
     (NETWORK, &["unmetered", "any"]),
+    (LISTEN, &["shown", "app"]),
 ];
 const SHARED: &str = "config.toml";
 const OWN: &str = "settings.toml";

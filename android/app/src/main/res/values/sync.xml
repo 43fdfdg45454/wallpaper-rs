@@ -29,6 +29,8 @@
     <string name="sync_now">Sync now</string>
     <string name="pause_sync">Pause sync</string>
     <string name="mobile_data">Sync on mobile data too</string>
+    <string name="listen_shown">Hear changes while the wallpaper is shown</string>
+    <string name="listen_shown_note">On the screen in seconds while the app or the wallpaper is shown; otherwise at the next hourly sync, and as soon as the wallpaper shows again.</string>
     <string name="approve_device">Approve a device</string>
     <string name="approve_warning">Approve only a code that your own new device shows on its screen. Someone who sends you a code is trying to get into your account.</string>
     <string name="device_code">Code of the new device</string>

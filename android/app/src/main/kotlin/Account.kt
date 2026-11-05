@@ -132,6 +132,10 @@ private fun Summary(main: Main, status: JSONObject, run: Run, approve: () -> Uni
             Toggle(stringResource(R.string.mobile_data), status.optString("network") == "any") {
                 run("") { withContext(Dispatchers.IO) { Native.setting("sync_network", if (it) "any" else "unmetered") } }
             }
+            Toggle(stringResource(R.string.listen_shown), status.optString("listen") == Heard.SHOWN) {
+                run("") { withContext(Dispatchers.IO) { Native.setting(Heard.SETTING, if (it) Heard.SHOWN else "app") } }
+            }
+            Note(stringResource(R.string.listen_shown_note))
         }
         TextButton({ removing = true }) { Text(stringResource(R.string.remove_server)) }
         if (removing) AlertDialog(

@@ -942,11 +942,18 @@ red. Mientras el teléfono no está enlazado, la app no prepara ninguna tarea ni
 arrancar. *Pausar la sincronización* y *Quitar el servidor* (que pide al servidor que olvide el
 teléfono) están en la misma pestaña.
 
-Mientras la app está abierta, el teléfono escucha el canal de avisos del servidor (el mismo que
-usa el escritorio) y sincroniza en cuanto otro equipo guarda un cambio, sin esperar a la hora;
-si el canal se corta después de abrirse vuelve a conectarse a los 5 segundos, y solo espera cada
-vez más (hasta 15 minutos) cuando el servidor no responde; al salir de la app cierra el canal, y en
-segundo plano no queda nada abierto ni ningún despertar nuevo. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
+Mientras la app está abierta o el fondo se ve (en inicio o en bloqueo, con la pantalla encendida),
+el teléfono escucha el canal de avisos del servidor (el mismo que usa el escritorio) y sincroniza
+en cuanto otro equipo guarda un cambio, en unos segundos y sin esperar a la hora: al abrir el canal
+pregunta además si se perdió algo, así que al encender la pantalla el fondo se pone al día enseguida.
+Un solo canal sirve a la app y al fondo y se abre 2 segundos después de mostrarse, para no abrir y
+cerrar conexiones al pasar de una app a otra. Si el canal se corta después de abrirse vuelve a
+conectarse a los 5 segundos, solo espera cada vez más (hasta 15 minutos) cuando el servidor no
+responde, y si se cortó porque faltaba la red vuelve en cuanto Android avisa de que hay red de
+nuevo. Cuando no se ve nada cierra el canal, y con la pantalla apagada no queda nada abierto ni
+ningún despertar nuevo: los cambios llegan con la sincronización de cada hora o al volver a verse
+el fondo. Al desactivar *Escuchar los cambios mientras se ve el fondo* (activado de serie) solo
+escucha con la app abierta. No hay servicio en primer plano ni avisos push de terceros. En la misma pestaña están las funciones de la cuenta que tiene el escritorio: la *Frase de
 recuperación* (guardarla, cambiarla o quitarla, con la misma custodia Argon2id que
 `wprs-ctl server escrow`, y en un teléfono nuevo sin ningún otro equipo *Recuperar la clave con la
 frase*), *Cambiar la clave de sincronización* (como `wprs-ctl server rotate`: cifra todo de nuevo,

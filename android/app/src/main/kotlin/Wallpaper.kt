@@ -74,6 +74,7 @@ class Wallpaper : WallpaperService() {
         override fun onDestroy() {
             screens -= this
             if (!isPreview) live--
+            Heard.want(this@Wallpaper, this, false)
             super.onDestroy()
         }
 
@@ -93,6 +94,7 @@ class Wallpaper : WallpaperService() {
             power.show(this, visible)
             Render.post {
                 if (visible && !isPreview && Native.rotate(painter.lock)) Wallpaper.reload(Native.setting(COLORS, null) == ALWAYS)
+                if (!isPreview) Heard.want(this@Wallpaper, this, visible && Heard.shown())
                 painter.show(visible)
             }
         }

@@ -18,6 +18,11 @@ pub(super) fn records() {
         ),
         (Some("none"), Some(false))
     );
+    assert_eq!(ask(json!({ "op": "status" }))["listen"], json!("shown"));
+    assert!(settings::setting(account::LISTEN, Some("always")).is_err());
+    assert_eq!(settings::setting(account::LISTEN, Some("app")).unwrap(), "app");
+    assert_eq!(ask(json!({ "op": "status" }))["listen"], json!("app"));
+    assert_eq!(settings::setting(account::LISTEN, Some("shown")).unwrap(), "shown");
     assert!(
         ask(json!({ "op": "pause", "paused": true }))["error"].as_str().unwrap().contains("add a server")
     );

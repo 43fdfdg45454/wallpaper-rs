@@ -9,6 +9,7 @@ use wprs_sync::Peer;
 use zeroize::Zeroizing;
 
 pub(crate) const NETWORK: &str = "sync_network";
+pub(crate) const LISTEN: &str = "sync_listen";
 
 static BUSY: Mutex<()> = Mutex::new(());
 
@@ -113,7 +114,8 @@ fn status() -> Value {
             "last_error": s.last_error, "last_reply": s.last_reply, "warning": s.warning, "records": s.replica.bases.len(),
             "quarantined": s.quarantine.len(), "unapplied": s.unapplied.len(),
             "devices": s.peers.iter().map(device).collect::<Vec<_>>(), "link": link::shown(),
-            "pairing": pairing::shown(), "network": settings::chosen(NETWORK), "active": s.active(),
+            "pairing": pairing::shown(), "network": settings::chosen(NETWORK),
+            "listen": settings::chosen(LISTEN), "active": s.active(),
             "outdated": s.outdated, "recovery_stale": s.recovery_stale, "pin": s.pin,
             "recovery": match (s.recovery, s.recovery_stale) { (None, _) => "off", (_, true) => "stale", _ => "current" },
             "secrets": s.shared, "offers": s.offers.len(), "files": s.files.items.len(),
