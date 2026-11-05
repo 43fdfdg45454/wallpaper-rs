@@ -4,7 +4,7 @@ use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
 use std::sync::PoisonError;
-use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
 use wprs_scene::{Budget, Content, FlashGuard, Quality, Tier, Wake, Why};
 
@@ -39,7 +39,7 @@ impl Stage {
         if crate::power::guarded() != self.guard.is_some() {
             self.guard =
                 crate::power::guarded().then(|| Box::new((FlashGuard::default(), Vec::new(), nanos, None)));
-            CALMING.store(0, Relaxed);
+            self.told(&CALMING, 0);
         }
         let speed = self.guard.as_ref().map_or(1.0, |g| g.0.speed());
         let still = cap == 0 || self.heavy || calm || speed == 0.0;
@@ -82,7 +82,7 @@ impl Stage {
         let ceiling = budget.choose(auto);
         self.governor.hold(budget.floor());
         let (quality, why) = self.governor.level(ceiling);
-        LEVEL.store(1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32, Relaxed);
+        self.told(&LEVEL, 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32);
         if self.reports {
             let (costs, heavy) = (
                 [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q)),
@@ -161,10 +161,12 @@ impl Stage {
             let raises = power.charging && power.ceiling() == Quality::Q3;
             self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
         }
-        ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
         let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
-        if left.0 != view.left_key() {
-            *left = (view.left_key(), view.left());
+        if self.reports {
+            ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
+            if left.0 != view.left_key() {
+                *left = (view.left_key(), view.left());
+            }
         }
         drop(left);
         rendered?;
@@ -178,9 +180,17 @@ impl Stage {
                     wprs_scene::Calming::Slowed(_) => 1,
                     wprs_scene::Calming::Paused => 2,
                 };
-                CALMING.store(calming, Relaxed);
+                if self.reports {
+                    CALMING.store(calming, Relaxed);
+                }
             }
         }
         Ok(Shot { image: Some(image), fps: self.fps, delay })
+    }
+
+    fn told(&self, report: &AtomicU32, value: u32) {
+        if self.reports {
+            report.store(value, Relaxed);
+        }
     }
 }

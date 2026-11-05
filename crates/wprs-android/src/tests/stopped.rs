@@ -52,7 +52,11 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     preview.reports = false;
     assert_eq!(settings::setting("playback.quality", Some("q0")).unwrap(), "q0");
     let at = ((64, 32), 0, 30);
+    let (level, left) = (report::level(), report::left_out());
     assert!(preview.render(r, at, (power, wprs_scene::Tier::T3), &[], false).unwrap().fps > 0);
+    assert_eq!(report::level(), level, "a preview wrote the wallpaper's level");
+    assert_eq!(report::left_out(), left, "a preview wrote the wallpaper's left-out effects");
+    assert_eq!(level.map(|[tier, ..]| tier), Some("T0".to_owned()));
     assert_eq!(
         report::over().map(|[_, b]| b),
         Some(wprs_scene::Tier::T0.budget()),
