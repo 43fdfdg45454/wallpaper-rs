@@ -1289,7 +1289,7 @@ cualquier otro uso del puntero), exactas para dos huesos y por rondas para caden
 límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
 un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
-(`canvas.gusts`, de 0 a 1);
+(`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
 quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
 perspectiva de `canvas.perspective` (también bajo la inclinación de la capa) y las caras vistas por

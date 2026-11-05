@@ -583,8 +583,8 @@ its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings lik
 loosely to its pose, and a `rope` links the bone and its first children (those without a body of
 their own, at most 8 links) into a chain that hangs and sways. `inertia` is how much a body stays
 behind when its parent moves, `damping` how fast it calms down, `gravity` pulls down (98 pixels per
-second squared for each unit), `wind` is how much `canvas.wind` (in pixels a second, with gusts)
-pushes it, `rotation` bounds how far each link turns from its pose and `translation` lets the head of
+second squared for each unit), `wind` is how much `canvas.wind` (in pixels a second, with gusts
+taken at the time each step stands for, so they blow alike at every frame rate) pushes it, `rotation` bounds how far each link turns from its pose and `translation` lets the head of
 the bone itself move that many pixels each way. A body that has not moved for half a second, while
 its pose and the wind stay still, asks for no frames; at the lowest quality bodies keep the pose
 of the animation and ask for nothing. Scripts can push bones with `impulse`.

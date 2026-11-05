@@ -2,6 +2,7 @@ mod caps;
 mod checks;
 mod cues;
 mod decode;
+mod gusts;
 mod kit;
 mod pin;
 mod points;

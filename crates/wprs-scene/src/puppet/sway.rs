@@ -86,7 +86,10 @@ impl Puppet {
             let windy = e.wind > 0.0 && sim.wind != [0.0; 2];
             let busy = windy || body.quiet < QUIET_STEPS;
             if busy {
-                (0..steps).for_each(|s| advance(body, e, sim, (at(s), at(s + 1))));
+                for s in 0..steps {
+                    let t = sim.t - self.lag - (steps - 1 - s) as f32 * sim.h;
+                    advance(body, e, &Sim { t, ..*sim }, (at(s), at(s + 1)));
+                }
             }
             if steps > 0 {
                 let f = at(steps);
