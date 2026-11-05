@@ -534,11 +534,11 @@ msgstr "%1: se reproduce sin %2"
 
 #: crates/wprs-editor/src/handles.rs
 msgid ""
-"a Bézier handle reaches from 0 s up to the neighbouring keyframe and any "
-"finite value"
+"a Bézier handle reaches from 0 s up to the neighbouring keyframe and by "
+"-1000000 to 1000000 in value"
 msgstr ""
-"un tirador Bézier llega de 0 s hasta el fotograma clave vecino y a cualquier "
-"valor finito"
+"un tirador Bézier llega de 0 s hasta el fotograma clave vecino y de -1000000 "
+"a 1000000 en valor"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "a keyframe eases or has Bézier handles, not both"
@@ -563,6 +563,10 @@ msgstr "los tiradores Bézier dan forma a fotogramas clave de un solo número"
 #: crates/wprs-editor/src/handles.rs
 msgid "only a value with keyframes adds them to a base"
 msgstr "solo un valor con fotogramas clave los suma a una base"
+
+#: crates/wprs-editor/src/handles.rs
+msgid "each number of the base of %1 is from -1000000 to 1000000"
+msgstr "cada número de la base de %1 va de -1000000 a 1000000"
 
 #: crates/wprs-editor/src/handles.rs
 msgid ""

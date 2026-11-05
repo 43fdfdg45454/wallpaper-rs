@@ -40,6 +40,12 @@ fn timelines_relative_keys_and_handles_are_written_from_the_command_line() {
     ok(dir, &["scene", "keyframe", "glow", opacity, "0", "--out-handle", "0.5,0"]);
     assert_eq!(shown(dir, &format!("{opacity}/keys/0/2")), json!({"out": [0.5, 0.0]}));
     assert_eq!(shown(dir, &format!("{opacity}/base")), json!(0.75));
+    let far = fails(dir, &["scene", "keyframe", "glow", opacity, "0", "--out-handle", "0.5,2000000"]);
+    assert!(far.contains("1000000"), "{far}");
+    let base = fails(dir, &["scene", "keyframe", "glow", opacity, "0", "--base", "5000000"]);
+    assert!(base.contains("1000000"), "{base}");
+    assert!(fails(dir, &["scene", "keyframe", "glow", opacity, "2", "5000000"]).contains("1000000"));
+    ok(dir, &["scene", "validate", "glow"]);
     assert!(
         fails(dir, &["scene", "keyframe", "glow", opacity, "0", "--ease", "linear", "--in-handle", "1,0"])
             .contains("not both")

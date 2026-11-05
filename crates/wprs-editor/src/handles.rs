@@ -4,6 +4,8 @@ use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
 
+const SPAN: f64 = 1e6;
+
 fn handle(key: &Value, side: &str) -> Option<[f64; 2]> {
     let pair = key.get(2)?.get(side)?.as_array()?;
     Some([pair.first()?.as_f64()?, pair.get(1)?.as_f64()?])
@@ -33,12 +35,12 @@ pub(crate) fn curve(a: &Value, b: &Value, t: f64) -> Option<Value> {
 
 pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
     let handles = [e.in_handle, e.out_handle];
-    let fine = |[dt, dv]: [f64; 2]| dt.is_finite() && dv.is_finite() && dt >= 0.0;
+    let fine = |[dt, dv]: [f64; 2]| dt.is_finite() && dt >= 0.0 && (-SPAN..=SPAN).contains(&dv);
     ensure!(
         handles.iter().flatten().all(|h| fine(*h)),
         said(
-            "editor.handle_reach",
-            "a Bézier handle reaches from 0 s up to the neighbouring keyframe and any finite value",
+            "editor.handle_span",
+            "a Bézier handle reaches from 0 s up to the neighbouring keyframe and by -1000000 to 1000000 in value",
             &[]
         )
     );
@@ -128,6 +130,12 @@ pub(crate) fn based(staged: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
     ensure!(
         !e.remove && first.is_some(),
         said("editor.base_keys", "only a value with keyframes adds them to a base", &[])
+    );
+    let numbers = base.as_array().map_or_else(|| vec![base], |l| l.iter().collect());
+    let within = numbers.iter().all(|n| n.as_f64().is_none_or(|n| (-SPAN..=SPAN).contains(&n)));
+    ensure!(
+        within,
+        said("editor.base_span", "each number of the base of %1 is from -1000000 to 1000000", &[&pointer])
     );
     let fits = kind(base).is_some() && kind(base) == first.and_then(kind);
     ensure!(

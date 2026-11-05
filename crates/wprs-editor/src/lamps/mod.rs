@@ -45,6 +45,9 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Property(e) => crate::shaping::marks::property(dir, doc, e),
         Action::Canvas(e) => crate::shaping::canvas::canvas(dir, doc, e),
         Action::Timeline(e) => crate::timelines::edit(dir, doc, e),
+        Action::Keyframe(e) => {
+            crate::keys::keyframe(doc, e).and_then(|ops| crate::shaping::refused(dir, doc, ops))
+        }
         _ => return None,
     })
 }
