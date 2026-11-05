@@ -1744,10 +1744,13 @@ búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. Oc
 sigue en los archivos firmados del repositorio, que cualquiera puede descargar y leer, con su título y
 su descripción; lo privado va en la sincronización o en un repositorio propio. *Cuenta* lista tus
 subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
-add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`.
+add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`, y la pestaña
+*Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
+ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
+confirmación; publicar sigue siendo `wprs-ctl repo publish` con la clave en línea.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
-del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
+del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde
 `/admin/featured` del servidor), y, con un servidor enlazado, cada paquete del repositorio de ese servidor muestra sus votos a favor y
 en contra, con tu voto marcado, y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`,
 también como `REPO/ID`); los paquetes de otros repositorios no muestran votos y sus ids nunca se

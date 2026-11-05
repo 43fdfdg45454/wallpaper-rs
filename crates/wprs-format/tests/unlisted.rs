@@ -1,7 +1,10 @@
 mod fixture;
 
 use fixture::{DAWN, DUSK, NOW, Repo};
-use wprs_format::{Error, FileFetch, add_repo, browse, browse_with, install, list, update_repo};
+use wprs_format::{
+    Error, FileFetch, Reason, add_repo, browse, browse_with, feature, install, list, revoke, stock,
+    update_repo,
+};
 
 fn shards(repo: &Repo, entry: &str, key: &str) -> Vec<String> {
     let value: serde_json::Value =
@@ -42,4 +45,23 @@ fn listing_names_a_known_package_and_version() {
     assert!(matches!(list(&repo.dir, "org.example.none", None, false), Err(Error::NotFound(_))));
     assert!(matches!(list(&repo.dir, DAWN, Some("2.0.0"), false), Err(Error::NotFound(_))));
     assert!(!std::fs::read_to_string(repo.dir.join("catalog.json")).unwrap().contains("listed"));
+}
+
+#[test]
+fn the_stock_of_a_repository_shows_what_is_listed_featured_and_revoked() {
+    let repo = Repo::new();
+    repo.add(DAWN, "1.0.0");
+    repo.add(DAWN, "1.1.0");
+    repo.add(DUSK, "1.0.0");
+    list(&repo.dir, DAWN, Some("1.0.0"), false).unwrap();
+    feature(&repo.dir, DUSK, Some("Calm evening"), true).unwrap();
+    revoke(&repo.dir, DUSK, None, Reason::Broken, "").unwrap();
+    let stocked = stock(&repo.dir).unwrap();
+    let ids: Vec<&str> = stocked.iter().map(|s| s.id.as_str()).collect();
+    assert_eq!(ids, [DAWN, DUSK]);
+    let listed: Vec<bool> = stocked[0].versions.iter().map(|v| v.listed).collect();
+    assert_eq!(listed, [false, true]);
+    assert!(!stocked[0].featured && stocked[0].versions.iter().all(|v| !v.revoked));
+    assert_eq!((stocked[1].featured, stocked[1].note.as_deref()), (true, Some("Calm evening")));
+    assert!(stocked[1].versions[0].revoked && stocked[1].versions[0].listed);
 }

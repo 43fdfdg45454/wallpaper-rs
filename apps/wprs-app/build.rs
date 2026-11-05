@@ -38,6 +38,7 @@ fn main() {
         "src/packer.rs",
         "src/scene.rs",
         "src/shelf.rs",
+        "src/stall.rs",
     ])
     .build();
 }

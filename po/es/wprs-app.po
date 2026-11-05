@@ -2665,6 +2665,114 @@ msgstr ""
 msgid "Refresh"
 msgstr "Actualizar"
 
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Added %1. Publish the repository next."
+msgstr "Añadido %1. Publica el repositorio a continuación."
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid ""
+"Changed. Publish the repository next: wprs-ctl repo publish %1 --key <online "
+"key>"
+msgstr ""
+"Cambiado. Publica el repositorio a continuación: wprs-ctl repo publish %1 --"
+"key <clave en línea>"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Open a static repository…"
+msgstr "Abrir un repositorio estático…"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "A folder made with wprs-ctl repo init"
+msgstr "Una carpeta creada con wprs-ctl repo init"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Add unlisted"
+msgstr "Añadir ocultos"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Out of browsing and search; installing by id still works"
+msgstr ""
+"Fuera de la exploración y la búsqueda; instalar por id sigue funcionando"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Add packages…"
+msgstr "Añadir paquetes…"
+
+#: apps/wprs-app/qml/RepoStatic.qml
+msgid "Change the repository"
+msgstr "Cambiar el repositorio"
+
+#: apps/wprs-app/qml/RepoStatic.qml apps/wprs-app/qml/ReposPage.qml
+msgid "Packages (*.wpak)"
+msgstr "Paquetes (*.wpak)"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "by %1"
+msgstr "de %1"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Unlist"
+msgstr "Ocultar"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "List again"
+msgstr "Volver a mostrar"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Unlist %1: out of browsing and search, still installable by id."
+msgstr ""
+"Ocultar %1: fuera de la exploración y la búsqueda, todavía instalable por id."
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "List %1 again in browsing and search."
+msgstr "Volver a mostrar %1 en la exploración y la búsqueda."
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Note, optional"
+msgstr "Nota, opcional"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Unfeature"
+msgstr "Quitar de destacados"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Feature"
+msgstr "Destacar"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Stop featuring %1."
+msgstr "Dejar de destacar %1."
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Feature %1, signed into the repository."
+msgstr "Destacar %1, firmado en el repositorio."
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "revoked"
+msgstr "revocado"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "unlisted"
+msgstr "oculto"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Unlist this version"
+msgstr "Ocultar esta versión"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "List this version again"
+msgstr "Volver a mostrar esta versión"
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "Unlist %1 %2: out of browsing and search, still installable by id."
+msgstr ""
+"Ocultar %1 %2: fuera de la exploración y la búsqueda, todavía instalable por "
+"id."
+
+#: apps/wprs-app/qml/RepoStock.qml
+msgid "List %1 %2 again in browsing and search."
+msgstr "Volver a mostrar %1 %2 en la exploración y la búsqueda."
+
 #: apps/wprs-app/qml/ReposPage.qml
 msgid "Add repository…"
 msgstr "Añadir un repositorio…"
@@ -2686,8 +2794,8 @@ msgid "Installed"
 msgstr "Instalados"
 
 #: apps/wprs-app/qml/ReposPage.qml
-msgid "Packages (*.wpak)"
-msgstr "Paquetes (*.wpak)"
+msgid "Static repository"
+msgstr "Repositorio estático"
 
 #: apps/wprs-app/qml/ReposPage.qml
 msgid "Add repository"
@@ -3433,13 +3541,17 @@ msgstr "Curva hasta el siguiente fotograma clave"
 #: apps/wprs-app/qml/SceneKeyCurve.qml
 msgid ""
 "Drag the two handles to bend how the number moves between the keyframes."
-msgstr "Arrastra los dos tiradores para curvar cómo cambia el número entre los fotogramas clave."
+msgstr ""
+"Arrastra los dos tiradores para curvar cómo cambia el número entre los "
+"fotogramas clave."
 
 #: apps/wprs-app/qml/SceneKeyCurve.qml
 msgid ""
 "Handles bend the curve between two keyframes of a single number; pick one "
 "that has another after it."
-msgstr "Los tiradores curvan el tramo entre dos fotogramas clave de un solo número; elige uno que tenga otro después."
+msgstr ""
+"Los tiradores curvan el tramo entre dos fotogramas clave de un solo número; "
+"elige uno que tenga otro después."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "Desktop graphics cards (BC7)"

@@ -416,7 +416,8 @@ msgstr "no hay ningún clip «%1»"
 
 #: crates/wprs-editor/src/clips.rs
 msgid "only a clip being added starts playing in a new animation layer"
-msgstr "solo un clip que se añade empieza a sonar en una capa de animación nueva"
+msgstr ""
+"solo un clip que se añade empieza a sonar en una capa de animación nueva"
 
 #: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/motion/mod.rs
 #: crates/wprs-editor/src/skin/mod.rs
@@ -529,7 +530,9 @@ msgstr "%1: se reproduce sin %2"
 #: crates/wprs-editor/src/handles.rs
 msgid ""
 "a Bézier handle reaches 0 to 3600 s along the timeline and any finite value"
-msgstr "un tirador Bézier llega de 0 a 3600 s a lo largo de la línea de tiempo y a cualquier valor finito"
+msgstr ""
+"un tirador Bézier llega de 0 a 3600 s a lo largo de la línea de tiempo y a "
+"cualquier valor finito"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "a keyframe eases or has Bézier handles, not both"
@@ -550,7 +553,9 @@ msgstr "solo un valor con fotogramas clave los suma a una base"
 #: crates/wprs-editor/src/handles.rs
 msgid ""
 "the base of %1 is a number, a list of numbers or a color like its keyframes"
-msgstr "la base de %1 es un número, una lista de números o un color, como sus fotogramas clave"
+msgstr ""
+"la base de %1 es un número, una lista de números o un color, como sus "
+"fotogramas clave"
 
 #: crates/wprs-editor/src/history.rs
 msgid "Change a value"
@@ -947,7 +952,9 @@ msgstr "las máscaras se pintan en un parámetro de un efecto"
 msgid ""
 "a %1 layer cannot show %2; image, video, sound, mesh and model layers take a "
 "file of their kind"
-msgstr "una capa %1 no puede mostrar %2; las capas image, video, sound, mesh y model toman un archivo de su tipo"
+msgstr ""
+"una capa %1 no puede mostrar %2; las capas image, video, sound, mesh y model "
+"toman un archivo de su tipo"
 
 #: crates/wprs-editor/src/previews.rs
 msgid "the picture does not fit in 1 MiB even as a jpeg of 512 pixels"

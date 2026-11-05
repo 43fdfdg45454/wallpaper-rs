@@ -59,6 +59,10 @@ Kirigami.Page {
         QQC2.TabButton {
             text: App.tr("Installed")
         }
+
+        QQC2.TabButton {
+            text: App.tr("Static repository")
+        }
     }
 
     Connections {
@@ -90,6 +94,8 @@ Kirigami.Page {
         Installed {
             installer: installer
         }
+
+        RepoStatic {}
     }
 
     Installer {
