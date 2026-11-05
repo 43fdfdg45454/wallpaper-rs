@@ -64,6 +64,23 @@ class UpdatesTest {
         }
     }
 
+    @Test
+    fun aCheckTurnedOffElsewhereCancelsItselfOnItsNextRun() {
+        storage()
+        val work = WorkManager.getInstance(context)
+        val states = { work.getWorkInfosForUniqueWork(Updates.WORK).get().map { it.state } }
+        try {
+            Updates.schedule(context, repos = 1)
+            assertTrue(waitFor { states() == listOf(WorkInfo.State.ENQUEUED) })
+            Native.setting(Updates.SETTING, "false")
+            Updates.check(context)
+            assertTrue("a synced switch stops the daily wakeup", waitFor { states().all { it == WorkInfo.State.CANCELLED } })
+        } finally {
+            Native.setting(Updates.SETTING, "true")
+            work.cancelUniqueWork(Updates.WORK).result.get()
+        }
+    }
+
     private companion object {
         const val NETWORK = "sync_network"
     }

@@ -86,7 +86,10 @@ class Syncer(context: Context, params: WorkerParameters) : Worker(context, param
         if (!Sync.active()) return Result.success()
         val request = JSONObject(mapOf("op" to "sync", "conflict" to applicationContext.getString(R.string.conflict, "%1")))
         val answer = JSONObject(Native.account(request.toString()))
-        if (answer.optInt("applied") > 0) Render.post { Wallpaper.reload(false) }
+        if (answer.optInt("applied") > 0) {
+            Updates.schedule(applicationContext)
+            Render.post { Wallpaper.reload(false) }
+        }
         return if (answer.optInt("unsent") > 0) Result.retry() else Result.success()
     }
 }

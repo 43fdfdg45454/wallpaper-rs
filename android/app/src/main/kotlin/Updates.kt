@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import androidx.work.Worker
@@ -14,12 +15,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class RepoCheck(context: Context, params: WorkerParameters) : Worker(context, params) {
-    override fun doWork(): Result {
-        if (!Updates.on()) return Result.success()
-        val found = runCatching { JSONArray(Native.account(JSONObject().put("op", "refresh_repos").put("force", false).toString())) }
-        Updates.found(found.getOrNull()?.length() ?: return Result.retry())
-        return Result.success()
-    }
+    override fun doWork() = Updates.check(applicationContext)
 }
 
 object Updates {
@@ -35,6 +31,13 @@ object Updates {
     fun repos() = runCatching { JSONObject(Native.account("{\"op\": \"repos\"}")).optJSONArray("repos")?.length() }.getOrNull() ?: 0
 
     fun on() = runCatching { Native.setting(SETTING, null) }.getOrNull() != "false"
+
+    fun check(context: Context): ListenableWorker.Result {
+        if (!on()) return ListenableWorker.Result.success().also { schedule(context) }
+        val found = runCatching { JSONArray(Native.account(JSONObject().put("op", "refresh_repos").put("force", false).toString())) }
+        found(found.getOrNull()?.length() ?: return ListenableWorker.Result.retry())
+        return ListenableWorker.Result.success()
+    }
 
     fun schedule(context: Context, repos: Int = repos()) {
         val work = WorkManager.getInstance(context)

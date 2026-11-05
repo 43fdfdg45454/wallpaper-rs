@@ -164,7 +164,10 @@ object Heard {
         val request = JSONObject().put("op", "sync").put("conflict", conflict)
         val synced = runCatching { JSONObject(Native.account(request.toString())) }.getOrNull()
         if (synced == null || synced.has("error")) return false
-        if (synced.optInt("applied") > 0) applied?.invoke() ?: Render.post { Wallpaper.reload(false) }
+        if (synced.optInt("applied") > 0) {
+            watching?.context?.let(Updates::schedule)
+            applied?.invoke() ?: Render.post { Wallpaper.reload(false) }
+        }
         return true
     }
 
