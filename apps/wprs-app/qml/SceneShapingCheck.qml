@@ -10,6 +10,20 @@ QtObject {
         return JSON.parse(page.editor.value(pointer) || "null");
     }
 
+    function dragged() {
+        const steps = page.view.history.done.length;
+        const look = Qt.createComponent("SceneCanvasLook.qml").createObject(page, {
+            "page": page
+        });
+        for (const value of [1.5, 2.5, 3.5])
+            look.slid("bloom", "strength", value, true);
+        look.slid("bloom", "strength", 4, false);
+        look.destroy();
+        if (read("/scene/canvas/bloom/strength") !== 4 || page.view.history.done.length !== steps + 1)
+            throw new Error("shaping: one drag of the glow took other than one undo step");
+        page.run("undo");
+    }
+
     function exercise() {
         const id = read("/scene/layers/0/id");
         const steps = page.view.history.done.length;
@@ -66,6 +80,7 @@ QtObject {
             throw new Error("shaping: an authoring action did not take exactly one undo step");
         for (let k = 0; k < 6; k++)
             page.run("undo");
+        dragged();
         Qt.createComponent("SceneSeedingCheck.qml").createObject(page, {
             "page": page
         }).exercise();

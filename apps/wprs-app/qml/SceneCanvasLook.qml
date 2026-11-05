@@ -19,6 +19,13 @@ Kirigami.FormLayout {
         });
     }
 
+    function slid(what, key, value, held) {
+        if (!held)
+            edit(what, {
+                [key]: Math.round(value * 100) / 100
+            });
+    }
+
     QQC2.Switch {
         Kirigami.FormData.label: App.tr("Glow:")
         text: App.tr("Bright parts glow")
@@ -32,8 +39,6 @@ Kirigami.FormLayout {
         model: look.glows
 
         delegate: QQC2.Slider {
-            id: knob
-
             required property var modelData
 
             visible: look.bloom !== null
@@ -42,16 +47,8 @@ Kirigami.FormLayout {
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
             value: typeof look.bloom?.[modelData[0]] === "number" ? look.bloom[modelData[0]] : modelData[4]
-            onMoved: settle.restart()
-
-            Timer {
-                id: settle
-
-                interval: 150
-                onTriggered: look.edit("bloom", {
-                    [knob.modelData[0]]: Math.round(knob.value * 100) / 100
-                })
-            }
+            onMoved: look.slid("bloom", modelData[0], value, pressed)
+            onPressedChanged: look.slid("bloom", modelData[0], value, pressed)
         }
     }
 
@@ -68,8 +65,6 @@ Kirigami.FormLayout {
         model: look.moves
 
         delegate: QQC2.Slider {
-            id: knob
-
             required property var modelData
 
             visible: look.glide !== null
@@ -78,16 +73,8 @@ Kirigami.FormLayout {
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
             value: look.glide?.[modelData[0]] ?? modelData[4]
-            onMoved: settle.restart()
-
-            Timer {
-                id: settle
-
-                interval: 150
-                onTriggered: look.edit("parallax", {
-                    [knob.modelData[0]]: Math.round(knob.value * 100) / 100
-                })
-            }
+            onMoved: look.slid("parallax", modelData[0], value, pressed)
+            onPressedChanged: look.slid("parallax", modelData[0], value, pressed)
         }
     }
 
