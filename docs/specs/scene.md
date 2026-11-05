@@ -784,8 +784,10 @@ input, the others `pointer`): a click is a press and a release of any button bot
 which keeps the pointer from the press until the release (so dragging off it and letting go is no
 click), and `enter`/`leave` follow the topmost solid layer under the pointer. They also start sounds
 whose `play_on` names them. Pointer events never make extra frames: they are worked out when the
-scene draws a frame for the pointer it already follows, and a still pointer makes none. And `media:play`, `media:pause`, `media:track` (a new track) or
-`media:cover` (a new cover) (`media_info`, input `media`).
+scene draws a frame for the pointer it already follows, and a still pointer makes none. And `media:play` (the media player starts playing), `media:pause` (it pauses or stops, or the
+player goes away while it played), `media:track` (a new track, also the first one the scene sees)
+or `media:cover` (a new cover) (`media_info`, input `media`), evaluated without scripts when the
+reading of the player changes, never while the package lacks the grant or no player is there.
 
 `media` values follow what the media player of the computer plays, only while the scene is shown,
 the package declares `media` and the user allows it: the texts `title`, `artist`, `album`,

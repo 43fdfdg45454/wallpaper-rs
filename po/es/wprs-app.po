@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-03 00:00+0000\n"
+"POT-Creation-Date: 2026-11-04 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -3871,6 +3871,20 @@ msgstr "Álbum"
 #: apps/wprs-app/qml/SceneMedia.qml
 msgid "Cover"
 msgstr "Carátula"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid "Triggers"
+msgstr "Disparadores"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid "Next track"
+msgstr "Pista siguiente"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid ""
+"Starts what waits for a new track and, when the scene has pictures, for a "
+"new cover; Playing starts what waits for play or pause."
+msgstr "Inicia lo que espera una pista nueva y, si la escena tiene imágenes, una carátula nueva; Reproduciendo inicia lo que espera reproducir o pausar."
 
 #: apps/wprs-app/qml/SceneMedia.qml
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
@@ -7919,6 +7933,22 @@ msgstr "Color de texto legible sobre el principal"
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "Black or white over the primary"
 msgstr "Negro o blanco sobre el principal"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When the media player starts playing"
+msgstr "Cuando el reproductor empieza a sonar"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When the media player stops playing"
+msgstr "Cuando el reproductor deja de sonar"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When a new track plays"
+msgstr "Cuando suena una pista nueva"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When a new cover arrives"
+msgstr "Cuando llega una carátula nueva"
 
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "yes"

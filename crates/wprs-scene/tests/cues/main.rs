@@ -4,6 +4,7 @@ use std::sync::Arc;
 use wprs_scene::*;
 
 mod events;
+mod media;
 mod sounds;
 
 fn runtime(timelines: Json, layers: Json) -> Runtime {

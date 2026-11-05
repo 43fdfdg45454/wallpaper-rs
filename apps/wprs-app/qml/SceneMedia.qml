@@ -15,6 +15,18 @@ QQC2.ScrollView {
         "palette": player.media.cover || (player.placeholder?.path ?? "")
     })) || "null")
 
+    function skip() {
+        const titles = ["Night Drive", "Morning Light", "Evening Tide", "Open Road"];
+        const next = Object.assign({}, player.media);
+        next.title = titles[(titles.indexOf(next.title) + 1) % titles.length];
+        const at = player.pictures.findIndex(p => p.path === next.cover);
+        if (player.pictures.length > 0)
+            next.cover = player.pictures[(at + 1) % player.pictures.length].path;
+        next.position = 0;
+        SceneLook.media = next;
+        SceneLook.preview(player.page);
+    }
+
     function change(key, value) {
         const next = Object.assign({}, player.media);
         next[key] = value;
@@ -62,6 +74,15 @@ QQC2.ScrollView {
                 model: [App.tr("None")].concat(player.pictures.map(p => p.id))
                 currentIndex: 1 + player.pictures.findIndex(p => p.path === player.media.cover)
                 onActivated: index => player.change("cover", index > 0 ? player.pictures[index - 1].path : "")
+            }
+
+            QQC2.Button {
+                Kirigami.FormData.label: App.tr("Triggers")
+                text: App.tr("Next track")
+                icon.name: "media-skip-forward"
+                QQC2.ToolTip.text: App.tr("Starts what waits for a new track and, when the scene has pictures, for a new cover; Playing starts what waits for play or pause.")
+                QQC2.ToolTip.visible: hovered
+                onClicked: player.skip()
             }
 
             QQC2.Switch {

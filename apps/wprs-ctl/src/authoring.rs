@@ -81,6 +81,7 @@ pub fn run(command: Author) -> Result<()> {
         Author::Modeling(command) => crate::modeled::run(command)?,
         Author::Flying(command) => crate::animated::run(command)?,
         Author::Texturing(command) => crate::texturing::run(command)?,
+        Author::Triggering(command) => crate::triggering::run(command)?,
         other => bail!("{other:?} is not a scene command"),
     }
     Ok(())

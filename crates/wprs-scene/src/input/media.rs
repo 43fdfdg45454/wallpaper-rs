@@ -25,3 +25,14 @@ impl MediaState {
         self.enabled && self.track != 0
     }
 }
+
+impl MediaState {
+    pub fn cues(&self, before: &MediaState) -> Vec<&'static str> {
+        let on = |s: &MediaState| s.present() && s.playing;
+        let fresh = self.present() && (!before.present() || self.track != before.track);
+        let covered = self.enabled && self.cover != 0 && self.cover != before.cover;
+        let found = [("play", on(self) && !on(before)), ("pause", on(before) && !on(self))];
+        let found = found.into_iter().chain([("track", fresh), ("cover", covered)]);
+        found.filter(|(_, fired)| *fired).map(|(name, _)| name).collect()
+    }
+}

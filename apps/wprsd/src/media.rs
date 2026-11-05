@@ -4,6 +4,7 @@ mod listen;
 mod pictured;
 mod pictures;
 mod players;
+mod simulated;
 #[cfg(test)]
 mod tests;
 mod track;
@@ -119,7 +120,10 @@ pub(crate) fn simulate(output: &str, frame: Option<Arc<Frame>>) {
     let Some(l) = LISTENER.get() else { return };
     let mut simulated = lock(&l.simulated);
     let changed = match frame {
-        Some(frame) => simulated.insert(output.to_owned(), frame).is_none(),
+        Some(frame) => {
+            let next = Arc::new(simulated::continued(simulated.get(output).map(|f| &**f), (*frame).clone()));
+            simulated.insert(output.to_owned(), next).is_none()
+        }
         None => simulated.remove(output).is_some(),
     };
     drop(simulated);

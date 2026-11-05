@@ -20,6 +20,7 @@ pub(crate) struct Cover {
     pub(crate) serial: u64,
     pub(crate) pixels: Arc<Pixels>,
     pub(crate) colors: [[f32; 4]; 5],
+    pub(crate) digest: u64,
 }
 
 impl std::fmt::Debug for Cover {
@@ -44,6 +45,10 @@ pub(crate) fn reduced(image: RgbaImage) -> RgbaImage {
 }
 
 pub(crate) fn decode(bytes: &[u8]) -> Option<Arc<Cover>> {
+    let digest = std::hash::BuildHasher::hash_one(
+        &std::hash::BuildHasherDefault::<std::hash::DefaultHasher>::default(),
+        bytes,
+    );
     let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().ok()?;
     let mut limits = Limits::default();
     (limits.max_image_width, limits.max_image_height) = (Some(MAX_SIDE), Some(MAX_SIDE));
@@ -52,7 +57,7 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Arc<Cover>> {
     let image = reduced(reader.decode().ok()?.into_rgba8());
     let colors = colors(&image).unwrap_or(FALLBACK);
     let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
-    Some(Arc::new(Cover { serial, pixels: Pixels::new(image), colors }))
+    Some(Arc::new(Cover { serial, pixels: Pixels::new(image), colors, digest }))
 }
 
 pub(crate) fn local(url: &Url) -> Option<Vec<u8>> {

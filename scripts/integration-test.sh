@@ -15,6 +15,7 @@ source "$(dirname "$0")"/integration-content.sh
 source "$(dirname "$0")"/integration-inputs.sh
 source "$(dirname "$0")"/integration-audio.sh
 source "$(dirname "$0")"/integration-media.sh
+source "$(dirname "$0")"/integration-media-cues.sh
 source "$(dirname "$0")"/integration-sound.sh
 source "$(dirname "$0")"/integration-recovery.sh
 source "$(dirname "$0")"/integration-sources.sh

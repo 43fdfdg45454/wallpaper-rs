@@ -3,7 +3,7 @@ import QtQuick
 
 QtObject {
     property var own: ({})
-    readonly property var words: Object.assign({}, early, SceneTerms.words, SceneNames.words, SceneLabels.words)
+    readonly property var words: Object.assign({}, early, SceneTerms.words, SceneNames.words, SceneLabels.words, SceneMediaWords.triggers)
     readonly property var early: ({
             "a": App.tr("Alpha"),
             "aberration": App.tr("Color fringes"),

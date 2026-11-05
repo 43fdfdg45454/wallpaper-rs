@@ -194,4 +194,6 @@ pub enum Author {
     Flying(crate::flying::Flying),
     #[command(flatten)]
     Texturing(crate::texturing::Texturing),
+    #[command(flatten)]
+    Triggering(crate::triggering::Triggering),
 }

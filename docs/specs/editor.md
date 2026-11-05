@@ -51,6 +51,7 @@ undo and redo walk through, the undone ones marked.
 | `hide` | `id`, `hidden`; sets `visible`, or `play` on a sound layer, to `false`, keeping what it held under `hidden`, and puts it back when shown | `hide DIR ID --hidden BOOL` |
 | `lock`, `solo` | `id` and `locked`; `id`, or nothing to end the solo | `lock`, `solo` |
 | `keyframe` | `pointer`, `time`, optional `value` (the current value when omitted), `ease`, `timeline`, `remove`, `from` (moves the keyframe at that time to `time`, keeping its value and easing unless given, as one step; refused when another keyframe is at `time`) | `keyframe DIR POINTER TIME [VALUE]`, `--remove` or `--from T` |
+| `set` on a `trigger` or `play_on` | the trigger of a timeline or of a sound layer; the picker of the inspector offers `start`, `beat`, the buttons and settings of the package (`prop:`) and, in scenes, `media:play`, `media:pause`, `media:track` and `media:cover` with their names | `trigger DIR TARGET [TRIGGER]` (a timeline or sound layer id; prints the trigger without one), `--none` to take it away, `--list` for the offered ones; an unknown `media:` name is refused |
 | `import` | `file`, optional `id`; copies the file into `assets/` and declares the asset | `import DIR FILE` |
 | `import_effect` | `descriptor`, optional `wgsl` (the `.wgsl` file beside the descriptor when omitted); checks the effect as a package reader does, copies both files to `effects/<id>.json` and `effects/<id>.wgsl` and declares or replaces `effects.<id>` of the scene | `import-effect DIR DESCRIPTOR [--wgsl FILE]` |
 | `paint_mask` | `pointer` (a parameter of an effect), optional `channel` (0 red to 3 alpha; every color when omitted), `radius` (a fraction of the shorter side), optional `hardness` (0.5) and `value` (1; 0 erases), `points` (fractions of the layer); paints the stroke into the picture the parameter names, or into a new one of 512 × 512 filled with the `paint` of the parameter (black without one), saves the result as a new `linear` picture `masks/<id>-<n>.png` and points the asset and the parameter at it, so that undo returns to the previous picture. The inspector shows a Paint button, the channel (for `mask` parameters with 3 or 4 `channels`), Erase and the brush size next to every `mask` parameter, and strokes on the layer in the preview are painted | `paint-mask DIR POINTER X,Y;X,Y;... [--channel r\|g\|b\|a] [--radius R] [--hardness H] [--value V]` |
@@ -179,7 +180,10 @@ can go back to its default.
 The Player tab is a simulated media player for the preview, so that a scene can be made without
 music playing: a switch turns it on, and it has the title, artist and album of a made-up track,
 whether it plays, its position and length (sliders) and its cover, picked among the pictures of the scene, with the five colors that the scene would
-get from it (or from the placeholder) as swatches.
+get from it (or from the placeholder) as swatches. Next track gives the made-up track another title
+and the next picture as its cover, so that what waits for `media:track` and `media:cover` starts in
+the preview, and the playing switch starts what waits for `media:play` or `media:pause`; the track
+and its cover stay the same while only the position, length or playing change.
 The preview then shows that track instead of what a media player plays, without asking for the
 `media` grant and without reading the players; it reaches only the preview.
 

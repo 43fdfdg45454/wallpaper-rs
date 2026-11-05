@@ -56,8 +56,13 @@ impl Runtime {
     }
 
     pub fn set_media(&mut self, media: MediaState) -> bool {
-        let changed = self.uses().media && media != self.media.0;
+        let heard = self.uses().media;
+        let changed = heard && media != self.media.0;
+        let cues = if heard { media.cues(&self.media.0) } else { Vec::new() };
         self.media = (media, self.t);
+        for cue in cues {
+            self.trigger(|t| t.strip_prefix("media:") == Some(cue));
+        }
         changed
     }
 

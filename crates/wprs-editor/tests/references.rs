@@ -135,7 +135,11 @@ fn references_offer_only_what_the_validator_accepts() {
     assert_eq!(trigger.widget, "ref:trigger");
     assert_eq!(
         trigger.options,
-        ["start", "beat", "prop:mood", "prop:wind", "prop:rain", "prop:go"].map(Value::from)
+        ["start", "beat", "prop:mood", "prop:wind", "prop:rain", "prop:go", "media:play", "media:pause"]
+            .into_iter()
+            .chain(["media:track", "media:cover"])
+            .map(Value::from)
+            .collect::<Vec<_>>()
     );
     assert_eq!(trigger.names[2], "Weather");
 }

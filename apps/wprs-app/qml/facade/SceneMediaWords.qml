@@ -7,6 +7,12 @@ QtObject {
     readonly property var numbers: [["position", App.tr("Position")], ["duration", App.tr("Duration")], ["progress", App.tr("Progress")]]
     readonly property var colors: [["primary", App.tr("Primary color of the cover")], ["secondary", App.tr("Secondary color of the cover")], ["tertiary", App.tr("Tertiary color of the cover")], ["text", App.tr("Text color readable over the primary")], ["contrast", App.tr("Black or white over the primary")]]
     readonly property var playing: [["playing", App.tr("Playing")]]
+    readonly property var triggers: ({
+            "media:play": App.tr("When the media player starts playing"),
+            "media:pause": App.tr("When the media player stops playing"),
+            "media:track": App.tr("When a new track plays"),
+            "media:cover": App.tr("When a new cover arrives")
+        })
 
     function clock(seconds) {
         const s = Math.max(0, Math.floor(seconds));

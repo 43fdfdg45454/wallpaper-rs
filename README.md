@@ -1484,6 +1484,13 @@ sirve para mostrar u ocultar capas o para cualquier número. `position` y `durat
 La posición avanza sola desde la última lectura del reproductor, sin volver a preguntarle: una
 barra pide como mucho 30 fotogramas por segundo y un texto uno por segundo, solo mientras suena.
 
+Una línea de tiempo o una capa de sonido también puede arrancar sola, sin scripts, con
+`media:play` (empieza a sonar), `media:pause` (se pausa o se para), `media:track` (llega una pista
+nueva) o `media:cover` (llega una carátula nueva). El selector de disparador del editor los ofrece
+con su nombre, el botón *Pista siguiente* de la pestaña *Reproductor* los prueba en la vista previa y
+desde la terminal `wprs-ctl scene trigger CARPETA ID media:track` los pone (`--list` muestra los que
+hay).
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
