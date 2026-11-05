@@ -73,6 +73,7 @@ pub enum ToWeb {
     Properties { view: u32, values: Map<String, Value> },
     Allowed(Allowed),
     Audio { left: Vec<f32>, right: Vec<f32> },
+    Media(Value),
     Pointer { view: u32, at: Option<(f64, f64)> },
     Press { view: u32, at: (f64, f64), button: u32 },
     Folder(Folder),

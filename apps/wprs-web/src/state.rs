@@ -43,6 +43,8 @@ pub struct Live {
     pub folders: BTreeMap<String, Folder>,
     pub files: HashMap<String, PathBuf>,
     pub audio: bool,
+    pub media: bool,
+    pub heard: Option<serde_json::Value>,
     pub copy: bool,
     pub said: u32,
 }

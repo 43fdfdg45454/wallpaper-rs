@@ -48,6 +48,7 @@ pub fn handle(message: ToWeb) {
                 tell(&json!({"audio": [left, right]}));
             }
         }
+        ToWeb::Media(heard) => crate::script::heard(heard),
         ToWeb::Pointer { view: id, at } => view(id).into_iter().for_each(|v| pointer(&v, at)),
         ToWeb::Press { view: id, at, button } => view(id).into_iter().for_each(|v| press(&v, at, button)),
         ToWeb::Folder(folder) => folders(folder),

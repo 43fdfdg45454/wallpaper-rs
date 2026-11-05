@@ -35,7 +35,7 @@ pub struct WebPack {
     pub preload: Option<String>,
     pub background: [u8; 3],
     pub network: Vec<String>,
-    pub uses: [bool; 4],
+    pub uses: [bool; 5],
     pub storage_kib: u32,
     pub key: String,
     pub shape: Json,
@@ -86,6 +86,7 @@ impl Daemon {
             has(wprs_format::Input::Pointer),
             has(wprs_format::Input::Clicks),
             m.permissions.as_ref().is_some_and(|p| p.rgb),
+            has(wprs_format::Input::Media),
         ];
         let key = self.package_key(wpak, &std::fs::metadata(wpak)?)?;
         let (shape, plain) = (shape(&props, &props.languages), shape(&props, &m.languages(&[PLAIN.into()])));

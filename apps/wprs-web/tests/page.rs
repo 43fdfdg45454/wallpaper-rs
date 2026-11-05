@@ -1,5 +1,7 @@
 #[path = "page/folders.rs"]
 mod folders;
+#[path = "page/heard.rs"]
+mod heard;
 #[path = "page/helper.rs"]
 mod helper;
 #[path = "page/input.rs"]

@@ -716,6 +716,17 @@ msgstr ""
 "de eso se guarda, se registra ni se envía."
 
 #: apps/wprs-app/qml/Consent.qml
+msgid "Show what plays even though it can reach the network"
+msgstr "Mostrar lo que suena aunque pueda salir a internet"
+
+#: apps/wprs-app/qml/Consent.qml
+msgid ""
+"This web wallpaper may also reach the sites it names, so the title, artist "
+"and cover of what plays could leave this computer. Allow it only if you "
+"trust it with them."
+msgstr "Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir de este equipo. Permítelo solo si le confías esos datos."
+
+#: apps/wprs-app/qml/Consent.qml
 msgid "Send its colors to the RGB lighting"
 msgstr "Mandar sus colores a la iluminación RGB"
 
@@ -2758,7 +2769,9 @@ msgstr "Módulo vacío"
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid ""
 "Module that follows the media player, with its events and values to follow"
-msgstr "Módulo que sigue al reproductor multimedia, con sus eventos y valores para enlazar"
+msgstr ""
+"Módulo que sigue al reproductor multimedia, con sus eventos y valores para "
+"enlazar"
 
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "Import from an assets package…"
@@ -6230,6 +6243,10 @@ msgstr "los clics"
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "what the media player plays"
 msgstr "lo que suena en el reproductor"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "what the media player plays, even with the network"
+msgstr "lo que suena en el reproductor, aun con acceso a internet"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "the network"

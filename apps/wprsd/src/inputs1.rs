@@ -39,7 +39,7 @@ impl Inputs {
         let (input, scene) = (parse(input)?, scene_id(scene)?.to_owned());
         let (key, title) = lock(&hub.control).package(&scene, key)?;
         let trusted = caller(call.0, call.1).await.trusted();
-        if matches!(input, Input::Network | Input::Rgb) && !trusted {
+        if matches!(input, Input::Network | Input::Rgb | Input::MediaNetwork) && !trusted {
             return Err(denied("only the app, the tray and wprs-ctl give wallpapers the network or lights"));
         }
         if !trusted {
@@ -58,8 +58,9 @@ impl Inputs {
 }
 
 fn parse(input: &str) -> Result<Input> {
-    Input::parse(input)
-        .ok_or_else(|| invalid(format!("{input} is not audio, pointer, clicks, network, rgb or media")))
+    Input::parse(input).ok_or_else(|| {
+        invalid(format!("{input} is not audio, pointer, clicks, network, rgb, media or media_network"))
+    })
 }
 
 fn reopen(d: &Daemon, input: Input) -> anyhow::Result<()> {

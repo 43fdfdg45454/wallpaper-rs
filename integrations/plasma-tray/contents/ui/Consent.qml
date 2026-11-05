@@ -17,14 +17,16 @@ Kirigami.InlineMessage {
             "pointer": [daemon.tr("Follow the pointer"), daemon.tr("Only the latest pointer position over this screen reaches the scene; positions are never kept and keys are never read.")],
             "clicks": [daemon.tr("Take clicks and taps"), daemon.tr("Only real clicks and taps on the wallpaper of this screen reach the scene; they are never kept and keys are never read.")],
             "media": [daemon.tr("Show what the media player plays"), daemon.tr("While the scene is shown, the title, artist, album, cover and progress of what a media player on this computer plays reach it; nothing of it is kept, logged or sent.")],
+            "media_network": [daemon.tr("Show what plays even though it can reach the network"), daemon.tr("This web wallpaper may also reach the sites it names, so the title, artist and cover of what plays could leave this computer. Allow it only if you trust it with them.")],
             "rgb": [daemon.tr("Send its colors to the RGB lighting"), daemon.tr("Up to 64 × 16 colors of the wallpaper go to your keyboard, mouse and other lights through the OpenRGB server set in Settings, on this computer unless you set another address, and only while RGB lighting is on there.")]
         })
     readonly property var ask: {
         const shown = inputs.shown ?? {};
         const decided = (map, scene, input) => ((map ?? {})[scene] ?? []).includes(input);
-        const open = (s, input) => s[input] === true && !(s.granted ?? []).includes(input) && !decided(inputs.declined, s.scene, input);
+        const wants = (s, input) => input === "media_network" ? s.media === true && s.network === true && (s.granted ?? []).includes("media") : s[input] === true;
+        const open = (s, input) => wants(s, input) && !(s.granted ?? []).includes(input) && !decided(inputs.declined, s.scene, input);
         for (const name of Object.keys(shown).filter(name => consent.output === "" || name === consent.output)) {
-            const list = ["audio", "pointer", "clicks", "media", "rgb"].filter(input => open(shown[name], input));
+            const list = ["audio", "pointer", "clicks", "media", "media_network", "rgb"].filter(input => open(shown[name], input));
             if (list.length > 0)
                 return {
                     "screen": name,

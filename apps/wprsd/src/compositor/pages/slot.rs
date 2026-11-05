@@ -40,6 +40,8 @@ pub(in crate::compositor) struct PageSlot {
     pub(in crate::compositor) scoped: bool,
     pub(in crate::compositor) ready: bool,
     pub(in crate::compositor) full: bool,
+    pub(in crate::compositor) media: Option<(bool, Option<u64>)>,
+    pub(in crate::compositor) cover: u64,
 }
 
 impl PageSlot {
@@ -71,6 +73,8 @@ impl PageSlot {
             scoped: false,
             ready: false,
             full: false,
+            media: None,
+            cover: 0,
         }
     }
 
@@ -133,6 +137,7 @@ impl PageSlot {
         (self.link, self.child, self.waiting) = (Some(link), Some(child), Some(now + FIRST_FRAME));
         self.views.values_mut().for_each(ViewSlot::reset);
         (self.files, self.folders, self.settings, self.allowed) = Default::default();
+        (self.media, self.cover) = (None, 0);
     }
 
     pub(super) fn starts(&mut self, now: Instant) -> bool {

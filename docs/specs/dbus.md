@@ -1422,8 +1422,12 @@ Only the app, the tray and `wprs-ctl` grant it, as `network`; the colors reach t
 
 ### `Grant(s scene, s input)`
 
-Lets the scene or web package with id `scene` that an output shows now use `input`, `audio`, `pointer`, `clicks`, `network`, `rgb` or `media`,
-whenever it is shown. A package that already has the input gets it again at once, from any caller
+Lets the scene or web package with id `scene` that an output shows now use `input`, `audio`, `pointer`, `clicks`, `network`, `rgb`, `media` or `media_network`,
+whenever it is shown. `media_network` is the second confirmation that a web package which declares
+network origins needs besides `media`: without both, `onMedia` gets `{enabled: false}` and the media
+players are not read for it, since the title, artist and cover could leave the computer through
+those origins; like `network` and `rgb`, only the app, the tray and `wprs-ctl` give it, and the app
+and the tray ask for it only after `media` was allowed. A package that already has the input gets it again at once, from any caller
 and without asking. `InvalidArgs` for another input or a malformed id (1 to 255 characters of
 `a-z`, `0-9`, `.`, `_`, `-`) and while the outputs show more than one package with that id (other
 versions, signers or files), which `GrantPackage` tells apart; `NotFound` while no output shows a
@@ -2551,7 +2555,7 @@ struct InstalledReply { model: u32, serial: u64, packages: Vec<InstalledPackage>
 struct Update { repo_id: String, id: String, installed: String, available: String, changes: String }
 struct RefreshOutput { repos: Vec<Repo>, updates: Vec<Update>, revoked: Vec<InstalledPackage> }
 
-enum Input { Audio, Pointer, Clicks, Network, Rgb, Media }
+enum Input { Audio, Pointer, Clicks, Network, Rgb, Media, MediaNetwork }
 struct SceneInputs {
     scene: String, audio: bool, pointer: bool, clicks: bool, network: bool, rgb: bool, media: bool, title: String,
     key: String, granted: Vec<Input>,

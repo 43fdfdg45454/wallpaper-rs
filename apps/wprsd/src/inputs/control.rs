@@ -24,7 +24,10 @@ impl Control {
                     Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
                     Input::Network => need.network,
                     Input::Rgb => need.rgb,
-                    Input::Media => need.media,
+                    Input::Media => {
+                        need.media && (!need.network || self.has(&need.scene, &need.key, Input::MediaNetwork))
+                    }
+                    Input::MediaNetwork => need.media && need.network,
                 };
                 declared && self.has(&need.scene, &need.key, input)
             })

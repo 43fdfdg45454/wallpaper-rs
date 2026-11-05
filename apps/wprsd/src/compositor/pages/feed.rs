@@ -9,7 +9,9 @@ impl State {
     pub(in crate::compositor) fn feed_pages(&mut self) {
         let now = Instant::now();
         for slot in self.pages.values_mut().filter(|s| s.link.is_some()) {
-            let [audio, pointer, clicks, _] = slot.spec.pack.uses;
+            let [audio, pointer, clicks, ..] = slot.spec.pack.uses;
+            let live: Vec<String> =
+                slot.views.iter().filter(|(_, v)| v.opened && v.live).map(|(n, _)| n.clone()).collect();
             let mut allowed = Allowed::default();
             let mut out = Vec::new();
             for (name, view) in slot.views.iter_mut().filter(|(_, v)| v.opened && v.live) {
@@ -48,6 +50,7 @@ impl State {
                     right: frame.right[..BANDS].to_vec(),
                 });
             }
+            out.extend(slot.hear(&live));
             out.iter().for_each(|m| slot.send(m));
         }
     }

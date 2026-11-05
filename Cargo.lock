@@ -7096,7 +7096,9 @@ dependencies = [
 name = "wprs-web"
 version = "0.3.0"
 dependencies = [
+ "base64 0.23.1",
  "blake3",
+ "image",
  "libc",
  "libloading 0.8.9",
  "rustix",

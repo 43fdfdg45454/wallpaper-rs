@@ -22,6 +22,10 @@ wprs.onProperties((changed) => report("properties", changed));
 wprs.onSettings((settings) => report("settings", settings));
 wprs.onPause((paused) => report("paused", paused));
 wprs.onAudio((bands) => report("audio", bands.left.length));
+wprs.onMedia((m) => {
+  report("media", m.enabled ? [m.state, m.title, m.colors && m.colors.primary.hex, Boolean(m.cover)] : false);
+  if (m.cover) fetch(m.cover).then((r) => r.blob()).then((b) => report("cover", [m.cover.slice(0, 5), b.type, b.size > 0]));
+});
 addEventListener("pointermove", (e) => report("move", [Math.round(e.clientX), Math.round(e.clientY), e.isTrusted]));
 addEventListener("click", (e) => report("click", [Math.round(e.clientX), Math.round(e.clientY), e.isTrusted]));
 const reach = (name, url) => fetch(url).then((r) => r.text()).then((t) => report(name, `read ${t.length}`), () => report(name, "blocked"));

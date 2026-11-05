@@ -1499,6 +1499,12 @@ panel de recursos (o `wprs-ctl scene import-script CARPETA reproductor.js --temp
 módulo con todos esos eventos y valores para enlazar. Para probarlos sin música, `wprs-ctl media
 simulate PANTALLA pista.json` muestra una pista inventada en cualquier pantalla (`--stop` la quita).
 
+Un fondo web que declara `media` recibe lo mismo con `window.wprs.onMedia(cb)`: estado, título,
+artista, álbum, la carátula como una dirección `blob:` hecha en la propia página, sus colores,
+posición y duración. Si además puede salir a internet (declara orígenes de red), pide una segunda
+confirmación aparte (`wprs-ctl input grant ID media_network`, o el segundo aviso de la app y la
+bandeja), porque el título y la carátula podrían salir por la red.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas

@@ -1,7 +1,9 @@
 (() => {
   const init = __WPRS_INIT__;
   const post = __WPRS_POST__;
-  const handlers = { properties: [], settings: [], pause: [], audio: [], files: new Map(), action: [] };
+  const handlers = { properties: [], settings: [], pause: [], audio: [], files: new Map(), action: [], media: [] };
+  let heard = { enabled: false };
+  let picture = null;
   const waiting = new Map();
   let asked = 0;
   let paused = document.visibilityState === "hidden";
@@ -66,7 +68,7 @@
     onPause(cb) { handlers.pause.push(cb); },
     onAudio(cb) { handlers.audio.push(cb); if (handlers.audio.length === 1) post({ audio: true }); },
     onAction(cb) { handlers.action.push(cb); },
-    onMedia(cb) { call([cb], { enabled: false }); },
+    onMedia(cb) { handlers.media.push(cb); if (handlers.media.length === 1) post({ media: true }); else call([cb], Object.assign({}, heard)); },
     openShortcut(prop) {
       if (navigator.userActivation && !navigator.userActivation.isActive) return false;
       post({ open: String(prop) });
@@ -104,6 +106,18 @@
     if (message.audio) {
       const [left, right] = message.audio.map((bands) => Float32Array.from(bands));
       call(handlers.audio, { left, right });
+    }
+    if (message.media) {
+      const m = message.media;
+      if (typeof m.cover === "string") {
+        if (picture) URL.revokeObjectURL(picture);
+        const bytes = m.cover ? Uint8Array.from(atob(m.cover), (c) => c.charCodeAt(0)) : null;
+        picture = bytes ? URL.createObjectURL(new Blob([bytes], { type: "image/png" })) : null;
+      }
+      const colors = m.colors ? Object.fromEntries(Object.entries(m.colors).map(([k, v]) => [k, color(v)])) : null;
+      const { state, title, artist, album, position, duration, rate } = m;
+      heard = m.enabled ? { enabled: true, state, title, artist, album, cover: picture, colors, position, duration, rate } : { enabled: false };
+      call(handlers.media, Object.assign({}, heard));
     }
     if (message.files) call(handlers.files.get(message.files.prop) || [], message.files);
     if (message.action) call(handlers.action, message.action);

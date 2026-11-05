@@ -9,6 +9,7 @@ use wprs_web::{Folder, Settings, Start, ToWeb, token};
 mod ending;
 mod feed;
 mod frames;
+mod heard;
 mod slot;
 #[cfg(test)]
 mod tests;

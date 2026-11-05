@@ -435,7 +435,7 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 | `onPause(cb)` | `true` while it is hidden or paused, when animation frames stop too |
 | `onAudio(cb)` | 64 bands per channel while `audio` is allowed, silence otherwise |
 | pointer and clicks | real DOM events while `pointer` is allowed, and clicks only from real clicks on screens where clicks are on, for packages allowed `clicks` |
-| `onMedia(cb)` | what the media player plays while `media` is allowed, `{enabled: false}` otherwise |
+| `onMedia(cb)` | what the media player plays while `media` is allowed (and, for a page that declares network origins, a second confirmation that the title, artist and cover may then leave the computer), with the cover as a `blob:` address and its colors; `{enabled: false}` otherwise (`web.md`) |
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | opaque addresses (`wpak-user://<prop>/…` on the desktop, `https://<host>/:user/<prop>/…` on the phone) for the files of a chosen folder, and the ones added and removed; never their paths |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `openShortcut(prop)` | opens what the user chose for a `shortcut` property, only inside a real click and at most once a second |
@@ -444,8 +444,8 @@ declares `network` in `inputs`, and only then. Pages receive their settings thro
 Nothing reaches the page without the input it needs, and a page never sees paths, device names,
 the battery or the list of fonts. It sees the time zone, the language and what the graphics card
 can do through WebGL, and keeps its storage, until the user restricts each of them for the package; every client
-shows a notice saying so (`web.md`, "Privacy"). `onMedia` exists but does nothing while its
-feature is refused. Web pages with storage get the `storage` facet.
+shows a notice saying so (`web.md`, "Privacy"). `onMedia` gets `{enabled: false}` on engines that do
+not read the media player. Web pages with storage get the `storage` facet.
 
 ## Presets
 

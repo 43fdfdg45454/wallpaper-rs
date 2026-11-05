@@ -131,3 +131,21 @@ fn a_declined_question_spares_the_twins_and_old_clients_see_the_shown_package() 
     lock(&hub.control).shown.clear();
     assert_eq!(reported(), Grants::from([(SEA.into(), [Input::Audio].into())]), "a grant was hidden");
 }
+
+#[test]
+fn a_page_that_reaches_the_network_hears_the_player_only_after_a_second_confirmation() {
+    let mut control = Control::default();
+    let page = |network| SceneInputs { media: true, network, ..scene(SEA, "k", false, false) };
+    control.shown.insert("A".into(), page(true));
+    control.grants = bound("k", &[Input::Media]);
+    assert!(!control.allows("A", Input::Media), "media alone does not reach a page with the network");
+    assert!(!control.allows("A", Input::MediaNetwork));
+    control.grants = bound("k", &[Input::Media, Input::MediaNetwork]);
+    assert!(control.allows("A", Input::Media) && control.allows("A", Input::MediaNetwork));
+    control.grants = bound("k", &[Input::MediaNetwork]);
+    assert!(!control.allows("A", Input::Media), "the second confirmation never stands alone");
+    control.shown.insert("A".into(), page(false));
+    control.grants = bound("k", &[Input::Media]);
+    assert!(control.allows("A", Input::Media) && !control.allows("A", Input::MediaNetwork));
+    assert_eq!(Input::parse("media_network"), Some(Input::MediaNetwork));
+}

@@ -22,6 +22,7 @@ QtObject {
             "pointer": App.tr("the pointer"),
             "clicks": App.tr("clicks"),
             "media": App.tr("what the media player plays"),
+            "media_network": App.tr("what the media player plays, even with the network"),
             "network": App.tr("the network"),
             "rgb": App.tr("the RGB lighting"),
             "general": App.tr("For everyone"),

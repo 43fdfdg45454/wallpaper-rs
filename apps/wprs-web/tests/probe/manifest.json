@@ -17,6 +17,7 @@
     "features": [
       "inputs.audio",
       "inputs.clicks",
+      "inputs.media",
       "inputs.pointer",
       "properties2",
       "web"
@@ -25,7 +26,8 @@
   "inputs": [
     "audio",
     "pointer",
-    "clicks"
+    "clicks",
+    "media"
   ],
   "web": {
     "preload": "early.js",

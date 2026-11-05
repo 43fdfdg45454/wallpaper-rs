@@ -70,8 +70,12 @@ pub fn tell_view(id: u32, message: &Value) {
 }
 
 fn reply(view: u32, id: u64, value: Value) {
+    direct(view, &json!({"reply": {"id": id, "value": value}}));
+}
+
+fn direct(view: u32, message: &Value) {
     let Some(view) = crate::state::view(view) else { return };
-    let code = text(&format!("window.__wprs({})", json!({"reply": {"id": id, "value": value}})));
+    let code = text(&format!("window.__wprs({message})"));
     unsafe {
         let null = std::ptr::null_mut();
         (get().webkit_web_view_evaluate_javascript)(
@@ -113,6 +117,14 @@ pub unsafe extern "C" fn message(_manager: Ptr, value: Ptr, data: Ptr) {
     if message.get("audio").is_some() && !live(|l| std::mem::replace(&mut l.audio, true)) {
         send(&FromWeb::Wants { audio: true });
     }
+    if message.get("media").is_some() {
+        let last = live(|l| {
+            l.media = true;
+            l.heard.clone()
+        });
+        let last = last.unwrap_or_else(|| json!({ "enabled": false }));
+        direct(view, &json!({ "media": last }));
+    }
     if let Some(prop) = message.get("files").and_then(Value::as_str) {
         reply(view, id, tokens(prop, true).map_or(Value::Null, |t| json!(t)));
     }
@@ -149,4 +161,19 @@ fn lit(view: u32, rgb: &Value) {
     }
     *last = Some(std::time::Instant::now());
     send(&FromWeb::Rgb { view, size: (w, h), rgb: data });
+}
+
+pub fn heard(heard: Value) {
+    let asked = live(|l| {
+        let mut kept = heard.clone();
+        let before = l.heard.as_ref().and_then(|h| h.get("cover")).filter(|_| heard.get("cover").is_none());
+        if let Some(cover) = before {
+            kept["cover"] = cover.clone();
+        }
+        l.heard = Some(kept);
+        l.media
+    });
+    if asked {
+        tell(&json!({ "media": heard }));
+    }
 }
