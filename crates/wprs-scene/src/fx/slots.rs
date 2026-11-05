@@ -53,7 +53,8 @@ impl ParamDef {
             }
             (ParamKind::Bool, Param::Bool(b)) => [f32::from(*b), 0.0, 0.0, 0.0],
             (ParamKind::Emitters, Param::Emitters(list)) => {
-                [list.len().min(crate::MAX_EFFECT_EMITTERS) as f32, 0.0, 0.0, 0.0]
+                let blows = list.iter().any(|e| e.strength > 0.0);
+                [if blows { list.len().min(crate::MAX_EFFECT_EMITTERS) as f32 } else { 0.0 }, 0.0, 0.0, 0.0]
             }
             (ParamKind::Texture | ParamKind::Lut | ParamKind::Mask, _) => [0.0; 4],
             _ => self.slot(&self.default),

@@ -60,6 +60,10 @@ fn newer_effects_refuse_values_outside_their_types_and_ranges() {
     let spout =
         json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 4 }] } });
     assert!(timed(spout) && !timed(json!({ "effect": "fluid" })), "only emitters ask for time");
+    let still = json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 4 }], "strength": 0 } });
+    let calm =
+        json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 0 }] } });
+    assert!(!timed(still) && !timed(calm), "emitters that blow nothing ask for no time");
     let frozen = descriptor("fluid").unwrap();
     assert!(frozen.frozen(Quality::Q0) && !frozen.frozen(Quality::Q1) && frozen.class() == Class::Heavy);
     let trail = descriptor("trail").unwrap();

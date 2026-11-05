@@ -21,10 +21,9 @@ impl Wake {
 }
 
 pub(crate) fn wakes(d: &Descriptor, slots: &[[f32; 4]; MAX_PARAMS], cx: &Context, q: Quality) -> Wake {
-    let yields =
-        |p: &crate::ParamDef| p.yields_to.as_ref().and_then(|o| d.param(o)).is_some_and(|i| live(slots[i]));
-    let gated =
-        d.params.iter().zip(slots).filter(|(p, s)| live(**s) && !yields(p)).filter_map(|(p, _)| p.uses);
+    let held = |o: &Option<String>| o.as_ref().and_then(|o| d.param(o)).is_some_and(|i| live(slots[i]));
+    let on = |p: &crate::ParamDef| !held(&p.yields_to) && (p.waits_for.is_none() || held(&p.waits_for));
+    let gated = d.params.iter().zip(slots).filter(|(p, s)| live(**s) && on(p)).filter_map(|(p, _)| p.uses);
     let settle = d.state.as_ref().map_or(0.0, |s| s.settle);
     let wake = |u| match u {
         Use::Time => pace(d, slots, cx, q),
