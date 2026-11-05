@@ -1760,7 +1760,7 @@ La carpeta `scenes/` guarda cinco escenas de ejemplo de dominio público (CC0):
 capas, modos de fusión, máscaras, línea de tiempo y profundidad que sigue al puntero o una órbita
 lenta con un mapa calculado a partir de sus formas (`dusk`), partículas, efectos, el sonido del
 viento y las imágenes de una carpeta que elijas tras la nieve (`snowfall`), análisis del sonido
-(`pulse`), puntero y el sonido del agua (`pond`) y un script con una imagen o un vídeo de fondo que
+con la carátula, el título y el artista de lo que suena en el centro (`pulse`), puntero y el sonido del agua (`pond`) y un script con una imagen o un vídeo de fondo que
 eliges (`orbits`). `scripts/ambient-sounds.sh` sintetiza esos dos sonidos (ruido filtrado y gotas,
 también CC0) y los guarda como Ogg Vorbis.
 

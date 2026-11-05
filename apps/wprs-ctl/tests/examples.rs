@@ -89,7 +89,8 @@ fn example_scenes_pack_small_render_and_rest() {
         let scene = Arc::new(package.scene().unwrap());
         assert_eq!(scene.sounds().count(), usize::from(SOUNDS.contains(&name.as_str())), "{name}");
         let pictures: Vec<_> = scene.assets.iter().filter(|(_, a)| !playable(&a.path)).collect();
-        assert!(pictures.iter().all(|(_, a)| a.linear), "{name} draws its pictures itself");
+        let drawn = pictures.iter().all(|(_, a)| a.linear || a.media.is_some());
+        assert!(drawn, "{name} draws its pictures itself");
         let mut assets = SceneAssets::default();
         for (id, asset) in pictures {
             let data = image::load_from_memory(&package.read_file(&asset.path).unwrap()).unwrap();
@@ -104,6 +105,10 @@ fn example_scenes_pack_small_render_and_rest() {
         let mean = shot.pixels().map(|p| f64::from(p.0[1])).sum::<f64>() / count;
         let spread = shot.pixels().map(|p| (f64::from(p.0[1]) - mean).powi(2)).sum::<f64>() / count;
         assert!(spread.sqrt() > 8.0, "{name} looks flat");
+        if scene.assets.values().any(|a| a.media.is_some()) {
+            let middle = shot.get_pixel(SIZE.0 / 2 - 4, SIZE.1 / 2 + 11).0;
+            assert!(middle[0] > 160 && middle[2] > 120, "{name} shows its cover in the middle: {middle:?}");
+        }
         let mut runtime = fresh();
         if runtime.uses().cursor {
             let at = [1.0, 0.5];

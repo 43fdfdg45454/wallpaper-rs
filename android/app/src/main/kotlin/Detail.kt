@@ -94,6 +94,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                         "shortcut" -> R.string.lacks_shortcut
                         "script_hierarchy" -> R.string.lacks_script_hierarchy
                         "rgb" -> R.string.lacks_rgb
+                        "media_info" -> R.string.lacks_media_info
                         else -> null
                     }
                 }.map { stringResource(it) }

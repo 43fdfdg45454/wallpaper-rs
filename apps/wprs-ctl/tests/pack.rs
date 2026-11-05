@@ -19,8 +19,8 @@ fn check_explains_what_a_package_needs_and_upgrade_rates_it() {
     for line in [
         "rating = general",
         "photosensitive = yes",
-        "inputs = audio",
-        "needs = inputs.audio (reacts to the sound playing on the computer)",
+        "inputs = audio, media",
+        "needs = inputs.audio (reacts to the sound playing on the computer), inputs.media (shows what the media player plays), media_info (shows the title, cover or progress of what the media player plays)",
         "languages = en, es",
     ] {
         assert!(shown.lines().any(|l| l == line), "{line}: {shown}");
@@ -29,6 +29,8 @@ fn check_explains_what_a_package_needs_and_upgrade_rates_it() {
     let src = tmp.path().join("src");
     std::fs::create_dir(&src).unwrap();
     std::fs::copy(pulse.join("scene.json"), src.join("scene.json")).unwrap();
+    std::fs::create_dir(src.join("assets")).unwrap();
+    std::fs::copy(pulse.join("assets/cover.png"), src.join("assets/cover.png")).unwrap();
     let manifest = r##"{"schema": "wallpaper-rs.wpak/1", "id": "org.example.beat", "version": "1.0.0",
         "title": "Beat", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json",
         "properties": {"color": {"type": "color", "default": "#ffffff"}, "show": {"type": "combo",
@@ -47,8 +49,8 @@ fn check_explains_what_a_package_needs_and_upgrade_rates_it() {
             &serde_json::json!("wallpaper-rs.wpak/2"),
             &serde_json::json!("mature"),
             &serde_json::json!(["violence"]),
-            &serde_json::json!(["audio"]),
-            &serde_json::json!(["inputs.audio"])
+            &serde_json::json!(["audio", "media"]),
+            &serde_json::json!(["inputs.audio", "inputs.media", "media_info"])
         )
     );
     std::fs::create_dir(src.join("locale")).unwrap();

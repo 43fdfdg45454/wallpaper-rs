@@ -48,6 +48,7 @@
     <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
+    <string name="lacks_media_info">It shows its placeholders instead of the cover, title and progress of what plays on the phone.</string>
     <string name="failed_without_reason">Something failed without giving a reason.</string>
     <string name="cancel">Cancel</string>
     <string name="size" translatable="false">%1$d × %2$d</string>

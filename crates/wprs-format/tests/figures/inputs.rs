@@ -50,10 +50,8 @@ fn declared_script_parts_and_media_become_inputs() {
     assert_eq!(package.facts.inputs.iter().collect::<Vec<_>>(), [&Input::Audio, &Input::Media]);
     let declared = package.manifest.declared().unwrap();
     assert!(declared.audio && declared.media && !declared.cursor);
-    let phone =
-        features::playable(&package.manifest, &package.facts, Platform::Android).unwrap_err().to_string();
-    assert!(phone.contains("media_info") && !phone.contains("scripts2"), "{phone}");
-    assert!(features::lacks("android", &package.facts.features).is_empty(), "the phone runs scripts");
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_ok());
+    assert_eq!(features::lacks("android", &package.facts.features), ["media_info"], "the phone runs scripts");
 }
 
 #[test]
