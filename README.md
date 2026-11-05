@@ -958,7 +958,10 @@ el teléfono escucha el canal de avisos del servidor (el mismo que usa el escrit
 en cuanto otro equipo guarda un cambio, en unos segundos y sin esperar a la hora: al abrir el canal
 pregunta además si se perdió algo, así que al encender la pantalla el fondo se pone al día enseguida.
 Un solo canal sirve a la app y al fondo y se abre 2 segundos después de mostrarse, para no abrir y
-cerrar conexiones al pasar de una app a otra. Si el canal se corta después de abrirse vuelve a
+cerrar conexiones al pasar de una app a otra. Sigue las mismas reglas que la sincronización de
+cada hora: solo con Wi-Fi u otra red sin límite de datos (salvo *Sincronizar también con datos
+móviles*) y nunca con batería baja; se cierra al pasar a datos móviles o al bajar la batería y se
+abre de nuevo al volver la red sin límite o la carga. Si el canal se corta después de abrirse vuelve a
 conectarse a los 5 segundos, solo espera cada vez más (hasta 15 minutos) cuando el servidor no
 responde, y si se cortó porque faltaba la red vuelve en cuanto Android avisa de que hay red de
 nuevo. Cuando no se ve nada cierra el canal, y con la pantalla apagada no queda nada abierto ni

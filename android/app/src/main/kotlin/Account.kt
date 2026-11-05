@@ -130,7 +130,7 @@ private fun Summary(main: Main, status: JSONObject, run: Run, approve: () -> Uni
                 run("") { account("pause", "paused" to it) }
             }
             Toggle(stringResource(R.string.mobile_data), status.optString("network") == "any") {
-                run("") { withContext(Dispatchers.IO) { Native.setting("sync_network", if (it) "any" else "unmetered") } }
+                run("") { withContext(Dispatchers.IO) { Native.setting("sync_network", if (it) "any" else "unmetered").also { Heard.recheck() } } }
             }
             Toggle(stringResource(R.string.listen_shown), status.optString("listen") == Heard.SHOWN) {
                 run("") { withContext(Dispatchers.IO) { Native.setting(Heard.SETTING, if (it) Heard.SHOWN else "app") } }
