@@ -60,6 +60,7 @@ pub(crate) struct Engine {
     window: NativeWindow,
     steered: steer::Steered,
     reel: crate::reel::Reel,
+    still: Option<i64>,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -107,6 +108,7 @@ impl Engine {
             window,
             steered: Default::default(),
             reel: Default::default(),
+            still: None,
         }
     }
 

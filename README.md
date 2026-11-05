@@ -465,7 +465,8 @@ de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cam
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y
 posición) y sus preajustes, como en el escritorio; con zoom, posición o límite de fotogramas el
 vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en silencio y la
-reproducción única valen para vídeos y páginas como en el escritorio, y una página sin volumen
+reproducción única valen para vídeos y páginas como en el escritorio (al terminar, el último
+fotograma queda en pantalla sin volver a dibujarse), y una página sin volumen
 propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos. Un vídeo en
 silencio o con volumen 0 no descodifica su sonido ni ocupa la salida de audio. Cuando dos pantallas
 o una vista previa muestran el mismo vídeo con ajustes distintos (un preajuste y su base, por

@@ -22,6 +22,7 @@ struct Clip {
     chroma: Vec<u8>,
     epoch: u64,
     warned: bool,
+    fresh: bool,
 }
 
 #[derive(Default)]
@@ -93,6 +94,7 @@ impl Clips {
             chroma: Vec::new(),
             epoch: 0,
             warned: false,
+            fresh: false,
         });
         Ok(window)
     }
@@ -105,13 +107,7 @@ impl Clips {
         self.0.iter_mut().for_each(|clip| clip.yuv = None);
     }
 
-    pub(crate) fn frames<'a>(
-        &'a mut self,
-        r: &Renderer,
-        (epoch, headroom): (u64, f32),
-        wanted: &'a [(String, PathBuf)],
-    ) -> Vec<(&'a str, &'a GpuImage)> {
-        let mut shown = Vec::new();
+    pub(crate) fn take(&mut self, r: &Renderer, (epoch, headroom): (u64, f32)) {
         for clip in &mut self.0 {
             if clip.epoch != epoch {
                 (clip.yuv, clip.epoch) = (None, epoch);
@@ -122,23 +118,41 @@ impl Clips {
                     planes(&image, &mut clip.chroma, (coding, headroom)).and_then(|planes| {
                         crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
                             .map_err(Error::from)
-                            .inspect(|()| {
+                            .map(|()| {
                                 SHOWN.fetch_add(1, Relaxed);
+                                true
                             })
                     })
                 }
-                Ok(_) => Ok(()),
+                Ok(_) => Ok(false),
                 Err(e) => Err(media(e)),
             };
+            clip.fresh = converted.as_ref().is_ok_and(|fresh| *fresh);
             if let Err(e) = converted {
                 failed(&e, &mut clip.warned);
             }
-            let clip: &'a Clip = clip;
-            let Some(yuv) = clip.yuv.as_ref() else { continue };
-            shown.extend(
-                wanted.iter().filter(|(_, p)| *p == clip.path).map(|(id, _)| (id.as_str(), yuv.image())),
-            );
         }
-        shown
+    }
+
+    pub(crate) fn fresh(&self, path: &Path) -> bool {
+        self.0.iter().any(|clip| clip.fresh && clip.path == path)
+    }
+
+    pub(crate) fn shown<'a>(&'a self, wanted: &'a [(String, PathBuf)]) -> Vec<(&'a str, &'a GpuImage)> {
+        let clips = self.0.iter().filter_map(|clip| Some((clip, clip.yuv.as_ref()?)));
+        let of = |(clip, yuv): (&'a Clip, &'a Yuv)| {
+            wanted.iter().filter(move |(_, p)| *p == clip.path).map(move |(id, _)| (id.as_str(), yuv.image()))
+        };
+        clips.flat_map(of).collect()
+    }
+
+    pub(crate) fn frames<'a>(
+        &'a mut self,
+        r: &Renderer,
+        epoch: (u64, f32),
+        wanted: &'a [(String, PathBuf)],
+    ) -> Vec<(&'a str, &'a GpuImage)> {
+        self.take(r, epoch);
+        self.shown(wanted)
     }
 }

@@ -41,7 +41,9 @@ impl Engine {
         self.forget_old_gpu();
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| shown.video);
         let flip = shown.as_ref().map_or([false; 2], |s| s.flip);
-        self.reel = crate::reel::shown(shown.as_ref());
+        let reel = crate::reel::shown(shown.as_ref());
+        self.dirty |= reel != self.reel;
+        self.reel = reel;
         let shown = shown.map(|shown| shown.path);
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {
@@ -64,7 +66,7 @@ impl Engine {
                 Some(_) => None,
                 None => self.fading.take(),
             };
-            (self.film, self.look, self.dirty) = (shown, look, true);
+            (self.film, self.look, self.dirty, self.still) = (shown, look, true, None);
         }
         let plain = direct(&settings::Look { flip, ..settings::look(self.lock) }) && self.reel.direct();
         if self.film.is_some() && self.fading.is_none() && plain {
@@ -108,7 +110,14 @@ impl Engine {
             (None, None) => crate::hdr::dark(r, surface).map(|()| 1.0)?,
             (None, Some(_)) => 1.0,
         };
-        let frames = self.clips.frames(&gpu.renderer, (gpu.epoch, headroom), &reels);
+        self.clips.take(r, (gpu.epoch, headroom));
+        let new = reels.iter().any(|(_, path)| self.clips.fresh(path));
+        let since = match self.still {
+            Some(at) if !film.is_some_and(|film| self.clips.fresh(film)) => at,
+            _ => nanos,
+        };
+        self.still = Some(since);
+        let frames = self.clips.shown(&reels);
         let reel = |id: &str| frames.iter().find(|(key, _)| *key == id).map(|(_, image)| *image);
         let size = self.size;
         let (fit, background, flip, grade) =
@@ -160,7 +169,7 @@ impl Engine {
         if self.film.is_some() && self.reel.framed() {
             shown.uv = shown.uv.map(|uv| uv.framed(self.reel.zoom, self.reel.pan));
         }
-        if !waiting && (now.is_some() || was.is_some()) {
+        if !waiting && (now.is_some() || was.is_some()) && (new || self.dirty || self.fading.is_some()) {
             self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
             if !self.dirty {
                 self.presented = nanos;
@@ -175,7 +184,11 @@ impl Engine {
                 && direct(&settings::Look { flip, ..settings::look(self.lock) });
             gpu::trim();
         }
-        let busy = self.fading.is_some() || (self.film.is_some() && power.moving());
+        let ended = blend::rests(self.reel.once, now.is_some(), nanos - since);
+        let busy = self.fading.is_some() || (self.film.is_some() && power.moving() && !ended);
+        if !busy || fps == 0 {
+            self.still = None;
+        }
         Ok(if busy && fps > 0 { (fps, delay_ms(fps)) } else { (0, 0) })
     }
 }

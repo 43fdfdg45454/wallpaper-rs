@@ -1,9 +1,14 @@
 use std::time::Duration;
 
 pub(crate) const PATIENCE_NS: i64 = 2_000_000_000;
+pub(crate) const STILL_NS: i64 = 3_000_000_000;
 
 pub(crate) fn begins(gone: bool, coming: bool, waited_ns: i64) -> bool {
     (gone && coming) || waited_ns > PATIENCE_NS
+}
+
+pub(crate) fn rests(once: bool, shown: bool, since_new_ns: i64) -> bool {
+    once && shown && since_new_ns > STILL_NS
 }
 
 pub(crate) fn fades(fade: Duration, fps: u32, hidden: bool, from_video: bool) -> bool {
@@ -38,6 +43,17 @@ mod tests {
         assert!(fades(FADE, 30, true, false), "a picture left while hidden still fades into the video");
         assert!(!fades(FADE, 30, true, true));
         assert!(!fades(Duration::ZERO, 30, false, false) && !fades(FADE, 0, false, false));
+    }
+
+    #[test]
+    fn a_video_played_once_stops_drawing_after_its_last_frame() {
+        assert!(rests(true, true, STILL_NS + 1));
+        assert!(!rests(true, true, STILL_NS / 2), "a slow video still gives a frame now and then");
+        assert!(!rests(false, true, STILL_NS * 10), "a looping video keeps going");
+        assert!(
+            !rests(true, false, STILL_NS * 10),
+            "a video that has not given its first frame is waited for"
+        );
     }
 
     #[test]

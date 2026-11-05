@@ -126,7 +126,8 @@ user chooses the accent color from the wallpaper, the phone gives it to Android 
 color of the wallpaper, and other desktops ignore it.
 
 `playback` takes `speed` (0.1 to 4), `start` and `end` (0 to 3600 s, `end` after `start`) and
-`loop` (`false` plays it once and keeps the last frame) for videos, and `max_fps` (1 to 240, or
+`loop` (`false` plays it once and keeps the last frame, which is not drawn again until something
+changes) for videos, and `max_fps` (1 to 240, or
 `display` to follow the screen), `volume` (0 to 1) and `muted` (it starts without sound) for videos,
 web pages and scenes; a page decides itself how it repeats, so it ignores `loop`. A setting the user
 makes always wins, and the frame rate never exceeds what the user, the author (`playback.max_fps`,
