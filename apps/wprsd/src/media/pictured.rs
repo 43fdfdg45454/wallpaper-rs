@@ -1,6 +1,6 @@
-use super::covers::{MAX_FILE, decode, fetch, local, reduced};
+use super::covers::{MAX_FILE, MAX_SIDE, decode, fetch, local, reduced};
 use super::pictures::Pictures;
-use image::{ImageFormat, Rgba, RgbaImage};
+use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
 use reqwest::Url;
 use std::io::Cursor;
 use std::time::Duration;
@@ -13,12 +13,17 @@ fn png(w: u32, h: u32, color: [u8; 4]) -> Vec<u8> {
 
 #[test]
 fn covers_shrink_to_256_pixels_and_keep_their_shape() {
-    assert_eq!(reduced(RgbaImage::new(600, 300)).dimensions(), (256, 128));
-    assert_eq!(reduced(RgbaImage::new(90, 2000)).dimensions(), (12, 256));
-    assert_eq!(reduced(RgbaImage::new(64, 64)).dimensions(), (64, 64));
+    assert_eq!(reduced(DynamicImage::new_rgba8(600, 300)).dimensions(), (256, 128));
+    assert_eq!(reduced(DynamicImage::new_rgb8(90, 2000)).dimensions(), (12, 256));
+    assert_eq!(reduced(DynamicImage::new_rgba8(64, 64)).dimensions(), (64, 64));
     let cover = decode(&png(512, 512, [200, 10, 10, 255])).unwrap();
     assert_eq!(cover.pixels.size(), (256, 256));
     assert!(decode(b"not a picture").is_none());
+    assert!(decode(&png(MAX_SIDE, 2, [9, 9, 9, 255])).is_some());
+    assert!(
+        decode(&png(MAX_SIDE + 1, 2, [9, 9, 9, 255])).is_none(),
+        "a cover wider than 4096 pixels is refused"
+    );
     assert!(decode(&png(4, 4, [0; 4])).unwrap().serial < decode(&png(4, 4, [0; 4])).unwrap().serial);
 }
 
@@ -57,18 +62,28 @@ fn a_new_cover_pushes_the_last_one_to_previous() {
         let (red, blue) = (file("red.png", [255, 0, 0, 255]), file("blue.png", [0, 0, 255, 255]));
         let (sender, mut arrivals) = tokio::sync::mpsc::unbounded_channel();
         let mut p = Pictures::new(sender);
-        p.ask(&red);
+        p.ask(1, &red, false);
         p.arrived(arrivals.recv().await.unwrap());
         let first = p.serial();
         assert!(first != 0 && p.previous.is_none());
-        p.ask(&red);
-        assert!(arrivals.try_recv().is_err(), "the same address is not read again");
-        p.ask(&blue);
+        p.ask(1, &red, false);
+        assert!(arrivals.try_recv().is_err(), "the same track is not read again");
+        p.ask(2, &red, false);
         p.arrived(arrivals.recv().await.unwrap());
+        assert_eq!((p.serial(), p.previous.is_none()), (first, true), "an unchanged file keeps its cover");
+        std::fs::write(Url::parse(&red).unwrap().to_file_path().unwrap(), png(8, 8, [0, 255, 0, 255]))
+            .unwrap();
+        p.ask(3, &red, false);
+        p.arrived(arrivals.recv().await.unwrap());
+        let rewritten = p.serial();
+        assert!(rewritten != first, "a file rewritten for a new track is read again");
         assert_eq!(p.previous.as_ref().map(|c| c.serial), Some(first));
-        p.ask("");
+        p.ask(4, &blue, false);
+        p.arrived(arrivals.recv().await.unwrap());
+        assert_eq!(p.previous.as_ref().map(|c| c.serial), Some(rewritten));
+        p.ask(5, "", false);
         assert_eq!((p.serial(), p.previous.is_some()), (0, true));
-        p.ask("https://example.org/cover.png");
+        p.ask(6, "https://example.org/cover.png", false);
         assert_eq!(p.serial(), 0, "a cover from the internet stays out while the switch is off");
     });
 }

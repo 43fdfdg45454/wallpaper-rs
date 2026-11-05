@@ -1,5 +1,5 @@
 use image::imageops::FilterType;
-use image::{ImageReader, Limits, RgbaImage};
+use image::{DynamicImage, ImageReader, Limits, RgbaImage};
 use reqwest::Url;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -11,7 +11,8 @@ use wprs_scene::{COVER_SIDE, FALLBACK, PALETTE_SIDE, palette};
 pub(crate) const MAX_FILE: u64 = 16 << 20;
 pub(crate) const MAX_REMOTE: usize = 4 << 20;
 pub(crate) const PATIENCE: Duration = Duration::from_secs(5);
-const MAX_SIDE: u32 = 8192;
+pub(crate) const MAX_SIDE: u32 = 4096;
+const MAX_ALLOC: u64 = 96 << 20;
 const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
 
 static SERIAL: AtomicU64 = AtomicU64::new(1);
@@ -34,14 +35,14 @@ pub(crate) fn colors(image: &RgbaImage) -> Option<[[f32; 4]; 5]> {
     palette(small.as_raw())
 }
 
-pub(crate) fn reduced(image: RgbaImage) -> RgbaImage {
-    let (w, h) = image.dimensions();
+pub(crate) fn reduced(image: DynamicImage) -> RgbaImage {
+    let (w, h) = (image.width(), image.height());
     if w <= COVER_SIDE && h <= COVER_SIDE {
-        return image;
+        return image.into_rgba8();
     }
     let scale = f64::from(COVER_SIDE) / f64::from(w.max(h));
     let size = |v: u32| ((f64::from(v) * scale).round() as u32).clamp(1, COVER_SIDE);
-    image::imageops::resize(&image, size(w), size(h), FilterType::Triangle)
+    image.resize_exact(size(w), size(h), FilterType::Triangle).into_rgba8()
 }
 
 pub(crate) fn decode(bytes: &[u8]) -> Option<Arc<Cover>> {
@@ -52,9 +53,9 @@ pub(crate) fn decode(bytes: &[u8]) -> Option<Arc<Cover>> {
     let mut reader = ImageReader::new(Cursor::new(bytes)).with_guessed_format().ok()?;
     let mut limits = Limits::default();
     (limits.max_image_width, limits.max_image_height) = (Some(MAX_SIDE), Some(MAX_SIDE));
-    limits.max_alloc = Some(512 << 20);
+    limits.max_alloc = Some(MAX_ALLOC);
     reader.limits(limits);
-    let image = reduced(reader.decode().ok()?.into_rgba8());
+    let image = reduced(reader.decode().ok()?);
     let colors = colors(&image).unwrap_or(FALLBACK);
     let serial = SERIAL.fetch_add(1, Ordering::Relaxed);
     Some(Arc::new(Cover { serial, pixels: Pixels::new(image), colors, digest }))

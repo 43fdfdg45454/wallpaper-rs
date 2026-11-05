@@ -4,6 +4,7 @@ use super::{Frame, Player, Status, Track, chosen};
 use futures_util::StreamExt;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+use tokio::sync::watch::Receiver;
 use wprs_core::model::MediaStatus;
 use wprs_scene::MediaState;
 use zbus::fdo::DBusProxy;
@@ -15,6 +16,7 @@ const PATH: &str = "/org/mpris/MediaPlayer2";
 const PLAYER: &str = "org.mpris.MediaPlayer2.Player";
 const PROPERTIES: &str = "org.freedesktop.DBus.Properties";
 const PATIENCE: Duration = Duration::from_secs(2);
+const RETRY: Duration = Duration::from_secs(10);
 
 type Props = HashMap<String, OwnedVariant>;
 
@@ -26,13 +28,16 @@ pub(super) struct Reading {
     pictures: Pictures,
 }
 
-pub(super) async fn listen(bus: Connection) {
-    if let Err(e) = run(&bus).await {
+pub(super) async fn listen(id: u64, bus: Connection, remote: Receiver<bool>) {
+    if let Err(e) = run(&bus, remote).await {
         tracing::warn!("cannot follow the media players: {e}");
     }
+    super::publish(None, MediaStatus::default());
+    tokio::time::sleep(RETRY).await;
+    super::ended(id);
 }
 
-async fn run(bus: &Connection) -> zbus::Result<()> {
+async fn run(bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
     let owners = MatchRule::builder().msg_type(Type::Signal).sender("org.freedesktop.DBus");
     let owners = owners.interface("org.freedesktop.DBus").member("NameOwnerChanged").arg0ns(SPACE).build()?;
     let changes =
@@ -80,6 +85,7 @@ async fn run(bus: &Connection) -> zbus::Result<()> {
                 }
             }
             Some(arrival) = arrivals.recv() => r.pictures.arrived(arrival),
+            Ok(()) = remote.changed() => {}
             else => return Ok(()),
         }
         r.publish();
@@ -142,7 +148,8 @@ impl Reading {
             (state.playing, state.position, state.rate) =
                 (p.status == Status::Playing, p.now(now) as f32, p.rate as f32);
         }
-        self.pictures.ask(active.as_ref().map_or("", |p| p.track.art.as_str()));
+        let art = active.as_ref().map_or("", |p| p.track.art.as_str());
+        self.pictures.ask(self.track, art, super::remote_on());
         state.cover = self.pictures.serial();
         state.colors = self.pictures.cover.as_ref().map(|c| c.colors);
         let (playing, cover) = (state.playing, state.cover != 0);

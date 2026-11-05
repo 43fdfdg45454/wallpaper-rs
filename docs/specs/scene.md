@@ -804,9 +804,11 @@ the end of the track they wake nothing. An asset with `media: current` shows the
 cover of the track and one with `media: previous` the cover of the track before it (both still
 pictures, usable wherever a picture is: image layers, masks, effects, particles); `path` is the
 placeholder shown until a cover arrives, while nothing plays, without the grant and when the
-cover cannot be read. Covers are read once per track from `file://` addresses of at most 16 MiB
-or, only with `media.remote_covers` on (`dbus.md`), from `http` and `https` addresses of at most
-4 MiB within 5 seconds; they are reduced in memory to at most 256 pixels on the longer side in
+cover cannot be read. Covers are read once per track, also when a new track keeps the address of
+the one before (a cover with the same bytes stays the same cover), from `file://` addresses of at
+most 16 MiB or, only with `media.remote_covers` on (`dbus.md`), from `http` and `https` addresses
+of at most 4 MiB within 5 seconds, and pictures of more than 4096 pixels a side are refused; they
+are reduced in memory to at most 256 pixels on the longer side in
 sRGB, keeping their shape, and never written to disk. A layer that shows a cover keeps its `size`,
 so a square `size` suits most covers. The colors are worked out once per cover: the three
 most common colors of the cover reduced to 64 × 64 (k-means of three in OKLab, transparent pixels

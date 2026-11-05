@@ -1466,7 +1466,8 @@ dicen si se está leyendo, para qué pantallas y si hay un reproductor abierto, 
 Algunos reproductores dan la carátula como una dirección de internet en vez de un archivo. Solo se
 descarga con *Descargar carátulas de internet* encendido (`wprs-ctl config media.remote_covers
 true`, apagado por defecto y propio de cada equipo), como mucho 4 MiB y en 5 segundos, y esa web
-puede saber que esa pista suena aquí; las carátulas solo viven en memoria.
+puede saber que esa pista suena aquí; las carátulas solo viven en memoria. Al encenderlo se
+descarga enseguida la carátula de lo que suena y al apagarlo se quitan las que vinieron de internet.
 
 En el editor, el menú de enlace de cada campo tiene *Seguir al reproductor multimedia* con los
 datos que le caben: el título, el artista, el álbum, el artista del álbum, el subtítulo, los

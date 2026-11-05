@@ -53,6 +53,28 @@ wait_for 10 says "r['cover']" False || fail "a cover from the internet was read 
 shown "$s21" 255 0 0
 play "{\"title\": \"Morning\", \"artist\": [\"Example Artist\"], \"length\": 100, \"art\": \"$art\"}"
 shown "$s21" 0 0 255
+uri() { python3 -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).as_uri())' "$1"; }
+song() { play "{\"title\": \"$1\", \"artist\": [\"Example Artist\"], \"length\": 100, \"art\": \"$2\"}"; }
+png "$WORK/same.png" 00ff00 && song First "$(uri "$WORK/same.png")"
+shown "$s21" 0 255 0
+png "$WORK/same.png" ff00ff && song Second "$(uri "$WORK/same.png")"
+shown "$s21" 255 0 255
+mkdir -p "$WORK/site" && png "$WORK/site/cover.png" 00ffff
+covers=$(python3 -c "import socket; s = socket.socket(); s.bind(('127.0.0.1', 0)); print(s.getsockname()[1])")
+python3 -m http.server --bind 127.0.0.1 --directory "$WORK/site" "$covers" >"$WORK/covers.log" 2>&1 & pids+=($!)
+wait_for 10 python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:$covers/cover.png')" ||
+  fail "the cover server did not start"
+song Online "http://127.0.0.1:$covers/cover.png"
+wait_for 10 says "r['cover']" False || fail "a cover from the internet was read with the switch off"
+shown "$s21" 255 0 0
+ctl config media.remote_covers true
+wait_for 10 says "r['cover']" True || fail "turning media.remote_covers on did not fetch the cover of the playing track"
+shown "$s21" 0 255 255
+ctl config media.remote_covers false
+wait_for 10 says "r['cover']" False || fail "turning media.remote_covers off kept the cover from the internet"
+shown "$s21" 255 0 0
+song Morning "$art"
+shown "$s21" 0 0 255
 more() { [ "$(grep -c '^gets' "$WORK/player.out")" -gt "$1" ]; }
 asked() {
   local n
