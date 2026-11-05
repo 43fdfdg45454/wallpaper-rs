@@ -9,7 +9,6 @@ use std::time::Instant;
 use wprs_core::stash::Keeper;
 use wprs_scene::{Control, Mode, Property, Scene, ScriptApi, ScriptOutputs, Values};
 
-const SCREEN: &str = "phone";
 const EVERY: f64 = 2.0;
 const SHOWN: usize = 8;
 static SALT: OnceLock<RandomState> = OnceLock::new();
@@ -44,10 +43,11 @@ pub(crate) fn forget(lib: &wprs_library::Library, items: &[wprs_library::Item]) 
 }
 
 impl Keeping {
-    pub(crate) fn new(pack: &Pack) -> Keeping {
+    pub(crate) fn new(pack: &Pack, lock: bool) -> Keeping {
         let stores = pack.scene.scripts.iter().any(|s| s.wants(ScriptApi::Storage));
         let dir = stores.then(|| crate::store::dir().ok()).flatten();
-        let keeper = dir.and_then(|d| Keeper::open(&d.join("storage"), &pack.id, SCREEN, true));
+        let screen = crate::choice::row(lock);
+        let keeper = dir.and_then(|d| Keeper::open(&d.join("storage"), &pack.id, screen, true));
         Keeping { keeper, ..Keeping::default() }
     }
 

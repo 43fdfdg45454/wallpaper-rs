@@ -48,9 +48,9 @@ pub(crate) struct Acting {
 }
 
 impl Acting {
-    pub(crate) fn new(pack: &Pack, runtime: &Runtime) -> Acting {
+    pub(crate) fn new(pack: &Pack, runtime: &Runtime, lock: bool) -> Acting {
         STATE.store(0, Relaxed);
-        let keeping = crate::keeping::Keeping::new(pack);
+        let keeping = crate::keeping::Keeping::new(pack, lock);
         let local = (!pack.scripts.is_empty()).then(|| {
             let named = (pack.locale.as_deref().unwrap_or_default(), &pack.labels);
             let (storage, folders) = (keeping.scopes(), crate::keeping::folders(&pack.properties));

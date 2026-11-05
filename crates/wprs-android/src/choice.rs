@@ -33,7 +33,7 @@ pub(crate) fn screen(lock: bool) -> &'static str {
     if lock { LOCK } else { "" }
 }
 
-fn row(lock: bool) -> &'static str {
+pub(crate) fn row(lock: bool) -> &'static str {
     if lock { LOCK } else { HOME }
 }
 

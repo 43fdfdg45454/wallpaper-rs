@@ -12,6 +12,7 @@ mod cued;
 mod flight;
 mod frames;
 mod guarded;
+mod kept;
 mod lit;
 mod looks;
 mod pages;
@@ -134,6 +135,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     records::records();
     lit::hdr_follows_the_setting_and_the_display();
     scenes::scenes();
+    kept::home_and_lock_keep_their_own_storage();
     screens::home_and_lock();
     screens::ruled_lists();
     screens::synced_lists_fade_their_own_way();

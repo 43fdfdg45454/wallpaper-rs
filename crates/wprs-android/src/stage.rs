@@ -24,6 +24,7 @@ pub(crate) mod report;
 
 pub(crate) struct Stage {
     pub(crate) uid: String,
+    pub(crate) lock: bool,
     pub(crate) pack: Arc<Pack>,
     runtime: Runtime,
     view: Option<SceneView>,
@@ -73,7 +74,12 @@ impl Stage {
         self.quality == Quality::Q3 && self.pack.scene.canvas.bright()
     }
 
+    #[cfg(test)]
     pub(crate) fn new(uid: String, pack: Arc<Pack>) -> Stage {
+        Stage::on(uid, pack, false)
+    }
+
+    pub(crate) fn on(uid: String, pack: Arc<Pack>, lock: bool) -> Stage {
         let mut runtime = Runtime::new(Arc::clone(&pack.scene), props::values(&pack));
         pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         runtime.set_leveling(wprs_scene::Leveling::of(&pack.properties));
@@ -86,11 +92,12 @@ impl Stage {
         let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
         let media = heard::Shown::new(heard::allowed(&pack));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
-        let acting = Acting::new(&pack, &runtime);
+        let acting = Acting::new(&pack, &runtime, lock);
         let extras = Extras::gather(&pack, (runtime.props(), &[]), extras::now(), &Extras::default());
         let assets = extras.assets(&pack);
         Stage {
             uid,
+            lock,
             pack,
             runtime,
             view,

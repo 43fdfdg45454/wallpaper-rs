@@ -18,10 +18,12 @@ impl Engine {
         let next = match shown.filter(|shown| shown.scene).map(|shown| (&shown.uid, pack::load(&shown.path)))
         {
             Some((uid, Ok(pack))) => match self.stage.as_mut() {
-                Some(stage) if stage.uid == *uid && Arc::ptr_eq(&stage.pack, &pack) => {
+                Some(stage)
+                    if stage.uid == *uid && stage.lock == self.lock && Arc::ptr_eq(&stage.pack, &pack) =>
+                {
                     return stage.refresh();
                 }
-                _ => Some(Stage::new(uid.clone(), pack)),
+                _ => Some(Stage::on(uid.clone(), pack, self.lock)),
             },
             Some((_, Err(e))) => {
                 log::warn!("cannot show the scene: {e}");

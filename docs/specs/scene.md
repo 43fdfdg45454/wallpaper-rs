@@ -1946,7 +1946,8 @@ not JSON. They are kept on the device only (never synced or exported), in a file
 (mode 0600) that is written at most every 5 s and when the scene stops, and removed with the package;
 a scene whose scripts use storage runs one script process per screen. The screens showing a package
 share its `package` scope: what one stores reaches the scripts of the others on their next frame,
-and each keeps its own `output` scope (at most 16 screens, the one used longest ago going first).
+and each keeps its own `output` scope (at most 16 screens, the one used longest ago going first;
+on the phone the home screen and the lock screen are two screens, each with its own `output` scope).
 Previews in the editor read what is kept but never write it.
 
 With `folders`, `folder(prop)` lists a `folder` property with `mode: all`: `files` are opaque ids of
