@@ -1,11 +1,11 @@
 use crate::Facts;
 use crate::build::collect;
-use crate::contents::{Ends, binaries, preset_files, scripts, sounds};
+use crate::contents::{binaries, preset_files, scripts, sounds};
 use crate::features::facts;
 use crate::locale::{LOCALE, MAX_LOCALE_FILE};
 use crate::{Error, Kind, Limits, MANIFEST, Manifest, Result, SIGNATURE, Scene, media, validate};
 use std::fs::{self, File};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::Read;
 use std::path::Path;
 use wprs_core::message::said;
 use wprs_scene::Files;
@@ -91,7 +91,7 @@ pub(crate) fn facts_of(
             return Err(Error::Invalid { field: format!("/scripts/{i}"), reason: reason.into() });
         }
         sounds(scene, &files, |path, edge| match edge {
-            Some(edge) => ends(&source.join(path), edge),
+            Some(edge) => Ok(media::ends(&source.join(path), edge)?),
             None => Ok((fs::read(source.join(path))?, Vec::new())),
         })?;
         scene.adopt(&manifest.properties, Folder(source)).map_err(invalid)?;
@@ -107,7 +107,7 @@ pub(crate) fn facts_of(
     found.notes.extend(scene.iter().flat_map(|s| uneven(source, s)));
     found.notes.extend(manifest.unread_texts(locale_names(source)));
     for path in media::videos(manifest, scene.as_ref()) {
-        let (head, tail) = ends(&source.join(&path), media::EDGE)?;
+        let (head, tail) = media::ends(&source.join(&path), media::EDGE)?;
         if media::hdr(&head) || media::hdr(&tail) {
             media::mark(&mut found, &path);
         }
@@ -123,16 +123,6 @@ pub(crate) fn facts_of(
         found.notes.push(note);
     }
     Ok(found)
-}
-
-fn ends(path: &Path, edge: u64) -> Result<Ends> {
-    let mut file = File::open(path)?;
-    let (mut head, mut tail) = (Vec::new(), Vec::new());
-    file.by_ref().take(edge).read_to_end(&mut head)?;
-    let size = file.seek(SeekFrom::End(0))?;
-    file.seek(SeekFrom::Start(size.saturating_sub(edge).max(edge)))?;
-    file.read_to_end(&mut tail)?;
-    Ok((head, tail))
 }
 
 fn uneven(source: &Path, scene: &Scene) -> Vec<String> {

@@ -112,15 +112,50 @@ pub fn preview(animated: bool, path: &str, data: &[u8]) -> Result<()> {
     crate::ensure(fits, || crate::refuse(field, reason()))
 }
 
-pub fn hdr(data: &[u8]) -> bool {
-    let tone = |t: u16| t == 16 || t == 18;
-    let boxed = data.windows(12).any(|w| {
-        &w[..4] == b"colr"
-            && matches!(&w[4..8], b"nclx" | b"nclc")
-            && tone(u16::from_be_bytes([w[10], w[11]]))
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tone {
+    Pq,
+    Hlg,
+}
+
+fn coded(t: u16) -> Option<Tone> {
+    match t {
+        16 => Some(Tone::Pq),
+        18 => Some(Tone::Hlg),
+        _ => None,
+    }
+}
+
+pub fn tone(data: &[u8]) -> Option<Tone> {
+    let boxed = data.windows(12).find_map(|w| {
+        (&w[..4] == b"colr" && matches!(&w[4..8], b"nclx" | b"nclc"))
+            .then(|| coded(u16::from_be_bytes([w[10], w[11]])))
+            .flatten()
     });
-    let tagged = data.windows(4).any(|w| w[..3] == [0x55, 0xba, 0x81] && tone(u16::from(w[3])));
-    boxed || data.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]) && tagged
+    let matroska = data.starts_with(&[0x1a, 0x45, 0xdf, 0xa3]);
+    let tagged =
+        || data.windows(4).find_map(|w| (w[..3] == [0x55, 0xba, 0x81]).then(|| coded(w[3].into())).flatten());
+    boxed.or_else(|| matroska.then(tagged).flatten())
+}
+
+pub fn hdr(data: &[u8]) -> bool {
+    tone(data).is_some()
+}
+
+pub fn ends(path: &std::path::Path, edge: u64) -> std::io::Result<(Vec<u8>, Vec<u8>)> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let (mut head, mut tail) = (Vec::new(), Vec::new());
+    file.by_ref().take(edge).read_to_end(&mut head)?;
+    let size = file.seek(SeekFrom::End(0))?;
+    file.seek(SeekFrom::Start(size.saturating_sub(edge).max(edge)))?;
+    file.read_to_end(&mut tail)?;
+    Ok((head, tail))
+}
+
+pub fn tone_of(path: &std::path::Path) -> Option<Tone> {
+    let (head, tail) = ends(path, EDGE).ok()?;
+    tone(&head).or_else(|| tone(&tail))
 }
 
 pub fn is_video_path(path: &str) -> bool {
@@ -143,5 +178,5 @@ pub(crate) fn mark(facts: &mut Facts, path: &str) {
     facts.facets.sort();
     facts
         .notes
-        .push(format!("{path} is an HDR video: the computer maps its tones to standard colors, and phones show it as Android decodes it"));
+        .push(format!("{path} is an HDR video: the computer and the phone map its tones to standard colors"));
 }

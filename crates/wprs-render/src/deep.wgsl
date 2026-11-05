@@ -26,29 +26,10 @@ fn half(t: texture_2d<u32>, at: vec2<f32>) -> f32 {
     return mix(top, bottom, f.y);
 }
 
-fn pq(e: vec3<f32>) -> vec3<f32> {
-    let p = pow(max(e, vec3(0.0)), vec3(1.0 / 78.84375));
-    return 10000.0 * pow(max(p - 0.8359375, vec3(0.0)) / (18.8515625 - 18.6875 * p), vec3(1.0 / 0.1593017578125));
-}
-
-fn hlg(e: vec3<f32>) -> vec3<f32> {
-    let high = (exp((e - 0.55991073) / 0.17883277) + 0.28466892) / 12.0;
-    let lin = select(high, e * e / 3.0, e <= vec3(0.5));
-    let y = dot(lin, vec3(0.2627, 0.6780, 0.0593));
-    return 1000.0 * lin * pow(max(y, 1e-6), 0.2);
-}
-
 @fragment
 fn fs_main(in: VertexOut) -> @location(0) vec4<f32> {
     let p = in.position.xy;
     let ycc = vec4(code(luma, vec2<i32>(p)), half(cb, p), half(cr, p), 1.0);
     let e = clamp(vec3(dot(d.r, ycc), dot(d.g, ycc), dot(d.b, ycc)), vec3(0.0), vec3(1.0));
-    let light = select(pq(e), hlg(e), d.tone.x > 1.5) / d.tone.y;
-    let c = max(vec3(dot(d.m0.xyz, light), dot(d.m1.xyz, light), dot(d.m2.xyz, light)), vec3(0.0));
-    let k = d.tone.w;
-    let l = max(max(c.r, c.g), c.b);
-    let x = max(l - k, 0.0) / (1.0 - k);
-    let wx = (d.tone.z / d.tone.y - k) / (1.0 - k);
-    let mapped = select(l, k + (1.0 - k) * x * (1.0 + x / (wx * wx)) / (1.0 + x), l > k);
-    return vec4(clamp(c * (mapped / max(l, 1e-6)), vec3(0.0), vec3(1.0)), 1.0);
+    return vec4(mapped(e, d.tone, d.m0.xyz, d.m1.xyz, d.m2.xyz), 1.0);
 }

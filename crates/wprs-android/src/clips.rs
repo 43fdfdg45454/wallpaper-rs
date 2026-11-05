@@ -5,7 +5,7 @@ use ndk::native_window::NativeWindow;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::sync::{Mutex, PoisonError};
-use wprs_render::{GpuImage, Planes, Renderer, Yuv};
+use wprs_render::{Coding, GpuImage, Planes, Renderer, Yuv};
 
 const EDGE: i32 = 1920;
 const IMAGES: i32 = 3;
@@ -16,6 +16,7 @@ static LAST: Mutex<String> = Mutex::new(String::new());
 
 struct Clip {
     path: PathBuf,
+    coding: Coding,
     reader: ImageReader,
     yuv: Option<Yuv>,
     chroma: Vec<u8>,
@@ -43,7 +44,7 @@ fn media(e: ndk::media_error::MediaError) -> Error {
     said("android.video_frames", "video frames: %1", &[&e])
 }
 
-fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>) -> Result<Planes<'a>, Error> {
+fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>, coding: Coding) -> Result<Planes<'a>, Error> {
     let crop = image.crop_rect().map_err(media)?;
     let (left, top) = (crop.left.max(0) as usize & !1, crop.top.max(0) as usize & !1);
     let (w, h) =
@@ -68,6 +69,7 @@ fn planes<'a>(image: &'a Image, chroma: &'a mut Vec<u8>) -> Result<Planes<'a>, E
         chroma: (chroma, half),
         bt709: h >= 720,
         full: false,
+        coding,
     })
 }
 
@@ -80,6 +82,7 @@ impl Clips {
         let window = reader.window().map_err(media)?;
         self.0.push(Clip {
             path: path.to_owned(),
+            coding: crate::media::coding(path),
             reader,
             yuv: None,
             chroma: Vec::new(),
@@ -109,13 +112,15 @@ impl Clips {
                 (clip.yuv, clip.epoch) = (None, epoch);
             }
             let converted = match clip.reader.acquire_latest_image() {
-                Ok(AcquireResult::Image(image)) => planes(&image, &mut clip.chroma).and_then(|planes| {
-                    crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
-                        .map_err(Error::from)
-                        .inspect(|()| {
-                            SHOWN.fetch_add(1, Relaxed);
-                        })
-                }),
+                Ok(AcquireResult::Image(image)) => {
+                    planes(&image, &mut clip.chroma, clip.coding).and_then(|planes| {
+                        crate::counted::gpu(|| r.convert_yuv(&mut clip.yuv, &planes).map(drop))
+                            .map_err(Error::from)
+                            .inspect(|()| {
+                                SHOWN.fetch_add(1, Relaxed);
+                            })
+                    })
+                }
                 Ok(_) => Ok(()),
                 Err(e) => Err(media(e)),
             };

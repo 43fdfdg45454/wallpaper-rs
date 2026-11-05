@@ -92,8 +92,14 @@ fn yuv_frames_convert_to_rgb_in_place() {
         [(red, green, [[255, 0, 0], [0, 255, 0]]), (green, red, [[0, 255, 0], [255, 0, 0]])]
     {
         let (luma, chroma) = frame(left, right);
-        let planes =
-            Planes { size: (6, 4), luma: (&luma, 8), chroma: (&chroma, 8), bt709: true, full: false };
+        let planes = Planes {
+            size: (6, 4),
+            luma: (&luma, 8),
+            chroma: (&chroma, 8),
+            bt709: true,
+            full: false,
+            coding: Default::default(),
+        };
         let image = r.read_image(r.convert_yuv(&mut slot, &planes).unwrap()).unwrap();
         let pixel = |x, y| -> [u8; 3] { image.get_pixel(x, y).0[..3].try_into().unwrap() };
         assert!(
@@ -104,6 +110,13 @@ fn yuv_frames_convert_to_rgb_in_place() {
         );
     }
     let short = [0; 10];
-    let planes = Planes { size: (6, 4), luma: (&short, 8), chroma: (&short, 8), bt709: false, full: true };
+    let planes = Planes {
+        size: (6, 4),
+        luma: (&short, 8),
+        chroma: (&short, 8),
+        bt709: false,
+        full: true,
+        coding: Default::default(),
+    };
     assert!(r.convert_yuv(&mut slot, &planes).is_err());
 }

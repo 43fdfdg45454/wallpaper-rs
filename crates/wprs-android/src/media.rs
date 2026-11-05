@@ -1,6 +1,15 @@
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
+use std::time::SystemTime;
+use wprs_format::media::{Tone, tone_of};
+use wprs_render::Coding;
+
+type Coded = (PathBuf, Option<SystemTime>, u64, Coding);
+
+static CODED: Mutex<Vec<Coded>> = Mutex::new(Vec::new());
+const KEPT: usize = 8;
 
 const STILL_BRANDS: [[u8; 4]; 10] =
     [*b"avif", *b"avis", *b"heic", *b"heix", *b"heim", *b"heis", *b"hevc", *b"hevx", *b"mif1", *b"msf1"];
@@ -31,6 +40,26 @@ pub(crate) fn extension(path: &Path) -> Option<&'static str> {
         header if video(&header) => Some("mp4"),
         header => image::guess_format(&header).ok()?.extensions_str().first().copied(),
     }
+}
+
+pub(crate) fn coding(path: &Path) -> Coding {
+    let meta = std::fs::metadata(path).ok();
+    let stamp = (meta.as_ref().and_then(|m| m.modified().ok()), meta.as_ref().map_or(0, |m| m.len()));
+    let mut read = CODED.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(found) = read.iter().find(|r| r.0 == path && (r.1, r.2) == stamp) {
+        return found.3;
+    }
+    let coding = match tone_of(path) {
+        Some(Tone::Pq) => Coding::Pq,
+        Some(Tone::Hlg) => Coding::Hlg,
+        None => Coding::Sdr,
+    };
+    read.retain(|r| r.0 != path);
+    if read.len() >= KEPT {
+        read.remove(0);
+    }
+    read.push((path.to_owned(), stamp.0, stamp.1, coding));
+    coding
 }
 
 #[cfg(test)]
@@ -66,5 +95,20 @@ mod tests {
         std::fs::write(zip.path(), b"PK\x03\x04\x14\0\0\0\0\0\0\0").unwrap();
         assert_eq!((extension(zip.path()), is_video(zip.path())), (Some("wpak"), false));
         assert!(!video(b"\x89PNG\r\n\x1a\n\0\0\0\x0d"));
+    }
+
+    #[test]
+    fn hdr_videos_are_read_once_for_their_transfer() {
+        let at = |name: &str| coding(&Path::new(FIXTURES).join(name));
+        assert_eq!(
+            [at("pq-64x32.mkv"), at("hlg-64x32.mkv"), at("magenta-64x32.webm")],
+            [Coding::Pq, Coding::Hlg, Coding::Sdr]
+        );
+        let copy = tempfile::NamedTempFile::new().unwrap();
+        std::fs::copy(Path::new(FIXTURES).join("pq-64x32.mkv"), copy.path()).unwrap();
+        assert_eq!(coding(copy.path()), Coding::Pq);
+        std::fs::copy(Path::new(FIXTURES).join("magenta-64x32.webm"), copy.path()).unwrap();
+        assert_eq!(coding(copy.path()), Coding::Sdr, "a changed file is read again");
+        assert_eq!(at("missing.webm"), Coding::Sdr);
     }
 }

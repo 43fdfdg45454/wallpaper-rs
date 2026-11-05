@@ -113,6 +113,19 @@ fn hdr_videos_get_a_facet_and_a_warning_wherever_their_colors_are_written() {
     package.look_closer().unwrap();
     assert!(!package.facts.facets.contains(&"hdr".to_owned()));
     assert!(!wprs_format::media::hdr(&mp4[..4 << 20]) && wprs_format::media::hdr(&mkv));
+    use wprs_format::media::{Tone, tone, tone_of};
+    assert_eq!((tone(&mp4), tone(&mkv), tone(&mkv[..6])), (Some(Tone::Pq), Some(Tone::Hlg), None));
+    let flat = [&mkv[..6], &[0x01]].concat();
+    assert_eq!((tone(&flat), tone(&mkv[4..])), (None, None), "an unknown transfer or a stray tag is no tone");
+    let glow = dir.path().join("glow.mp4");
+    std::fs::write(&glow, &mp4).unwrap();
+    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures");
+    let read = |name: &str| tone_of(&fixtures.join(name));
+    assert_eq!(
+        (tone_of(&glow), read("pq-64x32.mkv"), read("hlg-64x32.mkv")),
+        (Some(Tone::Pq), Some(Tone::Pq), Some(Tone::Hlg))
+    );
+    assert_eq!((read("magenta-64x32.webm"), tone_of(&dir.path().join("gone.mkv"))), (None, None));
 }
 
 fn png(width: u32, height: u32) -> String {

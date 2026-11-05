@@ -73,7 +73,7 @@ impl Renderer {
     pub(crate) fn mapper(&self) -> &Mapper {
         self.deep.get_or_init(|| {
             let layout = layout(&self.device);
-            let shader = module(&self.device, include_str!("deep.wgsl"));
+            let shader = module(&self.device, concat!(include_str!("tone.wgsl"), include_str!("deep.wgsl")));
             let pipeline = pipeline(&self.device, &layout, &shader, "fs_main", Format::Rgba8UnormSrgb.into());
             Mapper { layout, pipeline }
         })

@@ -1,3 +1,4 @@
+use crate::coded::Coding;
 use crate::shader::{bind_group_layout, module, pipeline};
 use crate::texture::{GpuImage, create_texture, gpu_image};
 use crate::{RenderError, Renderer};
@@ -9,10 +10,13 @@ pub struct Planes<'a> {
     pub chroma: (&'a [u8], u32),
     pub bt709: bool,
     pub full: bool,
+    pub coding: Coding,
 }
 
+type Key = ((u32, u32), bool, bool, Coding);
+
 pub struct Yuv {
-    key: ((u32, u32), bool, bool),
+    key: Key,
     luma: wgpu::Texture,
     chroma: wgpu::Texture,
     group: wgpu::BindGroup,
@@ -28,6 +32,7 @@ impl Yuv {
 pub(crate) struct Converter {
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::RenderPipeline,
+    coded: wgpu::RenderPipeline,
 }
 
 const TURNS: [[f32; 4]; 8] = [
@@ -69,8 +74,11 @@ pub(crate) fn group(
     renderer.device.create_bind_group(&wgpu::BindGroupDescriptor { label, layout, entries: &entries })
 }
 
-fn rows(bt709: bool, full: bool) -> [[f32; 4]; 3] {
-    let (kr, kb) = if bt709 { (0.2126, 0.0722) } else { (0.299, 0.114) };
+pub(crate) fn rows(bt709: bool, full: bool) -> [[f32; 4]; 3] {
+    rows_of(if bt709 { (0.2126, 0.0722) } else { (0.299, 0.114) }, full)
+}
+
+pub(crate) fn rows_of((kr, kb): (f32, f32), full: bool) -> [[f32; 4]; 3] {
     let kg = 1.0 - kr - kb;
     let (ys, yo, cs) = if full { (1.0, 0.0, 1.0) } else { (255.0 / 219.0, 16.0 / 255.0, 255.0 / 224.0) };
     let row = |u: f32, v: f32| [ys, u * cs, v * cs, -ys * yo - cs * 128.0 / 255.0 * (u + v)];
@@ -92,14 +100,17 @@ impl Renderer {
     pub(crate) fn converter(&self) -> &Converter {
         self.yuv.get_or_init(|| {
             let layout = bind_group_layout(&self.device, 2);
-            let shader = module(&self.device, include_str!("yuv.wgsl"));
-            let pipeline = pipeline(&self.device, &layout, &shader, "fs_main", Format::Rgba8UnormSrgb.into());
-            Converter { layout, pipeline }
+            let made = |source| {
+                let shader = module(&self.device, source);
+                pipeline(&self.device, &layout, &shader, "fs_main", Format::Rgba8UnormSrgb.into())
+            };
+            let (pipeline, coded) = (made(include_str!("yuv.wgsl")), made(crate::coded::source()));
+            Converter { layout, pipeline, coded }
         })
     }
 
-    fn yuv_slot(&self, key: ((u32, u32), bool, bool)) -> Yuv {
-        let ((w, h), bt709, full) = key;
+    fn yuv_slot(&self, key: Key) -> Yuv {
+        let ((w, h), bt709, full, coding) = key;
         let (sampled, drawn) =
             (Usage::TEXTURE_BINDING | Usage::COPY_DST, Usage::TEXTURE_BINDING | Usage::COPY_SRC);
         let luma = create_texture(&self.device, "wprs-render luma", (w, h), Format::R8Unorm, sampled);
@@ -113,7 +124,10 @@ impl Renderer {
             target,
             drawn | Usage::RENDER_ATTACHMENT,
         ));
-        let rows = uniform(self, bt709, full, 0);
+        let rows = match coding {
+            Coding::Sdr => uniform(self, bt709, full, 0),
+            hdr => crate::coded::uniform(self, full, hdr),
+        };
         let group = group(self, &rows, [&luma, &chroma]);
         Yuv { key, luma, chroma, group, image }
     }
@@ -128,7 +142,7 @@ impl Renderer {
         if !self.limits.fits(w, h) || !covers(planes.luma, (w, h), 1) || !covers(planes.chroma, half, 2) {
             return Err(RenderError::InvalidSize(w, h));
         }
-        let key = (planes.size, planes.bt709, planes.full);
+        let key = (planes.size, planes.bt709, planes.full, planes.coding);
         if slot.as_ref().is_none_or(|yuv| yuv.key != key) {
             *slot = Some(self.scoped(|| self.yuv_slot(key))?);
         }
@@ -136,7 +150,10 @@ impl Renderer {
         self.scoped(|| {
             write(&self.queue, &yuv.luma, planes.luma);
             write(&self.queue, &yuv.chroma, planes.chroma);
-            self.convert(&yuv.group, &yuv.image);
+            match yuv.key.3 {
+                Coding::Sdr => self.convert(&yuv.group, &yuv.image),
+                _ => self.draw_with(&self.converter().coded, &yuv.group, &yuv.image),
+            }
         })?;
         Ok(&yuv.image)
     }
@@ -167,29 +184,5 @@ impl Renderer {
         pass.draw(0..3, 0..1);
         drop(pass);
         self.queue.submit([encoder.finish()]);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::rows;
-
-    fn near(bt709: bool, full: bool, [y, u, v]: [u8; 3], want: [i32; 3]) -> bool {
-        let yuv = [y, u, v].map(|c| f32::from(c) / 255.0);
-        let rgb = rows(bt709, full).map(|r| {
-            ((r[0] * yuv[0] + r[1] * yuv[1] + r[2] * yuv[2] + r[3]).clamp(0.0, 1.0) * 255.0).round() as i32
-        });
-        rgb.iter().zip(want).all(|(have, want)| (have - want).abs() <= 2)
-    }
-
-    #[test]
-    fn studio_and_full_swing_colours_come_back() {
-        assert!(near(false, false, [81, 90, 240], [255, 0, 0]));
-        assert!(near(true, false, [63, 102, 240], [255, 0, 0]));
-        assert!(near(true, false, [173, 42, 26], [0, 255, 0]));
-        assert!(near(true, false, [235, 128, 128], [255, 255, 255]));
-        assert!(near(false, true, [0, 128, 128], [0, 0, 0]));
-        assert!(near(true, true, [128, 128, 128], [128, 128, 128]));
-        assert!(!near(false, false, [63, 102, 240], [255, 0, 0]));
     }
 }

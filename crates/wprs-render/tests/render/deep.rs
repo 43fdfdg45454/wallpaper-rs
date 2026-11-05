@@ -1,5 +1,5 @@
 use super::renderer;
-use wprs_render::{DeepPlanes, GAMUT, KNEE, PEAK_NITS, REFERENCE_NITS, deep_rows};
+use wprs_render::{Coding, DeepPlanes, GAMUT, KNEE, PEAK_NITS, Planes, REFERENCE_NITS, deep_rows};
 
 fn pq(e: f32) -> f32 {
     let p = e.max(0.0).powf(1.0 / 78.84375);
@@ -65,4 +65,39 @@ fn hdr_frames_are_mapped_to_standard_colors_on_the_gpu() {
     assert!(
         r.convert_deep(&mut None, &DeepPlanes { size: (4, 4), planes, hlg: false, full: false }).is_err()
     );
+}
+
+#[test]
+fn eight_bit_hdr_frames_are_mapped_like_ten_bit_ones() {
+    let Some(r) = renderer() else { return };
+    let swatches: [[u8; 3]; 3] = [[127, 128, 128], [175, 128, 128], [100, 105, 160]];
+    for coding in [Coding::Pq, Coding::Hlg] {
+        let (mut slot, mut plain) = (None, None);
+        for codes in swatches {
+            let (luma, chroma) = ([codes[0]; 16], [codes[1], codes[2]].repeat(4));
+            let planes = Planes {
+                size: (4, 4),
+                luma: (&luma, 4),
+                chroma: (&chroma, 4),
+                bt709: true,
+                full: false,
+                coding,
+            };
+            let shown = |image| {
+                let mut target = r.create_target(4, 4).unwrap();
+                let layer = super::layer(Some(image), wprs_core::Fit::Stretch, [0; 3], 1.0);
+                let mut pixels = Vec::new();
+                r.render_layers(&mut target, &[layer], &mut pixels).unwrap();
+                super::rgb(&pixels, 4, 1, 1)
+            };
+            let got = shown(r.convert_yuv(&mut slot, &planes).unwrap());
+            let want = reference(codes.map(|c| u16::from(c) * 4), coding == Coding::Hlg);
+            assert!(
+                got.iter().zip(want).all(|(a, b)| a.abs_diff(b) <= 3),
+                "{codes:?} {coding:?}: {got:?} not {want:?}"
+            );
+            let sdr = shown(r.convert_yuv(&mut plain, &Planes { coding: Coding::Sdr, ..planes }).unwrap());
+            assert_ne!(sdr, got, "{codes:?} {coding:?} read as standard colors");
+        }
+    }
 }

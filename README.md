@@ -454,8 +454,9 @@ y tono, con su valor a la vista) que la app de escritorio y *Mostrar tal cual*; 
 de inicio mientras *El mismo filtro que la pantalla de inicio* está activo, y el fondo cambia al
 mover cada control. El filtro y el volteo de imágenes y
 vídeos se aplican también aquí; un vídeo con filtro o volteado pasa por la gráfica en vez de
-reproducirse directo en la pantalla. Un vídeo HDR se ve como lo decodifica Android: al reproducirse
-directo, el sistema adapta sus tonos. Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
+reproducirse directo en la pantalla. Los tonos de un vídeo HDR (PQ o HLG) los adapta el sistema
+cuando se reproduce directo y la propia app cuando pasa por la gráfica, con la misma curva que el
+escritorio (blanco de 203 nits y luz máxima de 1000 nits). Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
 avisa. El color de acento del fondo (o, si no propone uno, el dominante de su vista previa) es el
 color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza, y los
 preajustes publicados aparte y las dependencias entre paquetes aún no funcionan en el teléfono. Un paquete hecho solo para

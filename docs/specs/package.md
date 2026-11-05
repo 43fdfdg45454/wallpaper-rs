@@ -563,8 +563,11 @@ and images, and `hdr` when a video of the package (its entry, or a video asset o
 the PQ or HLG transfer in its colour description (the `colr` box of MP4 or the colour elements of
 Matroska and WebM). On the computer such a video is decoded with 10 bits and its tones are mapped to
 standard colors on the graphics card (PQ and HLG, BT.2020 to sRGB, with 203 nits as the white of
-the screen and 1000 nits as the brightest light); on the phone it shows as Android decodes it,
-mapped by the system when it plays straight on the screen. `wprs-ctl pack check` says so. Readers look for it only when they
+the screen and 1000 nits as the brightest light); on the phone the system maps it when it plays
+straight on the screen, and when a filter, a flip, a fit other than fill or stretch or a setting of
+the package sends it through the graphics card, the app maps the 8 bits the decoder gives it the
+same way (BT.2020 YCbCr, PQ or HLG read from that colour description, the same knee toward 1000
+nits). `wprs-ctl pack check` says so. Readers look for it only when they
 record facets (adding to a repository, indexing the library, the server and `pack check`), never
 when they open a package to show it. The inputs of a web page come from its manifest as declared;
 for the other kinds every input, `media` included, comes from what the package uses, and an
