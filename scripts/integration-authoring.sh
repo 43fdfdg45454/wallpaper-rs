@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-declare scene
+declare scene ROOT
 craft=$scene/craft
 ctl scene new "$craft" --id org.example.craft >/dev/null
 ctl scene add-layer "$craft" solid --id card >/dev/null
@@ -39,3 +39,25 @@ if ctl scene particles "$craft" sparks delete 2>/dev/null; then fail "a system i
 ctl scene particles "$craft" lone create || fail "no lone system was created"
 ctl scene particles "$craft" lone delete || fail "a lone system was not deleted"
 ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with every particle field was not previewed"
+ctl scene layer "$craft" card transform --position 100,-20 --rotation -15 --scale 2,2 --size 300,200 || fail "the layer was not placed"
+ctl scene layer "$craft" card blend screen || fail "the blend mode was not set"
+if ctl scene layer "$craft" card transform --rotation 900 2>/dev/null; then fail "a turn of 900 degrees was kept"; fi
+ctl scene layer "$craft" dust instance --alpha 0.5 --count 0.25 --color '#ffcc88' || fail "the instance was not set"
+ctl scene layer "$craft" dust instance --unset count || fail "the instance value was not unset"
+ctl scene manifest "$craft" license CC-BY-4.0 || fail "the license was not set"
+ctl scene manifest "$craft" authors Ana Luis || fail "the authors were not set"
+ctl scene manifest "$craft" tags sea night || fail "the tags were not set"
+ctl scene manifest "$craft" tags --remove night || fail "the tag was not removed"
+ctl scene manifest "$craft" origin derived --derived-from Ana || fail "the origin was not set"
+if ctl scene manifest "$craft" license 'free as in beer' 2>/dev/null; then fail "an unknown license was kept"; fi
+ctl scene manifest "$craft" display --span all-outputs --accent '#ff8800' || fail "the display was not set"
+if ctl scene manifest "$craft" display --fit fit 2>/dev/null; then fail "a scene took the fit of a picture"; fi
+ctl scene add-property "$craft" slider --id speed >/dev/null
+ctl scene property "$craft" speed --min -1 --max 10 --step 0.5 --default 4 --order 0 || fail "the property range was not set"
+if ctl scene property "$craft" speed --default 40 2>/dev/null; then fail "a default out of the range was kept"; fi
+ctl scene canvas "$craft" bloom --strength 2 --radius 24 || fail "the canvas does not glow"
+ctl scene canvas "$craft" parallax --amount 1.5 --gyro true || fail "the canvas has no parallax"
+if ctl scene canvas "$craft" parallax --delay 9 2>/dev/null; then fail "a parallax delay of 9 s was kept"; fi
+ctl scene import "$craft" "$ROOT/tests/fixtures/green-64x32.png" --id sheet --atlas 2,4 >/dev/null || fail "no sprite sheet was imported"
+ctl scene import "$craft" "$ROOT/tests/fixtures/green-64x32.png" --id bumps --linear >/dev/null || fail "no linear picture was imported"
+ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with authored layers, canvas and manifest was not previewed"

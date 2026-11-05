@@ -30,7 +30,9 @@ fn source(root: &Path) -> Project {
     )
     .unwrap();
     picture(&root.join("sky.png"), [40, 90, 160]);
-    project.act(&Action::Import { file: root.join("sky.png"), id: Some("sky".into()) }).unwrap();
+    let sky =
+        Action::Import { file: root.join("sky.png"), id: Some("sky".into()), linear: false, atlas: None };
+    project.act(&sky).unwrap();
     let layer = |kind: &str, id: &str| Action::AddLayer {
         kind: kind.into(),
         id: Some(id.into()),

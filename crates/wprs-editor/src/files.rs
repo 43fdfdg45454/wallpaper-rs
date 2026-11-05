@@ -7,8 +7,8 @@ use std::path::Path;
 
 pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec<Op>>> {
     Some(match action {
-        Action::Import { file, id } => crate::assets::import(dir, doc, file, id.as_deref())
-            .and_then(|(id, path)| crate::assets::adopt(doc, &id, &path)),
+        Action::Import { file, id, linear, atlas } => crate::assets::import(dir, doc, file, id.as_deref())
+            .and_then(|(id, path)| crate::assets::sheet(dir, doc, &id, &path, (*linear, *atlas))),
         Action::ImportEffect { descriptor, wgsl } => {
             crate::shaders::import(dir, doc, descriptor, wgsl.as_deref())
         }

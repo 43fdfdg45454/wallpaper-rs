@@ -159,3 +159,13 @@ fn slot(doc: &Value, id: &str) -> Result<String> {
 pub fn adopt(doc: &Value, id: &str, path: &str) -> Result<Vec<Op>> {
     Ok(set(doc, &slot(doc, id)?, json!({"path": path})))
 }
+
+pub fn sheet(
+    dir: &Path,
+    doc: &Value,
+    id: &str,
+    path: &str,
+    cut: (bool, Option<[u32; 2]>),
+) -> Result<Vec<Op>> {
+    crate::shaping::sheet(dir, doc, adopt(doc, id, path)?, cut.0, cut.1)
+}

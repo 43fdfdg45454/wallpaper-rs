@@ -965,6 +965,7 @@ msgid "%1 is not a kind of property: %2"
 msgstr "%1 no es un tipo de propiedad: %2"
 
 #: crates/wprs-editor/src/props.rs crates/wprs-editor/src/references.rs
+#: crates/wprs-editor/src/shaping/marks.rs
 msgid "there is no property \"%1\""
 msgstr "no hay ninguna propiedad «%1»"
 
@@ -1127,9 +1128,41 @@ msgstr "la capa %1 no tiene el efecto %2"
 msgid "a sound or light layer takes no effects"
 msgstr "una capa de sonido o de luz no lleva efectos"
 
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "only a particles layer has an instance"
+msgstr "solo una capa de partículas tiene instancia"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "%1 is not a value of an instance: %2"
+msgstr "%1 no es un valor de una instancia: %2"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "the rotation goes from -360 to 360 degrees"
+msgstr "el giro va de -360 a 360 grados"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "a size is above 0 pixels"
+msgstr "un tamaño es mayor que 0 píxeles"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "a %1 layer takes no size"
+msgstr "una capa %1 no lleva tamaño"
+
+#: crates/wprs-editor/src/shaping/marks.rs
+msgid "%1 is not a display setting: %2"
+msgstr "%1 no es un ajuste de presentación: %2"
+
+#: crates/wprs-editor/src/shaping/marks.rs
+msgid "only a slider has a minimum, a maximum and a step"
+msgstr "solo un deslizador tiene mínimo, máximo y paso"
+
 #: crates/wprs-editor/src/shaping/masks.rs
 msgid "a mask needs a picture, a layer or a shape"
 msgstr "una máscara necesita una imagen, una capa o una forma"
+
+#: crates/wprs-editor/src/shaping/mod.rs
+msgid "a sprite sheet has from 1 to 256 rows and from 1 to 256 columns"
+msgstr "una hoja de sprites tiene de 1 a 256 filas y de 1 a 256 columnas"
 
 #: crates/wprs-editor/src/shelf.rs
 msgid "name a part as layer:ID, particles:ID, script:PATH or effect:ID, not %1"

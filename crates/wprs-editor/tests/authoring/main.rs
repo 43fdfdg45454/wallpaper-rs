@@ -6,6 +6,8 @@ use wprs_editor::actions::Action;
 use wprs_editor::starters::starter;
 
 mod effects;
+mod layers;
+mod marks;
 
 fn state() {
     static STATE: OnceLock<TempDir> = OnceLock::new();

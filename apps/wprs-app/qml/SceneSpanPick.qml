@@ -23,8 +23,14 @@ RowLayout {
         visible: spans.currentIndex > 0
         text: App.tr("Spread over every screen")
         checked: pick.page.editor.value("/manifest/display/span") === "\"all-outputs\""
-        onToggled: checked ? pick.page.change("/manifest/display/span", "all-outputs") : pick.page.run("remove", {
-            "pointer": "/manifest/display/span"
+        onToggled: pick.page.run("manifest", {
+            "display": checked ? {
+                "values": {
+                    "span": "all-outputs"
+                }
+            } : {
+                "clear": ["span"]
+            }
         })
     }
 }

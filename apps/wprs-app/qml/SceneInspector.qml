@@ -136,6 +136,13 @@ ColumnLayout {
         ColumnLayout {
             width: parent.width
 
+            SceneShaping {
+                Layout.fillWidth: true
+                page: inspector.page
+                node: inspector.node
+                pointer: inspector.pointer
+            }
+
             SceneLightTools {
                 Layout.fillWidth: true
                 page: inspector.page

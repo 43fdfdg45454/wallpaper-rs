@@ -1966,7 +1966,14 @@ otra página no cierra un editor con cambios sin guardar.
   no tiene traducción al español. Las capas y opciones nuevas que crea la app llevan nombres y
   textos en ese idioma. El rombo de cada valor animable pone o quita un fotograma clave en el
   instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar el
-  origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
+  origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace. Encima de los campos,
+  una capa ofrece su modo de fusión, el lienzo interruptores y deslizadores para el brillo y el
+  paralaje, y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
+  hoja de sprites o un mapa de datos…* del panel de recursos corta una imagen en filas y columnas
+  o la lee como datos. En la terminal hacen lo mismo `wprs-ctl scene effects CARPETA CAPA
+  add|set|remove|move|mask`, `scene layer CARPETA CAPA transform|blend|instance`, `scene manifest
+  CARPETA origin|license|tags|authors|display`, `scene property CARPETA ID`, `scene canvas CARPETA
+  bloom|parallax` y `scene import --linear --atlas FILAS,COLUMNAS`, con las mismas comprobaciones.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
   instante), una pista por valor animado con sus fotogramas clave, que se arrastran a otro
   instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
@@ -2286,6 +2293,7 @@ historial de deshacer, donde cada orden es un paso (todas en
 wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, particles, parallax o clock
 wprs-ctl scene open copia --from escena.wpak            # una copia sin firma, derivada, con el id <id>.copy
 wprs-ctl scene import mar ola.ogg                       # copiar un recurso a assets/
+wprs-ctl scene import mar espuma.png --atlas 4,4         # hoja de sprites; --linear para mapas de datos
 wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplicate-layer, move-layer
 wprs-ctl scene add-layer mar text --name Título         # id «titulo», con ese texto
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
@@ -2303,6 +2311,10 @@ wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
 wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
 wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
 wprs-ctl scene effects mar far add vignette --param intensity=0.5   # y set, remove, move, mask
+wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2   # y blend, instance
+wprs-ctl scene property mar velocidad --min 0 --max 10 --step 0.5 --default 2
+wprs-ctl scene manifest mar tags mar noche && wprs-ctl scene manifest mar license CC-BY-4.0   # y origin, authors, display
+wprs-ctl scene canvas mar bloom --strength 1.5 && wprs-ctl scene canvas mar parallax --amount 2
 wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
 wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer

@@ -10,7 +10,7 @@ use wprs_editor::{Action, assets, check, package, packing, previews};
 type Done<T> = Box<dyn FnOnce(Pin<&mut SceneEditor>, T) + Send>;
 
 enum Placed {
-    Asset(String),
+    Asset(String, (bool, Option<[u32; 2]>)),
     Preview(bool),
     Packed(String),
 }
@@ -53,9 +53,9 @@ impl SceneEditor {
             Action::Thumbnail { file, animated } => {
                 Ok((Placed::Preview(animated), previews::store(&dir, &doc, &file, animated)?))
             }
-            Action::Import { file, id } => {
+            Action::Import { file, id, linear, atlas } => {
                 let (id, path) = assets::import(&dir, &doc, &file, id.as_deref())?;
-                Ok((Placed::Asset(id), path))
+                Ok((Placed::Asset(id, (linear, atlas)), path))
             }
             Action::Asset(wanted) => {
                 Ok((Placed::Packed(wanted.asset.clone()), packing::store(&dir, &doc, &wanted)?))
@@ -69,7 +69,7 @@ impl SceneEditor {
                     let mut this = editor.as_mut().rust_mut();
                     let Some(project) = this.project.as_mut() else { return };
                     let ops = match &placed {
-                        Placed::Asset(id) => assets::adopt(&project.doc, id, &path),
+                        Placed::Asset(id, cut) => assets::sheet(&project.dir, &project.doc, id, &path, *cut),
                         Placed::Preview(animated) => previews::adopt(&project.doc, *animated, &path),
                         Placed::Packed(id) => Ok(packing::adopt(&project.doc, id, &path)),
                     };

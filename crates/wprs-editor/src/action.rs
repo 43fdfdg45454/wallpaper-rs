@@ -5,6 +5,7 @@ use std::path::PathBuf;
 mod glows;
 mod lamps;
 mod limbs;
+mod marks;
 mod motion;
 mod names;
 mod rigging;
@@ -15,6 +16,7 @@ mod swarm;
 mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
+pub use marks::{CanvasEdit, LayerEdit, ManifestEdit, PropertyEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use names::{ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile, UpgradeEdit};
 pub use rigging::{
@@ -107,6 +109,10 @@ pub enum Action {
         file: PathBuf,
         #[serde(default)]
         id: Option<String>,
+        #[serde(default)]
+        linear: bool,
+        #[serde(default)]
+        atlas: Option<[u32; 2]>,
     },
     ImportEffect {
         descriptor: PathBuf,
@@ -184,6 +190,10 @@ pub enum Action {
     Scene3d(Edit3d),
     Animate(AnimEdit),
     Effects(EffectsEdit),
+    Layer(LayerEdit),
+    Manifest(ManifestEdit),
+    Property(PropertyEdit),
+    Canvas(CanvasEdit),
     Undo {},
     Redo {},
 }
