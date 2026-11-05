@@ -26,6 +26,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlin.concurrent.thread
 import org.json.JSONObject
 
 class Wprs : Application(), Configuration.Provider {
@@ -39,6 +40,7 @@ class Wprs : Application(), Configuration.Provider {
         val small = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
         Native.device(small, Build.VERSION.MEDIA_PERFORMANCE_CLASS)
         if (Sync.active()) Sync.schedule(this)
+        thread(isDaemon = true) { Mirrors.watch(this, ExistingWorkPolicy.KEEP) }
     }
 }
 

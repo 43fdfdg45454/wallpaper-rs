@@ -14,10 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import java.io.File
-import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 
 private val COLUMNS = arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_MIME_TYPE, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_SIZE)
@@ -50,12 +48,13 @@ suspend fun Main.chooseFolder(uid: String, key: String, tree: Uri) = withContext
     keep(tree)
     val plan = ask("folder", "uid" to uid, "key" to key, "tree" to tree.toString()) as JSONObject
     mirror(tree, plan)
-    ask("folded", "uid" to uid, "key" to key)
+    ask("folded", "uid" to uid, "key" to key).also { Mirrors.watch(this@chooseFolder) }
 }
 
 suspend fun Main.unchoose(uid: String, key: String) = withContext(Dispatchers.IO) {
     (ask("unchoose", "uid" to uid, "key" to key) as? String)?.let { tree ->
         runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(tree), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        Mirrors.watch(this@unchoose)
     }
 }
 
@@ -84,16 +83,4 @@ fun Context.mirror(tree: Uri, plan: JSONObject): Boolean {
         contentResolver.openInputStream(source.first)?.use { input -> File(dir, name).outputStream().use { input.copyTo(it) } }
     }
     return stale.isNotEmpty() || missing.isNotEmpty()
-}
-
-fun Main.remirror() = thread(isDaemon = true) {
-    val mirrors = runCatching { Native.library(JSONObject().put("op", "mirrors").toString()) }.getOrNull()?.let(::JSONArray) ?: return@thread
-    val kept = contentResolver.persistedUriPermissions.map { it.uri.toString() }.toSet()
-    val changed = (0 until mirrors.length()).map { mirrors.getJSONObject(it).getJSONObject("plan") }
-        .filter { it.getString("tree") in kept }
-        .count { plan -> runCatching { mirror(Uri.parse(plan.getString("tree")), plan) }.getOrDefault(false) }
-    if (changed > 0) {
-        Native.library(JSONObject().put("op", "mirrored").toString())
-        Render.post { Wallpaper.reload(false) }
-    }
 }

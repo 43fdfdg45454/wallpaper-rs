@@ -440,7 +440,11 @@ Android. Las propiedades de archivo y de carpeta se eligen con el selector de do
 Android: el archivo elegido (una imagen o, si la propiedad los admite, un vídeo) se copia a los
 archivos de la app, y de una carpeta se copian las imágenes y los vídeos que admite, con sus
 subcarpetas hasta la profundidad que pide y como mucho los archivos que pide. La app guarda el
-permiso de lectura de la carpeta y, cada vez que se abre, copia otra vez lo que cambió en ella;
+permiso de lectura de la carpeta y copia otra vez lo que cambió en ella cada vez que se abre y,
+en segundo plano, cuando Android avisa de un cambio en la carpeta o en las fotos y vídeos del
+teléfono: WorkManager espera a que los cambios se calmen 10 segundos (2 minutos como mucho), sin
+batería baja y sin consultar nada a intervalos, así que la copia suele ponerse al día en menos de un
+minuto. Una carpeta de una nube que no avisa de sus cambios se pone al día al abrir la app;
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y

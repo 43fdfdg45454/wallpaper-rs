@@ -53,7 +53,7 @@ class Main : ComponentActivity() {
         Unveil.load()
         if (savedInstanceState == null) {
             Sync.soon(this, 0)
-            remirror()
+            thread(isDaemon = true) { remirror() }
         }
         setContent { App(this) }
     }
