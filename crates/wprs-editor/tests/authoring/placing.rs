@@ -49,4 +49,14 @@ fn a_script_that_moves_the_camera_or_the_parallax_declares_camera() {
         assert!(!uses(&source).to_string().contains("camera"), "{other}");
     }
     assert!(uses("export function update() {\nscene.sky = 1; }").to_string().contains("camera"));
+    for unpacked in
+        ["const { parallax } = scene;", "let { bloom: b, x } =wprs.scene;", "const {camera3d}=scene\n"]
+    {
+        let source = format!("export function update() {{ {unpacked} }}");
+        assert!(uses(&source).to_string().contains("camera"), "{unpacked}");
+    }
+    for other in ["const { x } = scene;", "const { parallax } = scenery;", "const { parallax } = other;"] {
+        let source = format!("export function update() {{ {other} }}");
+        assert!(!uses(&source).to_string().contains("camera"), "{other}");
+    }
 }

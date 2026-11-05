@@ -29,6 +29,18 @@ fn staged(source: &str) -> bool {
     })
 }
 
+fn unpacked(source: &str) -> bool {
+    let word = |c: char| c.is_alphanumeric() || c == '_' || c == '$';
+    source.match_indices('}').any(|(i, _)| {
+        let rest = source[i + 1..].trim_start();
+        let Some(rest) = rest.strip_prefix('=').map(str::trim_start) else { return false };
+        let rest = rest.strip_prefix("wprs.").unwrap_or(rest);
+        let named = rest.strip_prefix("scene").is_some_and(|after| !after.starts_with(word));
+        let open = source[..i].rfind('{').unwrap_or(i);
+        named && source[open + 1..i].split(|c: char| !word(c)).any(|w| STAGE.contains(&w))
+    })
+}
+
 fn exported(source: &str) -> Vec<String> {
     let mut found = Vec::new();
     for line in source.lines().map(str::trim_start).filter_map(|l| l.strip_prefix("export ")) {
@@ -58,7 +70,7 @@ pub fn declaration(source: &str) -> Value {
     events.dedup();
     let mut uses = imported(source);
     uses.extend(CALLS.iter().filter(|(call, _)| source.contains(call)).map(|(_, api)| *api));
-    uses.extend(staged(source).then_some(ScriptApi::Camera));
+    uses.extend((staged(source) || unpacked(source)).then_some(ScriptApi::Camera));
     uses.sort();
     uses.dedup();
     let mut entry = json!({});
