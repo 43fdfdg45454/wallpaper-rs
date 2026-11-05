@@ -20,6 +20,12 @@ ColumnLayout {
         page: shaping.page
     }
 
+    SceneEffectMask {
+        Layout.fillWidth: true
+        page: shaping.page
+        pointer: shaping.pointer
+    }
+
     ScenePropertyRange {
         Layout.fillWidth: true
         page: shaping.page

@@ -2062,7 +2062,14 @@ El editor de escenas pinta también las máscaras de los efectos que las piden p
 cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, azul o alfa), un modo
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
-hace lo mismo desde la terminal).
+hace lo mismo desde la terminal). Al elegir un efecto de una capa, el inspector ofrece su máscara:
+ninguna, una imagen, otra capa o una forma (rectángulo, elipse, anillo, polígono, estrella o línea),
+el canal, invertir, el borde suave (con un deslizador de hasta 200 px y un campo de hasta 10 000) y
+la intensidad, y el lienzo la dibuja sobre la capa: la imagen encima, la capa que enmascara
+recuadrada y la forma con su contorno, el borde suave por dentro y por fuera en trazos, un asa
+para darle tamaño (o mover el extremo de la línea) y un punto junto al borde para suavizarlo; cada
+arrastre es un paso de deshacer y sigue la acción `effects mask`, como `wprs-ctl scene effects
+CARPETA CAPA mask`.
 
 También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
 capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos, igual

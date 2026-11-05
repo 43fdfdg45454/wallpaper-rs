@@ -174,7 +174,15 @@ translation or a raw JSON field holds a plain text. Effect parameters come from 
 the effect, with its `label` as `title` and its `help` as `help` (a tooltip) in the language of the
 desktop; a `texture` or `mask` parameter offers the image assets and every other layer, written as
 `{ "layer": "<id>" }`, and every entry of `options` is a field of its own, with its values as
-choices and bindable to a property. The outline adds `effect_names`, the `name` of each effect of
+choices and bindable to a property. Above the fields of an effect use, the inspector offers its
+mask: none, a picture, another layer or a shape (rect, ellipse, ring, polygon, star or line, each
+started at half the size of the layer), the channel, invert, a soft edge (a slider up to 200 px and
+a field up to 10000) and the strength, all through `effects mask`; the canvas draws it over the
+layer while the use or its mask is selected: a picture half see-through over the layer box, the
+masking layer framed, and a shape centered on the layer with its outline, its feather inside and
+outside in dashes, a handle that sizes it (or moves the end of a line, which runs from −`to`/2 to
+`to`/2 around the middle) and a dot past its edge that sets the feather; each drag is one gesture.
+The outline adds `effect_names`, the `name` of each effect of
 the package in the language of the desktop. Problems and refused actions show the message of the validator and of the editor, the
 same English text that `wprs-ctl scene validate` and the commands print, under a translated
 heading; each problem leads to its field, whose name is translated. A field that may follow a

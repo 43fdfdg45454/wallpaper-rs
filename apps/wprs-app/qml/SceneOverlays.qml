@@ -34,6 +34,13 @@ Item {
         ratio: overlays.ratio
     }
 
+    SceneMaskOverlay {
+        anchors.fill: parent
+        z: 6
+        page: overlays.page
+        ratio: overlays.ratio
+    }
+
     SceneStage3d {
         anchors.fill: parent
         z: 5

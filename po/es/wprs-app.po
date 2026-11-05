@@ -594,9 +594,10 @@ msgid "Preset:"
 msgstr "Preajuste:"
 
 #: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
-#: apps/wprs-app/qml/SceneMedia.qml apps/wprs-app/qml/SceneRig.qml
-#: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/SceneSwarmLight.qml
-#: apps/wprs-app/qml/SceneTones.qml apps/wprs-app/qml/facade/LabelWords.qml
+#: apps/wprs-app/qml/SceneEffectMask.qml apps/wprs-app/qml/SceneMedia.qml
+#: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSwarmKin.qml
+#: apps/wprs-app/qml/SceneSwarmLight.qml apps/wprs-app/qml/SceneTones.qml
+#: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "None"
@@ -888,20 +889,20 @@ msgstr ""
 msgid "All channels"
 msgstr "Todos los canales"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/facade/SceneNames.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Red"
 msgstr "Rojo"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Green"
 msgstr "Verde"
 
-#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneMask.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/EditCurves.qml apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/facade/SceneValues.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Blue"
 msgstr "Azul"
@@ -1350,10 +1351,11 @@ msgid "Remove"
 msgstr "Quitar"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
-#: apps/wprs-app/qml/SceneCanvasLook.qml apps/wprs-app/qml/SceneLighting.qml
-#: apps/wprs-app/qml/SceneNormals.qml apps/wprs-app/qml/SceneRigWeights.qml
-#: apps/wprs-app/qml/SceneRigWind.qml apps/wprs-app/qml/SceneSwarmKeep.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/SceneCanvasLook.qml
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneNormals.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -3459,6 +3461,77 @@ msgstr "Elemento %1"
 msgid "%1 is not valid JSON"
 msgstr "%1 no es JSON válido"
 
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "Mask of the effect:"
+msgstr "Máscara del efecto:"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "A picture"
+msgstr "Una imagen"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "A layer"
+msgstr "Una capa"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "A shape"
+msgstr "Una forma"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "Picture:"
+msgstr "Imagen:"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "Layer:"
+msgstr "Capa:"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "Shape:"
+msgstr "Forma:"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid "Mask:"
+msgstr "Máscara:"
+
+#: apps/wprs-app/qml/SceneEffectMask.qml
+msgid ""
+"The canvas shows the mask over the layer: drag the handles of a shape to "
+"size it and the dot past its edge to soften it."
+msgstr ""
+"El lienzo muestra la máscara sobre la capa: arrastra las asas de una forma "
+"para darle tamaño y el punto junto a su borde para suavizarlo."
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Channel"
+msgstr "Canal"
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Brightness"
+msgstr "Brillo"
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/SceneSwarmStart.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Alpha"
+msgstr "Alfa"
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+msgid "Invert: apply the effect where the mask is empty"
+msgstr "Invertir: aplicar el efecto donde la máscara está vacía"
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml
+msgid "Soft edge"
+msgstr "Borde suave"
+
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/SceneSwarmSwirl.qml
+msgid "%1 px"
+msgstr "%1 px"
+
 #: apps/wprs-app/qml/SceneEntry.qml
 msgid "Stored in the keyring"
 msgstr "Guardado en el depósito de claves"
@@ -4084,18 +4157,19 @@ msgstr "Gris"
 msgid "Paint"
 msgstr "Pintar"
 
-#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/SceneSwarmKin.qml
-#: apps/wprs-app/qml/SceneSwarmStart.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Alpha"
-msgstr "Alfa"
-
 #: apps/wprs-app/qml/SceneMask.qml
 msgid "Paint on the layer in the preview; each stroke is one step to undo."
 msgstr ""
 "Pinta sobre la capa en la vista previa; cada trazo es un paso que se puede "
 "deshacer."
+
+#: apps/wprs-app/qml/SceneMaskKnobs.qml
+msgid "Drag to size the mask"
+msgstr "Arrastra para dar tamaño a la máscara"
+
+#: apps/wprs-app/qml/SceneMaskKnobs.qml
+msgid "Soft edge %1 px: drag away from the shape to soften its edge"
+msgstr "Borde suave %1 px: arrastra lejos de la forma para suavizar su borde"
 
 #: apps/wprs-app/qml/SceneMaterial3d.qml
 msgid "Physical"
@@ -5114,10 +5188,6 @@ msgid "Normalise"
 msgstr "Normalizar"
 
 #: apps/wprs-app/qml/SceneRigWeights.qml
-msgid "Soft edge"
-msgstr "Borde suave"
-
-#: apps/wprs-app/qml/SceneRigWeights.qml
 msgid "Weight of the bone"
 msgstr "Peso del hueso"
 
@@ -5239,10 +5309,6 @@ msgstr "Como mucho %1 luces dan sombra; los niveles de equipo dibujan %2."
 #: apps/wprs-app/qml/SceneShadows3d.qml
 msgid "%1 casts shadows"
 msgstr "%1 da sombra"
-
-#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/SceneSwarmSwirl.qml
-msgid "%1 px"
-msgstr "%1 px"
 
 #: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bias"
@@ -9982,10 +10048,6 @@ msgid "Bounds"
 msgstr "Límites"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Brightness"
-msgstr "Brillo"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Burst"
 msgstr "Ráfaga"
 
@@ -10016,10 +10078,6 @@ msgstr "Centro"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Bone chain"
 msgstr "Cadena de huesos"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Channel"
-msgstr "Canal"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Child systems"
