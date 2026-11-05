@@ -2383,8 +2383,10 @@ interfaz completa; lo esencial:
 - **Carpeta elegida**: con `uses: ["folders"]` y una propiedad `folder` con `"mode": "all"`,
   `folder("fotos").files` da identificadores opacos de sus imágenes, `name(id)` el nombre del
   archivo, `on("added" | "removed" | "changed", …)` avisa de los cambios y `show("marco", id)` elige
-  qué foto muestra una capa. La carpeta se mira cada 2 s fuera del hilo que dibuja, también con la
-  escena quieta. Los scripts nunca ven rutas.
+  qué foto muestra una capa. Con `folder("fotos", {videos: true})` también lista sus vídeos si la
+  propiedad acepta `video` (`kind(id)` dice `image` o `video`) y `show("pantalla", id)` reproduce uno en bucle y sin sonido en una capa `video`, como
+  mucho cuatro a la vez, en el escritorio y en el teléfono. La carpeta se mira cada 2 s fuera del hilo
+  que dibuja, también con la escena quieta. Los scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no

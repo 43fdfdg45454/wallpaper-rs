@@ -19,11 +19,8 @@ fn demand(outputs: &BTreeMap<String, Output>, exporter: &Exporter, reel: &Reel, 
 impl State {
     pub(super) fn sync_players(&mut self) {
         let (outputs, exporter, power, now) = (&self.outputs, &*self.exporter, self.power, Instant::now());
-        let wanted: Vec<&Reel> = outputs
-            .values()
-            .flat_map(|o| o.layers().flat_map(|s| s.content.videos()))
-            .map(|(r, _)| r)
-            .collect();
+        let wanted: Vec<&Reel> =
+            outputs.values().flat_map(|o| o.layers().flat_map(|s| s.videos())).map(|(r, _)| r).collect();
         let mut orphans: Vec<(Reel, PlayerSlot)> =
             self.players.extract_if(|reel, _| !wanted.contains(&reel)).collect();
         for reel in wanted {

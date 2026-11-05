@@ -10,6 +10,7 @@ use wprs_scene::{Control, Mode, ScriptOutputs, Wake};
 const EVERY: Duration = Duration::from_secs(2);
 const SOON: Duration = Duration::from_millis(50);
 const SHOWN: usize = 8;
+const VIDEOS: usize = 4;
 static SALT: LazyLock<std::hash::RandomState> = LazyLock::new(std::hash::RandomState::new);
 
 type Loaded = Vec<(String, Arc<Pixels>)>;
@@ -23,6 +24,7 @@ pub(in crate::compositor) struct Listed {
     files: Files,
     pub(super) pixels: Loaded,
     asked: Vec<String>,
+    pub(super) reels: Vec<(String, super::super::Reel)>,
     loading: Option<mpsc::Receiver<Loaded>>,
     scanning: Option<mpsc::Receiver<(String, Files)>>,
     pub(super) unset: bool,
@@ -38,12 +40,13 @@ fn scan(wanted: Wanted) -> (String, Files) {
     let (mut listing, mut files) = (serde_json::Map::new(), Vec::new());
     for (id, chosen) in wanted {
         let found = chosen.map(|(dir, prop)| crate::picks::files(&dir, &prop)).unwrap_or_default();
-        let entries = found.into_iter().filter(|p| !wprs_video::is_video(p)).map(|path| {
+        let entries = found.into_iter().map(|path| {
             let stamp = std::fs::metadata(&path).map_or([0; 2], |m| [m.size() as i64, m.mtime()]);
             let raw = path.as_os_str().as_encoded_bytes();
             let token = opaque(&[id.as_bytes(), raw, &stamp[0].to_le_bytes(), &stamp[1].to_le_bytes()]);
             let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            let entry = serde_json::json!([token, opaque(&[id.as_bytes(), raw]), name]);
+            let kind = if wprs_video::is_video(&path) { "video" } else { "image" };
+            let entry = serde_json::json!([token, opaque(&[id.as_bytes(), raw]), name, kind]);
             files.push((format!("wpak-user://{id}/{token}"), path));
             entry
         });
@@ -132,6 +135,14 @@ impl SceneState {
                 Some(found.clone())
             })
             .collect();
+        let (videos, paths): (Vec<_>, Vec<_>) = paths.into_iter().partition(|(_, p)| wprs_video::is_video(p));
+        let reels: Vec<_> =
+            videos.into_iter().take(VIDEOS).map(|(k, p)| (k, super::super::Reel::plain(p))).collect();
+        if reels != self.listed.reels {
+            self.listed.reels = reels;
+            let spec = self.spec.clone();
+            self.update(spec);
+        }
         let kept: Loaded =
             self.listed.pixels.iter().filter(|(k, _)| paths.iter().any(|(p, _)| p == k)).cloned().collect();
         let (tx, rx) = mpsc::channel();

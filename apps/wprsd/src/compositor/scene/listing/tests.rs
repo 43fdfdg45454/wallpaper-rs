@@ -10,7 +10,10 @@ fn state(folder: Option<&std::path::Path>) -> SceneState {
         "scripts": [{ "path": "main.js", "uses": ["folders"] }],
         "layers": [{ "id": "photo", "type": "solid", "color": "#ffffff" }] });
     let scene = Scene::from_json(&scene.to_string()).unwrap();
-    let properties = serde_json::from_value(json!({ "album": { "type": "folder", "mode": "all" } })).unwrap();
+    let properties = serde_json::from_value(
+        json!({ "album": { "type": "folder", "mode": "all", "accept": ["image", "video"] } }),
+    )
+    .unwrap();
     let pack = Arc::new(ScenePack::bare(scene, properties, Vec::new()));
     let chosen = folder.map(|f| json!({ "album": f }));
     let values = serde_json::from_value(chosen.unwrap_or(json!({}))).unwrap();
@@ -50,4 +53,29 @@ fn a_still_scene_looks_at_its_folder_off_the_compositor_and_wakes_for_it() {
     let mut unset = self::state(None);
     assert!(unset.listing(start) && unset.listed.text == r#"{"album":[]}"#);
     assert_eq!(unset.listing_wake(start + EVERY), Wake::Idle, "no folder chosen, nothing to look at");
+}
+
+#[test]
+fn videos_are_listed_as_such_and_shown_ones_become_clips_of_the_scene() {
+    let dir = tempfile::tempdir().unwrap();
+    image::RgbaImage::new(2, 2).save(dir.path().join("a.png")).unwrap();
+    std::fs::write(dir.path().join("waves.webm"), b"not decoded here").unwrap();
+    let (mut state, start) = (state(Some(dir.path())), Instant::now());
+    assert!(listed(&mut state, start));
+    assert!(
+        state.listed.text.contains(r#""waves.webm","video"]"#)
+            && state.listed.text.contains(r#""a.png","image"]"#)
+    );
+    let key =
+        state.listed.files.iter().find(|(_, p)| p.ends_with("waves.webm")).map(|(k, _)| k.clone()).unwrap();
+    let mut outputs = ScriptOutputs::default();
+    outputs
+        .layers
+        .insert("photo".into(), wprs_scene::LayerOverride { file: Some(key.clone()), ..Default::default() });
+    state.show(&outputs);
+    assert!(state.listed.reels.len() == 1 && state.listed.reels[0].0 == key);
+    assert!(state.spec.clips.iter().any(|(k, reel)| *k == key && reel.path.ends_with("waves.webm")));
+    assert!(state.spec.reels().any(|(k, ..)| k == key), "the compositor opens a player for it");
+    state.show(&ScriptOutputs::default());
+    assert!(state.listed.reels.is_empty() && !state.spec.clips.iter().any(|(k, _)| *k == key));
 }

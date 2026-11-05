@@ -1958,12 +1958,16 @@ and each keeps its own `output` scope (at most 16 screens, the one used longest 
 on the phone the home screen and the lock screen are two screens, each with its own `output` scope).
 Previews in the editor read what is kept but never write it.
 
-With `folders`, `folder(prop)` lists a `folder` property with `mode: all`: `files` are opaque ids of
-its pictures (an id changes when its file is written again), `name(id)` the name of the file, and
+With `folders`, `folder(prop, options)` lists a `folder` property with `mode: all`: `files` are opaque
+ids of its pictures, and also of its videos with `options.videos: true` when the property `accept`s
+`video` (an id changes when its file is
+written again), `name(id)` the name of the file, `kind(id)` `"image"` or `"video"`, and
 `on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
-pairs) when the folder changes, looked at every 2 s while the scene is shown. `show(layer, id)` makes
-an image layer show that file instead of its own picture (`null` gives it back), at most eight files
-at once. Scripts never see paths, and the phone lists the folder the user chose in the same way.
+pairs, only of the files that `folder` lists) when the folder changes, looked at every 2 s while the
+scene is shown. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that
+video (looping and without sound, with a decoder of its own that only runs while the scene is shown; the script controls of `layer.video` do not reach it), instead of its own
+(`null` gives it back), at most eight files at once and four of them videos; a video on another
+kind of layer throws. Scripts never see paths, and the phone lists the folder the user chose in the same way.
 
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
 like the other layers (`script_layers`); a template id may not be the id of a layer, a template holds

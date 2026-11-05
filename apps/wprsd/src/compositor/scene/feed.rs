@@ -8,6 +8,8 @@ impl SceneState {
     pub(in crate::compositor) fn update(&mut self, mut spec: SceneSpec) -> bool {
         spec.extra.retain(|(key, _)| !key.starts_with("wpak-user://"));
         spec.extra.extend(self.listed.pixels.iter().cloned());
+        spec.clips.retain(|(key, _)| !key.starts_with("wpak-user://"));
+        spec.clips.extend(self.listed.reels.iter().cloned());
         let mut changed = self.runtime.set_props(spec.values.clone());
         let media = self.spec.media() != spec.media();
         if media {

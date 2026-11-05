@@ -76,14 +76,19 @@ impl Keeping {
             let dir =
                 values.get(&id).and_then(Json::as_str).filter(|v| v.starts_with('/')).map(PathBuf::from);
             let found = dir.map(|d| crate::chosen::listed(&d)).unwrap_or_default();
-            let pictures = found.into_iter().filter(|f| crate::chosen::kind(f) == Some("image"));
+            let video = properties.get(&id).is_some_and(|p| p.accepts("video"));
+            let pictures = found.into_iter().filter(|f| match crate::chosen::kind(f) {
+                Some("video") => video,
+                kind => kind == Some("image"),
+            });
             let entries: Vec<Json> = pictures
                 .map(|path| {
                     let stamp = std::fs::metadata(&path).map_or((0, 0), |m| (m.size(), m.mtime()));
                     let (token, key) = (opaque((&id, &path, stamp)), opaque((&id, &path)));
                     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                    let kind = if crate::chosen::kind(&path) == Some("video") { "video" } else { "image" };
                     files.push((format!("wpak-user://{id}/{token}"), path));
-                    json!([token, key, name])
+                    json!([token, key, name, kind])
                 })
                 .collect();
             listing.insert(id, Json::Array(entries));

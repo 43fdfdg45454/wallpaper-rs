@@ -123,3 +123,37 @@ fn scripts_list_a_chosen_folder_and_pick_what_a_layer_shows() {
         "main.js uses folders without declaring it in scene.json"
     );
 }
+
+const CLIPS: &str = r#"import { scene, folder } from "wprs";
+    const said = [];
+    const pictures = folder("album");
+    const all = folder("album", { videos: true });
+    pictures.on("added", ({ files }) => said.push(`pictures:${files.length}`));
+    all.on("added", ({ files }) => said.push(`all:${files.length}`));
+    export function update() {
+        if (all.files.length) {
+            said.push(`${pictures.files.length}/${all.files.length}`, all.kind("v1"), pictures.kind("v1"), all.kind("a1"));
+            try { pictures.show("film", "v1"); } catch (e) { said.push(e.message); }
+            try { all.show("photo", "v1"); } catch (e) { said.push(e.message); }
+            all.show("film", "v1");
+        }
+        scene.layer("info").text = said.join("|");
+    }"#;
+
+#[test]
+fn scripts_that_ask_for_videos_list_and_play_them_on_video_layers() {
+    let layers = json!([{ "id": "photo", "type": "solid", "color": "#ffffff" }, { "id": "film", "type": "video", "video": "clip" },
+        { "id": "info", "type": "text", "text": "", "size": 10 }]);
+    let doc = json!({ "scripts": [{ "path": "main.js", "uses": ["folders"] }], "assets": { "clip": { "path": "clip.webm" } }, "layers": layers });
+    let mut made = common::setup(doc, &[("main.js", CLIPS)]);
+    made.folders = vec!["album".into()];
+    let mut script =
+        Script::load(&made, Limits { update: Duration::from_millis(250), ..Limits::default() }).unwrap();
+    let listed = r#"{"album":[["a1","k1","sea.png","image"],["v1","k2","waves.webm","video"]]}"#;
+    let out = script.update(&Frame { folders: listed, ..Frame::at(0.0) }).unwrap();
+    assert_eq!(out.layers["film"].file.as_deref(), Some("wpak-user://album/v1"));
+    assert_eq!(
+        text(&out, "info"),
+        "pictures:1|all:2|1/2|video||image|v1 is not a file of album|photo is no video layer and cannot show a video"
+    );
+}

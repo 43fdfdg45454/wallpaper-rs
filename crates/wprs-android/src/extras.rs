@@ -44,6 +44,10 @@ impl Extras {
     ) -> Extras {
         let (mut images, mut videos, mut next) = (Vec::new(), Vec::new(), None);
         for (key, file) in shown {
+            if kind(file) == Some("video") {
+                videos.extend((videos.len() < 4).then(|| (key.clone(), file.clone())));
+                continue;
+            }
             let kept = old.images.iter().find(|(k, f, _)| k == key && f == file).map(|(.., p)| Arc::clone(p));
             let decoded = kept.or_else(|| wprs_render::decode_image(file, EDGE).ok().map(Pixels::new));
             images.extend(decoded.map(|pixels| (key.clone(), file.clone(), pixels)));
