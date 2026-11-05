@@ -2335,7 +2335,11 @@ interfaz completa; lo esencial:
   parámetros dentro de su rango o vacía lo que guarda. Con plantillas (`templates`),
   `scene.spawn("barra", {position: [x, y]})` crea hasta 256 copias, que con las capas de la escena y
   las de dentro de cada copia suman como mucho 512 (una plantilla tiene como mucho 256), `destroy()`
-  las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores.
+  las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores. Una plantilla
+  puede ser también una capa `mesh` (o un grupo con ellas): cada copia recibe su propio títere, con
+  huesos, clips, física e IK como las mallas de la escena (64 títeres como mucho en total), y el botón
+  *Hacer plantilla* del editor copia la capa elegida a `templates` (`wprs-ctl scene set DIR
+  /scene/templates/<id> '<capa>'` hace lo mismo).
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del

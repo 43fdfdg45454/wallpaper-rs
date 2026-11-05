@@ -48,6 +48,7 @@ impl Runtime {
         outputs.spawned.retain(|(id, _)| self.spawned.iter().any(|(_, l)| l.id == *id));
         if outputs.spawned != self.script.spawned {
             self.costs.set((0, [None; 4]));
+            self.recast();
         }
         for (id, list) in outputs.effects.iter_mut() {
             let Some(layer) = self.layer(id) else {

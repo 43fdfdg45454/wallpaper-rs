@@ -1965,8 +1965,11 @@ at once. Scripts never see paths, and the phone lists the folder the user chose 
 
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
 like the other layers (`script_layers`); a template id may not be the id of a layer, a template holds
-at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra and
-groups of them. `scene.spawn(template, options)` adds a
+at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra,
+meshes and groups of them. Each copy of a `mesh` gets a puppet of its own, with the bones, clips,
+physics, IK and attachments of a mesh layer of the scene (scripts drive it by the id of the copy), at
+most 64 puppets in a scene, and the puppet goes with the copy; the editor's *Make a template* copies
+the selected layer into `templates`. `scene.spawn(template, options)` adds a
 copy on top of the layers (or at `options.at`, 0 being the bottom) with the id `options.id` (letters,
 digits, `_` and `-`, at most 64) or `<template>_<n>`, sets the fields `options` names and returns its
 handle; the children of a copied group are `<id>.<child>`. `destroy()` removes it, `scene.order(id,

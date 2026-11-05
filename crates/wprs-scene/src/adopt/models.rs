@@ -18,7 +18,7 @@ impl Scene {
         fail: impl Fn(String, String) -> SceneError + Copy,
     ) -> Result<(), SceneError> {
         let mut figures = BTreeMap::<String, (bool, bool, bool)>::new();
-        for l in self.layers().chain(self.templates.values()) {
+        for l in self.drawable() {
             let Some(id) = l.figure() else { continue };
             let seen = figures.entry(id.to_owned()).or_default();
             let posed = matches!(&l.kind, Kind::Model(m) if !m.rig.is_empty() || m.root_motion);

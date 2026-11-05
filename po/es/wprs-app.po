@@ -3302,11 +3302,6 @@ msgstr "Vídeos"
 msgid "Hide"
 msgstr "Ocultar"
 
-#: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneRefs.qml
-#: apps/wprs-app/qml/SceneRigIk.qml
-msgid "Layer %1"
-msgstr "Capa %1"
-
 #: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Default"
 msgstr "Valor por defecto"
@@ -3449,6 +3444,14 @@ msgstr "Duplicar"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Ungroup"
 msgstr "Desagrupar"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Make a template"
+msgstr "Hacer plantilla"
+
+#: apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Copy the layer to the templates that scripts spawn"
+msgstr "Copia la capa a las plantillas que crean los scripts"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Group the layers"
@@ -4565,6 +4568,11 @@ msgstr "Carátula anterior (%1)"
 #: apps/wprs-app/qml/SceneRefs.qml
 msgid "Bone %1"
 msgstr "Hueso %1"
+
+#: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/facade/SceneOptions.qml
+msgid "Layer %1"
+msgstr "Capa %1"
 
 #: apps/wprs-app/qml/SceneRgb.qml apps/wprs-app/qml/SettingsPage.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml

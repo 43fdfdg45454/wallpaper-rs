@@ -99,6 +99,19 @@ Flow {
     }
 
     QQC2.ToolButton {
+        icon.name: "document-save-as-template"
+        text: App.tr("Make a template")
+        display: QQC2.AbstractButton.IconOnly
+        QQC2.ToolTip.text: App.tr("Copy the layer to the templates that scripts spawn")
+        QQC2.ToolTip.visible: hovered
+        enabled: tools.owner.current !== null && ["group", "image", "text", "shape", "solid", "spectrum", "mesh"].includes(tools.owner.current.type)
+        onClicked: tools.owner.page.run("set", {
+                "pointer": "/scene/templates/" + tools.owner.current.id + "_template",
+                "value": JSON.parse(tools.owner.page.editor.value(tools.owner.current.pointer) || "null")
+            })
+    }
+
+    QQC2.ToolButton {
         icon.name: "object-group"
         text: App.tr("Group the layers")
         display: QQC2.AbstractButton.IconOnly

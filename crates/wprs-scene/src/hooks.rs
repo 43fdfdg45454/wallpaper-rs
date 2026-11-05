@@ -92,6 +92,7 @@ impl Check<'_> {
                         | Kind::Shape { .. }
                         | Kind::Solid { .. }
                         | Kind::Spectrum(_)
+                        | Kind::Mesh(_)
                 );
                 if !copied {
                     self.issues.push(Issue::Type(format!("{p}/type")));

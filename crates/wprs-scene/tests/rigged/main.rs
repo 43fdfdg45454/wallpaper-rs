@@ -9,4 +9,5 @@ mod pose;
 mod reach;
 mod settle;
 mod sketch;
+mod spawned;
 mod swing;
