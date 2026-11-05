@@ -32,11 +32,13 @@ class Main : ComponentActivity() {
     val revision = mutableIntStateOf(0)
     val importing = mutableIntStateOf(0)
     val imports = mutableIntStateOf(0)
-    val videos by lazy { Videos(applicationContext) }
+    private val playing = lazy { Videos(applicationContext) }
+    val videos by playing
     val tilt by lazy { Tilt(applicationContext) }
     val hearing by lazy { Hearing(applicationContext) }
     val players by lazy { Players(applicationContext) }
-    val pages by lazy { Pages(applicationContext) }
+    private val paging = lazy { Pages(applicationContext) }
+    val pages by paging
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()
     private val synced = { runOnUiThread { changed(false) } }
@@ -84,6 +86,8 @@ class Main : ComponentActivity() {
         if (Heard.applied === synced) Heard.applied = null
         if (Converting.finished === conversions) Converting.finished = null
         forget()
+        if (playing.isInitialized()) videos.close()
+        if (paging.isInitialized()) pages.close()
         super.onDestroy()
     }
 

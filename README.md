@@ -1084,8 +1084,8 @@ mientras otra aplicación reproduce sonido* (`playback.duck`, apagado de serie) 
 fundido mientras alguna otra aplicación reproduce, contando sus flujos de PipeWire sin leer sus
 nombres ni su contenido. En el teléfono el mismo ajuste (*Silenciar el fondo mientras otra app
 reproduce sonido*) sigue las reproducciones activas que Android anuncia, sin saber de qué app son
-ni qué suenan, y solo escucha mientras un vídeo o una página con sonido se ve; sus propios
-reproductores se marcan para no contarse, y una página con sonido se descuenta una vez. Las propiedades con valores por nivel de calidad (`quality`) los toman solas
+ni qué suenan, y solo escucha mientras un vídeo o una página con sonido se ve; baja el sonido solo
+si hay más reproducciones que las suyas (una por vídeo que suena y una por página con sonido). Las propiedades con valores por nivel de calidad (`quality`) los toman solas
 cuando el equipo ahorra energía, y scripts y páginas reciben el nivel. Un atajo (`shortcut`) lo
 eliges tú en los ajustes del fondo: una dirección `https://` (se abre con el portal del escritorio),
 un archivo o una carpeta (con el selector) o una aplicación por su id `.desktop` (fuera del

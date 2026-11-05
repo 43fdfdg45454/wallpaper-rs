@@ -8,11 +8,12 @@ import org.junit.Test
 class DuckTest {
     @Test
     fun onlySoundOfOtherAppsSilencesTheWallpaper() {
-        assertFalse(Ducking.others(emptyList(), 0))
-        assertFalse(Ducking.others(listOf(true, true), 0))
-        assertTrue(Ducking.others(listOf(true, false), 0))
-        assertFalse(Ducking.others(listOf(false), 1))
-        assertTrue(Ducking.others(listOf(false, false, true), 1))
+        assertFalse(Ducking.others(0, 0))
+        assertFalse("our own video plays alone", Ducking.others(1, 1))
+        assertFalse("a video and a page with sound", Ducking.others(2, 2))
+        assertTrue(Ducking.others(1, 0))
+        assertTrue(Ducking.others(3, 2))
+        assertFalse("our player was not reported yet", Ducking.others(0, 1))
     }
 
     @Test

@@ -9,12 +9,16 @@ import androidx.media3.exoplayer.ExoPlayer
 import org.json.JSONObject
 
 @OptIn(UnstableApi::class)
-class Videos(private val context: Context) {
+class Videos(private val context: Context) : Ducked {
     private val videos = mutableMapOf<String, Video>()
 
     init {
-        Duck.listen { videos.values.forEach(Video::duck) }
+        Duck.listen(this)
     }
+
+    override fun ducked() = videos.values.forEach(Video::duck)
+
+    fun close() = Duck.unlisten(this)
 
     fun join(uri: String, painter: Painter) = videos.getOrPut(uri) { Video(context, uri) }.run {
         if (painter !in viewers) viewers += painter

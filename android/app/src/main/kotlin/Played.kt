@@ -16,8 +16,7 @@ private const val STRETCH = "stretch"
 private const val SOUND = "playback.muted"
 private const val IDLE_MS = 30_000L
 internal val WHOLE = 0L to C.TIME_END_OF_SOURCE
-private val MARK = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-    .setAllowedCapturePolicy(C.ALLOW_CAPTURE_BY_SYSTEM).build()
+private val MOVIE = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
 
 @OptIn(UnstableApi::class)
 internal class Video(
@@ -90,7 +89,7 @@ internal class Video(
 
     private fun start(target: Surface) {
         player = ExoPlayer.Builder(context).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false)
-            .setAudioAttributes(MARK, false).build().apply {
+            .setAudioAttributes(MOVIE, false).build().apply {
                 addListener(this@Video)
                 steer(this, null)
                 setVideoSurface(target)

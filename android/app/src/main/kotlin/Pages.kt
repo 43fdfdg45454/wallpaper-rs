@@ -9,12 +9,18 @@ import android.webkit.WebStorage
 import org.json.JSONArray
 import org.json.JSONObject
 
-class Pages(private val context: Context) {
+class Pages(private val context: Context) : Ducked {
     private val shown = mutableMapOf<Painter, Shown>()
 
     init {
-        Duck.listen { main.post { shown.keys.forEach { Render.post(it::refresh) } } }
+        Duck.listen(this)
     }
+
+    override fun ducked() {
+        main.post { shown.keys.forEach { Render.post(it::refresh) } }
+    }
+
+    fun close() = Duck.unlisten(this)
 
     private inner class Shown(val painter: Painter, var spec: JSONObject, val surface: Surface, var size: Pair<Int, Int>) {
         var page: Page? = null
