@@ -20,7 +20,9 @@ pub use crate::action::{
 };
 pub use crate::action::{AnimEdit, EffectsEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use crate::action::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
-pub use crate::action::{CanvasEdit, KeyframeEdit, LayerEdit, ManifestEdit, PropertyEdit, TimelineEdit};
+pub use crate::action::{
+    CanvasEdit, KeyframeEdit, LayerEdit, ManifestEdit, PropertyEdit, TimelineEdit, TimelineEvent,
+};
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
     let path = find(doc, id)?;

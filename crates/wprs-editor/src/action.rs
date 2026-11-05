@@ -28,7 +28,7 @@ pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
 pub use sow::SowEdit;
 pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
-pub use timing::{KeyframeEdit, TimelineEdit};
+pub use timing::{KeyframeEdit, TimelineEdit, TimelineEvent};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]

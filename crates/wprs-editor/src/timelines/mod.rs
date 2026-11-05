@@ -1,3 +1,5 @@
+mod events;
+
 use crate::action::TimelineEdit;
 use crate::ops::{Op, escape, set};
 use anyhow::{Result, bail, ensure};
@@ -110,6 +112,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &TimelineEdit) -> Result<Vec<Op>>
         return crate::shaping::refused(dir, doc, ops);
     }
     fields(&mut line, e)?;
+    events::events(&mut line, e)?;
     let mut follow = Vec::new();
     if let Some(to) = e.to.as_deref().filter(|t| *t != id) {
         valid(to)?;

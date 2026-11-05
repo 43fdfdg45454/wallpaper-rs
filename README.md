@@ -2347,7 +2347,7 @@ wprs-ctl scene add-layer mar mesh --file zorro.glb      # importa el .glb y lo m
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
-wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat   # y --rename, --remove, --frames con --fps
+wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat --event 3:ola   # y --rename, --remove, --frames con --fps, --drop-event
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 -0.5 --timeline olas --base 0.5   # relativo a 0,5
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier hasta la clave vecina (aquí la de 3 s); también --in-handle
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --straighten   # recta hasta la clave siguiente, sin tocar las curvas vecinas

@@ -65,4 +65,14 @@ pub struct TimelineEdit {
     pub delay: Option<f64>,
     pub autoplay: Option<bool>,
     pub trigger: Option<String>,
+    pub add_events: Vec<TimelineEvent>,
+    pub drop_events: Vec<String>,
+    pub clear_events: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TimelineEvent {
+    pub t: f64,
+    pub name: String,
 }
