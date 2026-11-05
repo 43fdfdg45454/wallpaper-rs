@@ -11,7 +11,7 @@ use wprs_providers::HttpFetch;
 use wprs_sync::{Ids, Kept, Local, Replica, View};
 
 const DIR: &str = "repos";
-const ITEMS: &str = "items.json";
+pub(crate) const ITEMS: &str = "items.json";
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Offer {
@@ -98,7 +98,7 @@ pub(crate) fn offers(local: &Local, replica: &Replica) -> Vec<Offer> {
     found.map(offer).filter(|o| shared(&o.url) && o.repo_id.len() == 64).collect()
 }
 
-fn fetch() -> Result<HttpFetch, Error> {
+pub(crate) fn fetch() -> Result<HttpFetch, Error> {
     HttpFetch::new(Arc::default())
         .map_err(|e| said("android.web_client", "web connections cannot start: %1", &[&e]))
 }

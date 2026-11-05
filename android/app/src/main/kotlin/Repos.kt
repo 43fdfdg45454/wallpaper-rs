@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -40,6 +42,7 @@ fun Repos(main: Main, status: JSONObject, run: Run) {
     fun act(work: suspend () -> Unit) = run("") {
         work()
         changed++
+        withContext(Dispatchers.IO) { Updates.schedule(main) }
     }
     Text(stringResource(R.string.repos), Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleSmall)
     shown.optJSONArray("offers").objects().forEach { offer ->
@@ -73,6 +76,7 @@ fun Repos(main: Main, status: JSONObject, run: Run) {
             if (shown.optJSONArray("repos").objects().isNotEmpty()) TextButton({ exploring = true }) { Text(stringResource(R.string.repo_browse)) }
         }
     }
+    if (shown.optJSONArray("repos").objects().isNotEmpty()) RepoUpdates(main, run)
     if (exploring) Explore(main, run) { exploring = false }
 }
 

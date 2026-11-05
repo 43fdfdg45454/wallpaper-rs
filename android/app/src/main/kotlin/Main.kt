@@ -60,7 +60,10 @@ class Main : ComponentActivity() {
         Converting.finished = conversions
         if (savedInstanceState == null) {
             Sync.soon(this, 0)
-            thread(isDaemon = true) { remirror() }
+            thread(isDaemon = true) {
+                remirror()
+                Updates.found(Updates.count())
+            }
         }
         setContent { App(this) }
     }

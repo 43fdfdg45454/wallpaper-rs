@@ -41,7 +41,10 @@ class Wprs : Application(), Configuration.Provider {
         Native.device(small, Build.VERSION.MEDIA_PERFORMANCE_CLASS)
         Heard.conflict = getString(R.string.conflict, "%1")
         if (Sync.active()) Sync.schedule(this)
-        thread(isDaemon = true) { Mirrors.watch(this, ExistingWorkPolicy.KEEP) }
+        thread(isDaemon = true) {
+            Mirrors.watch(this, ExistingWorkPolicy.KEEP)
+            Updates.schedule(this)
+        }
     }
 }
 
@@ -96,7 +99,7 @@ object Sync {
 
     fun active() = status().optBoolean("active")
 
-    private fun constraints() = Constraints.Builder()
+    fun constraints() = Constraints.Builder()
         .setRequiredNetworkType(if (Native.setting("sync_network", null) == "any") NetworkType.CONNECTED else NetworkType.UNMETERED)
         .setRequiresBatteryNotLow(true)
         .build()

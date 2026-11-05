@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,7 +74,11 @@ fun App(main: Main) {
                             tab = index
                             playlist = null
                         },
-                        icon = { Icon(icon, null) },
+                        icon = {
+                            val updates = Updates.count.intValue
+                            if (label != R.string.devices || updates == 0) Icon(icon, null)
+                            else BadgedBox({ Badge { Text("$updates") } }) { Icon(icon, stringResource(R.string.repo_updates)) }
+                        },
                         label = { Text(stringResource(label)) },
                     )
                 }

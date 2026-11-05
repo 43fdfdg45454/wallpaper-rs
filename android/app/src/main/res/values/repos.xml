@@ -11,4 +11,8 @@
     <string name="repo_search">Search packages</string>
     <string name="repo_install">Install</string>
     <string name="repo_installed">Installed</string>
+    <string name="repo_updates">Updates</string>
+    <string name="repo_update_from">%1$s → %2$s</string>
+    <string name="repo_update">Update</string>
+    <string name="repo_check">Check for updates</string>
 </resources>

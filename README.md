@@ -984,7 +984,11 @@ propuesta con su clave y se añaden o se rechazan una vez, también se añade un
 y *Explorar* busca sus paquetes (los marca si son para adultos y los oculta con *Ocultar el
 contenido para adultos*) y los instala en la biblioteca, comprobados con el índice firmado
 del repositorio; un paquete instalado así es el mismo elemento de la biblioteca en el teléfono y
-en el ordenador.
+en el ordenador. Una vez al día, con las mismas reglas de red y batería que la sincronización de
+cada hora y solo si hay repositorios, el teléfono actualiza sus índices como el escritorio: la
+pestaña muestra un aviso con cuántos paquetes tienen versión nueva, *Actualizaciones* los lista con
+*Actualizar* (la versión nueva ocupa el lugar de la vieja, con sus listas y ajustes) y *Buscar
+actualizaciones* lo hace al momento.
 
 Para sincronizar por la red de casa sin un dominio ni un certificado público, un ordenador puede
 servir `wprs-server` con su propio certificado (`WPRS_TLS=self-signed`) y anunciarse en la red

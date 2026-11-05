@@ -31,6 +31,7 @@ mod screens;
 mod steady;
 mod stopped;
 mod tilted;
+mod updated;
 mod variants;
 mod words;
 
@@ -157,6 +158,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     paced::pages_fade_out_while_another_app_plays();
     paced::pages_keep_the_frame_cap_and_the_volume_of_their_author();
     paced::shortcuts_open_what_the_user_chose_after_a_tap();
+    updated::nothing_to_update_without_repositories();
     unreadable();
 }
 
