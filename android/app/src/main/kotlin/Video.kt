@@ -84,7 +84,10 @@ class Videos(private val context: Context) : Ducked {
         val (video, told) = (videos[key ?: return] ?: return) to JSONObject(reel ?: return)
         video.speed = told.getDouble("rate").toFloat()
         video.looped = told.getBoolean("loop")
-        video.loudness = told.getDouble("volume").toFloat()
+        val loudness = told.getDouble("volume").toFloat()
+        val hushed = (loudness <= 0f) != (video.loudness <= 0f)
+        video.loudness = loudness
+        if (hushed) video.configure()
         val range = told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE)
         val cut = range != video.clip
         video.clip = range

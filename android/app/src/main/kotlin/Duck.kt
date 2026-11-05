@@ -21,6 +21,10 @@ object Ducking {
     fun next(gain: Float, target: Float) = if (abs(target - gain) <= STEP) target else gain + sign(target - gain) * STEP
 }
 
+object Audible {
+    fun muted(silent: Boolean, sound: String?, loudness: Float) = silent || sound != "false" || loudness <= 0f
+}
+
 object Duck : AudioManager.AudioPlaybackCallback() {
     @Volatile
     var gain = 1f

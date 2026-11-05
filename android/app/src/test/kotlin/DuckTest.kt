@@ -17,6 +17,14 @@ class DuckTest {
     }
 
     @Test
+    fun aVideoAtNoVolumeDecodesNoSound() {
+        assertFalse(Audible.muted(silent = false, sound = "false", loudness = 0.5f))
+        assertTrue("a muted package or a volume of 0", Audible.muted(silent = false, sound = "false", loudness = 0f))
+        assertTrue("video sound off", Audible.muted(silent = false, sound = "true", loudness = 1f))
+        assertTrue("a clip of a scene without sound", Audible.muted(silent = true, sound = "false", loudness = 1f))
+    }
+
+    @Test
     fun theGainFadesInTenStepsAndStopsAtItsGoal() {
         var gain = 1f
         var steps = 0

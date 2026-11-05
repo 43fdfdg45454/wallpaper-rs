@@ -77,7 +77,7 @@ internal class Video(
         val stretch = Native.setting(FITTING, null) == STRETCH
         active.videoScalingMode =
             if (stretch) C.VIDEO_SCALING_MODE_SCALE_TO_FIT else C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-        muted = (fixed != null && !audible) || Native.setting(SOUND, null) != "false"
+        muted = Audible.muted(fixed != null && !audible, Native.setting(SOUND, null), loudness)
         active.trackSelectionParameters =
             active.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, muted).build()
         heard()

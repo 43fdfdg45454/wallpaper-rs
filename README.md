@@ -464,7 +464,8 @@ La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, 
 posición) y sus preajustes, como en el escritorio; con zoom, posición o límite de fotogramas el
 vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en silencio y la
 reproducción única valen para vídeos y páginas como en el escritorio, y una página sin volumen
-propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos.
+propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos. Un vídeo en
+silencio o con volumen 0 no descodifica su sonido ni ocupa la salida de audio.
 La página de un paquete avisa de todo lo que el teléfono omite: el color alrededor de la imagen y la
 extensión sobre varias pantallas, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,
