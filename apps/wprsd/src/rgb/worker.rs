@@ -3,7 +3,7 @@ use crate::compositor::lock;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use wprs_core::rgb::{Covered, Rgb};
+use wprs_core::rgb::Rgb;
 use wprs_rgb::{Client, Strip, colors, pattern};
 
 const WAIT: Duration = Duration::from_secs(2);

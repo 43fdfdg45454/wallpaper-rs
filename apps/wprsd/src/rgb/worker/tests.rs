@@ -1,4 +1,5 @@
 use super::*;
+use wprs_core::rgb::Covered;
 
 fn session(source: &str) -> Session {
     let status = Arc::new(Mutex::new(Status { source: Some(source.into()), ..Status::default() }));
