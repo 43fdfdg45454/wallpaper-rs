@@ -33,6 +33,12 @@ sleep 2
 ctl covered TEST-RGB false
 wait_for 20 grows 10 || fail "the lights did not resume when the screen showed again"
 held pause False || fail "the lights stayed paused on a shown screen"
+ctl config pause.when_covered false >/dev/null
+ctl covered TEST-RGB true && expect "s['outputs']['TEST-RGB']['active']" True
+wait_for 20 grows 10 || fail "the lights stopped on a covered screen that keeps drawing: $(ctl rgb status)"
+held pause False || fail "the lights paused on a covered screen that keeps drawing"
+ctl covered TEST-RGB false
+ctl config pause.when_covered true >/dev/null
 ctl rgb covered follow | grep -q "^while covered (rgb.when_covered): follow$" || fail "wprs-ctl rgb covered follow: $(ctl rgb covered)"
 grep -q '^when_covered = "follow"' "$config" || fail "the choice was not saved: $(cat "$config")"
 ctl covered TEST-RGB true && expect "s['outputs']['TEST-RGB']['active']" False

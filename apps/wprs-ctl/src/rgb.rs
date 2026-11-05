@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use wprs_client::Client;
 use wprs_core::rgb::Covered;
 
-const COVERED: &str = "follow keeps the lights following the scene without drawing it, pause sends nothing and leaves the lights as they are until the wallpaper shows again";
+const COVERED: &str = "follow keeps the lights following the scene without drawing it, pause sends nothing and leaves the lights as they are until the wallpaper shows again; both apply while the covered wallpaper pauses (pause.when_covered)";
 
 fn covered(s: &Value) -> String {
     let choice = s["when_covered"].as_str().unwrap_or("pause");

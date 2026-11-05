@@ -6099,11 +6099,11 @@ msgstr ""
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""
-"Nothing is sent and nothing runs for the lights until the wallpaper shows "
-"again."
+"While the covered wallpaper pauses, nothing is sent and nothing runs for the "
+"lights until it shows again."
 msgstr ""
-"No se manda nada ni se hace nada para las luces hasta que el fondo vuelve a "
-"verse."
+"Mientras el fondo tapado está en pausa, no se manda nada ni se hace nada para "
+"las luces hasta que vuelve a verse."
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid ""

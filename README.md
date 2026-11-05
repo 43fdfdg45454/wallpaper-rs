@@ -1452,16 +1452,18 @@ app o `wprs-ctl input grant <id> rgb`). El servidor es este equipo (`127.0.0.1:6
 pongas otra dirección (`rgb.server`), y entonces la app avisa de que los colores viajan por la red.
 La misma sección tiene *Conectar*, la lista de dispositivos con sus luces y *Probar* en cada uno (un
 arcoíris de 3 segundos); `wprs-ctl rgb status`, `rgb devices`, `rgb test [N]` y `rgb strip -o
-SALIDA` hacen lo mismo desde la terminal. Mientras una ventana tapa el fondo que manda los colores,
-eliges qué hacen las luces (*Mientras una ventana tapa el fondo* en la misma sección, `wprs-ctl rgb
-covered follow|pause` o `rgb.when_covered`): *Pausar y dejar las luces como están* (lo predeterminado) no manda nada, no
+SALIDA` hacen lo mismo desde la terminal. Mientras una ventana tapa el fondo que manda los colores y
+el fondo se pausa por eso (`pause.when_covered`, lo predeterminado), eliges qué hacen las luces
+(*Mientras una ventana tapa el fondo* en la misma sección, `wprs-ctl rgb covered follow|pause` o
+`rgb.when_covered`): *Pausar y dejar las luces como están* (lo predeterminado) no manda nada, no
 dibuja ni capta nada para las luces y deja los dispositivos con sus últimos colores hasta que el
 fondo vuelve a verse, sin devolverlos a su propio modo para no hacerlos parpadear; *Seguir el fondo*
 mantiene las luces cambiando con la escena tapada: la escena sigue a 30 fotogramas por segundo como
 mucho, dibujada a 320 píxeles por lado como mucho solo para la tira y nunca en la pantalla, y una
-página sigue igual sin mostrarse. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran la
-elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de la
-tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
+página sigue igual sin mostrarse. Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
+siguen como siempre, elijas lo que elijas. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran
+la elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de
+la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
 `adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
 scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista
 previa y la tira de 64 × 16 que reciben las luces, en vivo. El teléfono no tiene iluminación RGB y

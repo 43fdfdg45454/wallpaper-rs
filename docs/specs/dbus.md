@@ -582,7 +582,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 | `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
-| `rgb.when_covered` | what the lights do while a window covers the output they follow: `pause` sends nothing, samples nothing and leaves the devices with their last colors until the output shows again (a scene that keeps running because `pause.when_covered` is off draws without sampling); `follow` keeps the lights following the scene or page while covered: a scene paused by `pause.when_covered` keeps running at most 30 times a second, drawn at most 320 pixels a side for the strip and never to the screen or the stream, and a page keeps running at the same rate without being shown; synced like the other `rgb` keys | `pause` |
+| `rgb.when_covered` | what the lights do while a window covers the output they follow and the wallpaper pauses for it: `pause` sends nothing, samples nothing and leaves the devices with their last colors until the output shows again (with `pause.when_covered` off the covered wallpaper keeps drawing and the lights keep following it, as before this key existed); `follow` keeps the lights following the scene or page while covered: a scene paused by `pause.when_covered` keeps running at most 30 times a second, drawn at most 320 pixels a side for the strip and never to the screen or the stream, and a page keeps running at the same rate without being shown; synced like the other `rgb` keys | `pause` |
 | `media.remote_covers` | download covers that media players give as `http` or `https` addresses (at most 4 MiB, within 5 s, kept in memory only); turning it on fetches the cover of the track that plays at once, and turning it off drops the covers fetched that way; off, only `file://` covers are read. Kept on each device, never synced | `false` |
 | `rgb.server` | `host:port` of the OpenRGB server, at most 255 characters; an address that is not this computer sends the colors over the network | `127.0.0.1:6742` |
 | `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `Graphics A` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
@@ -1554,7 +1554,7 @@ at most 64 × 16 pixels comes from the shown scene or page of each output that h
 (`Inputs1`), at most 30 times a second for all of them together; the daemon spreads it over each
 device: a zone with a matrix takes the cell of the strip under each key, the other zones the column
 under each light, averaged over the height. The devices keep the last colors when the scene stops.
-While a window covers the output that sends the colors, `rgb.when_covered` decides: `pause` (the
+While a window covers the output that sends the colors and the wallpaper pauses for it (`pause.when_covered`), `rgb.when_covered` decides: `pause` (the
 default) sends nothing until it shows again and lets the connection rest without even listening for
 device changes, leaving the lights as they are (gentler than switching the devices back to their own
 mode and again to direct mode); `follow` keeps them following the scene without drawing it.
@@ -1568,7 +1568,7 @@ held}`: `local` is
 `{index, name, kind, leds, zones: [{name, leds, matrix: [w, h] | null}]}` as the server names them,
 `source` the output whose colors were sent last, `frames` how many were sent and `strips` the
 outputs with a strip kept; `when_covered` is `rgb.when_covered` and `held` is `true` while the
-lights pause because the output they follow is covered.
+lights pause because the output they follow is covered and paused.
 
 ### `Connect()`
 

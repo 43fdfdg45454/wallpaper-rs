@@ -19,7 +19,7 @@ impl State {
             Command::Region(output) => self.region(&output),
             Command::Backdrop(output) => self.backdrop_again(&output),
             Command::SetActive(output, active, (covered, awake)) => {
-                crate::rgb::cover(&output, covered);
+                crate::rgb::cover(&output, covered && !active);
                 self.outputs
                     .get_mut(&output)
                     .into_iter()

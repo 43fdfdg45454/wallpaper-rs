@@ -94,7 +94,7 @@ ColumnLayout {
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30
         wrapMode: Text.Wrap
         color: Kirigami.Theme.disabledTextColor
-        text: lights.covered === "follow" ? App.tr("The lights keep changing with the scene, which keeps running without drawing the hidden wallpaper.") : App.tr("Nothing is sent and nothing runs for the lights until the wallpaper shows again.")
+        text: lights.covered === "follow" ? App.tr("The lights keep changing with the scene, which keeps running without drawing the hidden wallpaper.") : App.tr("While the covered wallpaper pauses, nothing is sent and nothing runs for the lights until it shows again.")
     }
 
     Kirigami.InlineMessage {
