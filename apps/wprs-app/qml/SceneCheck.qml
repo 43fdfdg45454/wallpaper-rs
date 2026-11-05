@@ -165,6 +165,9 @@ QtObject {
                 Qt.createComponent("SceneSwarmCheck.qml").createObject(page, {
                     "page": page
                 }).exercise();
+                Qt.createComponent("SceneShapingCheck.qml").createObject(page, {
+                    "page": page
+                }).exercise();
             }
             if (kind === "empty")
                 Qt.createComponent("SceneMeshCheck.qml").createObject(page, {

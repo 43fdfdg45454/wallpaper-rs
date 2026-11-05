@@ -29,18 +29,19 @@ Kirigami.FormLayout {
     }
 
     Repeater {
-        model: look.bloom === null ? [] : look.glows
+        model: look.glows
 
         delegate: QQC2.Slider {
             id: knob
 
             required property var modelData
 
+            visible: look.bloom !== null
             Kirigami.FormData.label: modelData[1] + ":"
             from: modelData[2]
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
-            value: typeof look.bloom[modelData[0]] === "number" ? look.bloom[modelData[0]] : modelData[4]
+            value: typeof look.bloom?.[modelData[0]] === "number" ? look.bloom[modelData[0]] : modelData[4]
             onMoved: settle.restart()
 
             Timer {
@@ -64,18 +65,19 @@ Kirigami.FormLayout {
     }
 
     Repeater {
-        model: look.glide === null ? [] : look.moves
+        model: look.moves
 
         delegate: QQC2.Slider {
             id: knob
 
             required property var modelData
 
+            visible: look.glide !== null
             Kirigami.FormData.label: modelData[1] + ":"
             from: modelData[2]
             to: modelData[3]
             stepSize: (modelData[3] - modelData[2]) / 100
-            value: look.glide[modelData[0]] ?? modelData[4]
+            value: look.glide?.[modelData[0]] ?? modelData[4]
             onMoved: settle.restart()
 
             Timer {

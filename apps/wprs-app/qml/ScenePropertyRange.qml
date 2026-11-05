@@ -16,18 +16,21 @@ Kirigami.FormLayout {
     visible: prop?.type === "slider"
 
     Repeater {
-        model: range.visible ? range.keys : []
+        model: range.keys
 
         delegate: QQC2.TextField {
             required property var modelData
 
+            visible: range.visible
             Kirigami.FormData.label: modelData[1] + ":"
-            text: String(range.prop[modelData[0]] ?? "")
+            text: String(range.prop?.[modelData[0]] ?? "")
             inputMethodHints: Qt.ImhFormattedNumbersOnly
-            validator: DoubleValidator {}
+            validator: DoubleValidator {
+                locale: "C"
+            }
             onEditingFinished: {
                 const number = Number(text);
-                if (text !== "" && number !== range.prop[modelData[0]])
+                if (text !== "" && number !== range.prop?.[modelData[0]])
                     range.page.run("property", {
                         "id": range.id,
                         [modelData[0]]: number
