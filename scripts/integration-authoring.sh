@@ -47,6 +47,8 @@ ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with every p
 ctl scene layer "$craft" card transform --position 100,-20 --rotation -15 --scale 2,2 --size 300,200 || fail "the layer was not placed"
 ctl scene layer "$craft" card blend screen || fail "the blend mode was not set"
 if ctl scene layer "$craft" card transform --rotation 900 2>/dev/null; then fail "a turn of 900 degrees was kept"; fi
+ctl scene layer "$craft" card transform --tilt 20,-10 --z 120 || fail "the layer was not tilted"
+if ctl scene layer "$craft" card transform --tilt 95,0 2>/dev/null; then fail "a tilt of 95 degrees was kept"; fi
 ctl scene keyframe "$craft" /scene/layers/0/transform/scale 0 '[1,1]' >/dev/null || fail "the scale took no keyframe"
 if ctl scene keyframe "$craft" /scene/layers/0/transform/scale 1 1,1 2>/dev/null; then fail "a scale keyframe of text was kept"; fi
 if ctl scene layer "$craft" card transform --scale 3,3 2>/dev/null; then fail "a plain scale dropped the keyframes"; fi

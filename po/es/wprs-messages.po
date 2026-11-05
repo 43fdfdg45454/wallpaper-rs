@@ -1214,6 +1214,14 @@ msgid "the rotation goes from -360 to 360 degrees"
 msgstr "el giro va de -360 a 360 grados"
 
 #: crates/wprs-editor/src/shaping/layers.rs
+msgid "a tilt goes from -89 to 89 degrees"
+msgstr "una inclinación va de -89 a 89 grados"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "z goes from -100000 to 100000 pixels"
+msgstr "z va de -100000 a 100000 píxeles"
+
+#: crates/wprs-editor/src/shaping/layers.rs
 msgid "a size is above 0 pixels"
 msgstr "un tamaño es mayor que 0 píxeles"
 

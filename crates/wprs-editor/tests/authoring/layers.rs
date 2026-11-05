@@ -100,3 +100,25 @@ fn a_transform_over_keyframes_is_refused_unless_it_replaces_them() {
     act(&mut p, place(true)).unwrap();
     assert_eq!(at(&p, "/scene/layers/0/transform/position"), json!([50.0, 50.0]));
 }
+
+#[test]
+fn a_layer_is_tilted_and_lifted_within_their_ranges() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let lean = json!({"layer": {"transform": {"layer": "card", "tilt": [30, -10], "z": 250}}});
+    act(&mut p, lean).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/tilt"), json!([30.0, -10.0]));
+    assert_eq!(at(&p, "/scene/layers/0/transform/z"), json!(250.0));
+    for bad in [json!({"tilt": [90, 0]}), json!({"tilt": [0, -120]}), json!({"z": 2e5}), json!({"z": -1e6})] {
+        let mut edit = json!({"layer": "card"});
+        edit.as_object_mut().unwrap().extend(bad.as_object().unwrap().clone());
+        let words = refused(&mut p, json!({"layer": {"transform": edit}}));
+        assert!(words.contains("tilt") || words.contains("z goes"), "{words}");
+    }
+    let key = json!({"keyframe": {"pointer": "/scene/layers/0/transform/z", "time": 1, "value": 10}});
+    act(&mut p, key).unwrap();
+    let words = refused(&mut p, json!({"layer": {"transform": {"layer": "card", "z": 5}}}));
+    assert!(words.contains("another source"), "{words}");
+    act(&mut p, json!({"layer": {"transform": {"layer": "card", "z": 5, "replace": true}}})).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/z"), json!(5.0));
+}

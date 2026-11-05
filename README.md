@@ -2346,7 +2346,7 @@ wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
 wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
 wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
 wprs-ctl scene effects mar far add vignette --param intensity=0.5   # y set, remove, move, mask
-wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2   # y blend, instance
+wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2 --tilt 15,0 --z 40   # y blend, instance
 wprs-ctl scene property mar velocidad --min 0 --max 10 --step 0.5 --default 2
 wprs-ctl scene manifest mar tags mar noche && wprs-ctl scene manifest mar license CC-BY-4.0   # y origin, authors, display
 wprs-ctl scene canvas mar bloom --strength 1.5 && wprs-ctl scene canvas mar parallax --amount 2

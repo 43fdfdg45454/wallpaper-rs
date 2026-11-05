@@ -12,7 +12,7 @@ fn mode(text: &str) -> Result<wprs_scene::Blend, String> {
 
 #[derive(Subcommand, Debug)]
 pub enum Stage {
-    #[command(about = "Place, turn, scale, skew or size the layer; what is not given stays")]
+    #[command(about = "Place, turn, scale, skew, tilt, lift or size the layer; what is not given stays")]
     Transform {
         #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Pixels of the canvas")]
         position: Option<[f64; 2]>,
@@ -24,6 +24,10 @@ pub enum Stage {
         skew: Option<[f64; 2]>,
         #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Point it turns and scales around, in fractions of the layer")]
         origin: Option<[f64; 2]>,
+        #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Degrees from -89 to 89 the layer leans in depth around its position: X turns the bottom edge towards the viewer, Y the left edge")]
+        tilt: Option<[f64; 2]>,
+        #[arg(long, allow_hyphen_values = true, help = "Pixels towards the viewer, from -100000 to 100000")]
+        z: Option<f64>,
         #[arg(allow_hyphen_values = true, long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
         size: Option<[f64; 2]>,
         #[arg(long, help = crate::sowing::REPLACE)]
@@ -67,8 +71,8 @@ pub enum Stage {
 
 pub(crate) fn edit(layer: String, what: Stage) -> L {
     match what {
-        Stage::Transform { position, rotation, scale, skew, origin, size, replace } => {
-            L::Transform { layer, position, rotation, scale, skew, origin, size, replace }
+        Stage::Transform { position, rotation, scale, skew, origin, tilt, z, size, replace } => {
+            L::Transform { layer, position, rotation, scale, skew, origin, tilt, z, size, replace }
         }
         Stage::Blend { blend } => L::Blend { layer, blend },
         Stage::Instance {

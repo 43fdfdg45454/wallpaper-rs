@@ -12,7 +12,7 @@ const SIZED: [&str; 5] = ["image", "video", "solid", "adjustment", "spectrum"];
 const TUNABLE: [&str; 9] =
     ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color", "points"];
 
-type Fields<'a> = [(&'a str, Option<Value>); 5];
+type Fields<'a> = [(&'a str, Option<Value>); 7];
 
 fn transform(doc: &Value, path: &str, found: &Value, fields: Fields, replace: bool) -> Result<Vec<Op>> {
     let at = format!("{path}/transform");
@@ -61,10 +61,14 @@ fn instance(
 
 pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
     let ops = match e {
-        L::Transform { layer: id, position, rotation, scale, skew, origin, size, replace } => {
+        L::Transform { layer: id, position, rotation, scale, skew, origin, tilt, z, size, replace } => {
             let (path, found) = layer(doc, id)?;
             let turn = rotation.is_none_or(|r| (-360.0..=360.0).contains(&r));
             ensure!(turn, said("editor.rotation_range", "the rotation goes from -360 to 360 degrees", &[]));
+            let lean = tilt.is_none_or(|t| t.iter().all(|a| (-89.0..=89.0).contains(a)));
+            ensure!(lean, said("editor.tilt_range", "a tilt goes from -89 to 89 degrees", &[]));
+            let near = z.is_none_or(|z| (-1e5..=1e5).contains(&z));
+            ensure!(near, said("editor.z_range", "z goes from -100000 to 100000 pixels", &[]));
             let sized = size.is_none_or(|s| s.iter().all(|n| *n > 0.0));
             ensure!(sized, said("editor.size_positive", "a size is above 0 pixels", &[]));
             let pair = |v: &Option<[f64; 2]>| v.map(|v| json!(v));
@@ -74,6 +78,8 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
                 ("scale", pair(scale)),
                 ("skew", pair(skew)),
                 ("origin", pair(origin)),
+                ("tilt", pair(tilt)),
+                ("z", z.map(|z| json!(z))),
             ];
             let mut ops = transform(doc, &path, found, fields, *replace)?;
             if let Some(s) = size {

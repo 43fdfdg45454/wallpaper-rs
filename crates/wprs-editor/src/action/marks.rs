@@ -19,6 +19,10 @@ pub enum LayerEdit {
         #[serde(default)]
         origin: Option<[f64; 2]>,
         #[serde(default)]
+        tilt: Option<[f64; 2]>,
+        #[serde(default)]
+        z: Option<f64>,
+        #[serde(default)]
         size: Option<[f64; 2]>,
         #[serde(default)]
         replace: bool,
