@@ -2,6 +2,7 @@ use crate::account::{LISTEN, NETWORK};
 use crate::said;
 use crate::{Error, power, store};
 use std::fs;
+use std::path::Path;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 use wprs_core::settings::fps::DISPLAY;
@@ -86,6 +87,19 @@ pub(crate) fn update(change: impl FnOnce(&mut Config) -> Result<(), String>) -> 
     store::changed();
     caps();
     Ok(())
+}
+
+pub(crate) fn relinked(old: &Path, new: &Path) -> Result<(), Error> {
+    let was = |o: &wprs_core::config::OutputConfig| o.image.as_deref() == Some(old);
+    let config = config();
+    if !was(&config.default) && !config.outputs.values().any(was) {
+        return Ok(());
+    }
+    update(|config| {
+        let sections = std::iter::once(&mut config.default).chain(config.outputs.values_mut());
+        sections.filter(|o| was(o)).for_each(|o| o.image = Some(new.to_path_buf()));
+        Ok(())
+    })
 }
 
 fn table() -> Result<toml::Table, Error> {

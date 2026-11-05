@@ -1,4 +1,4 @@
-use crate::{Error, library, media, said, store};
+use crate::{Error, library, media, said, settings, store};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs;
@@ -70,7 +70,11 @@ fn replace(uid: &str) -> Result<Value, Error> {
     let hash: String = qhash(&made)?[..8].iter().map(|b| format!("{b:02x}")).collect();
     let path = store::dir()?.join(store::MEDIA).join(format!("{hash}.mp4"));
     fs::rename(&made, &path)?;
-    library::with(|lib| Ok(lib.relink_item(uid, &path, library::now())?))?;
+    let path = library::with(|lib| {
+        lib.relink_item(uid, &path, library::now())?;
+        Ok(lib.item(uid)?.path)
+    })?;
+    settings::relinked(&old.path, &path)?;
     let media = fs::canonicalize(store::dir()?.join(store::MEDIA))?;
     let (before, after) = (fs::canonicalize(&old.path).ok(), fs::canonicalize(&path).ok());
     if let Some(before) = before.filter(|b| b.starts_with(&media) && Some(b) != after.as_ref()) {

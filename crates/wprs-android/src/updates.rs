@@ -83,10 +83,12 @@ fn update(uid: &str) -> Result<Value, Error> {
     let old = library::with(|lib| Ok(lib.item(uid)?))?;
     let (fresh, path) = repos::fetched(&format!("{repo}/{id}"))?;
     if fresh != uid {
-        library::with(|lib| {
+        let path = library::with(|lib| {
             lib.remove_items(&[&fresh])?;
-            Ok(lib.relink_item(uid, &path, library::now())?)
+            lib.relink_item(uid, &path, library::now())?;
+            Ok(lib.item(uid)?.path)
         })?;
+        crate::settings::relinked(&old.path, &path)?;
         let mut installed = repos::installed();
         installed.remove(&fresh);
         store::write(&repos::dir()?.join(repos::ITEMS), &serde_json::to_vec(&installed)?)?;

@@ -1,4 +1,5 @@
 use super::{FIXTURES, ask, open};
+use crate::choice::{self, Choice, Target};
 use crate::{library, settings, store};
 use serde_json::{Value, json};
 use std::fs;
@@ -31,6 +32,11 @@ pub(super) fn converted_videos_take_the_place_of_their_original() {
     assert_eq!(ask(json!({ "op": "converted", "uid": clip }))["id"], json!("android.convert_failed"));
     assert!(!target.exists(), "an unreadable conversion is thrown away");
     let before = path(&clip);
+    let kept = settings::config();
+    for target in [Target::Both, Target::Lock] {
+        choice::pick(Some(Choice::Item(clip.clone())));
+        choice::commit(false, target).unwrap();
+    }
     fs::copy(Path::new(FIXTURES).join("quadrants-64x32.webm"), &target).unwrap();
     assert_eq!(ask(json!({ "op": "unconverted", "uid": clip })), Value::Null);
     assert!(!target.exists());
@@ -39,6 +45,15 @@ pub(super) fn converted_videos_take_the_place_of_their_original() {
     let after = path(&clip);
     assert_eq!(placed, json!(after));
     assert!(after != before && after.extension().unwrap() == "mp4" && after.is_file() && !before.exists());
+    for lock in [false, true] {
+        assert_eq!(choice::shown_on(false, lock).map(|s| s.uid), Some(clip.clone()), "lock: {lock}");
+        assert_eq!(settings::config().resolve(choice::screen(lock)).image, Some(after.clone()));
+    }
+    settings::update(|config| {
+        *config = kept;
+        Ok(())
+    })
+    .unwrap();
     assert!(!target.exists() && !store::thumb_file(&clip, "jpg").unwrap().exists());
     assert_eq!(ask(json!({ "op": "convert_to", "uid": clip })), json!(target));
     fs::write(&target, b"half").unwrap();
