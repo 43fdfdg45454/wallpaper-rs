@@ -1,7 +1,9 @@
 use super::{CALMING, ENGINE, RETRIES};
+use serde_json::json;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
+use wprs_core::QualityChoice;
 use wprs_scene::{Budget, Quality, Why};
 
 pub(crate) fn retry() {
@@ -32,13 +34,16 @@ pub(crate) fn particles() -> &'static str {
     ["", "gpu", "cpu"][ENGINE.load(Relaxed).min(2) as usize]
 }
 
-pub(crate) fn left_out() -> Vec<serde_json::Value> {
-    let left = shown().map(|shown| shown.left.1).unwrap_or_default();
-    left.iter().map(|(id, reason)| serde_json::json!({ "id": id, "reason": reason })).collect()
+pub(crate) fn wallpaper() -> serde_json::Value {
+    let shown = shown().unwrap_or(NOTHING);
+    let (auto, over) = shown.cost.map_or(("", None), |kept| judged(kept, crate::power::choice()));
+    let [tier, quality, reason] = level(shown.level).unwrap_or_default();
+    let left: Vec<_> = shown.left.1.iter().map(|(id, why)| json!({ "id": id, "reason": why })).collect();
+    json!({ "tier": tier, "quality": quality, "reason": reason, "left_out": left, "over": over, "auto": auto })
 }
 
-pub(crate) fn level() -> Option<[String; 3]> {
-    let level = shown()?.level.checked_sub(1)?;
+fn level(level: u32) -> Option<[String; 3]> {
+    let level = level.checked_sub(1)?;
     let why = Why::ALL.get(level as usize % 8)?.name();
     Some([format!("T{}", level / 32), format!("Q{}", level / 8 % 4), why.into()])
 }
@@ -94,9 +99,8 @@ fn shown() -> Option<Shown> {
     })
 }
 
-fn judged() -> (&'static str, Option<[f32; 2]>) {
-    let Some(kept) = shown().and_then(|shown| shown.cost) else { return ("", None) };
-    let budget = Budget { choice: crate::power::choice(), ..kept.budget };
+fn judged(kept: Cost, choice: QualityChoice) -> (&'static str, Option<[f32; 2]>) {
+    let budget = Budget { choice, ..kept.budget };
     let quality = if budget == kept.budget { kept.quality } else { budget.choose((kept.auto, Why::User)).0 };
     let (cost, most) = (kept.costs[quality as usize], budget.tier.budget());
     let over = (!budget.choice.is_auto() && cost > most).then_some([cost, most]);
@@ -107,14 +111,6 @@ fn judged() -> (&'static str, Option<[f32; 2]>) {
         _ => "",
     };
     (automatic, over)
-}
-
-pub(crate) fn over() -> Option<[f32; 2]> {
-    judged().1
-}
-
-pub(crate) fn automatic() -> &'static str {
-    judged().0
 }
 
 pub(crate) fn wall() -> f64 {

@@ -130,14 +130,18 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
         let elapsed = |at: Instant| now.duration_since(at).as_secs_f64().max(0.001);
         let fps = counted.map(|(at, before)| ((frames - before) as f64 / elapsed(at)).round());
         *counted = Some((now, frames));
-        let [tier, quality, reason] = stage::report::level().unwrap_or_default();
-        let report = json!({
+        let mut report = json!({
             "gpu": gpu::adapter(), "backend": settings::chosen(BACKEND), "frames": frames, "fps": fps,
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
-            "tier": tier, "quality": quality, "reason": reason, "measured": gpu::measured(), "timed": gpu::timed(), "flashes": stage::report::flashes(), "left_out": stage::report::left_out(),
+            "measured": gpu::measured(), "timed": gpu::timed(), "flashes": stage::report::flashes(),
             "particles": stage::report::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
-            "clips": crate::clips::report(), "over": stage::report::over(), "auto": stage::report::automatic(), "hdr": crate::hdr::report(),
+            "clips": crate::clips::report(), "hdr": crate::hdr::report(),
         });
+        if let (Some(all), serde_json::Value::Object(shown)) =
+            (report.as_object_mut(), stage::report::wallpaper())
+        {
+            all.extend(shown);
+        }
         Ok(env.new_string(report.to_string())?)
     })
 }

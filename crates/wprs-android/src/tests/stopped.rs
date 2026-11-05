@@ -1,5 +1,16 @@
 use super::*;
 use crate::stage::report;
+use wprs_core::QualityChoice;
+
+fn warned() -> (String, Option<[f32; 2]>) {
+    let shown = report::wallpaper();
+    let over = shown["over"].as_array().map(|o| [0, 1].map(|i| o[i].as_f64().unwrap() as f32));
+    (shown["auto"].as_str().unwrap().to_owned(), over)
+}
+
+fn tier() -> String {
+    report::wallpaper()["tier"].as_str().unwrap().to_owned()
+}
 
 fn heavy() -> (String, std::path::PathBuf) {
     let source = tempfile::tempdir().unwrap();
@@ -36,51 +47,48 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
         shot.unwrap().fps
     };
     assert_eq!(shoot(0), 0, "automatic played a scene too heavy for the phone");
-    assert_eq!((report::automatic(), report::over()), ("still", None));
+    assert_eq!(warned(), ("still".into(), None));
     for choice in ["q0", "q1", "min-q1"] {
         assert_eq!(settings::setting("playback.quality", Some(choice)).unwrap(), choice);
-        assert_eq!(report::automatic(), "stop", "{choice} kept warning of the old choice before a frame");
-        assert!(report::over().is_some(), "{choice} hid its cost before a frame");
+        assert_eq!(warned().0, "stop", "{choice} kept warning of the old choice before a frame");
+        assert!(warned().1.is_some(), "{choice} hid its cost before a frame");
         assert!(shoot(1) > 0, "{choice} kept the scene still");
-        let [cost, budget] = report::over().expect(choice);
+        let [cost, budget] = warned().1.expect(choice);
         assert!(cost > budget && budget == wprs_scene::Tier::T0.budget(), "{choice} {cost} {budget}");
-        assert_eq!(report::automatic(), "stop", "{choice}");
+        assert_eq!(warned().0, "stop", "{choice}");
     }
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
-    assert_eq!((report::automatic(), report::over()), ("still", None), "auto kept the old cost warning");
+    assert_eq!(warned(), ("still".into(), None), "auto kept the old cost warning");
     let mut preview = Stage::new(uid.clone(), pack::load(&path).unwrap());
     preview.reports = None;
     assert_eq!(settings::setting("playback.quality", Some("q0")).unwrap(), "q0");
     let at = ((64, 32), 0, 30);
-    let (level, left) = (report::level(), report::left_out());
+    let before = report::wallpaper();
     assert!(preview.render(r, at, (power, wprs_scene::Tier::T3), &[], false).unwrap().fps > 0);
-    assert_eq!(report::level(), level, "a preview wrote the wallpaper's level");
-    assert_eq!(report::left_out(), left, "a preview wrote the wallpaper's left-out effects");
-    assert_eq!(level.map(|[tier, ..]| tier), Some("T0".to_owned()));
-    assert_eq!(
-        report::over().map(|[_, b]| b),
-        Some(wprs_scene::Tier::T0.budget()),
-        "a preview wrote the report"
-    );
+    assert_eq!(report::wallpaper(), before, "a preview wrote the wallpaper's level or left-out effects");
+    assert_eq!(before["tier"], "T0");
+    assert_eq!(warned().1.map(|[_, b]| b), Some(wprs_scene::Tier::T0.budget()), "a preview wrote the report");
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
-    assert_eq!((shoot(2), report::automatic()), (0, "still"), "automatic did not stop it again");
+    assert_eq!((shoot(2), warned().0), (0, "still".into()), "automatic did not stop it again");
+    let flips = std::thread::spawn(|| {
+        (0..2000).for_each(|i| power::choose([QualityChoice::Fixed(0), QualityChoice::Auto][i % 2]));
+    });
+    while !flips.is_finished() {
+        let told = warned();
+        assert!(matches!((told.0.as_str(), told.1), ("still", None) | ("stop", Some(_))), "{told:?}");
+    }
+    flips.join().unwrap();
+    power::choose(QualityChoice::Auto);
     let mut lock = Stage::new(uid.clone(), pack::load(&path).unwrap());
     lock.reports = Some(1);
     lock.render(r, at, (power, wprs_scene::Tier::T3), &[], false).unwrap();
-    assert_eq!(
-        report::level().map(|[tier, ..]| tier),
-        Some("T3".to_owned()),
-        "the lock screen was not reported"
-    );
+    assert_eq!(tier(), "T3", "the lock screen was not reported");
     report::forget(1);
-    assert_eq!(report::level().map(|[tier, ..]| tier), Some("T0".to_owned()), "the home scene was forgotten");
-    assert_eq!(report::automatic(), "still", "the home scene's warning went with the lock screen's");
+    assert_eq!(tier(), "T0", "the home scene was forgotten");
+    assert_eq!(warned().0, "still", "the home scene's warning went with the lock screen's");
     report::forget(report::HOME);
-    assert_eq!(
-        (report::automatic(), report::over(), report::level()),
-        ("", None, None),
-        "an image kept a scene's warning"
-    );
-    assert!(report::left_out().is_empty());
+    let nothing =
+        json!({ "tier": "", "quality": "", "reason": "", "left_out": [], "over": null, "auto": "" });
+    assert_eq!(report::wallpaper(), nothing, "an image kept a scene's warning");
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }
