@@ -86,6 +86,10 @@ pub(crate) fn shown_as(path: &Path, coding: Coding) -> Coding {
     decoded.iter().find(|(p, _)| p == path).map_or(coding, |(_, c)| *c)
 }
 
+pub(crate) fn bright(path: &Path) -> bool {
+    shown_as(path, coding(path)) != Coding::Sdr
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,5 +150,15 @@ mod tests {
         assert_eq!(shown_as(path, Coding::Pq), Coding::Hlg);
         decoded(path, 99);
         assert_eq!(shown_as(path, Coding::Pq), Coding::Pq, "an unknown transfer keeps the file's own");
+    }
+
+    #[test]
+    fn a_video_the_decoder_maps_to_standard_colors_does_not_ask_for_hdr() {
+        let copy = tempfile::NamedTempFile::new().unwrap();
+        std::fs::copy(Path::new(FIXTURES).join("hlg-64x32.mkv"), copy.path()).unwrap();
+        assert!(bright(copy.path()));
+        decoded(copy.path(), SDR);
+        assert!(!bright(copy.path()), "every frame comes in standard colors");
+        assert!(!bright(&Path::new(FIXTURES).join("magenta-64x32.webm")));
     }
 }
