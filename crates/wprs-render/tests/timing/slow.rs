@@ -3,17 +3,39 @@ use super::{book, busy, draw, lines, one, wide};
 use std::time::Duration;
 use wprs_render::{Renderer, drawn_effects, retry_effects, set_gpu_budget};
 
+fn fine() -> (&'static str, String) {
+    ("fine", entry("return tap(in.uv) * 0.5;"))
+}
+
 fn effects() -> wprs_scene::Scene {
-    scene(&[("busy", busy(BUSY)), ("fine", entry("return tap(in.uv) * 0.5;"))])
+    scene(&[("busy", busy(BUSY)), fine()])
+}
+
+fn cost(r: &Renderer, s: wprs_scene::Scene, size: (u32, u32)) -> f64 {
+    let mut shown = show(r, s).unwrap();
+    let most = (0..4).fold(0, |most, _| {
+        draw(r, &mut shown, size);
+        r.finish().unwrap();
+        most.max(shown.view.stats().gpu_us)
+    });
+    f64::from(most.max(1)) / 1000.0
+}
+
+fn budget(r: &Renderer, size: (u32, u32)) -> u64 {
+    set_gpu_budget(Some(Duration::from_secs(60)));
+    let (light, whole) = (cost(r, scene(&[fine()]), size), cost(r, effects(), size));
+    ((whole - light) / 4.0).round().max(2.0) as u64
 }
 
 fn attempt(r: &Renderer) -> (Shown, Result<(), String>) {
+    let size = wide(r);
+    let ms = budget(r, size);
     retry_effects();
     let path = book("busy");
     let s = effects();
     let key = s.loaded["busy"].key;
-    set_gpu_budget(Some(Duration::from_millis(2)));
-    let (mut shown, size) = (show(r, s).unwrap(), wide(r));
+    set_gpu_budget(Some(Duration::from_millis(ms)));
+    let mut shown = show(r, s).unwrap();
     let mut slowest = Duration::ZERO;
     for _ in 0..40 {
         slowest = slowest.max(draw(r, &mut shown, size));
@@ -24,12 +46,18 @@ fn attempt(r: &Renderer) -> (Shown, Result<(), String>) {
         }
     }
     let left = shown.view.left_out();
+    if left.is_empty() || left.iter().any(|l| l.contains("effect fine")) {
+        r.finish().unwrap();
+        return (shown, Err(format!("the load changed against a budget of {ms} ms: {left:?}")));
+    }
     assert!(
         left.len() == 1 && left[0].contains("busy") && left[0].contains("too slow for this graphics card"),
         "{left:?}"
     );
     assert!(
-        !left[0].contains("stopped") && left[0].contains("ms on it") && left[0].contains("allows 2 ms"),
+        !left[0].contains("stopped")
+            && left[0].contains("ms on it")
+            && left[0].contains(&format!("allows {ms} ms")),
         "{left:?}"
     );
     assert_eq!(lines(&path, key, "1"), 0, "{}", std::fs::read_to_string(&path).unwrap_or_default());
@@ -72,4 +100,4 @@ fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
     r.finish().unwrap();
 }
 
-const BUSY: usize = 4;
+const BUSY: usize = 8;
