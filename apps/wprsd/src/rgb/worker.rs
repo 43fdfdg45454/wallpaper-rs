@@ -13,6 +13,7 @@ const STEP: Duration = Duration::from_millis(33);
 const LISTEN: Duration = Duration::from_secs(1);
 const IDLE: Duration = Duration::from_secs(3600);
 
+#[derive(Default)]
 struct Session {
     status: Arc<Mutex<Status>>,
     rgb: Rgb,
@@ -21,18 +22,11 @@ struct Session {
     last: Option<(String, Strip)>,
     test: Option<(Instant, Option<u32>)>,
     opened: bool,
+    direct: Vec<u32>,
 }
 
 pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>) {
-    let session = Session {
-        status,
-        rgb: Rgb::default(),
-        client: None,
-        failed: None,
-        last: None,
-        test: None,
-        opened: false,
-    };
+    let session = Session { status, ..Session::default() };
     let started = std::thread::Builder::new().name("wprsd-rgb".into()).spawn(move || run(asks, session));
     if let Err(e) = started {
         tracing::warn!("cannot start the RGB lighting: {e}");
@@ -48,6 +42,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                     if !rgb.enabled {
                         s.forget(None);
                     }
+                    s.restore();
                     (s.client, s.failed, s.rgb, s.opened) = (None, None, rgb, false);
                     s.publish(None, Vec::new());
                     s.retry();
@@ -64,6 +59,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
             }
             Ok(Ask::Connect(reply)) => {
                 (s.client, s.failed, s.opened) = (None, None, false);
+                s.direct.clear();
                 reply.send(s.ready()).ok();
             }
             Ok(Ask::Test(device, reply)) => {
@@ -79,8 +75,12 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 }
                 reply.send(ready).ok();
             }
+            Ok(Ask::Stop(reply)) => {
+                s.forget(None);
+                reply.send(()).ok();
+            }
             Err(RecvTimeoutError::Timeout) => s.tick(),
-            Err(RecvTimeoutError::Disconnected) => return,
+            Err(RecvTimeoutError::Disconnected) => return s.forget(None),
         }
     }
 }
@@ -91,6 +91,7 @@ impl Session {
             self.last = None;
             lock(&self.status).source = None;
         }
+        self.idle();
     }
 
     fn repaint(&mut self) {
@@ -118,14 +119,10 @@ impl Session {
         if self.failed.is_some_and(|at| at.elapsed() < RETRY) {
             return Err(lock(&self.status).error.clone().unwrap_or_default());
         }
-        let opened = Client::connect(&self.rgb.server, WAIT).and_then(|mut c| {
-            let devices = c.devices()?;
-            devices.iter().try_for_each(|d| c.direct(d.index))?;
-            Ok((c, devices))
-        });
+        let opened = Client::connect(&self.rgb.server, WAIT).and_then(|mut c| Ok((c.devices()?, c)));
         match opened {
-            Ok((client, devices)) => {
-                self.client = Some(client);
+            Ok((devices, client)) => {
+                (self.client, self.direct) = (Some(client), Vec::new());
                 self.publish(None, devices);
                 Ok(())
             }
@@ -142,9 +139,11 @@ impl Session {
             return;
         }
         let devices = lock(&self.status).devices.clone();
+        let wanted: Vec<&Device> = devices.iter().filter(|d| only.is_none_or(|i| i == d.index)).collect();
+        let taken = self.take(&wanted);
         let Some(client) = self.client.as_mut() else { return };
-        let wanted = devices.iter().filter(|d| only.is_none_or(|i| i == d.index));
-        let painted = wanted.into_iter().try_for_each(|d| client.paint(d.index, &colors(d, strip)));
+        let painted =
+            taken.and_then(|()| wanted.iter().try_for_each(|d| client.paint(d.index, &colors(d, strip))));
         match painted {
             Ok(()) => lock(&self.status).frames += 1,
             Err(e) => {
@@ -161,7 +160,8 @@ impl Session {
             }
             self.test = None;
             lock(&self.status).testing = false;
-            return self.repaint();
+            self.repaint();
+            return self.idle();
         }
         let changed = self.client.as_mut().map(Client::heard);
         match changed {
@@ -181,6 +181,9 @@ impl Session {
     }
 }
 
+mod kept;
+#[cfg(test)]
+mod restored;
 #[cfg(test)]
 mod tests;
 mod waits;

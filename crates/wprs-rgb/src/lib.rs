@@ -4,7 +4,7 @@ mod read;
 
 pub use client::{Client, Error};
 pub use paint::{Strip, colors, pattern, shrink};
-pub use read::{Device, Zone, controller};
+pub use read::{Device, Mode, Zone, controller};
 
 pub const PORT: u16 = 6742;
 pub const VERSION: u32 = 4;
@@ -21,6 +21,7 @@ pub(crate) const NAME: u32 = 50;
 pub(crate) const UPDATED: u32 = 100;
 pub(crate) const LEDS: u32 = 1050;
 pub(crate) const CUSTOM: u32 = 1100;
+pub(crate) const MODE: u32 = 1101;
 
 pub fn kind(code: i32) -> &'static str {
     const KINDS: [&str; 19] = [

@@ -70,7 +70,12 @@ fn status(s: &Value) -> String {
 fn devices(s: &Value) -> String {
     let rows = s["devices"].as_array().into_iter().flatten().map(|d| {
         let kind = d["kind"].as_str().unwrap_or("?");
-        format!("{:>3}  {kind:<14} {}  ({} lights)", d["index"], d["name"].as_str().unwrap_or("?"), d["leds"])
+        let own = d["own_mode"].as_str().map_or(String::new(), |m| match d["taken"] == true {
+            true => format!(", own mode {m} comes back when the lights stop"),
+            false => format!(", own mode {m}"),
+        });
+        let name = d["name"].as_str().unwrap_or("?");
+        format!("{:>3}  {kind:<14} {name}  ({} lights{own})", d["index"], d["leds"])
     });
     let list: Vec<String> = rows.collect();
     if list.is_empty() { "no devices".into() } else { list.join("\n") }

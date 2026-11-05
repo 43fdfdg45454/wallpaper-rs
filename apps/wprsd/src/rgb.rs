@@ -23,6 +23,7 @@ pub(crate) enum Ask {
     Test(Option<u32>, Sender<Result<(), String>>),
     Connect(Sender<Result<(), String>>),
     Covered,
+    Stop(Sender<()>),
 }
 
 #[derive(Default)]
@@ -35,6 +36,7 @@ pub(crate) struct Status {
     pub(crate) frames: u64,
     pub(crate) testing: bool,
     pub(crate) held: bool,
+    pub(crate) saved: Vec<Device>,
 }
 
 impl Status {
@@ -104,8 +106,18 @@ pub(crate) fn frame(source: &str, strip: Strip, send: bool) {
 
 pub(crate) fn forget(source: &str) {
     if let Some(l) = LIGHTS.get() {
-        lock(&l.strips).remove(source);
-        l.asks.send(Ask::Forget(source.into())).ok();
+        let kept = lock(&l.strips).remove(source).is_some();
+        if kept || lock(&l.status).source.as_deref() == Some(source) {
+            l.asks.send(Ask::Forget(source.into())).ok();
+        }
+    }
+}
+
+pub(crate) fn stop() {
+    if let Some(l) = LIGHTS.get() {
+        let (tx, rx) = channel();
+        l.asks.send(Ask::Stop(tx)).ok();
+        rx.recv_timeout(Duration::from_secs(3)).ok();
     }
 }
 
@@ -150,7 +162,10 @@ pub(crate) fn status(rgb: &Rgb) -> Value {
                 "matrix": z.matrix.as_ref().map(|(w, h, _)| [w, h]) })
                 })
                 .collect();
-            json!({ "index": d.index, "name": d.name, "kind": d.kind, "leds": d.leds, "zones": zones })
+            let saved = s.saved.iter().find(|v| v.index == d.index && v.name == d.name);
+            let own = saved.unwrap_or(d).mode.as_ref().map(|m| m.name.clone());
+            json!({ "index": d.index, "name": d.name, "kind": d.kind, "leds": d.leds, "zones": zones,
+                "own_mode": own, "taken": saved.is_some() })
         })
         .collect();
     json!({ "enabled": s.rgb.enabled, "server": s.rgb.server, "local": s.rgb.local(), "connected": s.connected,

@@ -11,7 +11,7 @@ def text(s):
     return struct.pack("<H", len(b)) + b
 def blob(name, kind, zones):
     body = struct.pack("<I", kind) + text(name) + b"".join(text(t) for t in ["Example", "A test device", "1.0", "", "local"])
-    body += struct.pack("<HI", 1, 0) + text("Direct") + struct.pack("<12I", *[0] * 12) + struct.pack("<H", 0)
+    body += struct.pack("<HI", 2, 1) + b"".join(text(m) + struct.pack("<12I", *[0] * 12) + struct.pack("<H", 0) for m in ["Direct", "Rainbow"])
     body += struct.pack("<H", len(zones))
     for i, (leds, matrix) in enumerate(zones):
         body += text(f"zone {i}") + struct.pack("<4I", 1, 0, leds, leds)
@@ -52,6 +52,9 @@ while True:
                 colors = [list(data[6 + 4 * i:9 + 4 * i]) for i in range(n)]
                 with open(f"{out}/painted", "a") as f:
                     f.write(json.dumps({"device": device, "colors": colors}) + "\n")
+            elif kind == 1101:
+                with open(f"{out}/painted", "a") as f:
+                    f.write(json.dumps({"mode": device, "index": struct.unpack("<i", data[4:8])[0]}) + "\n")
 SERVER
   pids+=("$!")
   wait_for 10 test -s "$rgbs/port" || fail "the OpenRGB test server did not start"

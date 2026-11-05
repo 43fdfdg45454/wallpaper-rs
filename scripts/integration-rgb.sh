@@ -11,6 +11,7 @@ ctl config rgb.server "127.0.0.1:$openrgb"
 ctl config rgb.enabled true
 ctl rgb devices | grep -q "Example keyboard" || fail "no devices: $(ctl rgb status)"
 [ "$(ctl rgb devices --json | js "[d['leds'] for d in r]")" = "[4, 1]" ] || fail "devices: $(ctl rgb devices --json)"
+ctl rgb devices | grep -q "own mode Rainbow" || fail "the own mode was not shown: $(ctl rgb devices)"
 ctl rgb test 1
 if ctl rgb test 7 2>/dev/null; then fail "a device that does not exist was tested"; fi
 wait_for 10 grep -q '"device": 1' "$rgbs/painted" || fail "the test pattern did not reach the mouse"
@@ -54,6 +55,7 @@ fi
 source "$(dirname "$0")"/integration-rgb-covered.sh
 ctl config rgb.enabled false
 [ "$(ctl rgb status --json | js "r['enabled'], r['connected']")" = "(False, False)" ] || fail "RGB lighting stayed on"
+wait_for 10 grep -q '"mode": 0, "index": 1' "$rgbs/painted" || fail "the keyboard did not get its own mode back"
 ctl release TEST-RGB && expect "list(s['outputs'])" "[]"
 bus Library1 Remove asb 1 "$rgbuid" false >/dev/null
 echo "rgb checks passed"

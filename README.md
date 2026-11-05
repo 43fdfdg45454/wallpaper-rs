@@ -1560,9 +1560,14 @@ dispositivos (si no, el fondo tapado sigue en pausa y el servicio vuelve a proba
 nunca por una imagen, un video, un paquete sin colores, la sesión bloqueada o la batería; si el
 servicio se conectó solo para ese fondo tapado, cierra la conexión en cuanto nada tapado pide las
 luces, al bloquear, pausar, pasar a batería, cambiar de fondo o quitar la pantalla, salvo que una
-pantalla a la vista mande colores, y los dispositivos quedan con sus últimos colores). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
+pantalla a la vista mande colores). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
 siguen como siempre, elijas lo que elijas. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran
-la elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de
+la elección y si las luces están en pausa ahora. Cada dispositivo pasa a su modo directo solo cuando
+se le pintan colores y recupera su propio modo (y sus colores, si ese modo fija cada luz) en cuanto
+nada manda colores: al detenerse o cambiar el paquete, al quitar la pantalla, al apagar la
+iluminación, al cambiar de servidor, al terminar una prueba sin nada que pintar y al detenerse el
+servicio. La lista de dispositivos de la app y `wprs-ctl rgb devices` muestran ese modo propio y si
+volverá cuando paren las luces. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
 `adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
 scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista

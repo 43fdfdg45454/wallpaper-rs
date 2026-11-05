@@ -1552,15 +1552,19 @@ on another computer sends the colors over the network, which the app says next t
 daemon connects when a granted package sends colors, when a covered wallpaper that holds the grant
 and sends colors would follow with `rgb.when_covered` set to `follow` (never for an image, a video, a
 package without colors or an output paused, locked or on battery), on `Connect` or `Test`, names itself
-`wallpaper-rs`, puts every device in its direct mode and tries again 10 s after a failure. A
-connection made only for a covered wallpaper closes again, leaving the devices with their last
-colors, as soon as nothing covered wants the lights (the session locks or pauses, the computer goes
+`wallpaper-rs`, reads the mode each device is in (and its colors) and tries again 10 s after a
+failure. A device goes to its direct mode only when colors are first painted on it, and gets its own
+mode back (the colors too when that mode sets each light) as soon as nothing sends colors any more:
+when the package that sent them stops or changes to one without colors, its output goes away, RGB
+lighting is turned off, the server changes, after a test with nothing else to paint, and when the
+daemon stops. A connection made only for a covered wallpaper closes again, giving the devices their
+own mode back, as soon as nothing covered wants the lights (the session locks or pauses, the computer goes
 on battery, the wallpaper changes or the output goes away), unless an uncovered output sends colors;
 the daemon then sleeps until something asks for the lights again. A strip of
 at most 64 × 16 pixels comes from the shown scene or page of each output that holds the `rgb` grant
 (`Inputs1`), at most 30 times a second for all of them together; the daemon spreads it over each
 device: a zone with a matrix takes the cell of the strip under each key, the other zones the column
-under each light, averaged over the height. The devices keep the last colors when the scene stops.
+under each light, averaged over the height.
 While a window covers the output that sends the colors and the wallpaper pauses for it (`pause.when_covered`), `rgb.when_covered` decides: `pause` (the
 default) sends nothing until it shows again and lets the connection rest without even listening for
 device changes, leaving the lights as they are (gentler than switching the devices back to their own
@@ -1572,7 +1576,9 @@ Previews (`preview:*` outputs) keep their strip for the editor but never send it
 `{enabled, server, local, connected, error, devices, source, frames, testing, strips, when_covered,
 held}`: `local` is
 `true` for addresses on this computer, `error` the last failure (`null` when fine), `devices` lists
-`{index, name, kind, leds, zones: [{name, leds, matrix: [w, h] | null}]}` as the server names them,
+`{index, name, kind, leds, zones: [{name, leds, matrix: [w, h] | null}], own_mode, taken}` as the
+server names them, with `own_mode` the name of the mode the device had before the daemon took it
+(`null` when the server names none) and `taken` `true` while it is in direct mode for the lights,
 `source` the output whose colors were sent last, `frames` how many were sent and `strips` the
 outputs with a strip kept; `when_covered` is `rgb.when_covered` and `held` is `true` while the
 lights pause because the output they follow is covered and paused.

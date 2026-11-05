@@ -79,6 +79,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
         _ = terminate.recv() => {}
     }
     tracing::info!("shutting down");
+    tokio::task::spawn_blocking(crate::rgb::stop).await.ok();
     wprs_scene::end_trials();
     inputs::stop(&connection).await;
     wprs_render::finish_builds(0);

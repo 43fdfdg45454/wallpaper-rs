@@ -84,3 +84,39 @@ fn broken_servers_and_addresses_are_refused() {
     let mut client = Client::connect(&address, WAIT).unwrap();
     assert_eq!(client.devices().unwrap()[0].kind, "other");
 }
+
+#[test]
+fn each_device_gets_back_the_mode_and_colors_it_had() {
+    let (address, painted) = serve(shapes(), Some(4));
+    let mut client = Client::connect(&address, WAIT).unwrap();
+    let devices = client.devices().unwrap();
+    let keys = devices[0].mode.clone().unwrap();
+    assert_eq!((keys.index, keys.name.as_str(), keys.per_led), (1, "Rainbow", false));
+    let mouse = devices[1].mode.clone().unwrap();
+    assert_eq!((mouse.index, mouse.name.as_str(), mouse.per_led), (0, "Direct", true));
+    assert_eq!(devices[1].colors, [[1, 2, 3]]);
+    assert_eq!(devices[0].colors.len(), 8);
+    client.restore(&devices[0]).unwrap();
+    client.restore(&devices[1]).unwrap();
+    client.restore(&wprs_rgb::Device { index: 1, ..Default::default() }).unwrap();
+    client.heard().unwrap();
+    std::thread::sleep(Duration::from_millis(100));
+    let got = painted.lock().unwrap().clone();
+    let ids: Vec<(u32, u32)> = got.iter().map(|(d, id, _)| (*d, *id)).collect();
+    assert_eq!(ids, [(0, 1101), (1, 1101), (1, 1050)], "only a per-light mode gets its colors back");
+    let sent = &got[0].2;
+    assert_eq!(u32::from_le_bytes(sent[..4].try_into().unwrap()) as usize, sent.len());
+    assert_eq!(i32::from_le_bytes(sent[4..8].try_into().unwrap()), 1);
+    assert_eq!(&sent[8..], &keys.data[..]);
+    assert_eq!(got[2].2, [10, 0, 0, 0, 1, 0, 1, 2, 3, 0]);
+}
+
+#[test]
+fn a_device_without_modes_or_colors_is_still_read() {
+    let mut r = blob(&shapes()[1], 0);
+    let device = controller(0, &r, 0).unwrap();
+    assert_eq!(device.mode.as_ref().map(|m| m.name.as_str()), Some("Direct"));
+    r.truncate(r.len() - 6);
+    let cut = controller(0, &r, 0).unwrap();
+    assert!(cut.colors.is_empty(), "colors were read from a cut answer");
+}

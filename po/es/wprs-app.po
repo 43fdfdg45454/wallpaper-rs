@@ -6671,6 +6671,14 @@ msgid "%1, with %2 lights"
 msgstr "%1, con %2 luces"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
+msgid "%1, with %2 lights; its own mode %3 comes back when the lights stop"
+msgstr "%1, con %2 luces; su propio modo %3 vuelve cuando paran las luces"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "%1, with %2 lights, in its own mode %3"
+msgstr "%1, con %2 luces, en su propio modo %3"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
 msgid "Test"
 msgstr "Probar"
 
