@@ -18,6 +18,7 @@ impl Engine {
             self.hint(0);
             (self.target, self.image, self.raised, self.stage, self.fading) = (None, None, None, None, None);
             gpu::trim();
+            self.unreport();
         }
         Some(spec.to_string())
     }

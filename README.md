@@ -600,7 +600,9 @@ una escena: la que pesa más que el presupuesto del equipo aun en el nivel más 
 triángulos de modelos de los que admite su clase) se queda quieta en su póster con `auto`, se
 reproduce en el nivel fijo elegido y, con `min-q1` o `min-q2`, en ese mínimo (o más arriba si
 cabe). La app (junto a la elección de calidad en *Ajustes* y en cada pantalla con escena), la
-bandeja, el teléfono (bajo su ajuste de calidad), `wprs-ctl quality` y `wprs-ctl state` avisan de
+bandeja, el teléfono (bajo su ajuste de calidad, del fondo de inicio o de bloqueo que dibujó
+último, nunca de una vista previa, y sin aviso en cuanto ese fondo pasa a ser una imagen, un video o
+una página), `wprs-ctl quality` y `wprs-ctl state` avisan de
 lo que cuesta frente al presupuesto del equipo, que puede perder fotogramas y gastar más batería, y
 si la elección automática la bajaría o la dejaría quieta (`quality_auto` en el estado: `still` si
 está quieta en su póster, `stop` si la reproduce un nivel fijo o un mínimo y `auto` la dejaría

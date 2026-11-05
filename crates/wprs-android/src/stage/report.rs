@@ -1,4 +1,4 @@
-use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES};
+use super::{CALMING, ENGINE, RETRIES};
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -33,12 +33,12 @@ pub(crate) fn particles() -> &'static str {
 }
 
 pub(crate) fn left_out() -> Vec<serde_json::Value> {
-    let left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
-    left.1.iter().map(|(id, reason)| serde_json::json!({ "id": id, "reason": reason })).collect()
+    let left = shown().map(|shown| shown.left.1).unwrap_or_default();
+    left.iter().map(|(id, reason)| serde_json::json!({ "id": id, "reason": reason })).collect()
 }
 
 pub(crate) fn level() -> Option<[String; 3]> {
-    let level = LEVEL.load(Relaxed).checked_sub(1)?;
+    let level = shown()?.level.checked_sub(1)?;
     let why = Why::ALL.get(level as usize % 8)?.name();
     Some([format!("T{}", level / 32), format!("Q{}", level / 8 % 4), why.into()])
 }
@@ -52,14 +52,50 @@ pub(crate) struct Cost {
     pub(crate) heavy: bool,
 }
 
-static COST: Mutex<Option<Cost>> = Mutex::new(None);
+pub(crate) const HOME: usize = 0;
 
-pub(crate) fn keep(cost: Cost) {
-    *COST.lock().unwrap_or_else(PoisonError::into_inner) = Some(cost);
+#[derive(Clone)]
+struct Shown {
+    cost: Option<Cost>,
+    level: u32,
+    left: (u64, Vec<(String, String)>),
+}
+
+const NOTHING: Shown = Shown { cost: None, level: 0, left: (0, Vec::new()) };
+
+static SHOWN: Mutex<(usize, [Shown; 2])> = Mutex::new((0, [NOTHING, NOTHING]));
+
+fn slots<T>(with: impl FnOnce(&mut (usize, [Shown; 2])) -> T) -> T {
+    with(&mut SHOWN.lock().unwrap_or_else(PoisonError::into_inner))
+}
+
+pub(crate) fn keep(slot: usize, cost: Cost, level: u32) {
+    slots(|(last, shown)| {
+        *last = slot;
+        (shown[slot].cost, shown[slot].level) = (Some(cost), level);
+    });
+}
+
+pub(crate) fn leave(slot: usize, key: u64, left: impl FnOnce() -> Vec<(String, String)>) {
+    slots(|(_, shown)| {
+        if shown[slot].left.0 != key {
+            shown[slot].left = (key, left());
+        }
+    });
+}
+
+pub(crate) fn forget(slot: usize) {
+    slots(|(_, shown)| shown[slot] = NOTHING);
+}
+
+fn shown() -> Option<Shown> {
+    slots(|(last, shown)| {
+        [*last, 1 - *last].into_iter().map(|s| &shown[s]).find(|s| s.cost.is_some()).cloned()
+    })
 }
 
 fn judged() -> (&'static str, Option<[f32; 2]>) {
-    let Some(kept) = *COST.lock().unwrap_or_else(PoisonError::into_inner) else { return ("", None) };
+    let Some(kept) = shown().and_then(|shown| shown.cost) else { return ("", None) };
     let budget = Budget { choice: crate::power::choice(), ..kept.budget };
     let quality = if budget == kept.budget { kept.quality } else { budget.choose((kept.auto, Why::User)).0 };
     let (cost, most) = (kept.costs[quality as usize], budget.tier.budget());

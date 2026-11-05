@@ -38,6 +38,7 @@ impl Drop for Engine {
     fn drop(&mut self) {
         self.paged.take().into_iter().for_each(crate::page::close);
         let mut stage = self.stage.take();
+        self.unreport();
         stage.iter_mut().for_each(Stage::hide);
         let epoch = self.target.as_ref().map_or(self.checked.0, |(gpu, _)| gpu.epoch);
         let (image, raised) = (self.image.take(), self.raised.take());

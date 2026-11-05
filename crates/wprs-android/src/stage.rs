@@ -3,8 +3,8 @@ use crate::extras::{self, Extras};
 use crate::pack::Pack;
 use crate::{props, saved};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
-use std::sync::{Arc, Mutex};
 use wprs_render::{GpuImage, Meter, SceneAssets, SceneView};
 use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 
@@ -13,10 +13,8 @@ mod input;
 
 pub(crate) use heard::allowed as media_allowed;
 
-static LEVEL: AtomicU32 = AtomicU32::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
 static ENGINE: AtomicU32 = AtomicU32::new(0);
-static LEFT: Mutex<(u64, Vec<(String, String)>)> = Mutex::new((0, Vec::new()));
 static RETRIES: AtomicU64 = AtomicU64::new(0);
 
 type Guarded = (FlashGuard, Vec<f32>, i64, Option<Meter>);
@@ -44,7 +42,7 @@ pub(crate) struct Stage {
     calmed: bool,
     stilled: bool,
     pub(crate) moving: bool,
-    pub(crate) reports: bool,
+    pub(crate) reports: Option<usize>,
     guard: Option<Box<Guarded>>,
     retried: u64,
     spare: Spare,
@@ -111,7 +109,7 @@ impl Stage {
             calmed: false,
             stilled: false,
             moving,
-            reports: true,
+            reports: Some(report::HOME),
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),

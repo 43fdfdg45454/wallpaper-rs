@@ -30,9 +30,16 @@ impl Engine {
             None => None,
         };
         let old = std::mem::replace(&mut self.stage, next).filter(|old| old.image().is_some());
+        self.unreport();
         let fades = !settings::look(self.lock).fade.is_zero() && shown.is_some() && self.fading.is_none();
         if let Some(old) = old.filter(|_| fades) {
             (self.fading, self.image) = (Some(Fading::new(Gone::Scene(Box::new(old)))), None);
+        }
+    }
+
+    pub(super) fn unreport(&self) {
+        if !self.preview && self.stage.is_none() {
+            crate::stage::report::forget(usize::from(self.lock));
         }
     }
 
@@ -96,7 +103,7 @@ impl Engine {
         let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute()).min(gpu.renderer.tier());
         stage.light(crate::hdr::light(&gpu.renderer, surface, power.charging, stage.top())?);
         stage.turn();
-        stage.reports = !self.preview;
+        stage.reports = (!self.preview).then_some(usize::from(self.lock));
         let wanted = stage.videos();
         let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &wanted);
         let shot =

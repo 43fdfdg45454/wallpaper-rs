@@ -49,7 +49,7 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
     assert_eq!((report::automatic(), report::over()), ("still", None), "auto kept the old cost warning");
     let mut preview = Stage::new(uid.clone(), pack::load(&path).unwrap());
-    preview.reports = false;
+    preview.reports = None;
     assert_eq!(settings::setting("playback.quality", Some("q0")).unwrap(), "q0");
     let at = ((64, 32), 0, 30);
     let (level, left) = (report::level(), report::left_out());
@@ -64,5 +64,23 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     );
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
     assert_eq!((shoot(2), report::automatic()), (0, "still"), "automatic did not stop it again");
+    let mut lock = Stage::new(uid.clone(), pack::load(&path).unwrap());
+    lock.reports = Some(1);
+    lock.render(r, at, (power, wprs_scene::Tier::T3), &[], false).unwrap();
+    assert_eq!(
+        report::level().map(|[tier, ..]| tier),
+        Some("T3".to_owned()),
+        "the lock screen was not reported"
+    );
+    report::forget(1);
+    assert_eq!(report::level().map(|[tier, ..]| tier), Some("T0".to_owned()), "the home scene was forgotten");
+    assert_eq!(report::automatic(), "still", "the home scene's warning went with the lock screen's");
+    report::forget(report::HOME);
+    assert_eq!(
+        (report::automatic(), report::over(), report::level()),
+        ("", None, None),
+        "an image kept a scene's warning"
+    );
+    assert!(report::left_out().is_empty());
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

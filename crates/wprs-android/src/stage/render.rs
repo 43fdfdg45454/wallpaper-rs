@@ -1,10 +1,9 @@
 use super::report::{self, Cost, wall};
-use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES, Shot, Stage};
+use super::{CALMING, ENGINE, RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
-use std::sync::PoisonError;
-use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
+use std::sync::atomic::Ordering::Relaxed;
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
 use wprs_scene::{Budget, Content, FlashGuard, Quality, Tier, Wake, Why};
 
@@ -39,7 +38,9 @@ impl Stage {
         if crate::power::guarded() != self.guard.is_some() {
             self.guard =
                 crate::power::guarded().then(|| Box::new((FlashGuard::default(), Vec::new(), nanos, None)));
-            self.told(&CALMING, 0);
+            if self.reports.is_some() {
+                CALMING.store(0, Relaxed);
+            }
         }
         let speed = self.guard.as_ref().map_or(1.0, |g| g.0.speed());
         let still = cap == 0 || self.heavy || calm || speed == 0.0;
@@ -82,13 +83,13 @@ impl Stage {
         let ceiling = budget.choose(auto);
         self.governor.hold(budget.floor());
         let (quality, why) = self.governor.level(ceiling);
-        self.told(&LEVEL, 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32);
-        if self.reports {
+        if let Some(slot) = self.reports {
             let (costs, heavy) = (
                 [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q)),
                 budget.heavy(&self.runtime),
             );
-            report::keep(Cost { budget, auto: auto.0, quality, costs, heavy });
+            let level = 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32;
+            report::keep(slot, Cost { budget, auto: auto.0, quality, costs, heavy }, level);
         }
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let retried = RETRIES.load(Relaxed);
@@ -161,14 +162,10 @@ impl Stage {
             let raises = power.charging && power.ceiling() == Quality::Q3;
             self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
         }
-        let mut left = LEFT.lock().unwrap_or_else(PoisonError::into_inner);
-        if self.reports {
+        if let Some(slot) = self.reports {
             ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
-            if left.0 != view.left_key() {
-                *left = (view.left_key(), view.left());
-            }
+            report::leave(slot, view.left_key(), || view.left());
         }
-        drop(left);
         rendered?;
         let view: &'a SceneView = view;
         let image = view.image().expect("rendered above");
@@ -180,17 +177,11 @@ impl Stage {
                     wprs_scene::Calming::Slowed(_) => 1,
                     wprs_scene::Calming::Paused => 2,
                 };
-                if self.reports {
+                if self.reports.is_some() {
                     CALMING.store(calming, Relaxed);
                 }
             }
         }
         Ok(Shot { image: Some(image), fps: self.fps, delay })
-    }
-
-    fn told(&self, report: &AtomicU32, value: u32) {
-        if self.reports {
-            report.store(value, Relaxed);
-        }
     }
 }
