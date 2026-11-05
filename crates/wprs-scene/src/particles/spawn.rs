@@ -96,6 +96,7 @@ pub(super) fn spawn(
         host = [ev.slot, ev.id];
         if s.depth[2][3] > 0.5 {
             deep[0] += ev.depth;
+            deep[1] += if bits & 8 != 0 { ev.vz } else { 0.0 };
         }
     }
     let mut out = Particle {

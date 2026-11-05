@@ -54,6 +54,7 @@ struct Event {
     prev: vec2<f32>,
     alive: u32,
     depth: f32,
+    vz: f32,
 };
 
 const TAU: f32 = 6.2831853;

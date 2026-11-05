@@ -5522,6 +5522,12 @@ msgid "Velocity"
 msgstr "Velocidad"
 
 #: apps/wprs-app/qml/SceneSwarmKin.qml
+msgid ""
+"Also the speed in depth, when the parent and the child both have perspective"
+msgstr ""
+"También la velocidad en profundidad, cuando el padre y el hijo tienen perspectiva"
+
+#: apps/wprs-app/qml/SceneSwarmKin.qml
 msgid "Every step while it follows"
 msgstr "En cada paso mientras lo sigue"
 

@@ -10,6 +10,7 @@ struct State {
 @group(0) @binding(4) var<uniform> sim: Sim;
 
 const MAX_EVENTS: u32 = 1024u;
+const EVENT_WORDS: u32 = 17u;
 const MAX_HATCH: u32 = 1000u;
 
 fn pcg(v: u32) -> u32 {

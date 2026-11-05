@@ -1465,7 +1465,8 @@ The newer fields behave as follows.
   parent (`spawn`, `death` or `follow`) cannot start particles from a `layer`.
 - **Children in depth.** A child of a system with `perspective` that has `perspective` of its own is
   born at the depth of its parent plus its own `init.depth`, and a `follow` child moves in depth
-  with its parent; a child without `perspective` is born where its parent is drawn, at
+  with its parent; with `velocity` in `inherit` it also adds the speed in depth of its parent to its
+  own `init.depth_speed` (and takes it every step with `follow_inherit`); a child without `perspective` is born where its parent is drawn, at
   `f / (f + z)` times its size and inherited speed, and a `follow` child moves as far as its parent
   is drawn to move.
 - **Instances.** `alpha`, `size`, `brightness` and `color` multiply the look of the layer; `count` is

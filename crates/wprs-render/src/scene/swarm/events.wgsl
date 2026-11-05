@@ -1,12 +1,13 @@
 fn record(base: u32, i: u32, p: Particle, slot: u32, prev: vec2<f32>) {
-    let o = base + i * 16u;
-    var words = array<u32, 16>(
+    let o = base + i * EVENT_WORDS;
+    var words = array<u32, 17>(
         bitcast<u32>(p.pos.x), bitcast<u32>(p.pos.y), bitcast<u32>(p.vel.x), bitcast<u32>(p.vel.y),
         bitcast<u32>(p.color.x), bitcast<u32>(p.color.y), bitcast<u32>(p.color.z), bitcast<u32>(p.color.w),
         bitcast<u32>(p.size), bitcast<u32>(p.rot), p.id, slot,
         bitcast<u32>(prev.x), bitcast<u32>(prev.y), select(0u, 1u, p.age < p.life), bitcast<u32>(p.depth.x),
+        bitcast<u32>(p.depth.y),
     );
-    for (var k = 0u; k < 16u; k++) {
+    for (var k = 0u; k < EVENT_WORDS; k++) {
         state.data[o + k] = words[k];
     }
 }
@@ -43,9 +44,9 @@ fn mark(i: u32, p: Particle, before: f32) {
 }
 
 fn event(i: u32) -> Event {
-    let o = 4u + sim.links.w + i * 16u;
+    let o = 4u + sim.links.w + i * EVENT_WORDS;
     let f = vec4<f32>(bitcast<f32>(host[o]), bitcast<f32>(host[o + 1u]), bitcast<f32>(host[o + 2u]), bitcast<f32>(host[o + 3u]));
     let c = vec4<f32>(bitcast<f32>(host[o + 4u]), bitcast<f32>(host[o + 5u]), bitcast<f32>(host[o + 6u]), bitcast<f32>(host[o + 7u]));
     let prev = vec2<f32>(bitcast<f32>(host[o + 12u]), bitcast<f32>(host[o + 13u]));
-    return Event(f.xy, f.zw, c, bitcast<f32>(host[o + 8u]), host[o + 10u], host[o + 11u], prev, host[o + 14u], bitcast<f32>(host[o + 15u]));
+    return Event(f.xy, f.zw, c, bitcast<f32>(host[o + 8u]), host[o + 10u], host[o + 11u], prev, host[o + 14u], bitcast<f32>(host[o + 15u]), bitcast<f32>(host[o + 16u]));
 }

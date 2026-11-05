@@ -1348,7 +1348,7 @@ de un punto o entre dos con arco y extremos afinados, la reasignación de valore
 (`init.remap`, hasta ocho, con la hora, el tiempo, la vida, la velocidad, el azar, la distancia a un
 punto, el sonido o el puntero), la herencia del color, el tamaño, el alfa y la velocidad de la
 partícula padre (los hijos de un sistema con perspectiva nacen a su profundidad o donde se lo ve
-dibujado), y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
+dibujado, y al heredar la velocidad también toman la que lleva en profundidad), y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
 comprobaciones, el mismo tiempo de construcción y el mismo límite de tiempo en la GPU que los demás
 efectos del paquete, y dejado fuera, sin dejar de dibujar las partículas, si no se puede construir o
 es demasiado lento).

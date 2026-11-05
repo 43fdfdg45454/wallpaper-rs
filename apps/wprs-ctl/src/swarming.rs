@@ -78,7 +78,7 @@ pub enum Particle {
         refresh: Option<String>,
     },
     #[command(
-        about = "Choose what a child system takes from its parent particle: color, size, alpha, velocity"
+        about = "Choose what a child system takes from its parent particle: color, size, alpha, velocity (with its speed in depth when both have perspective)"
     )]
     Inherit {
         child: usize,

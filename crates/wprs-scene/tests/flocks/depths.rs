@@ -76,3 +76,26 @@ fn boids_born_at_one_point_spread_apart() {
     let closest = closest.fold(f32::MAX, f32::min);
     assert!(closest > 0.5, "the flock stayed stacked: {closest}");
 }
+
+#[test]
+fn children_of_a_deep_parent_take_its_speed_in_depth_with_its_velocity() {
+    let moving = |inherit: Json, on: &str, more: Json| {
+        let mut parent =
+            deep(json!([{ "system": "b", "on": on, "inherit": inherit, "follow_inherit": more }]));
+        parent["init"]["depth_speed"] = json!([50, 50]);
+        parent["init"]["life"] = json!([2, 2]);
+        let child = kid(
+            json!({ "perspective": { "focal": 100 }, "emitters": [{ "shape": { "point": [0, 0] }, "rate": 20 }],
+            "init": { "life": [5, 5], "speed": [0, 0], "size": [4, 4], "depth": [0, 0], "depth_speed": [10, 10] } }),
+        );
+        let mut fly = Fly::of(json!({ "a": parent, "b": child }));
+        fly.run(0.5);
+        fly.alive(1)
+    };
+    let kids = moving(json!(["velocity"]), "spawn", json!(false));
+    assert!(!kids.is_empty() && kids.iter().all(|k| (k.depth[1] - 60.0).abs() < 1e-3), "{kids:?}");
+    let kids = moving(json!([]), "spawn", json!(false));
+    assert!(!kids.is_empty() && kids.iter().all(|k| (k.depth[1] - 10.0).abs() < 1e-3), "{kids:?}");
+    let kids = moving(json!(["velocity"]), "follow", json!(true));
+    assert!(!kids.is_empty() && kids.iter().all(|k| (k.depth[1] - 50.0).abs() < 1e-3), "{kids:?}");
+}

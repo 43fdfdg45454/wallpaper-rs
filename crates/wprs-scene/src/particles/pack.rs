@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 pub const PARTICLE_EVENTS: u32 = 1024;
 pub const MAX_HATCH: u32 = 1000;
-pub const EVENT: usize = 16;
+pub const EVENT: usize = 17;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
