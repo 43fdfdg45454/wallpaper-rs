@@ -17,7 +17,7 @@ pub(super) fn draw(
     let refresh = output.refresh;
     super::super::light::light(output, renderer, power)?;
     let (lit, lights) = (output.hdr.headroom(), output.lights_only(name));
-    output.shown.scene.iter_mut().for_each(|s| s.lit = lit);
+    output.shown.scene.iter_mut().for_each(|s| (s.lit, s.lights) = (lit, lights));
     let size = if lights { super::super::hidden::small(output.size) } else { output.size };
     if let Some(scene) = output.shown.scene.as_mut()
         && scene.render(renderer, (size, refresh), power, players, output.active || lights, now)?

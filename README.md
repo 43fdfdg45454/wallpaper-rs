@@ -1463,8 +1463,8 @@ el fondo se pausa por eso (`pause.when_covered`, lo predeterminado), eliges qué
 dibuja ni capta nada para las luces y deja los dispositivos con sus últimos colores hasta que el
 fondo vuelve a verse, sin devolverlos a su propio modo para no hacerlos parpadear; *Seguir el fondo*
 mantiene las luces cambiando con la escena tapada: la escena sigue a 30 fotogramas por segundo como
-mucho, dibujada a 320 píxeles por lado como mucho solo para la tira y nunca en la pantalla, y una
-página sigue igual sin mostrarse. Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
+mucho, dibujada a 320 píxeles por lado como mucho solo para la tira y nunca en la pantalla, sin
+que esos fotogramas cambien su nivel de calidad, y una página sigue igual sin mostrarse. Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
 siguen como siempre, elijas lo que elijas. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran
 la elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa

@@ -1,4 +1,6 @@
 pub(super) mod clock;
+#[cfg(test)]
+mod covered;
 mod heard;
 mod level;
 mod listing;
@@ -83,6 +85,7 @@ pub(super) struct SceneState {
     keeper: Option<wprs_core::stash::Keeper>,
     shared: Option<clock::Clock>,
     pub(super) lit: f32,
+    pub(super) lights: bool,
     media: media::Shown,
 }
 
@@ -169,6 +172,7 @@ impl SceneState {
             keeper: None,
             shared: None,
             lit: 1.0,
+            lights: false,
             media: Default::default(),
         };
         scene.uses = scene.needs(quality);

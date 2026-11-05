@@ -34,7 +34,7 @@ impl SceneState {
     }
 
     pub(super) fn judge(&mut self, (samples, gpu_ms): (u64, f64), power: Power, refresh: u32, now: Instant) {
-        if std::mem::replace(&mut self.samples, samples) == samples || self.still {
+        if std::mem::replace(&mut self.samples, samples) == samples || self.still || self.lights {
             return;
         }
         let (power, runtime) = (self.own(power), &self.runtime);
