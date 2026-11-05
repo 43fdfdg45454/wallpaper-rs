@@ -149,6 +149,7 @@ fun Settings(main: Main) {
                 }
             }
         }
+        item { PerfControls() }
         item { Header(stringResource(R.string.licenses)) }
         items(NOTICES) { ListItem(headlineContent = { Text(it) }, modifier = Modifier.clickable { notice = it }) }
     }

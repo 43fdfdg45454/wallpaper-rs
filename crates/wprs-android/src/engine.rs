@@ -156,7 +156,7 @@ impl Engine {
             return Ok(wait);
         }
         self.dirty |= force;
-        let shown = self.presented;
+        let (shown, mark) = (self.presented, crate::perf::enter(!self.preview));
         let next = self.frame(nanos, fps, power).inspect_err(|e| {
             (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
             log::warn!("{e}");
@@ -170,6 +170,7 @@ impl Engine {
             result => result.unwrap_or((0, 0)),
         };
         self.paced.shown(nanos, self.presented != shown);
+        crate::perf::leave(mark, nanos, self.presented != shown);
         self.hint(hint);
         Ok(match () {
             _ if delay > 0 && hint > 0 => delay.min(self.paced.armed(nanos, hint.min(fps.max(1)))).max(1),

@@ -43,10 +43,13 @@ mod opened;
 mod pack;
 mod page;
 mod pairing;
+mod perf;
 mod playing;
 mod power;
 mod private;
 mod props;
+#[cfg(target_os = "android")]
+mod recorded;
 mod reel;
 #[cfg(target_os = "android")]
 mod relief;

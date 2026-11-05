@@ -124,8 +124,13 @@ impl Engine {
                 flip: [false; 2],
                 grade: self.look.grade,
             };
+            let at = std::time::Instant::now();
             let presented =
                 crate::counted::gpu(|| gpu.renderer.present_layers(surface, self.size, &[shown], || {}));
+            if crate::perf::on() && !self.preview {
+                let ms = at.elapsed().as_secs_f32() * 1e3;
+                crate::perf::presented(ms, mode(surface.present_mode()), surface.latency());
+            }
             self.dirty = !presented?;
             if !self.dirty {
                 self.presented = nanos;
@@ -137,5 +142,15 @@ impl Engine {
             stage.rest();
         }
         Ok(Some((hint, delay)))
+    }
+}
+
+fn mode(mode: wgpu::PresentMode) -> &'static str {
+    match mode {
+        wgpu::PresentMode::Fifo => "fifo",
+        wgpu::PresentMode::FifoRelaxed => "fifo relaxed",
+        wgpu::PresentMode::Mailbox => "mailbox",
+        wgpu::PresentMode::Immediate => "immediate",
+        _ => "automatic",
     }
 }

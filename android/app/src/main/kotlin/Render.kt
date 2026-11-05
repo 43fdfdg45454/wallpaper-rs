@@ -112,6 +112,10 @@ object Native {
     external fun finish()
 
     external fun allocations(start: Boolean): Long
+
+    external fun perf(record: Boolean)
+
+    external fun performance(): String
 }
 
 object Render {
@@ -155,7 +159,12 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
         at = SystemClock.uptimeMillis() + delay
     }
 
-    override fun doFrame(frameTimeNanos: Long) = schedule(draw.frame(frameTimeNanos), frameTimeNanos)
+    override fun doFrame(frameTimeNanos: Long) {
+        val start = if (Perf.on) System.nanoTime() else 0L
+        val delay = draw.frame(frameTimeNanos)
+        if (start != 0L) Perf.frame((System.nanoTime() - start) / NANOS_PER_MS.toFloat())
+        schedule(delay, frameTimeNanos)
+    }
 }
 
 private const val SOON_MS = 100L

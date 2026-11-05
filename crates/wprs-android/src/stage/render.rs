@@ -23,6 +23,7 @@ impl Stage {
         videos: &[(&str, &GpuImage)],
         force: bool,
     ) -> Result<Shot<'a>, RenderError> {
+        let started = (crate::perf::on() && self.reports.is_some()).then(std::time::Instant::now);
         let budget =
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
@@ -152,9 +153,14 @@ impl Stage {
         let ahead = if wake == Wake::Frame { 0 } else { delay * 1_000_000 };
         self.due = (delay > 0 && wake != Wake::Idle).then_some(nanos + ahead);
         self.fps = if wake == Wake::Frame { fps } else { 0 };
+        let staged = started.map(|s| s.elapsed().as_secs_f32() * 1e3);
         let rendered =
             crate::counted::gpu(|| r.render_scene(view, &self.runtime, &frame, inner, quality, videos))
                 .map(drop);
+        if let Some((started, staged)) = started.zip(staged) {
+            let times = (staged, started.elapsed().as_secs_f32() * 1e3 - staged);
+            crate::perf::staged(times, (tier, quality, why), (inner, size), (fps, cap), view.stats());
+        }
         self.spare = frame.spare();
         let (samples, gpu_ms) = view.gpu_time();
         if std::mem::replace(&mut self.samples, samples) != samples && !still {

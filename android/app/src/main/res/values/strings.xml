@@ -187,4 +187,8 @@
     <string name="quality_q2">Always high (2 of 3)</string>
     <string name="quality_q1">Always reduced (1 of 3)</string>
     <string name="quality_q0">Always the lowest (0 of 3), uses the least battery</string>
+    <string name="perf_record">Record performance of the shown wallpaper</string>
+    <string name="perf_hint">Turn it on, look at the wallpaper for 30 seconds, then come back and copy the report.</string>
+    <string name="perf_copy">Copy performance report</string>
+    <string name="perf_copied">Performance report copied</string>
 </resources>

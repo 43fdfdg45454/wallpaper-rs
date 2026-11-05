@@ -44,6 +44,10 @@ impl Surface {
     pub fn present_mode(&self) -> PresentMode {
         self.config.present_mode
     }
+
+    pub fn latency(&self) -> u32 {
+        self.config.desired_maximum_frame_latency
+    }
 }
 
 fn present_mode(offered: &[PresentMode], vsync: bool) -> PresentMode {
