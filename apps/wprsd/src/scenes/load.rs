@@ -55,6 +55,7 @@ impl Daemon {
                 }
             }
         }
+        crate::scenes::lanes(&scene, &mut videos);
         assets.luts.extend(package.luts(&scene)?);
         let file = wpak.to_owned();
         assets.reloadable(&scene, move || {

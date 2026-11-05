@@ -40,8 +40,7 @@ fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
     if let Err(e) = wprs_video::init() {
         return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "video required: {e}");
     }
-    let (reel, (tx, _rx), now) =
-        (Reel { path: FIXTURE.into(), cut: Cut::default(), once: false }, mpsc::channel(), Instant::now());
+    let (reel, (tx, _rx), now) = (Reel::plain(FIXTURE.into()), mpsc::channel(), Instant::now());
     let mut slot = PlayerSlot::new(((64, 32), true, 60, 100), now);
     slot.shares = false;
     slot.tick(&reel, heard(), &tx, now);

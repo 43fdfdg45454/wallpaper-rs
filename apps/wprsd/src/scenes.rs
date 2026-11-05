@@ -13,6 +13,8 @@ use wprs_scene::{Control, Scene, Uses, Values};
 use wprs_video::Bank;
 
 mod load;
+#[cfg(test)]
+mod tests;
 
 const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
@@ -79,6 +81,13 @@ pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeM
     let probed =
         sounds.iter().filter_map(|(id, path)| Some((id.clone(), wprs_video::probe_sound(path).ok()?)));
     (Bank::new(files), probed.collect())
+}
+
+pub(crate) fn lanes(scene: &Scene, videos: &mut Vec<(String, Reel)>) {
+    for (key, asset) in scene.lanes() {
+        let found = videos.iter().find(|(id, _)| *id == asset).map(|(_, reel)| reel.clone());
+        videos.extend(found.map(|reel| (key.clone(), Reel { lane: key, ..reel })));
+    }
 }
 
 pub(crate) fn filmed(lengths: &mut BTreeMap<String, f32>, videos: &[(String, Reel)]) {

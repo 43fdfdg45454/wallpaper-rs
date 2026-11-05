@@ -23,6 +23,7 @@ pub struct Reel {
     pub path: PathBuf,
     pub cut: Cut,
     pub once: bool,
+    pub lane: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,7 +138,7 @@ impl Content {
 
 impl Reel {
     pub fn plain(path: PathBuf) -> Reel {
-        Reel { path, cut: Cut::default(), once: false }
+        Reel { path, cut: Cut::default(), once: false, lane: String::new() }
     }
 }
 

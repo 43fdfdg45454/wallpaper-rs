@@ -41,6 +41,7 @@
  "layer_textures": {"scene": {"layers": [{"id": "sky", "type": "image", "image": "sky"}, {"id": "glow", "type": "solid", "color": "#ffffff", "effects": [{"effect": "flow", "params": {"map": {"layer": "sky"}}}]}]}},
  "video_textures": {"scene": {"assets": {"sky": {"path": "sky.png"}, "clip": {"path": "clip.webm"}}, "layers": [{"id": "glow", "type": "solid", "color": "#ffffff", "mask": {"texture": "clip"}}]}, "files": {"clip.webm": "fixture:magenta-64x32.webm"}},
  "layer_playback": {"scene": {"layers": [{"id": "sky", "type": "image", "image": "sky", "playback": {"rate": 2}}]}},
+ "video_clocks": {"scene": {"assets": {"sky": {"path": "sky.png"}, "clip": {"path": "clip.webm"}}, "layers": [{"id": "a", "type": "video", "video": "clip"}, {"id": "b", "type": "video", "video": "clip", "playback": {"own_clock": true}}]}, "files": {"clip.webm": "fixture:magenta-64x32.webm"}},
  "texture_options": {"scene": {"assets": {"sky": {"path": "sky.png", "filter": "nearest"}}, "layers": [{"id": "sky", "type": "image", "image": "sky"}]}},
  "animated_textures": {"scene": {"assets": {"sky": {"path": "sky.png", "atlas": [1, 2], "frames": 2, "fps": 12}}, "layers": [{"id": "sky", "type": "image", "image": "sky"}]}},
  "text_layout": {"scene": {"layers": [{"id": "title", "type": "text", "text": "Hi", "valign": "bottom"}]}},

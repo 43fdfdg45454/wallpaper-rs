@@ -31,6 +31,7 @@ fn named(v: &Value<String>, asset: &str) -> bool {
 
 fn shows<'a>(layer: &'a Layer, asset: &str) -> Option<Option<&'a Playback>> {
     match &layer.kind {
+        _ if lane(layer).is_some() => None,
         Kind::Video { video: v, playback, .. } | Kind::Image { image: v, playback, .. }
             if named(v, asset) =>
         {
@@ -40,10 +41,29 @@ fn shows<'a>(layer: &'a Layer, asset: &str) -> Option<Option<&'a Playback>> {
     }
 }
 
+pub fn lane(layer: &Layer) -> Option<String> {
+    match &layer.kind {
+        Kind::Video { video: Value::Fixed(asset), playback: Some(p), .. } if p.own_clock => {
+            Some(format!("{asset}@{}", layer.id))
+        }
+        _ => None,
+    }
+}
+
+impl Scene {
+    pub fn lanes(&self) -> Vec<(String, String)> {
+        let own = self.layers().filter_map(|l| Some((lane(l)?, l)));
+        own.filter_map(|(key, l)| match &l.kind {
+            Kind::Video { video: Value::Fixed(asset), .. } => Some((key, asset.clone())),
+            _ => None,
+        })
+        .collect()
+    }
+}
+
 pub(crate) fn tapes(scene: &Scene) -> Vec<Tape> {
     let videos = scene.assets.iter().filter(|(_, a)| VIDEOS.contains(&a.extension().as_str()));
-    let tape = |id: &String| {
-        let owner = scene.layers().find_map(|l| Some((l, shows(l, id)?)));
+    let tape = |id: &String, owner: Option<(&Layer, Option<&Playback>)>| {
         let p = owner.and_then(|(_, p)| p).cloned().unwrap_or_default();
         let (start, end) = (f64::from(p.start), p.end.map(f64::from));
         let (layer, held, speed) = (owner.map(|(l, _)| l.id.clone()), None, None);
@@ -64,7 +84,12 @@ pub(crate) fn tapes(scene: &Scene) -> Vec<Tape> {
             speed,
         }
     };
-    videos.map(|(id, _)| tape(id)).collect()
+    let shared = videos.map(|(id, _)| tape(id, scene.layers().find_map(|l| Some((l, shows(l, id)?)))));
+    let own = scene.layers().filter_map(|l| match &l.kind {
+        Kind::Video { playback, .. } => Some(tape(&lane(l)?, Some((l, playback.as_ref())))),
+        _ => None,
+    });
+    shared.collect::<Vec<_>>().into_iter().chain(own).collect()
 }
 
 impl Runtime {

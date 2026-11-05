@@ -2192,6 +2192,10 @@ msgstr ""
 "fija la velocidad, el tramo o el fotograma de sus vídeos e imágenes animadas"
 
 #: crates/wprs-format/src/scenery.rs
+msgid "plays the same video in several layers, each on its own clock"
+msgstr "reproduce el mismo vídeo en varias capas, cada una con su propio reloj"
+
+#: crates/wprs-format/src/scenery.rs
 msgid "sets how its pictures are filtered, repeated or shrunk"
 msgstr "fija cómo se filtran, repiten o reducen sus imágenes"
 

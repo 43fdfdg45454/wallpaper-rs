@@ -1448,7 +1448,11 @@ pueden cambiar. Se nombran `effect.<id>` y `effect.<id>.<parámetro>`, de modo q
 anteriores rechazan con el aviso de versión más nueva los paquetes que los usan. Las líneas de
 tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
 enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el motor no lo dibuje), y
-`"seed": null` da a una escena una semilla nueva cada vez que empieza. Un paquete con un vídeo HDR
+`"seed": null` da a una escena una semilla nueva cada vez que empieza. Varias capas que muestran el mismo
+vídeo comparten su reloj, guiado por la primera; con `playback.own_clock` una capa `video` lo
+reproduce con un reloj propio (su velocidad, tramo, pausa y saltos de los scripts, a costa de un
+decodificador más), que el inspector del editor ofrece como *Reloj propio* y `wprs-ctl scene set DIR
+/scene/layers/N/playback/own_clock true` también. Un paquete con un vídeo HDR
 (PQ o HLG) recibe la faceta `hdr` y `wprs-ctl pack check` lo dice: en el ordenador se decodifica con
 10 bits y la gráfica adapta sus tonos a colores normales (BT.2020 a sRGB, el blanco de la pantalla
 a 203 nits y la luz más fuerte a 1000), también dentro de las escenas, y los vídeos normales no

@@ -122,6 +122,7 @@ impl Daemon {
         let properties = scene.properties(&m.properties, &crate::words::volume(), loudness);
         let labels = wprs_scene::labels(&properties, &languages);
         let (clips, mut lengths) = crate::scenes::bank(&scene, &sounds);
+        crate::scenes::lanes(&scene, &mut videos);
         crate::scenes::filmed(&mut lengths, &videos);
         let (id, version, title) = (m.id.clone(), m.version.clone(), m.title.pick(&languages));
         let (path, presets) = (dir.clone(), m.presets);

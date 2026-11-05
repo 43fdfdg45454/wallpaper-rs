@@ -89,6 +89,8 @@ pub struct Playback {
     pub end: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub frame: Option<Value<f32>>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub own_clock: bool,
 }
 
 impl Default for Glide {
@@ -127,6 +129,7 @@ impl Default for Playback {
             start: 0.0,
             end: None,
             frame: None,
+            own_clock: false,
         }
     }
 }

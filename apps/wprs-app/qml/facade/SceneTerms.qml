@@ -133,6 +133,7 @@ QtObject {
             "order": App.tr("Order"),
             "orient": App.tr("Orientation"),
             "origin": App.tr("Origin"),
+            "own_clock": App.tr("Own clock"),
             "oscillate": App.tr("Oscillate"),
             "other": App.tr("Other file"),
             "out": App.tr("Handle out"),

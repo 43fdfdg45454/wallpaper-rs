@@ -11,6 +11,7 @@ pub const SCENE: &[(&str, &str, [Support; 2])] = &[
     ("layer_textures", "feeds layers into effects", [Yes, Yes]),
     ("video_textures", "uses videos as masks, effect textures or light patterns", [Yes, Yes]),
     ("layer_playback", "sets the speed, range or frame of its videos and moving pictures", [Yes, Yes]),
+    ("video_clocks", "plays the same video in several layers, each on its own clock", [Yes, Yes]),
     ("texture_options", "sets how its pictures are filtered, repeated or shrunk", [Yes, Yes]),
     ("animated_textures", "plays sprite sheets or animated pictures", [Yes, Yes]),
     ("text_layout", "wraps or boxes its texts", [Yes, Yes]),

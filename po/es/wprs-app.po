@@ -6982,6 +6982,10 @@ msgstr ""
 "fija la velocidad, el tramo o el fotograma de sus vídeos e imágenes animadas"
 
 #: apps/wprs-app/qml/facade/Labels.qml
+msgid "plays the same video in several layers, each on its own clock"
+msgstr "reproduce el mismo vídeo en varias capas, cada una con su propio reloj"
+
+#: apps/wprs-app/qml/facade/Labels.qml
 msgid "sets how its pictures are filtered, repeated or shrunk"
 msgstr "fija cómo se filtran, repiten o reducen sus imágenes"
 
@@ -8914,6 +8918,10 @@ msgstr "Orientación"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Origin"
 msgstr "Origen"
+
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Own clock"
+msgstr "Reloj propio"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Oscillate"

@@ -143,6 +143,15 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
             videos.push((id.clone(), file));
         }
     }
+    for (key, asset) in scene.lanes() {
+        let Some(file) = videos.iter().find(|(id, _)| *id == asset).map(|(_, f)| f.clone()) else { continue };
+        let kind = file.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
+        let link = file.with_file_name(format!("{key}.{kind}"));
+        if fs::symlink_metadata(&link).is_err() {
+            std::os::unix::fs::symlink(&file, &link)?;
+        }
+        videos.push((key, link));
+    }
     assets.luts.extend(package.luts(&scene)?);
     let (file, kept) = (path.to_owned(), stamp.clone());
     assets.reloadable(&scene, move || {
