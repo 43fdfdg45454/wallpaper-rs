@@ -72,6 +72,7 @@ impl Tier {
         let cap = match (self, on_battery) {
             (Tier::T0, false) => 24,
             (Tier::T0, true) => 15,
+            (Tier::T1, false) if fits => wanted.min(60),
             (Tier::T1, _) | (Tier::T2, true) => 30,
             (Tier::T2, false) if fits => wanted,
             (Tier::T2, false) | (Tier::T3, true) => 60,

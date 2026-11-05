@@ -163,8 +163,10 @@ mod tests {
         assert_eq!((budget(false).quality(&light), budget(true).quality(&light)), (Quality::Q2, Quality::Q1));
         assert_eq!(
             (budget(false).fps(&light, Quality::Q2, 0), budget(true).fps(&light, Quality::Q1, 0)),
-            (30, 30)
+            (60, 60)
         );
+        let dear = Budget { max_fps: wprs_core::settings::fps::DISPLAY, ..budget(true) };
+        assert_eq!(dear.fps(&light, Quality::Q1, 0), 30);
         let capped = Budget { max_fps: 10, ..budget(true) };
         assert_eq!(capped.fps(&light, Quality::Q0, 0), 10);
     }

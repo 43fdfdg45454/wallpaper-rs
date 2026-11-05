@@ -12,7 +12,6 @@ const MODERATE: i32 = 2;
 const SEVERE: i32 = 3;
 const CRITICAL: i32 = 4;
 const WARM: f32 = 0.75;
-const HIGH_CLASS: i32 = 33;
 
 const DEFAULT_HZ: u32 = 60_000;
 
@@ -127,8 +126,7 @@ pub(crate) fn tier(software: bool, compute: bool) -> Tier {
     match CLASS.load(Relaxed) {
         _ if software || !compute => Tier::T0,
         class if class < 0 => Tier::T0,
-        HIGH_CLASS.. => Tier::T2,
-        _ => Tier::T1,
+        _ => Tier::T2,
     }
 }
 

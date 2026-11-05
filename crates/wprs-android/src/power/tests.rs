@@ -47,7 +47,7 @@ fn the_chosen_caps_apply_before_heat() {
 }
 
 #[test]
-fn heat_lowers_the_scene_level_and_the_device_class_picks_the_tier() {
+fn heat_lowers_the_scene_level_and_only_a_low_memory_phone_lowers_the_tier() {
     let levels = [0, LIGHT, MODERATE, SEVERE].map(|t| on(|p| p.thermal = t).ceiling());
     assert_eq!(levels, [Quality::Q3, Quality::Q2, Quality::Q1, Quality::Q0]);
     assert_eq!(on(|p| (p.thermal, p.headroom) = (LIGHT, 0.9)).ceiling(), Quality::Q1);
@@ -55,7 +55,7 @@ fn heat_lowers_the_scene_level_and_the_device_class_picks_the_tier() {
         device(low, class);
         tier(false, true)
     });
-    assert_eq!(tiers, [Tier::T1, Tier::T2, Tier::T0]);
+    assert_eq!(tiers, [Tier::T2, Tier::T2, Tier::T0]);
     device(false, 34);
     assert_eq!((tier(true, true), tier(false, false)), (Tier::T0, Tier::T0));
     device(false, 0);

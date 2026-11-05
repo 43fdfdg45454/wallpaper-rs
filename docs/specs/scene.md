@@ -183,7 +183,8 @@ computer that switches between two cards (`render.gpu` in `dbus.md`) measures ea
 A measure that lowered the tier, which a busy start can cause, is taken again on the next starts,
 three times in all, and the fastest one counts (`runs` in the file).
 `GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
-among its diagnostics.
+among its diagnostics. A phone takes the tier of its GPU and this measure, at most that of newer
+integrated GPUs, and the lowest tier when Android marks it as a low-memory device.
 
 While a scene plays, the GPU time of its frames (measured as described below) moves the quality
 level: when their average (an exponential average over the measured frames, started again after

@@ -189,11 +189,14 @@ often than the lowest of:
 - `playback.max_fps`: its number, or with `display` (the default) the refresh rate of the output
   on mains power (60 while it is unknown) and 30 on battery;
 - a known refresh rate;
-- except for videos, the GPU class: software renderers 24 (15 on battery), integrated GPUs 60 (30
-  on battery) or, on mains power, the rate above for a scene whose estimated cost at that rate
-  fits their budget, dedicated GPUs the rate above (60 on battery);
-- for scenes, their `clock.max_fps` (`display` follows the refresh rate) and the quality level;
-- for scenes on battery or with power saving, 30, and while the GPU or CPU is hot, 30 or 15 (see
+- except for videos, the GPU class: software renderers 24 (15 on battery), older integrated and
+  phone GPUs 30, or 60 on mains power for a scene whose estimated cost at that rate fits their
+  budget, newer integrated GPUs 60 (30 on battery) or, on mains power, the rate above for a scene
+  whose estimated cost at that rate fits their budget, dedicated GPUs the rate above (60 on
+  battery); a number the user chose in `playback.max_fps` keeps the caps of mains power on battery;
+- for scenes, their `clock.max_fps` (`display` follows the refresh rate); the quality level changes
+  what a frame draws, not the rate;
+- for scenes on battery with `display` or with power saving, 30, and while the GPU or CPU is hot, 30 or 15 (see
   "Cost and frame rate" in `scene.md`), and for scenes whose only motion comes from effects with a
   `min_fps`, the highest of those;
 - for parallax images with software rendering, 15;
