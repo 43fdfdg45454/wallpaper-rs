@@ -17,20 +17,17 @@ ColumnLayout {
         curve.timeline.page.run("keyframe", args);
     }
 
+    function straighten() {
+        keyed({
+            "straighten": true
+        });
+    }
+
     QQC2.Button {
         visible: curve.shaped
         icon.name: "draw-line"
         text: App.tr("Straighten the curve")
-        onClicked: {
-            base.keyed({
-                "ease": "linear"
-            });
-            curve.timeline.page.run("keyframe", {
-                "pointer": base.track.pointer,
-                "time": curve.to[0],
-                "ease": curve.to[2] && typeof curve.to[2] === "string" ? curve.to[2] : "linear"
-            });
-        }
+        onClicked: base.straighten()
     }
 
     Kirigami.Separator {

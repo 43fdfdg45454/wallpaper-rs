@@ -25,6 +25,8 @@ pub struct KeyframeEdit {
     pub in_handle: Option<[f64; 2]>,
     #[serde(default)]
     pub out_handle: Option<[f64; 2]>,
+    #[serde(default)]
+    pub straighten: bool,
 }
 
 impl KeyframeEdit {
@@ -41,6 +43,7 @@ impl KeyframeEdit {
             absolute: false,
             in_handle: None,
             out_handle: None,
+            straighten: false,
         }
     }
 }

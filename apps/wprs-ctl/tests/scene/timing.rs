@@ -55,6 +55,10 @@ fn timelines_relative_keys_and_handles_are_written_from_the_command_line() {
     assert_eq!(shown(dir, &format!("{opacity}/timeline")), "opening");
     ok(dir, &["scene", "timeline", "glow", "opening", "--remove"]);
     assert_eq!(shown(dir, &format!("{opacity}/timeline")), serde_json::Value::Null);
+    ok(dir, &["scene", "keyframe", "glow", opacity, "2", "--in-handle", "1,0"]);
+    ok(dir, &["scene", "keyframe", "glow", opacity, "0", "--straighten"]);
+    assert_eq!(shown(dir, &format!("{opacity}/keys/0/2")), serde_json::Value::Null);
+    assert_eq!(shown(dir, &format!("{opacity}/keys/1/2")), serde_json::Value::Null);
     ok(dir, &["scene", "keyframe", "glow", opacity, "0", "--absolute"]);
     assert_eq!(shown(dir, &format!("{opacity}/base")), serde_json::Value::Null);
 }

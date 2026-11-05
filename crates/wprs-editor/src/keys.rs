@@ -66,6 +66,9 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
         said("editor.time_must_more", "the time must be 0 or more seconds", &[])
     );
     let time = (e.time * 1000.0).round() / 1000.0;
+    if e.straighten {
+        return crate::straight::straighten(doc, e, time);
+    }
     if let Some(ease) = &e.ease {
         serde_json::from_value::<Ease>(ease.clone()).map_err(|e| anyhow!("{e}"))?;
     }

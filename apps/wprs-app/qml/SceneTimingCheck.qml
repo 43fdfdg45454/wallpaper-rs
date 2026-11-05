@@ -51,5 +51,44 @@ QtObject {
             throw new Error("timing: a timing action did not take exactly one undo step");
         for (let k = 0; k < 5; k++)
             page.run("undo");
+        straightened();
+    }
+
+    function straightened() {
+        const pointer = "/scene/layers/0/opacity";
+        const bent = {
+            "in": [0.3, 0.1],
+            "out": [0.3, 0.1]
+        };
+        const keys = [[0, 0, bent], [1, 1, bent], [2, 0, bent]];
+        page.run("set", {
+            "pointer": pointer,
+            "value": {
+                "keys": keys
+            }
+        });
+        const steps = page.view.history.done.length;
+        const base = Qt.createComponent("SceneKeyBase.qml").createObject(page, {
+            "curve": {
+                "track": {
+                    "pointer": pointer
+                },
+                "from": keys[1],
+                "to": keys[2],
+                "shaped": true,
+                "timeline": {
+                    "page": page
+                }
+            }
+        });
+        base.straighten();
+        base.destroy();
+        const after = read(pointer + "/keys") ?? [];
+        if (page.view.history.done.length !== steps + 1)
+            throw new Error("timing: straightening a curve did not take exactly one undo step");
+        if (JSON.stringify(after.slice(1)) !== "[[1,1,{\"in\":[0.3,0.1]}],[2,0,{\"out\":[0.3,0.1]}]]")
+            throw new Error("timing: straightening a curve bent the neighbouring curves: " + JSON.stringify(after));
+        page.run("undo");
+        page.run("undo");
     }
 }

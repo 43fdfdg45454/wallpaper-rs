@@ -683,7 +683,7 @@ msgstr "Añadir un ajuste predefinido"
 msgid "Update what the package uses"
 msgstr "Actualizar lo que usa el paquete"
 
-#: crates/wprs-editor/src/keys.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/straight.rs
 msgid "%1 has no keyframe at %2 s"
 msgstr "%1 no tiene ningún fotograma clave en %2 s"
 
@@ -691,7 +691,7 @@ msgstr "%1 no tiene ningún fotograma clave en %2 s"
 msgid "%1 already has a keyframe at %2 s"
 msgstr "%1 ya tiene un fotograma clave en %2 s"
 
-#: crates/wprs-editor/src/keys.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/straight.rs
 msgid "%1 has no keyframes"
 msgstr "%1 no tiene fotogramas clave"
 
@@ -1472,6 +1472,10 @@ msgstr "Segundos"
 #: crates/wprs-editor/src/stock.rs
 msgid "%1 is not an assets package"
 msgstr "%1 no es un paquete de recursos"
+
+#: crates/wprs-editor/src/straight.rs
+msgid "straighten the curve after a keyframe on its own, without other changes"
+msgstr "endereza la curva después de un fotograma clave por sí sola, sin otros cambios"
 
 #: crates/wprs-editor/src/swarms/emits.rs
 #: crates/wprs-editor/src/swarms/fields.rs crates/wprs-editor/src/swarms/sow.rs

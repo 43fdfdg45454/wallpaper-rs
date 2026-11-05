@@ -7,7 +7,7 @@ use wprs_editor::actions::{Action, KeyframeEdit, TimelineEdit};
 #[derive(Subcommand, Debug)]
 pub enum Keying {
     #[command(
-        about = "Add or replace a keyframe of an animatable value, remove it with --remove or move it with --from; --base makes the keyframes relative and --in-handle and --out-handle bend the curve of a number"
+        about = "Add or replace a keyframe of an animatable value, remove it with --remove or move it with --from; --base makes the keyframes relative, --in-handle and --out-handle bend the curve of a number and --straighten makes it straight again"
     )]
     Keyframe {
         #[arg(help = DIR)]
@@ -43,6 +43,12 @@ pub enum Keying {
         out_handle: Option<[f64; 2]>,
         #[arg(long, help = "Remove the keyframe at this time")]
         remove: bool,
+        #[arg(
+            long,
+            conflicts_with_all = ["value", "ease", "base", "absolute", "in_handle", "out_handle", "remove", "from"],
+            help = "Straighten the curve to the next keyframe, dropping only the handles or easing that bend it"
+        )]
+        straighten: bool,
         #[arg(
             allow_negative_numbers = true,
             long,
@@ -110,12 +116,13 @@ pub(crate) fn action(command: Keying) -> (PathBuf, Action) {
             absolute,
             in_handle,
             out_handle,
+            straighten,
         } => {
             let mut key = KeyframeEdit::at(&pointer, time);
             (key.value, key.ease) = (v.as_deref().map(value), ease.as_deref().map(value));
             (key.timeline, key.remove, key.from) = (timeline, remove, from);
             (key.base, key.absolute) = (base.as_deref().map(value), absolute);
-            (key.in_handle, key.out_handle) = (in_handle, out_handle);
+            (key.in_handle, key.out_handle, key.straighten) = (in_handle, out_handle, straighten);
             (dir, Action::Keyframe(key))
         }
         Keying::Timeline {
