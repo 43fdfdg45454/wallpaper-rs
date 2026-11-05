@@ -96,6 +96,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 }.map { stringResource(it) }
                 if (notes.isNotEmpty()) Note(notes.joinToString(" "))
             }
+            if (item?.preset == true) Note(stringResource(R.string.preset_note))
             if (picture && state.optBoolean("changed")) Note(stringResource(R.string.picture_changed), MaterialTheme.colorScheme.error)
             if (picture) {
                 Framing(main, uid, state)

@@ -427,8 +427,9 @@ escritorio), y *Abrir un paquete*, que importa un `.wpak` con el selector de doc
 Se admiten los cuatro tipos de paquete que son un fondo, como en el escritorio: los de imagen se
 muestran como una foto más (con su ajuste, su encuadre, su edición y su paralaje), los de vídeo como
 un vídeo más, los de escena con el motor de escenas y los de página web con el WebView del sistema
-(ver «Fondos web»); los de preajustes y de recursos se rechazan con un aviso, igual que en el
-escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
+(ver «Fondos web»); un preajuste publicado aparte se muestra con su paquete base, y al usarlo como
+fondo escribe sus valores en los ajustes de la base (si la base no está instalada lo avisa), y los
+de recursos se rechazan con un aviso, igual que en el escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
 entero en memoria, a los archivos de la app y se borra con el paquete. Las escenas se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la
 CPU con menos partículas), textos, líneas de tiempo y propiedades. La página de una escena muestra
@@ -461,8 +462,9 @@ reproducirse directo en la pantalla. Los tonos de un vídeo HDR (PQ o HLG) los a
 cuando se reproduce directo y la propia app cuando pasa por la gráfica, con la misma curva que el
 escritorio (blanco de 203 nits y luz máxima de 1000 nits). Si un paquete pide sombreadores de cálculo y la gráfica del teléfono no los tiene, su página lo
 avisa. El color de acento del fondo (o, si no propone uno, el dominante de su vista previa) es el
-color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza, y los
-preajustes publicados aparte y las dependencias entre paquetes aún no funcionan en el teléfono. Un paquete hecho solo para
+color que Android da al sistema. Un paquete de más de 1 GiB descomprimido se rechaza. Al instalar un
+paquete de un repositorio también se instalan del mismo repositorio los paquetes que nombra en
+`requires.packages` y que faltan (la versión más nueva que cumpla el rango). Un paquete hecho solo para
 el escritorio se rechaza con ese aviso, traducido. El nivel de calidad sale de la
 clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, alta si el fabricante
 declara una clase de rendimiento de Android 13 o posterior, media en el resto, ajustada con la misma

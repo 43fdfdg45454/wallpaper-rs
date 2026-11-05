@@ -26,6 +26,10 @@ pub(crate) fn commit(on_battery: bool, target: Target) -> Result<bool, Error> {
         Target::Home => &[false],
         Target::Lock => &[true],
     };
+    let choice = match choice {
+        Choice::Item(uid) => Choice::Item(crate::variant::apply(&uid)?),
+        list => list,
+    };
     let path = match &choice {
         Choice::Item(uid) => Some(with(|lib| Ok(lib.item(uid)?.path))?),
         Choice::Playlist(_) => None,

@@ -111,4 +111,7 @@
     <string name="error_android_no_depth_map">This picture has no depth map yet</string>
     <string name="error_android_filter_value">The filter cannot be read: %1$s</string>
     <string name="error_android_filter_range">The filter takes %1$s</string>
+    <string name="error_android_version_range">%1$s is not a version range: %2$s</string>
+    <string name="error_android_preset_needs">This preset needs %1$s %2$s; install it first</string>
+    <string name="error_android_no_release">No release of %1$s matches %2$s</string>
 </resources>

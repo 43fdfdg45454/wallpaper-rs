@@ -53,7 +53,7 @@ fn open(path: &Path) -> Result<Package<BufReader<fs::File>>, Error> {
     let package = wprs_format::open(path, &wprs_format::Limits::phone())?;
     wprs_format::features::playable(&package.manifest, &package.facts, wprs_format::Platform::Android)?;
     match package.manifest.kind {
-        kind if kind.first() || kind == Kind::Web => Ok(package),
+        kind if kind.first() || matches!(kind, Kind::Web | Kind::Preset) => Ok(package),
         kind => Err(said("android.not_shown", "%1 packages are not wallpapers", &[&kind])),
     }
 }

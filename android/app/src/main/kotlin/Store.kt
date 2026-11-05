@@ -33,7 +33,8 @@ class Item(json: JSONObject) {
     private val pack = json.optJSONObject("package")
     private val packed = pack?.optString("kind")
     val video = json.getString("kind") == "video" || packed == "video"
-    val scene = json.getString("kind") == "package" && packed != "video" && packed != "image"
+    val preset = packed == "preset"
+    val scene = json.getString("kind") == "package" && packed != "video" && packed != "image" && !preset
     val web = packed == "web"
     val reel = packed == "video"
     val exposes = strings(pack?.optJSONArray("exposes"))

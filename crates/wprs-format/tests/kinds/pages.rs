@@ -55,7 +55,7 @@ fn presets_carry_values_and_pictures_for_a_base_package() {
     let mut package = load(&preset(Value::Null), &files).unwrap();
     assert_eq!(package.preset().unwrap().base.id, "org.example.dusk");
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), ["packages", "preset"]);
-    assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_err());
+    assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_ok());
     let other = json!({ "features": ["packages", "preset"], "packages": [{ "id": "org.example.dawn", "version": "1" }] });
     assert_eq!(field(load(&preset(other), &files).map(drop)), "requires.packages");
     assert_eq!(field(preset(json!({ "features": ["preset"] })).check()), "requires.packages");

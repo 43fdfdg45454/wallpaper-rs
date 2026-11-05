@@ -6685,6 +6685,7 @@ dependencies = [
  "reqwest",
  "rquickjs",
  "rquickjs-sys",
+ "semver",
  "serde",
  "serde_json",
  "tempfile",

@@ -29,6 +29,7 @@ mod screens;
 mod steady;
 mod stopped;
 mod tilted;
+mod variants;
 mod words;
 
 pub(super) const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/fixtures");
@@ -134,6 +135,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "30");
     graded::each_screen_has_its_own_filter();
     reeled::video_settings_play_on_the_phone();
+    variants::presets_set_the_values_of_their_base();
     frames::framing(&green, &bands);
     relief::relief(&green);
     relief::heif_photos_get_maps();

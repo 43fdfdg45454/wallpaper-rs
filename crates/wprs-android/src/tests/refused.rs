@@ -19,11 +19,14 @@ pub(super) fn packages_the_phone_cannot_play_are_refused() {
         if refused.is_empty() {
             assert!(!error.contains("needs a newer version"), "{name}: {error}");
             let kind = package.manifest.kind;
-            let shown = kind.first() || kind == wprs_format::Kind::Web;
+            let shown = kind.first() || matches!(kind, wprs_format::Kind::Web | wprs_format::Kind::Preset);
             assert_eq!(result.is_ok(), shown, "{name}: {error}");
             stored += usize::from(shown);
             if let Ok((uid, _)) = result.as_ref()
-                && !matches!(kind, wprs_format::Kind::Scene | wprs_format::Kind::Web)
+                && !matches!(
+                    kind,
+                    wprs_format::Kind::Scene | wprs_format::Kind::Web | wprs_format::Kind::Preset
+                )
             {
                 kinds(uid, package.manifest.kind);
             }

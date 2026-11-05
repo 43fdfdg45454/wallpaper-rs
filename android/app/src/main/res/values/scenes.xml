@@ -76,4 +76,5 @@
     <string name="shortcut_web">Web address</string>
     <string name="shortcut_keep">Keep</string>
     <string name="shortcut_https">An address that starts with https://</string>
+    <string name="preset_note">A preset of another package: it shows that package, and setting it as wallpaper keeps its values as the settings of that package.</string>
 </resources>

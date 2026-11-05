@@ -111,4 +111,7 @@
     <string name="error_android_no_depth_map">Esta imagen todavía no tiene mapa de profundidad</string>
     <string name="error_android_filter_value">No se puede leer el filtro: %1$s</string>
     <string name="error_android_filter_range">El filtro admite %1$s</string>
+    <string name="error_android_version_range">%1$s no es un rango de versiones: %2$s</string>
+    <string name="error_android_preset_needs">Este preajuste necesita %1$s %2$s; instálalo antes</string>
+    <string name="error_android_no_release">Ninguna versión de %1$s cumple %2$s</string>
 </resources>

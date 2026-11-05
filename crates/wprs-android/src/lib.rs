@@ -60,6 +60,7 @@ mod store;
 #[cfg(test)]
 mod tests;
 mod tilt;
+mod variant;
 mod vault;
 mod votes;
 

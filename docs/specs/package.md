@@ -259,9 +259,9 @@ the folder changed, and the stored value is the path of that copy.
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | runs | runs |
 | `accent` | sets `display.accent` | runs | runs |
 | `web` | is a web page (`kind: web`, see `web.md`) | runs | runs |
-| `preset` | sets the values of another package (`kind: preset`) | runs | refused |
+| `preset` | sets the values of another package (`kind: preset`) | runs | runs |
 | `assets` | holds resources for other packages (`kind: assets`) | refused | refused |
-| `packages` | lists `requires.packages` | runs | refused |
+| `packages` | lists `requires.packages` | runs | runs |
 | `gpu` | sets `requires.gpu` | runs | runs |
 | `platforms` | sets `platforms` | runs | runs |
 | `locale_files` | keeps texts in `locale/<language>.json` | runs | runs |
@@ -485,6 +485,11 @@ the requirement on that output, with the values of the preset kept as the settin
 there, like a preset of the base, and the files of the preset taken out of it into the cache as the
 chosen files of their `file` settings; while no such base is installed, applying it fails with
 `NotFound` naming the base, and the app offers to install it from the repository of the preset.
+The phone does the same: a preset in its library previews its base, *Set as wallpaper* writes the
+values of the preset as the settings of the base (its files go to the app's own storage) and shows
+the base, and without the base it says which package to install. Installing a package from a
+repository on the phone also installs, from that repository, the newest release of each package of
+`requires.packages` that meets its range and is missing, and theirs in turn, four levels deep.
 
 ## Shared resources
 

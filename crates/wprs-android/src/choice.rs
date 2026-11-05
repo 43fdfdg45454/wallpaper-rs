@@ -100,7 +100,7 @@ fn chosen(lib: &Library, preview: bool, lock: bool) -> Result<Option<String>, Er
     });
     Ok(match choice {
         None => None,
-        Some(Choice::Item(uid)) => Some(uid),
+        Some(Choice::Item(uid)) => Some(crate::variant::preset(lib, &uid).ok().flatten().unwrap_or(uid)),
         Some(Choice::Playlist(playlist)) => {
             let synced = lib.playlist(&playlist).is_ok_and(|list| list.rules.synced);
             match lib.rotation(if synced { HOME } else { row(lock) })?.filter(|row| row.playlist == playlist)
