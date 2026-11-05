@@ -112,11 +112,15 @@ fn form(pack: &Pack, languages: &[String]) -> Result<Value, Error> {
     let ran = runtime.uses();
     let [audio, touch, taps] = granted(&pack.id);
     let uses = pack.web.as_ref().map_or([ran.audio, ran.cursor, ran.clicks], |w| w.uses);
+    let media = pack.web.as_ref().map_or(ran.media, |w| w.media);
+    let network = pack.web.as_ref().is_some_and(|w| !w.network.is_empty());
     Ok(json!({
         "fields": fields, "presets": presets, "scripts": pack.web.is_none() && ran.scripts, "sounds": sounds,
         "saved": saved::listed(pack)?, "web": crate::page::form(pack),
-        "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2] },
-        "granted": { "audio": audio, "touch": touch, "taps": taps },
+        "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2], "media": media, "network": network },
+        "granted": { "audio": audio, "touch": touch, "taps": taps, "media": allows(&pack.id, Input::Media),
+            "media_network": allows(&pack.id, Input::MediaNetwork) },
+        "access": crate::playing::access(),
     }))
 }
 
@@ -156,7 +160,11 @@ fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {
         "touch" => Input::Pointer,
         "taps" => Input::Clicks,
         "network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::Network,
-        _ => return Err(said("android.audio_touch_taps", "%1 is not audio, touch or taps", &[&input])),
+        "media" => Input::Media,
+        "media_network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::MediaNetwork,
+        _ => {
+            return Err(said("android.audio_touch_taps", "%1 is not audio, touch, taps or media", &[&input]));
+        }
     };
     let mut grants = grants();
     let inputs = grants.entry(pack.id.clone()).or_default();

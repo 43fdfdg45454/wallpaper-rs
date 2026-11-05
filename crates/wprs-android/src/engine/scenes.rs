@@ -67,6 +67,7 @@ impl Engine {
         i32::from(audio && moving && crate::power::hears())
             | (i32::from(touch) << 1)
             | (i32::from(plays && moving) << 2)
+            | (i32::from(self.stage.as_ref().is_some_and(Stage::hears_media)) << 3)
     }
 
     pub(crate) fn touch(&mut self, x: f32, y: f32, down: bool) -> bool {

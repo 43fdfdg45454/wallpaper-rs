@@ -13,6 +13,7 @@ class Wallpaper : WallpaperService() {
     private val tilt by lazy { Tilt(this) }
     private val hearing by lazy { Hearing(this) }
     private val pages by lazy { Pages(this) }
+    private val players by lazy { Players(this) }
 
     override fun onCreate() {
         super.onCreate()
@@ -42,7 +43,7 @@ class Wallpaper : WallpaperService() {
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
-            painter = Painter(isPreview, videos, tilt, hearing, pages) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
+            painter = Painter(isPreview, videos, tilt, hearing, pages, players) { on -> mainExecutor.execute { setTouchEventsEnabled(on) } }
             if (!isPreview) live++
             if (!isPreview) screens[this] = flags()
             val lock = lock()

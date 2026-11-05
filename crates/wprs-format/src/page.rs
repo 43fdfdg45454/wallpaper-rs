@@ -1,3 +1,7 @@
+mod heard;
+
+pub use heard::heard;
+
 pub const API: &str = include_str!("page/api.js");
 pub const MASK: &str = include_str!("page/mask.js");
 pub const VOLUME: &str = include_str!("page/volume.js");

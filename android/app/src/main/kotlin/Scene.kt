@@ -75,6 +75,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
         if (uses?.optBoolean("taps") == true) {
             Toggle(stringResource(R.string.react_taps), granted?.optBoolean("taps") == true) { grant("taps", it) }
         }
+        MediaGrants(form) { input, on -> grant(input, on) }
         if (form.optBoolean("sounds")) Text(stringResource(R.string.sounds_off), Modifier.padding(16.dp, 4.dp), style = small)
         val saved = options(form.optJSONArray("saved"))
         val presets = options(form.optJSONArray("presets")) + saved

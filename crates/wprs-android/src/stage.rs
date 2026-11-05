@@ -8,7 +8,10 @@ use std::sync::{Arc, Mutex};
 use wprs_render::{GpuImage, Meter, SceneAssets, SceneView};
 use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 
+mod heard;
 mod input;
+
+pub(crate) use heard::allowed as media_allowed;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
 static OVER: AtomicU64 = AtomicU64::new(0);
@@ -50,6 +53,7 @@ pub(crate) struct Stage {
     offset: f32,
     extras: Extras,
     assets: SceneAssets,
+    media: heard::Shown,
 }
 
 pub(crate) struct Shot<'a> {
@@ -82,6 +86,7 @@ impl Stage {
             pack.videos.iter().filter_map(|(id, path)| Some((id.clone(), wprs_scene::film_file(path)?)));
         runtime.set_lengths(films.collect());
         let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
+        let media = heard::Shown::new(heard::allowed(&pack));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         let acting = Acting::new(&pack, &runtime);
         let extras = Extras::gather(&pack, (runtime.props(), &[]), extras::now(), &Extras::default());
@@ -114,11 +119,13 @@ impl Stage {
             offset: 0.5,
             extras,
             assets,
+            media,
         }
     }
 
     pub(crate) fn refresh(&mut self) {
         self.granted = props::granted(&self.pack.id);
+        self.media.granted = heard::allowed(&self.pack);
         self.moving = moves(&self.pack.id);
         let changed = self.runtime.set_props(props::values(&self.pack));
         if changed {
@@ -168,7 +175,7 @@ impl Stage {
         let shown = &self.acting.keeping.shown;
         let fresh = Extras::gather(&self.pack, (self.runtime.props(), shown), extras::now(), &self.extras);
         if !fresh.same(&self.extras) {
-            (self.assets, self.restock, self.touch.2) = (fresh.assets(&self.pack), true, true);
+            (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
         }
         self.extras = fresh;
     }

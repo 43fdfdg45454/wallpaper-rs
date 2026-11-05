@@ -111,6 +111,9 @@ pub(crate) fn heard(handle: i64, text: &str) -> Option<String> {
     if let Some(prop) = message.get("random").and_then(Value::as_str) {
         return reply(&id, random(folders::listed(folders, prop, false).map_or(&[][..], Vec::as_slice)));
     }
+    if message.get("media").is_some() {
+        return call(&[super::heard::told(view, true)?]);
+    }
     if message.get("audio").is_some() {
         view.audio = true;
         crate::store::changed();
@@ -125,8 +128,11 @@ pub(crate) fn heard(handle: i64, text: &str) -> Option<String> {
 }
 
 pub(crate) fn listen(handle: i64) -> Option<String> {
-    super::hearing(handle).then_some(())?;
-    let frame = crate::hearing::frame();
-    let audio = [frame.left[..BANDS].to_vec(), frame.right[..BANDS].to_vec()];
-    call(&[json!({"audio": audio})])
+    let media =
+        views().get_mut(&handle).filter(|v| v.heard.is_some()).and_then(|v| super::heard::told(v, false));
+    let audio = super::hearing(handle).then(|| {
+        let frame = crate::hearing::frame();
+        json!({"audio": [frame.left[..BANDS].to_vec(), frame.right[..BANDS].to_vec()]})
+    });
+    call(&audio.into_iter().chain(media).collect::<Vec<_>>())
 }

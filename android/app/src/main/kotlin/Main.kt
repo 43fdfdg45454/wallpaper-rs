@@ -34,6 +34,7 @@ class Main : ComponentActivity() {
     val videos by lazy { Videos(applicationContext) }
     val tilt by lazy { Tilt(applicationContext) }
     val hearing by lazy { Hearing(applicationContext) }
+    val players by lazy { Players(applicationContext) }
     val pages by lazy { Pages(applicationContext) }
     private val power by lazy { Power(applicationContext) }
     private val scope = MainScope()

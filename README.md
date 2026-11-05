@@ -488,6 +488,14 @@ por paquete. La biblioteca y la página de un paquete muestran su título y su d
 idioma del teléfono, y la página avisa de cada parte que no funciona en él, de sus sonidos a sus
 ajustes de vídeo y las funciones nuevas que omite.
 
+*Mostrar lo que suena* aparece en las escenas y páginas que declaran `media` y también empieza
+apagado. Android solo deja ver los reproductores de otras apps con el acceso a las notificaciones:
+al activarlo, la app explica para qué lo usa y abre ese ajuste. Con los dos permisos, el teléfono
+sigue la sesión multimedia activa por sus avisos, sin consultarla periódicamente, solo mientras se ve
+un fondo que la usa, y le da lo mismo que el ordenador: textos, carátula reducida a 256 píxeles,
+colores, posición, disparadores `media:` y eventos de scripts; nunca lee las notificaciones ni guarda,
+registra o envía lo que suena. Una página que además puede salir a internet pide un segundo permiso.
+
 *Reaccionar al sonido*, *Reaccionar al tacto* y *Reaccionar a los toques* solo aparecen en las
 escenas y las páginas web que los usan y se activan paquete a paquete; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de
 poca resolución de lo que suena en el teléfono; Android pide el permiso del micrófono la primera vez

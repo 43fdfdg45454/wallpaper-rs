@@ -63,6 +63,8 @@ object Native {
 
     external fun playback(active: Boolean)
 
+    external fun media(told: String?, cover: IntArray?, width: Int, access: Boolean)
+
     external fun clips(engine: Long): String?
 
     external fun film(engine: Long): String?

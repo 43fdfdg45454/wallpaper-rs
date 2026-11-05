@@ -197,6 +197,11 @@ their text. A second-version package receives only what it declares: the sound f
 pointer for `pointer` or `clicks`, clicks for `clicks` and the media player for `media`, whatever its
 scenes, scripts or page would read; in first-version scenes, scripts that declare nothing use the
 inputs of what they import from the `wprs` module (`audio` and `input`). Web pages always declare their inputs, and their facets come from that list.
+On the phone `media` comes from the media sessions of the system, which Android shows to an app
+only through notification access: the app asks for it with an explanation when the user turns on
+*Show what plays* for a package, never reads a notification, and follows the active session by its
+callbacks only while a shown wallpaper with the grant uses it; without that access the package
+gets `enabled: false`, its placeholders and empty texts, as without the grant.
 
 ### RGB lighting
 
@@ -355,7 +360,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `script_shortcuts` | has scripts that use `shortcuts` | runs | without |
 | `script_hierarchy` | has scripts that use `hierarchy` | runs | runs |
 | `layer_events` | sets `solid: { "alpha" }`, `hit` bones, `click:`, `enter:` or `leave:` triggers or scripts that handle pointer events | runs | runs |
-| `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | runs | without |
+| `media_info` | follows `media` values, cover assets, `media:` triggers or scripts that use the media player | runs | runs |
 
 ## Profiles
 

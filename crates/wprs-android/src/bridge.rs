@@ -1,7 +1,7 @@
 use crate::exports::{engine, on};
 use crate::hearing::{self, MAX_CAPTURE};
 use crate::power;
-use jni::objects::{JByteArray, JObject, JString};
+use jni::objects::{JByteArray, JIntArray, JObject, JString};
 use jni::sys::{jboolean, jfloat, jint, jlong};
 use jni::{EnvUnowned, jni_mangle};
 use std::path::Path;
@@ -109,5 +109,30 @@ pub fn clip<'a>(
         };
         let surface = unsafe { window.to_surface(env.get_raw().cast()) };
         Ok(unsafe { JObject::from_raw(env, surface.cast()) })
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn media<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    told: JString<'a>,
+    cover: JIntArray<'a>,
+    width: jint,
+    access: jboolean,
+) {
+    on(&mut env, |env| {
+        crate::playing::allow(access);
+        let told = if told.is_null() || !access { None } else { Some(told.try_to_string(env)?) };
+        let argb = match cover.is_null() || told.is_none() {
+            true => None,
+            false => {
+                let mut argb = vec![0; cover.len(env)?.min(1 << 20)];
+                cover.get_region(env, 0, &mut argb)?;
+                Some(argb)
+            }
+        };
+        crate::playing::heard(told.as_deref(), argb.as_deref(), width.unsigned_abs());
+        Ok(())
     })
 }

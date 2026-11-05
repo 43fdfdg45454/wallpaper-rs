@@ -15,6 +15,7 @@ mod guarded;
 mod lit;
 mod looks;
 mod pages;
+mod played;
 mod records;
 mod refused;
 mod relief;

@@ -1,48 +1,25 @@
 use super::PageSlot;
 use crate::inputs;
 use crate::media::{Cover, Frame};
-use base64::Engine;
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::sync::Arc;
 use std::time::Instant;
 use wprs_core::model::Input;
 use wprs_web::ToWeb;
 
-const SHADES: [&str; 5] = ["primary", "secondary", "tertiary", "text", "contrast"];
-
-fn hex(c: [f32; 4]) -> String {
-    let byte = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-    format!("#{:02x}{:02x}{:02x}", byte(c[0]), byte(c[1]), byte(c[2]))
+pub(super) fn told(granted: bool, frame: Option<&Frame>, cover: Option<Option<&Cover>>) -> Value {
+    let state = frame.filter(|_| granted).map(|f| f.at(Instant::now()));
+    let picture = cover.map(|c| c.and_then(|c| c.pixels.image()).map(|i| png(&i)).unwrap_or_default());
+    wprs_format::page::heard(state.as_ref(), picture)
 }
 
-fn png(cover: &Cover) -> String {
+pub(crate) fn png(image: &image::RgbaImage) -> String {
+    use base64::Engine;
     let mut out = std::io::Cursor::new(Vec::new());
-    let written = cover.pixels.image().map(|i| i.write_to(&mut out, image::ImageFormat::Png).is_ok());
-    match written {
-        Some(true) => base64::engine::general_purpose::STANDARD.encode(out.into_inner()),
-        _ => String::new(),
+    match image.write_to(&mut out, image::ImageFormat::Png) {
+        Ok(()) => base64::engine::general_purpose::STANDARD.encode(out.into_inner()),
+        Err(_) => String::new(),
     }
-}
-
-pub(super) fn told(granted: bool, frame: Option<&Frame>, cover: Option<String>) -> Value {
-    let Some(f) = frame.filter(|_| granted) else { return json!({ "enabled": false, "cover": "" }) };
-    let s = f.at(Instant::now());
-    let present = s.present();
-    let state = match (present, s.playing) {
-        (false, _) => "stopped",
-        (true, true) => "playing",
-        (true, false) => "paused",
-    };
-    let colors = s.colors.map(|c| {
-        SHADES.iter().zip(c).map(|(k, v)| (k.to_string(), json!(hex(v)))).collect::<serde_json::Map<_, _>>()
-    });
-    let mut told = json!({ "enabled": true, "state": state, "title": s.title, "artist": s.artist, "album": s.album,
-        "colors": colors, "position": if present { s.position } else { 0.0 }, "duration": if present { s.duration } else { 0.0 },
-        "rate": s.rate });
-    if let Some(cover) = cover {
-        told["cover"] = json!(cover);
-    }
-    told
 }
 
 impl PageSlot {
@@ -60,8 +37,7 @@ impl PageSlot {
         let cover = frame.as_ref().and_then(|f| f.cover.clone());
         let serial = cover.as_ref().map_or(0, |c| c.serial);
         let fresh = std::mem::replace(&mut self.cover, serial) != serial;
-        let sent = fresh.then(|| cover.as_deref().map(png).unwrap_or_default());
-        Some(ToWeb::Media(told(granted, frame.as_deref(), sent)))
+        Some(ToWeb::Media(told(granted, frame.as_deref(), fresh.then_some(cover.as_deref()))))
     }
 }
 
@@ -72,7 +48,7 @@ mod tests {
 
     #[test]
     fn a_page_gets_the_track_with_its_colors_and_never_a_path() {
-        assert_eq!(told(false, None, Some(String::new())), json!({ "enabled": false, "cover": "" }));
+        assert_eq!(told(false, None, Some(None)), serde_json::json!({ "enabled": false, "cover": "" }));
         let colors = Some([
             [1.0, 0.0, 0.0, 1.0],
             [0.0, 1.0, 0.0, 1.0],

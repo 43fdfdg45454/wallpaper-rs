@@ -19,6 +19,7 @@ pub(crate) struct Web {
     pub(crate) network: Vec<String>,
     pub(crate) storage: bool,
     pub(crate) uses: [bool; 3],
+    pub(crate) media: bool,
 }
 
 pub(crate) fn host(id: &str, generation: u64) -> String {
@@ -35,6 +36,7 @@ fn web(package: &mut Package<BufReader<File>>, path: &Path) -> Result<Web, Error
     let m = &package.manifest;
     let block = m.web.clone().unwrap_or_default();
     let uses = [Input::Audio, Input::Pointer, Input::Clicks].map(|i| m.inputs.contains(&i));
+    let media = m.inputs.contains(&Input::Media);
     let network = m.permissions.iter().flat_map(|p| &p.network).flat_map(|n| n.allow.clone()).collect();
     let entries = package.entries.iter().map(|e| e.path.clone());
     let entries = entries.filter(|p| p != wprs_format::MANIFEST && p != wprs_format::SIGNATURE).collect();
@@ -48,7 +50,7 @@ fn web(package: &mut Package<BufReader<File>>, path: &Path) -> Result<Web, Error
     };
     let background = block.background.unwrap_or_else(|| "#000000".into());
     let (wpak, storage) = (path.to_owned(), block.storage_kib > 0);
-    Ok(Web { wpak, entry, entries, preload, background, network, storage, uses })
+    Ok(Web { wpak, entry, entries, preload, background, network, storage, uses, media })
 }
 
 pub(crate) fn is_web(package: &Package<BufReader<File>>) -> bool {

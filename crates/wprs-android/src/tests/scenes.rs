@@ -38,7 +38,7 @@ pub(super) fn scenes() {
     };
     assert_eq!(
         [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
-        [json!([]), json!(["sound"]), json!(["media_info"])]
+        [json!([]), json!(["sound"]), json!([])]
     );
     assert!(
         about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),
@@ -60,6 +60,7 @@ pub(super) fn scenes() {
     assert!(
         ask(json!({ "op": "property", "uid": pulse, "key": "nothing", "value": 1 }))["error"].is_string()
     );
+    super::played::pulse_shows_what_plays(&pulse, &path);
     let scene = pack::load(Path::new(&path)).unwrap();
     let mut stage = Stage::new(pulse.clone(), scene);
     assert_eq!(stage.wants(), [false, false]);

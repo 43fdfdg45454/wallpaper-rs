@@ -180,6 +180,9 @@ these are the differences:
   `"hidden"` and `onPause(true)` fires). After 5 minutes hidden it is closed and loads again when
   shown. A renderer that crashes loads the page again, up to three times. Touches reach the page
   only after its first paint.
+- **Media.** `onMedia` gets the same as on the desktop from the media sessions of the phone, once
+  the user allows `media` (and `media_network` for a page with network origins) and gives the app
+  notification access; the cover arrives as a PNG the page turns into a `blob:` address.
 - **Sandbox.** Layers 1 to 4 are the same, enforced by intercepting every request. Network loads
   are blocked in the WebView unless the package declares origins and the user allowed `network`,
   and only those origins pass; cookies, service workers, safe browsing and the WebView's metrics

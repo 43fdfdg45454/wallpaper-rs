@@ -46,6 +46,14 @@
     <string name="lacks_shortcut">Los atajos que elijas para él solo se abren en el escritorio.</string>
     <string name="lacks_script_shortcuts">Sus scripts no abren atajos en el teléfono.</string>
     <string name="lacks_script_hierarchy">Sus scripts no cambian los padres de las capas en el teléfono.</string>
+    <string name="show_media">Mostrar lo que suena</string>
+    <string name="media_note">Mientras se muestra, le llegan el título, el artista, el álbum, la carátula y el avance de lo que suena en un reproductor del teléfono; nada de eso se guarda, se registra ni se envía.</string>
+    <string name="media_access_off">El teléfono todavía no le dio a esta app acceso a lo que suena, así que el fondo muestra sus imágenes de reemplazo.</string>
+    <string name="media_access_open">Abrir el ajuste</string>
+    <string name="media_access_title">Permitir el acceso a lo que suena</string>
+    <string name="media_access_why">Android solo deja que una app vea lo que suenan otros reproductores mediante el acceso a las notificaciones. Esta app lo usa únicamente para leer el título, el artista, el álbum, la carátula y el avance de la pista mientras un fondo al que se lo permitiste los muestra; nunca lee tus notificaciones y no guarda, registra ni envía nada. Activa wallpaper-rs en la lista que se abre.</string>
+    <string name="show_media_network">Mostrar lo que suena aunque pueda salir a internet</string>
+    <string name="media_network_note">Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir del teléfono.</string>
     <string name="lacks_media_info">En el teléfono muestra sus imágenes de reemplazo en vez de la carátula, el título y el avance de lo que suena.</string>
     <string name="lacks_rgb">Sus colores no se envían a la iluminación RGB en el teléfono.</string>
     <string name="failed_without_reason">Algo falló sin dar ningún motivo.</string>

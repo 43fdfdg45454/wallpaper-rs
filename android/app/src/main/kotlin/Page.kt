@@ -112,8 +112,9 @@ class Page(context: Context, private val handle: Long, spec: JSONObject, val sur
     private inner class Bridge {
         @JavascriptInterface
         fun post(message: String) {
-            if (message.startsWith(AUDIO)) heard()
-            val reply = Native.heard(handle, message) ?: return
+            val reply = Native.heard(handle, message)
+            if (message.startsWith(AUDIO) || message.startsWith(MEDIA)) heard()
+            reply ?: return
             web.post { web.evaluateJavascript(reply, null) }
         }
     }
@@ -122,6 +123,7 @@ class Page(context: Context, private val handle: Long, spec: JSONObject, val sur
         private const val NAME = "wprs-page"
         private const val BRIDGE = "wprsHost"
         private const val AUDIO = "{\"audio\""
+        private const val MEDIA = "{\"media\""
 
         fun answer(text: String): WebResourceResponse? {
             val reply = JSONObject(text)

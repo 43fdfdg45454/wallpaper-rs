@@ -10,6 +10,7 @@ use wprs_core::model::Input;
 #[cfg(target_os = "android")]
 mod exports;
 mod folders;
+mod heard;
 mod package;
 pub(crate) mod script;
 pub(crate) mod serve;
@@ -41,6 +42,7 @@ pub(crate) struct View {
     audio: bool,
     said: u32,
     files: BTreeMap<String, PathBuf>,
+    heard: Option<(bool, u64, u64)>,
 }
 
 static VIEWS: Mutex<BTreeMap<i64, View>> = Mutex::new(BTreeMap::new());
@@ -93,6 +95,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
         audio: false,
         said: 0,
         files: BTreeMap::new(),
+        heard: None,
     };
     let mut views = views();
     let view = views.entry(handle).or_insert_with(fresh);
@@ -113,6 +116,10 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
 
 pub(crate) fn close(handle: i64) {
     views().remove(&handle);
+}
+
+pub(crate) fn heeds(handle: i64) -> bool {
+    views().get(&handle).is_some_and(|v| v.heard.is_some() && heard::allowed(v))
 }
 
 pub(crate) fn hearing(handle: i64) -> bool {

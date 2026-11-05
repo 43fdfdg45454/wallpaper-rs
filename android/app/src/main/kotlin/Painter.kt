@@ -12,6 +12,7 @@ class Painter(
     private val tilt: Tilt,
     private val hearing: Hearing,
     private val pages: Pages,
+    private val players: Players? = null,
     private val touchable: (Boolean) -> Unit = {},
 ) {
     var handle = 0L
@@ -132,6 +133,7 @@ class Painter(
         page = null
         tilt.follow(this, 0)
         hearing.follow(this, false)
+        players?.follow(this, false)
         clips.forEach { videos.leave(key(it), this) }
         clips = emptyList()
         video?.let { videos.leave(it, this) }
@@ -165,6 +167,7 @@ class Painter(
         val inputs = if (video == null) Native.inputs(handle) else 0
         hears = shown && inputs and AUDIO != 0
         hearing.follow(this, hears)
+        players?.follow(this, shown && inputs and MEDIA != 0)
         playing = shown && inputs and CLIPS != 0
         clips.forEach { videos.update(key(it)) }
         val touch = inputs and TOUCH != 0
@@ -185,6 +188,7 @@ class Painter(
         const val AUDIO = 1
         const val TOUCH = 2
         const val CLIPS = 4
+        const val MEDIA = 8
         const val FILE = "file://"
         const val AUDIO_MS = 33L
     }

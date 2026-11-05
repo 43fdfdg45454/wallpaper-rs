@@ -55,6 +55,7 @@ impl Stage {
             _ => 0,
         };
         let heard = hears && self.runtime.set_audio(hearing::frame());
+        let played = self.hear_media();
         let buttons = if allowed.0 && allowed.1 { self.touch.1 } else { 0 };
         let pointer = self.runtime.pointer().follow(self.touch.0, buttons, dt as f32);
         let felt = feels && self.runtime.set_pointer(pointer);
@@ -97,6 +98,7 @@ impl Stage {
         if !(force
             || due
             || heard
+            || played
             || felt
             || acted
             || tipped

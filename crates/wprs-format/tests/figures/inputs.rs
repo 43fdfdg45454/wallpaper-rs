@@ -51,7 +51,10 @@ fn declared_script_parts_and_media_become_inputs() {
     let declared = package.manifest.declared().unwrap();
     assert!(declared.audio && declared.media && !declared.cursor);
     assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_ok());
-    assert_eq!(features::lacks("android", &package.facts.features), ["media_info"], "the phone runs scripts");
+    assert!(
+        features::lacks("android", &package.facts.features).is_empty(),
+        "the phone runs scripts and media"
+    );
 }
 
 #[test]

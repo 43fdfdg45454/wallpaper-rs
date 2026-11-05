@@ -30,7 +30,7 @@ class Feel(private val pages: Pages) : View.OnTouchListener {
 @Composable
 fun Live(main: Main, vararg changes: Any?, modifier: Modifier = Modifier.fillMaxSize()) = Box(modifier) {
     val feel = remember { Feel(main.pages) }
-    val painter = remember { Painter(true, main.videos, main.tilt, main.hearing, main.pages) { feel.on = it }.also { feel.painter = it } }
+    val painter = remember { Painter(true, main.videos, main.tilt, main.hearing, main.pages, main.players) { feel.on = it }.also { feel.painter = it } }
     LaunchedEffect(*changes) { Render.post(painter::refresh) }
     AndroidView({ SurfaceView(it).apply { holder.addCallback(Preview(this, painter, main.pages)); setOnTouchListener(feel) } }, Modifier.fillMaxSize())
 }

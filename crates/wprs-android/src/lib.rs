@@ -39,6 +39,7 @@ mod media;
 mod pack;
 mod page;
 mod pairing;
+mod playing;
 mod power;
 mod private;
 mod props;

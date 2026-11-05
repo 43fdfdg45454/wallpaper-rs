@@ -24,6 +24,6 @@ impl Engine {
 
     pub(super) fn page_inputs(&self, handle: i64) -> i32 {
         let hears = page::hearing(handle) && Power::now().moving() && crate::power::hears();
-        i32::from(hears) | (i32::from(page::touched(handle)) << 1)
+        i32::from(hears) | (i32::from(page::touched(handle)) << 1) | (i32::from(page::heeds(handle)) << 3)
     }
 }
