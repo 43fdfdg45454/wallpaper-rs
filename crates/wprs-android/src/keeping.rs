@@ -43,11 +43,11 @@ pub(crate) fn forget(lib: &wprs_library::Library, items: &[wprs_library::Item]) 
 }
 
 impl Keeping {
-    pub(crate) fn new(pack: &Pack, lock: bool) -> Keeping {
+    pub(crate) fn new(pack: &Pack, lock: bool, preview: bool) -> Keeping {
         let stores = pack.scene.scripts.iter().any(|s| s.wants(ScriptApi::Storage));
         let dir = stores.then(|| crate::store::dir().ok()).flatten();
         let screen = crate::choice::row(lock);
-        let keeper = dir.and_then(|d| Keeper::open(&d.join("storage"), &pack.id, screen, true));
+        let keeper = dir.and_then(|d| Keeper::open(&d.join("storage"), &pack.id, screen, !preview));
         Keeping { keeper, ..Keeping::default() }
     }
 

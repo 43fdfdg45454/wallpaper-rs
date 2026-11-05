@@ -23,7 +23,7 @@ impl Engine {
                 {
                     return stage.refresh();
                 }
-                _ => Some(Stage::on(uid.clone(), pack, self.lock)),
+                _ => Some(Stage::on(uid.clone(), pack, (self.lock, self.preview))),
             },
             Some((_, Err(e))) => {
                 log::warn!("cannot show the scene: {e}");
