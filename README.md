@@ -991,7 +991,9 @@ contenido para adultos*) y los instala en la biblioteca, comprobados con el índ
 del repositorio; un paquete instalado así es el mismo elemento de la biblioteca en el teléfono y
 en el ordenador. Una vez al día, con las mismas reglas de red y batería que la sincronización de
 cada hora (al cambiar *Sincronizar también con datos móviles* cambia también la comprobación que
-espera) y solo si hay repositorios, el teléfono actualiza sus índices como el escritorio: la
+espera), solo si hay repositorios y mientras *Buscar actualizaciones en los repositorios cada día*
+(`repos.auto_refresh`, activado de serie como en el escritorio, en los ajustes del teléfono) siga
+activado, el teléfono actualiza sus índices como el escritorio: la
 pestaña muestra un aviso con cuántos paquetes tienen versión nueva, *Actualizaciones* los lista con
 *Actualizar* (la versión nueva ocupa el lugar de la vieja, con sus listas y ajustes) y *Buscar
 actualizaciones* lo hace al momento.
@@ -2562,7 +2564,7 @@ misma pausa.
 - Sin telemetría ni estadísticas de uso. El servicio solo se conecta a internet para los
   proveedores de fondos, los repositorios y el servidor propio que añadas tú. Al arrancar solo contacta con un
   proveedor si le toca su sincronización automática; la comprobación diaria de los repositorios
-  (`repos.auto_refresh`) empieza 10 minutos después. Un repositorio solo puede redirigir a su propia
+  (`repos.auto_refresh`, también en los ajustes del teléfono) empieza 10 minutos después. Un repositorio solo puede redirigir a su propia
   dirección y a las réplicas que declara en su raíz firmada.
 - Los proveedores de fondos en línea (Bing, APOD, Wikimedia, Wallhaven, WebDAV/Nextcloud, Immich)
   solo se usan si los configuras. Los servicios públicos se usan siempre por HTTPS; todos llevan un

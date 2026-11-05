@@ -28,6 +28,7 @@
     <string name="votes_down">Down %1$d</string>
     <string name="votes_note">Votes go to your server with your account; it keeps only the counts and your own vote.</string>
     <string name="vote_counts">Show vote counts from your server</string>
+    <string name="auto_refresh">Check repositories for updates every day</string>
     <string name="flashing">Flashing lights</string>
     <string name="mature_warning">This wallpaper has mature content.</string>
     <string name="flashing_warning">This wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.</string>

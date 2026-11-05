@@ -47,6 +47,23 @@ class UpdatesTest {
         }
     }
 
+    @Test
+    fun turningTheDailyCheckOffStopsIt() {
+        storage()
+        val work = WorkManager.getInstance(context)
+        val states = { work.getWorkInfosForUniqueWork(Updates.WORK).get().map { it.state } }
+        try {
+            Updates.schedule(context, repos = 1)
+            assertTrue("on by default, as on the computer", waitFor { states() == listOf(WorkInfo.State.ENQUEUED) })
+            Native.setting(Updates.SETTING, "false")
+            Updates.schedule(context, repos = 1)
+            assertTrue(waitFor { states().all { it == WorkInfo.State.CANCELLED } })
+        } finally {
+            Native.setting(Updates.SETTING, "true")
+            work.cancelUniqueWork(Updates.WORK).result.get()
+        }
+    }
+
     private companion object {
         const val NETWORK = "sync_network"
     }

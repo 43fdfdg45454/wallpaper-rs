@@ -15,6 +15,7 @@ import org.json.JSONObject
 
 class RepoCheck(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
+        if (!Updates.on()) return Result.success()
         val found = runCatching { JSONArray(Native.account(JSONObject().put("op", "refresh_repos").put("force", false).toString())) }
         Updates.found(found.getOrNull()?.length() ?: return Result.retry())
         return Result.success()
@@ -23,6 +24,7 @@ class RepoCheck(context: Context, params: WorkerParameters) : Worker(context, pa
 
 object Updates {
     const val WORK = "repos"
+    const val SETTING = "repos.auto_refresh"
     val count = mutableIntStateOf(0)
     private val main = Handler(Looper.getMainLooper())
 
@@ -32,9 +34,11 @@ object Updates {
 
     fun repos() = runCatching { JSONObject(Native.account("{\"op\": \"repos\"}")).optJSONArray("repos")?.length() }.getOrNull() ?: 0
 
+    fun on() = runCatching { Native.setting(SETTING, null) }.getOrNull() != "false"
+
     fun schedule(context: Context, repos: Int = repos()) {
         val work = WorkManager.getInstance(context)
-        if (repos == 0) {
+        if (repos == 0 || !on()) {
             work.cancelUniqueWork(WORK)
             return
         }

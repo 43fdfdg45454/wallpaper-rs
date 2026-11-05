@@ -57,6 +57,7 @@ private val TOGGLES = listOf(
     Triple(R.string.scene_capture, "playback.scene_capture", "true" to "false"),
     Triple(R.string.hide_mature, "library.hide_mature", "true" to "false"),
     Triple(R.string.vote_counts, "repos.vote_counts", "true" to "false"),
+    Triple(R.string.auto_refresh, Updates.SETTING, "true" to "false"),
     Triple(R.string.show_mature, Unveil.KEY, "true" to "false"),
 )
 private val KEYS = CHOICES.map { it.second } + TOGGLES.map { it.second }
@@ -82,7 +83,13 @@ fun Settings(main: Main) {
             changes++
         }
     }
-    val set = { key: String, value: String -> change { Native.setting(key, value).also { Unveil.load() } } }
+    val set = { key: String, value: String ->
+        change {
+            Native.setting(key, value)
+            Unveil.load()
+            if (key == Updates.SETTING) Updates.schedule(main)
+        }
+    }
     LazyColumn {
         item { Header(stringResource(R.string.settings)) }
         items(CHOICES) { (label, key, options) ->

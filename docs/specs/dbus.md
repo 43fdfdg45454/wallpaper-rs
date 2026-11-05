@@ -576,7 +576,7 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `library.thumb_cache_mb` | `64` to `8192`, size of the thumbnail cache | `512` |
 | `library.hide_mature` | leave packages rated `mature` out of `Search` (unless the query has its own `content:` filter; `SearchPage.query` stays the one given) and `Browse`; a change emits `library` and `repos` | `false` |
 | `library.show_mature` | show the previews of packages rated `mature` without blur; otherwise clients (app, tray, phone) blur them until the user confirms once per package with `Library1.Confirm`; a change emits `library` and `repos` | `false` |
-| `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h | `true` |
+| `repos.auto_refresh` | refresh each repository 10 min after start and then every 24 h; the phone reads it for its daily check | `true` |
 | `repos.vote_counts` | fetch and show vote counts from the linked server in the catalog (`GetVotes`); voting itself stays possible | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |

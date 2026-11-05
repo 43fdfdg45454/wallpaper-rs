@@ -27,6 +27,7 @@
     <string name="votes_down">En contra %1$d</string>
     <string name="votes_note">Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu propio voto.</string>
     <string name="vote_counts">Mostrar los recuentos de votos de tu servidor</string>
+    <string name="auto_refresh">Buscar actualizaciones en los repositorios cada día</string>
     <string name="flashing">Destellos</string>
     <string name="mature_warning">Este fondo tiene contenido para adultos.</string>
     <string name="flashing_warning">Este fondo destella o muestra patrones rápidos que pueden provocar crisis a personas con epilepsia fotosensible.</string>
