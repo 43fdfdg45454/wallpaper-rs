@@ -97,3 +97,32 @@ fn package_effects_are_imported_listed_and_inspected() {
         wprs_editor::check::review(&project.doc, Some(&dir))
     );
 }
+
+#[test]
+fn shine_styles_are_picked_from_drawn_choices() {
+    let root = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    let dir = root.path().join("shine");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.shine", "Shine", "en").unwrap()).unwrap();
+    let layer = json!({"add_layer": {"kind": "solid", "id": "fill"}});
+    project.act(&serde_json::from_value::<Action>(layer).unwrap()).unwrap();
+    let pointer = wprs_editor::layers::find(&project.doc, "fill").unwrap();
+    let effect = json!({"add": {"pointer": format!("{pointer}/effects"), "value": [{ "effect": "shine" }]}});
+    project.act(&serde_json::from_value::<Action>(effect).unwrap()).unwrap();
+    let at = format!("{pointer}/effects/0");
+    let fields = fields_with(&project.doc, &at, 0.0, &project.effects());
+    let style = fields.iter().find(|f| f.key == "style").unwrap();
+    assert_eq!((style.widget.as_str(), &style.sample), ("styles", &json!({ "effect": "shine" })));
+    assert_eq!(style.options, vec![json!(0.0), json!(1.0), json!(2.0), json!(3.0)]);
+    assert_eq!(style.names, ["Line", "Double line", "Ring", "Glint"]);
+    let blend = fields.iter().find(|f| f.key == "blend").unwrap();
+    assert_eq!(blend.widget, "enum");
+    let set = json!({"set": {"pointer": format!("{at}/params/style"), "value": 2}});
+    project.act(&serde_json::from_value::<Action>(set).unwrap()).unwrap();
+    assert_eq!(project.doc.pointer(&format!("{at}/params/style")), Some(&json!(2)));
+    let wrong = json!({"set": {"pointer": format!("{at}/params/style"), "value": 9}});
+    project.act(&serde_json::from_value::<Action>(wrong).unwrap()).unwrap();
+    let found = wprs_editor::check::review(&project.doc, Some(&dir));
+    assert!(found.iter().any(|p| !p.warning && p.message.contains("style")), "{found:?}");
+}

@@ -1435,7 +1435,8 @@ de movimiento, el VHS, los fluidos, el destello de lente y el chisporroteo eléc
 nuevos de los efectos que ya existían: rayos de luz direccionales o en estrella, aberración cromática
 en cuatro modos, grano en blanco y negro o con otro modo de fusión, desenfoque mezclado con la imagen,
 fondo visible en el iris y la lente, reflejo inclinado, desplazamiento sin repetición, sacudida con
-ruido, fricción y límites, brillo con fusión y degradado, balanceo doble, remolino elíptico,
+ruido, fricción y límites, brillo con fusión, degradado y cuatro estilos (línea, línea doble, anillo
+o destello, elegidos en el editor entre dibujos de cada uno), balanceo doble, remolino elíptico,
 ondulaciones con perspectiva, reflejo, tinte, paredes y velocidad, ondas dobles con perspectiva y un
 desfase por píxel (`phase`) que evita que las zonas vecinas se muevan a la vez. Con los valores por
 defecto todo se ve exactamente como antes. Los efectos que dependen del tiempo dejan de pedir

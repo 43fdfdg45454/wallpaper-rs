@@ -23,18 +23,11 @@ ColumnLayout {
     }
 
     function at(list, option) {
-        const key = JSON.stringify(option);
-        return list.findIndex(item => JSON.stringify(item) === key);
+        return SceneOptions.at(list, option);
     }
 
     function name(option) {
-        if (option !== null && typeof option === "object" && option.layer !== undefined)
-            return App.tr("Layer %1", option.layer);
-        if (field.widget === "ref:language")
-            return ManifestWords.language(option);
-        if (["variant", "ref:effect"].includes(field.widget) || (field.widget === "enum" && !(field.names ?? []).length))
-            return SceneWords.value(option);
-        return (field.names ?? [])[at(field.options, option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
+        return SceneOptions.name(field, option);
     }
 
     Layout.leftMargin: field.depth * Kirigami.Units.largeSpacing
@@ -119,6 +112,7 @@ ColumnLayout {
                 "curve": editors.curve,
                 "stops": pairsEditor,
                 "points": pairsEditor,
+                "styles": stylesEditor,
                 "list": editors.list,
                 "ref:mask": editors.mask,
                 "ref:model": editors.rig,
@@ -167,6 +161,14 @@ ColumnLayout {
         id: pairsEditor
 
         ScenePairs {
+            host: input
+        }
+    }
+
+    Component {
+        id: stylesEditor
+
+        SceneStyles {
             host: input
         }
     }

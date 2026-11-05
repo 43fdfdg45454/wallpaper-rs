@@ -4,6 +4,8 @@ use crate::ops::escape;
 use serde_json::{Value, json};
 use wprs_scene::{Entry, ParamDef, ParamKind, Text, Variant};
 
+const PICTURED: [(&str, &str); 1] = [("shine", "style")];
+
 fn source(current: Option<&Value>) -> String {
     SOURCES.iter().find(|s| current.is_some_and(|c| c.get(**s).is_some())).map_or("", |s| *s).into()
 }
@@ -43,10 +45,11 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
     }
     let labeled = p.kind == ParamKind::Enum && p.values.iter().all(|e| !e.label.is_empty());
     let names = if labeled { p.values.iter().map(|e: &Entry| local(&e.label)).collect() } else { Vec::new() };
+    let drawn = value["effect"].as_str().filter(|e| PICTURED.contains(&(*e, p.id.as_str())));
     Field {
         pointer: format!("{base}/{}", escape(&p.id)),
         key: p.id.clone(),
-        widget: widget.into(),
+        widget: drawn.map_or(widget, |_| "styles").into(),
         value: current.cloned().unwrap_or_default(),
         default: serde_json::to_value(&p.default).unwrap_or_default(),
         set: current.is_some(),
@@ -57,10 +60,10 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         depth,
         names,
         title: local(&p.label),
-        sample: if p.kind == ParamKind::Mask {
-            json!({ "channels": p.channels.unwrap_or(1) })
-        } else {
-            Value::Null
+        sample: match (p.kind, drawn) {
+            (ParamKind::Mask, _) => json!({ "channels": p.channels.unwrap_or(1) }),
+            (_, Some(effect)) => json!({ "effect": effect }),
+            _ => Value::Null,
         },
         help: local(&p.help),
         ..Field::default()

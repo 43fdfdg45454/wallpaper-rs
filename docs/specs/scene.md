@@ -1241,7 +1241,7 @@ rules are also what a phone or a laptop on battery draws.
 | `reflection` | `angle` (−360 to 360) turns the mirror line around its middle |
 | `scroll` | `repeat_x`, `repeat_y`: off, the picture leaves that side instead of coming back |
 | `shake` | `noise` (0 to 1, jerkier), `friction` (0 to 1, longer near rest), `bounds` (0 to 1 of `strength` on each axis), `phase` |
-| `shine` | `blend` (`add`, as before), `gradient` (read across the band) |
+| `shine` | `blend` (`add`, as before), `gradient` (read across the band), `style` (0 a line, as before; 1 a double line, a thinner one at 60 % trailing the first; 2 a ring that grows from the middle of the layer and ignores `angle`; 3 a glint, a star with a bright core and four rays that travels along `angle`), picked in the editor from drawings of each style |
 | `sway` | `double` (a second, slower wave over the first), `phase` |
 | `twirl` | `aspect` (0.1 to 10, an ellipse), `inner` (0 to 1, turned whole inside), `noise` (0 to 1), `repeat` (wraps the picture around instead of stretching its edge) |
 | `water_ripple` | `perspective` (0 to 1, smaller waves towards the top), `reflection` (a picture seen in the slopes), `tint` (colors the moving water), `walls` (a picture where the water stays still), `speed` (0 to 4) |

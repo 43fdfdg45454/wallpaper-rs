@@ -13,7 +13,18 @@
     { "id": "gap", "type": "float", "default": 1, "min": 0, "max": 8 },
     { "id": "phase", "type": "float", "default": 0, "min": 0, "max": 1 },
     { "id": "blend", "type": "blend", "default": "add" },
-    { "id": "gradient", "type": "texture", "default": "" }
+    { "id": "gradient", "type": "texture", "default": "" },
+    {
+      "id": "style",
+      "type": "enum",
+      "default": 0,
+      "values": [
+        { "value": 0, "label": { "en": "Line", "es": "Línea" } },
+        { "value": 1, "label": { "en": "Double line", "es": "Línea doble" } },
+        { "value": 2, "label": { "en": "Ring", "es": "Anillo" } },
+        { "value": 3, "label": { "en": "Glint", "es": "Destello" } }
+      ]
+    }
   ],
   "passes": [{ "entry": "fs_shine", "inputs": ["previous", "asset:gradient"] }],
   "fuse": "color",
