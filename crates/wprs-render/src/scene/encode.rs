@@ -38,8 +38,16 @@ impl Renderer {
         clock.open(&mut encoder, timing);
         let mut stats = SceneStats::default();
         let frame = pool.frame_groups().clone();
-        let mut k = 0;
+        let (mut k, mut profile) = (0, super::profile::Profile::begin(&self.device));
         while k < ops.len() {
+            if let Some(p) = profile.as_mut() {
+                let (op, target) = (&ops[k], super::profile::target(&ops[k]));
+                let texture = target.map(|t| src.get(pool, t).2);
+                let shape = texture.map_or(((0, 0), wgpu::TextureFormat::R8Unorm), |t| {
+                    ((t.width(), t.height()), t.format())
+                });
+                p.start(&mut encoder, || super::profile::label(op, shape.0, shape.1));
+            }
             match &ops[k] {
                 Op::Copy { from, to, origin, size, at } => {
                     let ((_, _, from), (_, _, to)) = (src.get(pool, *from), src.get(pool, *to));
@@ -141,6 +149,7 @@ impl Renderer {
                     stats.passes += 1;
                 }
             }
+            profile.iter_mut().for_each(|p| p.end(&mut encoder));
         }
         let blit = |e, p| pipes.get(&self.device, Shader::Scene(e), Mode::Replace, p);
         if let Some((slot, pipeline)) =
@@ -157,9 +166,14 @@ impl Renderer {
             pass.draw(0..4, 0..1);
             (stats.passes, stats.draws) = (stats.passes + 1, stats.draws + 1);
         }
+        if let Some(p) = profile {
+            p.finish(&self.device, &self.queue, &mut encoder);
+        }
         clock.close(&mut encoder, timing);
         encoder.on_submitted_work_done(move || super::flight::done(view, serial));
         let at = Instant::now();
-        (stats, self.queue.submit([encoder.finish()]), at)
+        let submitted = self.queue.submit([encoder.finish()]);
+        super::profile::submitted();
+        (stats, submitted, at)
     }
 }

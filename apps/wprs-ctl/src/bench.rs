@@ -32,6 +32,8 @@ pub enum SceneCommand {
         json: bool,
         #[arg(long, value_parser = ["t0", "t1", "t2", "t3"], help = "Apply the limits of this device tier")]
         tier: Option<String>,
+        #[arg(long, help = "Time each render pass with GPU timestamps, where the GPU has them")]
+        passes: bool,
     },
     #[command(flatten)]
     Author(Box<crate::author::Author>),
@@ -53,9 +55,9 @@ fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAsse
 }
 
 pub fn run(command: SceneCommand) -> Result<()> {
-    let (path, frames, size, fps, quality, screens, json, forced) = match command {
-        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier } => {
-            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier)
+    let (path, frames, size, fps, quality, screens, json, forced, passes) = match command {
+        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier, passes } => {
+            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier, passes)
         }
         SceneCommand::Author(command) => return crate::authoring::run(*command),
     };
@@ -87,6 +89,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let load_ms = start.elapsed().as_secs_f64() * 1e3;
     drop(assets);
     view.profile_particles(true);
+    wprs_render::profile_passes(passes);
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
     let (mut sim, mut steps, mut compiled, mut gpu, mut sim_gpu) = (Vec::new(), 0, 0, Vec::new(), Vec::new());
     let (mut wake, mut spare) = (Wake::Frame, Spare::default());
@@ -139,7 +142,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
         "sim_gpu_ms": spread(sim_gpu),
     });
-    let report = json!({
+    let mut report = json!({
         "path": path, "adapter": r.adapter(), "tier": tier, "unit_ms": unit_ms, "quality": quality, "size": [size.0, size.1],
         "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
         "eval_us": spread(eval), "render_ms": spread(render), "gpu_ms": spread(gpu), "passes": stats.passes, "draws": stats.draws,
@@ -148,6 +151,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "gpu_mib": gpu_mib, "rss_mib": rss_mib,
         "particles": particles, "left_out": view.left_out(),
     });
+    let timed = passes.then(|| crate::benching::passes(&mut report));
     if json {
         println!("{report}");
         return Ok(());
@@ -177,6 +181,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         "created      {created} GPU resources, {compiled} of them shaders, after {WARMUP} warm-up frames"
     );
     view.left_out().iter().for_each(|note| println!("left out     {note}"));
+    timed.iter().for_each(|lines| print!("{lines}"));
     if engine != "none" {
         let per_frame = f64::from(steps) / steady as f64;
         println!(

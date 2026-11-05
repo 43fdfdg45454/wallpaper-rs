@@ -60,8 +60,8 @@ impl Renderer {
             max_buffer_size: offered.max_buffer_size,
             ..wgpu::Limits::downlevel_defaults()
         };
-        let required_features =
-            adapter.features() & (wgpu::Features::TIMESTAMP_QUERY | crate::packed::COMPRESSED);
+        let timing = wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS;
+        let required_features = adapter.features() & (timing | crate::packed::COMPRESSED);
         let descriptor = wgpu::DeviceDescriptor {
             label: Some("wprs-render"),
             required_limits,

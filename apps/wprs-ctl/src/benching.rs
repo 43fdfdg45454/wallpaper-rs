@@ -12,3 +12,13 @@ pub(crate) fn ms_of(value: &serde_json::Value, unit: &str) -> String {
     let at = |key: &str| value[key].as_f64().unwrap_or(0.0);
     format!("{:.3} {unit} (p95 {:.3}, max {:.3})", at("mean"), at("p95"), at("max"))
 }
+
+pub(crate) fn passes(report: &mut serde_json::Value) -> String {
+    let (frames, mut passes) = wprs_render::profiled_passes();
+    passes.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let total: f64 = passes.iter().map(|p| p.1).sum();
+    report["pass_ms"] = json!({ "frames": frames, "total": total, "passes": passes });
+    let head =
+        format!("passes       {total:.3} ms a frame in passes, from GPU timestamps of {frames} frames\n");
+    passes.iter().fold(head, |all, (label, ms)| all + &format!("  {ms:8.4} ms  {label}\n"))
+}
