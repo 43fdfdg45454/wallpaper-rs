@@ -1475,7 +1475,9 @@ msgstr "%1 no es un paquete de recursos"
 
 #: crates/wprs-editor/src/straight.rs
 msgid "straighten the curve after a keyframe on its own, without other changes"
-msgstr "endereza la curva después de un fotograma clave por sí sola, sin otros cambios"
+msgstr ""
+"endereza la curva después de un fotograma clave por sí sola, sin otros "
+"cambios"
 
 #: crates/wprs-editor/src/swarms/emits.rs
 #: crates/wprs-editor/src/swarms/fields.rs crates/wprs-editor/src/swarms/sow.rs
@@ -1494,6 +1496,10 @@ msgstr "el sistema no tiene la fuerza %1"
 #: crates/wprs-editor/src/swarms/emits.rs
 msgid "a life window rises and falls in order, each from 0 to 1"
 msgstr "una ventana de vida sube y baja en orden, cada valor de 0 a 1"
+
+#: crates/wprs-editor/src/swarms/ends.rs
+msgid "%1 has no end to keep yet; give both ends"
+msgstr "%1 aún no tiene un extremo que conservar; da los dos"
 
 #: crates/wprs-editor/src/swarms/fields.rs
 msgid "an emitter starts at least one particle a step"

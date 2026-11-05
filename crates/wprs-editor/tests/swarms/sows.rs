@@ -78,3 +78,18 @@ fn children_curves_and_the_render_look_are_edited() {
     let r = &system(&p)["render"];
     assert!(r.get("stretch").is_none() && r.get("frames").is_none() && r.get("mix").is_none());
 }
+
+#[test]
+fn a_starting_range_keeps_the_ends_and_the_curve_it_is_not_given() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let start = |ranges: serde_json::Value| json!({"ranges": ranges});
+    edit(&mut p, "start", start(json!({"life": [1, {"prop": "density"}, 2]}))).unwrap();
+    edit(&mut p, "start", start(json!({"life": [1.5, null, null]}))).unwrap();
+    assert_eq!(system(&p)["init"]["life"], json!([1.5, {"prop": "density"}, 2]));
+    edit(&mut p, "start", start(json!({"life": [1, 4, null]}))).unwrap();
+    assert_eq!(system(&p)["init"]["life"], json!([1, 4, 2]));
+    edit(&mut p, "start", start(json!({"life": [1, 4, 1]}))).unwrap();
+    assert_eq!(system(&p)["init"]["life"], json!([1, 4]));
+    assert!(edit(&mut p, "start", start(json!({"radial": [null, 4, null]}))).is_err());
+}

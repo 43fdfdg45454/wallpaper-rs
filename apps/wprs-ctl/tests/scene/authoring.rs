@@ -107,3 +107,25 @@ fn every_field_of_a_particle_system_is_set_from_the_command_line() {
     ok(dir, &["scene", "particles", "glow", "lone", "create"]);
     ok(dir, &["scene", "particles", "glow", "lone", "delete"]);
 }
+
+#[test]
+fn starting_ranges_take_a_curve_and_ends_that_follow_a_setting() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    glow(dir);
+    ok(dir, &["scene", "add-layer", "glow", "particles", "--id", "dust"]);
+    ok(dir, &["scene", "add-property", "glow", "slider", "--id", "speed"]);
+    let pt = |args: &[&'static str]| [&["scene", "particles", "glow", "dust"][..], args].concat();
+    ok(dir, &pt(&["start", "--life", "1,prop:speed,2"]));
+    assert_eq!(shown(dir, "/scene/particles/dust/init/life"), json!([1.0, {"prop": "speed"}, 2.0]));
+    ok(dir, &pt(&["start", "--life", "1.5,_"]));
+    assert_eq!(shown(dir, "/scene/particles/dust/init/life"), json!([1.5, {"prop": "speed"}, 2.0]));
+    ok(dir, &pt(&["start", "--life", "1,4"]));
+    assert_eq!(shown(dir, "/scene/particles/dust/init/life"), json!([1.0, 4.0, 2.0]));
+    ok(dir, &pt(&["start", "--life", "1,4,1", "--alpha", "0.5,1,0.5"]));
+    assert_eq!(shown(dir, "/scene/particles/dust/init/life"), json!([1.0, 4.0]));
+    assert_eq!(shown(dir, "/scene/particles/dust/init/alpha"), json!([0.5, 1.0, 0.5]));
+    assert!(fails(dir, &pt(&["start", "--radial", "_,4"])).contains("radial"));
+    assert!(!fails(dir, &pt(&["start", "--life", "1,prop:nothing"])).is_empty());
+    assert_eq!(super::run(dir, &pt(&["start", "--life", "1,2,3,4"])).status.code(), Some(2));
+}

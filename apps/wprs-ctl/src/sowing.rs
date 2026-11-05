@@ -1,10 +1,36 @@
-use crate::sowed::{pair, sweep};
+use crate::sowed::sweep;
 use clap::{ArgAction, Subcommand};
+use serde_json::{Value, json};
 
 const MOMENTS: [&str; 4] = ["static", "spawn", "death", "follow"];
 const LAYER: &str = "A particles layer whose own render changes";
-const RANGE: &str = "MIN,MAX";
+const RANGE: &str = "MIN,MAX[,CURVE]";
 pub(crate) const REPLACE: &str = "Write the plain value over keyframes or another source that drives it";
+
+pub(crate) fn range(text: &str) -> Result<Value, String> {
+    let parts: Vec<&str> = text.split(',').map(str::trim).collect();
+    let bad = || format!("{text} is not MIN,MAX[,CURVE], each end a number, prop:ID or _");
+    let end = |p: &str| match p {
+        "_" => Some(Value::Null),
+        p => p
+            .strip_prefix("prop:")
+            .filter(|id| !id.is_empty())
+            .map(|id| json!({ "prop": id }))
+            .or_else(|| p.parse::<f64>().ok().filter(|n| n.is_finite()).map(|n| json!(n))),
+    };
+    let (Some(low), Some(high)) = (parts.first().and_then(|p| end(p)), parts.get(1).and_then(|p| end(p)))
+    else {
+        return Err(bad());
+    };
+    let curve = match parts.get(2) {
+        None | Some(&"_") => Value::Null,
+        Some(c) => json!(c.parse::<f64>().map_err(|_| bad())?),
+    };
+    match parts.len() <= 3 {
+        true => Ok(json!([low, high, curve])),
+        false => Err(bad()),
+    }
+}
 
 #[derive(Subcommand, Debug)]
 pub enum Sowing {
@@ -40,30 +66,32 @@ pub enum Sowing {
         #[arg(long, value_delimiter = ',', value_parser = ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color", "points", "none"], help = "Values a particles layer cannot change from the system, or none")]
         lock: Vec<String>,
     },
-    #[command(about = "Set the ranges new particles start from; the next value is picked between the two")]
+    #[command(
+        about = "Set the ranges new particles start from; the next value is picked between the two ends, leaning by CURVE (above 1 near MIN more often; kept when left out, 1 picks evenly), and an end may be prop:ID to follow a slider setting or _ to keep it"
+    )]
     Start {
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Seconds")]
-        life: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Pixels a second")]
-        speed: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Degrees of the direction")]
-        angle: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Pixels")]
-        size: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Degrees")]
-        rotation: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Degrees a second")]
-        spin: Option<[f64; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Frame of the atlas")]
-        frame: Option<[f64; 2]>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Seconds")]
+        life: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second")]
+        speed: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees of the direction")]
+        angle: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels")]
+        size: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees")]
+        rotation: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Degrees a second")]
+        spin: Option<Value>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Frame of the atlas")]
+        frame: Option<Value>,
         #[arg(long, value_name = "COLOR,COLOR", value_parser = crate::sowed::colors, help = "Two colors such as #ffffff,#a0c8ff")]
         color: Option<String>,
-        #[arg(allow_hyphen_values = true, long, value_name = RANGE, value_parser = pair, help = "From 0 to 1")]
-        alpha: Option<[f64; 2]>,
+        #[arg(allow_hyphen_values = true, long, value_name = RANGE, value_parser = range, help = "From 0 to 1")]
+        alpha: Option<Value>,
         #[arg(long, value_name = "X,Y:X,Y", value_parser = sweep, allow_hyphen_values = true, help = "Pixels a second, instead of speed and angle")]
         velocity: Option<[[f64; 2]; 2]>,
-        #[arg(long, value_name = RANGE, value_parser = pair, allow_hyphen_values = true, help = "Pixels a second away from the center of the emitter")]
-        radial: Option<[f64; 2]>,
+        #[arg(long, value_name = RANGE, value_parser = range, allow_hyphen_values = true, help = "Pixels a second away from the center of the emitter")]
+        radial: Option<Value>,
         #[command(flatten)]
         tint: Box<crate::seeding::Tint>,
         #[arg(long, value_parser = ["alpha", "velocity", "radial", "hsv", "palette", "gradient"], help = "Remove a range or a way of picking colors")]

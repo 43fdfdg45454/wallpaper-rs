@@ -2165,7 +2165,9 @@ y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` su
 `--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
 `--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
 `render --cycles --order`, `settings --lock`, `force turbulence --time-scale --mask` y las fuerzas
-`noise`, `cap`, `torque`, `spin-drag`, `vortex` y `orbit`.
+`noise`, `cap`, `torque`, `spin-drag`, `vortex` y `orbit`. Los rangos de `start` aceptan
+`MÍN,MÁX,CURVA`, con `prop:ID` en un extremo para enlazarlo a un ajuste y `_` para dejarlo como está;
+sin curva se conserva la que había y `1` la quita (por ejemplo `start --life 1,prop:vida,2`).
 
 La vista previa dibuja también los colisionadores del sistema con el color de su respuesta (rojo
 donde mueren las partículas, verde donde se pegan) y asas para cada tipo: el borde del lienzo, el

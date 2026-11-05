@@ -87,7 +87,10 @@ fn start(doc: &Value, sys: &str, ranges: &Map<String, Value>, clear: &[String]) 
     if tints == 1 {
         TINTS.iter().for_each(|t| drop(init.remove(*t)));
     }
-    ranges.iter().for_each(|(k, v)| drop(init.insert(k.clone(), v.clone())));
+    for (k, v) in ranges {
+        let v = super::ends::kept(&init, k, v)?;
+        init.insert(k.clone(), v);
+    }
     Ok(set(doc, &at, Value::Object(init)))
 }
 

@@ -8,6 +8,9 @@ ctl scene particles "$craft" dust emitter 0 --clear burst --audio-gate false || 
 [ "$(ctl scene show "$craft" /scene/particles/dust/emitters/0/follow)" = '"cursor"' ] || fail "the emitter does not follow the pointer"
 if ctl scene particles "$craft" dust emitter 0 --delay -1 2>/dev/null; then fail "a negative delay was kept"; fi
 ctl scene particles "$craft" dust start --hsv 180,240 --saturation 0.5,1 --hue-steps 6 || fail "the particles took no hues"
+ctl scene particles "$craft" dust start --life 1,3,2 || fail "the life took no curve"
+ctl scene particles "$craft" dust start --life 1,4 || fail "the ends of the life were not set"
+[ "$(ctl scene show "$craft" /scene/particles/dust/init/life | tr -d " \n")" = '[1.0,4.0,2.0]' ] || fail "setting the ends dropped the curve"
 ctl scene particles "$craft" dust start --palette '#ff0000,#00ff00' --palette-noise 0.1,0,0 || fail "the particles took no palette"
 ctl scene particles "$craft" dust start --gradient '0:#000000' --gradient '1:#ffffff' || fail "the particles took no gradient"
 if ctl scene show "$craft" /scene/particles/dust/init/palette >/dev/null 2>&1; then fail "the palette stayed beside the gradient"; fi
