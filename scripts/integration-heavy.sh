@@ -9,7 +9,7 @@ blur = lambda i: {"id": f"b{i}", "type": "adjustment", "effects": [{"effect": "b
 fade = {"id": "fade", "type": "solid", "color": "#ffffff", "opacity": {"timeline": "fade", "keys": [[0, 0], [1, 1]]}}
 scene = {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [960, 540], "background": "#203040"},
          "clock": {"poster_time": 0.5}, "timelines": [{"id": "fade", "duration": 1.0, "loop": "repeat"}],
-         "layers": [fade] + [blur(i) for i in range(120)]}
+         "layers": [fade] + [blur(i) for i in range(250)]}
 with zipfile.ZipFile(sys.argv[1], "w") as package:
     package.writestr("manifest.json", json.dumps(manifest))
     package.writestr("scene.json", json.dumps(scene))

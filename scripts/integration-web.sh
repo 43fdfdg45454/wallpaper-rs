@@ -58,6 +58,15 @@ else
   ctl input grant org.example.glow-page rgb
   lit() { [ "$(ctl rgb strip -o TEST-W --json 2>/dev/null | from "r['width'], r['height'], r['colors']")" = "(2, 1, ['#00ff00', '#00ff00'])" ]; }
   wait_for 10 lit || fail "the page sent no colors with rgb.setImage: $(ctl rgb status)"
+  painted() { ctl rgb status --json | from "r['frames']"; }
+  sends() { local before; before=$(painted); sleep 1; [ "$(painted)" -gt "$before" ]; }
+  ctl rgb covered follow >/dev/null && ctl covered TEST-W true && expect "s['outputs']['TEST-W']['active']" False
+  wait_for 10 sends || fail "the lights stopped following a covered page: $(ctl rgb status)"
+  ctl rgb covered pause >/dev/null && sleep 0.5
+  before=$(painted) && sleep 1
+  [ "$(painted)" = "$before" ] || fail "a covered page sent colors while the lights pause"
+  ctl covered TEST-W false
+  wait_for 10 sends || fail "the lights did not follow the page once shown again"
   ctl input revoke org.example.glow-page rgb && ctl config rgb.enabled false
   kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
