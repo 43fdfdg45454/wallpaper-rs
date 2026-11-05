@@ -11,7 +11,7 @@ use wprs_rgb::{Device, Strip};
 mod covered;
 mod worker;
 
-pub(crate) use covered::{cover, follows, paused};
+pub(crate) use covered::{cover, follows, paused, want};
 
 pub(crate) const EVERY: Duration = Duration::from_millis(33);
 const KEPT: usize = 16;

@@ -103,6 +103,7 @@ impl State {
                     return;
                 }
             }
+            self.want_lights();
             self.sync_players();
             self.feed_inputs();
             self.take_video_frames();

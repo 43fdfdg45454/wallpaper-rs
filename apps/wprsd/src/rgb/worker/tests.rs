@@ -51,11 +51,18 @@ fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawi
     let mut s = session("TEST-RETRY");
     s.rgb = Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow };
     super::super::cover("TEST-RETRY", true);
+    s.retry();
+    assert_eq!(s.wait(), IDLE, "a covered screen that sends no lights kept retrying the server");
+    assert!(s.failed.is_none(), "a covered screen that sends no lights connected to the server");
+    super::super::want("TEST-RETRY", true);
     assert_eq!(s.wait(), RETRY, "covered following lights never tried the server again");
     s.retry();
     assert!(s.failed.is_some() && !lock(&s.status).receiving(), "an unreachable server counted as receiving");
     s.rgb.enabled = false;
     assert_eq!(s.wait(), IDLE, "lights turned off kept retrying");
+    s.rgb.enabled = true;
+    super::super::want("TEST-RETRY", false);
+    assert_eq!(s.wait(), IDLE, "lights kept retrying once the covered scene stopped wanting them");
     super::super::cover("TEST-RETRY", false);
 }
 

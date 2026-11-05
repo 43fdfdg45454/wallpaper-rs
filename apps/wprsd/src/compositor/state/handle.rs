@@ -9,6 +9,7 @@ impl State {
             Command::Remove(output) => {
                 super::super::feed::declare(&output, None);
                 crate::rgb::cover(&output, false);
+                crate::rgb::want(&output, false);
                 drop((self.outputs.remove(&output), self.windows.remove(&output)));
                 self.pictures.prune(&self.outputs);
                 self.follow(&output);

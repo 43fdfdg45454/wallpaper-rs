@@ -1,20 +1,20 @@
 use super::output::Output;
 use super::power::Power;
+use super::state::State;
 use std::time::Instant;
 
 const SIDE: u32 = 320;
 const LIGHTS_FPS: u32 = 30;
 
 impl Output {
-    pub(super) fn lights_only(&self, name: &str) -> bool {
+    pub(super) fn would_light(&self, name: &str) -> bool {
         let scene = self.shown.scene.as_ref().is_some_and(|s| s.sends_rgb());
         let page = self.shown.content.page().is_some_and(|p| p.pack.uses[3]);
-        !self.active
-            && self.covered
-            && self.awake
-            && (scene || page)
-            && crate::rgb::follows()
-            && crate::inputs::lights(name)
+        !self.active && self.covered && self.awake && (scene || page) && crate::inputs::lights(name)
+    }
+
+    pub(super) fn lights_only(&self, name: &str) -> bool {
+        self.would_light(name) && crate::rgb::follows()
     }
 
     pub(super) fn page_view(&self, name: &str, streaming: bool, power: Power) -> ((bool, bool), u32) {
@@ -30,6 +30,12 @@ impl Output {
         (self.last_render, self.failed, self.dirty, self.stale) = (Some(now), 0, false, true);
         self.composed = None;
         false
+    }
+}
+
+impl State {
+    pub(super) fn want_lights(&self) {
+        self.outputs.iter().for_each(|(name, o)| crate::rgb::want(name, o.would_light(name)));
     }
 }
 
@@ -68,6 +74,8 @@ mod tests {
         let mut output = Output::new((16, 9), shown, Sink::Stream(None), 60);
         (output.active, output.covered) = (false, true);
         assert!(!output.lights_only("TEST"), "an output without lights followed them");
+        output.awake = false;
+        assert!(!output.would_light("TEST"), "a paused, locked or battery output asked for the lights");
         let now = Instant::now();
         assert!(!output.lit_only(now), "a frame for the lights counted as drawn");
         assert!(

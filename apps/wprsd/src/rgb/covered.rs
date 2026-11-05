@@ -5,14 +5,23 @@ use std::sync::Mutex;
 use wprs_core::rgb::Covered;
 
 static COVERED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+static WANTED: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
 
-pub(crate) fn cover(source: &str, covered: bool) {
-    let mut set = lock(&COVERED);
-    let changed = if covered { set.insert(source.into()) } else { set.remove(source) };
+fn mark(set: &Mutex<BTreeSet<String>>, source: &str, on: bool) {
+    let mut set = lock(set);
+    let changed = if on { set.insert(source.into()) } else { set.remove(source) };
     drop(set);
     if let Some(l) = LIGHTS.get().filter(|_| changed) {
         l.asks.send(Ask::Covered).ok();
     }
+}
+
+pub(crate) fn cover(source: &str, covered: bool) {
+    mark(&COVERED, source, covered);
+}
+
+pub(crate) fn want(source: &str, wanted: bool) {
+    mark(&WANTED, source, wanted);
 }
 
 pub(crate) fn covered(source: &str) -> bool {
@@ -23,8 +32,8 @@ fn mode() -> Option<Covered> {
     LIGHTS.get().map(|l| lock(&l.status).rgb.when_covered)
 }
 
-pub(crate) fn any() -> bool {
-    !lock(&COVERED).is_empty()
+pub(crate) fn wanted() -> bool {
+    !lock(&WANTED).is_empty()
 }
 
 pub(crate) fn follows() -> bool {

@@ -19,7 +19,7 @@ impl Session {
     }
 
     pub(super) fn retries(&self) -> bool {
-        self.rgb.enabled && self.rgb.when_covered == Covered::Follow && super::super::covered::any()
+        self.rgb.enabled && self.rgb.when_covered == Covered::Follow && super::super::covered::wanted()
     }
 
     pub(super) fn retry(&mut self) {
