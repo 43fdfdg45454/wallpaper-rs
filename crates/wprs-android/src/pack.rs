@@ -24,7 +24,7 @@ const SCENE_VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 const DECODED: u64 = 256 << 20;
 const SCENES: &str = "scenes";
 
-type Stamp = (PathBuf, Option<SystemTime>, u64);
+pub(crate) type Stamp = (PathBuf, Option<SystemTime>, u64);
 pub(crate) type Preview = (Option<RgbaImage>, Option<(u32, u32)>);
 
 static LOADED: Mutex<Vec<(Stamp, Weak<Pack>)>> = Mutex::new(Vec::new());
@@ -91,7 +91,7 @@ fn extension(path: &str) -> String {
     Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or_default().to_ascii_lowercase()
 }
 
-fn stamp(path: &Path) -> Result<Stamp, Error> {
+pub(crate) fn stamp(path: &Path) -> Result<Stamp, Error> {
     let meta = fs::metadata(path)?;
     Ok((path.to_owned(), meta.modified().ok(), meta.len()))
 }

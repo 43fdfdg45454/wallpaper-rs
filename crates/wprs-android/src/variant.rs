@@ -12,7 +12,7 @@ use wprs_scene::{Property, Values};
 
 const DEPTH: u32 = 4;
 
-type Tried = ((String, PathBuf), Weak<Pack>);
+type Tried = ((String, PathBuf), pack::Stamp, Weak<Pack>);
 
 static TRIED: Mutex<Vec<Tried>> = Mutex::new(Vec::new());
 
@@ -54,9 +54,8 @@ pub(crate) fn preset(lib: &Library, uid: &str) -> Result<Option<String>, Error> 
     present(lib, &base)?.map(|base| Some(base.uid)).ok_or_else(needs)
 }
 
-fn chosen(uid: &str, properties: &BTreeMap<String, Property>) -> Result<Values, Error> {
-    let path = with(|lib| Ok(lib.item(uid)?.path))?;
-    let mut package = wprs_format::open(&path, &Limits::phone())?;
+fn chosen(path: &Path, properties: &BTreeMap<String, Property>) -> Result<Values, Error> {
+    let mut package = wprs_format::open(path, &Limits::phone())?;
     let chosen = wprs_format::values::chosen(&package.preset()?, properties);
     chosen.warnings.iter().for_each(|w| log::warn!("{}: {w}", package.manifest.id));
     let mut values = chosen.values;
@@ -77,7 +76,7 @@ fn chosen(uid: &str, properties: &BTreeMap<String, Property>) -> Result<Values, 
 pub(crate) fn apply(uid: &str) -> Result<String, Error> {
     let Some(base) = with(|lib| preset(lib, uid))? else { return Ok(uid.to_owned()) };
     let pack = pack::load(&with(|lib| Ok(lib.item(&base)?.path))?)?;
-    let values = chosen(uid, &pack.properties)?;
+    let values = chosen(&with(|lib| Ok(lib.item(uid)?.path))?, &pack.properties)?;
     props::change(&pack, |kept| {
         kept.extend(values.iter().filter_map(|(k, v)| Some((k.clone(), props::stored(v)?))))
     })?;
@@ -89,16 +88,17 @@ pub(crate) fn loaded(path: &Path, preset: Option<&str>) -> Result<Arc<Pack>, Err
     let Some(preset) = preset else { return Ok(base) };
     let key = (preset.to_owned(), path.to_path_buf());
     let mut tried = TRIED.lock().unwrap_or_else(PoisonError::into_inner);
-    tried.retain(|(_, made)| made.strong_count() > 0);
+    tried.retain(|(.., made)| made.strong_count() > 0);
     let on = |pack: &Arc<Pack>| pack.tried.as_ref().is_some_and(|(_, on)| Arc::ptr_eq(on, &base));
-    if let Some(pack) =
-        tried.iter().filter(|(k, _)| *k == key).filter_map(|(_, made)| made.upgrade()).find(on)
-    {
+    let same = |stamp: &pack::Stamp| pack::stamp(&stamp.0).is_ok_and(|now| now == *stamp);
+    let found = tried.iter().filter(|(k, stamp, _)| *k == key && same(stamp));
+    if let Some(pack) = found.filter_map(|(.., made)| made.upgrade()).find(on) {
         return Ok(pack);
     }
-    let values = chosen(preset, &base.properties)?;
+    let stamp = pack::stamp(&with(|lib| Ok(lib.item(preset)?.path))?)?;
+    let values = chosen(&stamp.0, &base.properties)?;
     let pack = Arc::new(Pack { tried: Some((values, Arc::clone(&base))), ..Pack::clone(&base) });
-    tried.push((key, Arc::downgrade(&pack)));
+    tried.push((key, stamp, Arc::downgrade(&pack)));
     Ok(pack)
 }
 
