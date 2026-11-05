@@ -42,6 +42,25 @@ pub(super) fn presets_set_the_values_of_their_base() {
         variant::needed("nowhere", &library::with(|lib| Ok(lib.item(&preset)?.path)).unwrap(), 0).is_empty()
     );
     let clip = fs::read(Path::new(FIXTURES).join("magenta-64x32.webm")).unwrap();
+    let chained = |n: usize| {
+        let mut needs = vec![json!({ "id": format!("org.example.chain{}", n + 1), "version": "^1" })];
+        needs.extend((n == 0).then(|| json!({ "id": "org.example.calm", "version": "^1" })));
+        let manifest = json!({ "id": format!("org.example.chain{n}"), "kind": "video", "entry": "clip.webm",
+            "requires": { "packages": needs } });
+        let uid = built(&format!("chain{n}"), manifest, &[("clip.webm", &clip)]);
+        (uid.clone(), library::with(|lib| Ok(lib.item(&uid)?.path)).unwrap())
+    };
+    let (first, top) = chained(0);
+    let mut asked = Vec::new();
+    let got = variant::needing(&top, 0, &mut |d| {
+        asked.push(d.id.clone());
+        Ok(chained(d.id.trim_start_matches("org.example.chain").parse().unwrap()))
+    });
+    let levels: Vec<String> = (1..=4).map(|n| format!("org.example.chain{n}")).collect();
+    assert_eq!(asked, levels, "four levels, and an installed preset is not fetched again");
+    assert_eq!(got.len(), 4);
+    let chain = [got, vec![first]].concat();
+    assert_eq!(ask(json!({ "op": "remove", "uids": chain })), Value::Null);
     let base = built(
         "based",
         json!({ "id": "org.example.based", "kind": "video", "entry": "clip.webm",

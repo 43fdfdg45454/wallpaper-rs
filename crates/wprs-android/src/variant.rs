@@ -26,13 +26,17 @@ fn wanted(dependency: &Dependency) -> Result<VersionReq, Error> {
     })
 }
 
-pub(crate) fn present(lib: &Library, dependency: &Dependency) -> Result<Option<Item>, Error> {
+fn found(lib: &Library, dependency: &Dependency, any: bool) -> Result<Option<Item>, Error> {
     let wanted = wanted(dependency)?;
     let usable = |i: &Item| {
-        i.package.as_ref().is_some_and(|p| p.kind != "preset" && p.kind != "assets")
+        i.package.as_ref().is_some_and(|p| any || (p.kind != "preset" && p.kind != "assets"))
             && version(i).is_some_and(|v| wanted.matches(&v))
     };
     Ok(lib.packages_of(&dependency.id)?.into_iter().filter(usable).max_by_key(version))
+}
+
+pub(crate) fn present(lib: &Library, dependency: &Dependency) -> Result<Option<Item>, Error> {
+    found(lib, dependency, false)
 }
 
 pub(crate) fn based(item: &Item) -> Result<Option<Dependency>, Error> {
@@ -98,18 +102,27 @@ pub(crate) fn loaded(path: &Path, preset: Option<&str>) -> Result<Arc<Pack>, Err
     Ok(pack)
 }
 
+pub(crate) type Fetch<'a> = dyn FnMut(&Dependency) -> Result<(String, PathBuf), Error> + 'a;
+
 pub(crate) fn needed(repo: &str, path: &Path, depth: u32) -> Vec<String> {
+    needing(path, depth, &mut |dependency| {
+        matching(Some(repo), dependency).and_then(|spec| repos::fetched(&spec))
+    })
+}
+
+pub(crate) fn needing(path: &Path, depth: u32, fetch: &mut Fetch) -> Vec<String> {
+    if depth >= DEPTH {
+        return Vec::new();
+    }
     let needs = wprs_format::peek(path).map(|m| m.dependencies().to_vec()).unwrap_or_default();
     let mut installed = Vec::new();
-    for dependency in needs.iter().filter(|d| !with(|lib| present(lib, d)).is_ok_and(|found| found.is_some()))
-    {
-        let done = matching(Some(repo), dependency).and_then(|spec| repos::fetched(&spec));
-        match done {
-            Ok((uid, path)) if depth < DEPTH => {
-                installed.extend(needed(repo, &path, depth + 1));
+    let missing = |d: &&Dependency| !with(|lib| found(lib, d, true)).is_ok_and(|found| found.is_some());
+    for dependency in needs.iter().filter(missing) {
+        match fetch(dependency) {
+            Ok((uid, path)) => {
+                installed.extend(needing(&path, depth + 1, fetch));
                 installed.push(uid);
             }
-            Ok((uid, _)) => installed.push(uid),
             Err(e) => log::warn!("cannot install {} that a package needs: {e}", dependency.id),
         }
     }
