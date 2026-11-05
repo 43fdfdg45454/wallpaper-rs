@@ -75,3 +75,19 @@ fn keyframes_take_a_base_and_bezier_handles_that_the_editor_samples() {
     );
     assert!(words.contains("single numbers"), "{words}");
 }
+
+#[test]
+fn a_timeline_that_drives_a_tracked_binding_is_renamed_and_removed_with_it() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    act(&mut p, json!({"timeline": {"id": "intro", "add": true}})).unwrap();
+    let tracked = json!({"x": {"keys": [[0, 0], [1, 100]]}, "y": 5, "timeline": "intro"});
+    let at_position = "/scene/layers/0/transform/position";
+    act(&mut p, json!({"set": {"pointer": at_position, "value": tracked}})).unwrap();
+    act(&mut p, json!({"timeline": {"id": "intro", "to": "main"}})).unwrap();
+    assert_eq!(at(&p, &format!("{at_position}/timeline")), "main");
+    act(&mut p, json!({"timeline": {"id": "main", "remove": true}})).unwrap();
+    assert!(at(&p, at_position).get("timeline").is_none());
+    let problems = wprs_editor::check::review(&p.doc, Some(&p.dir));
+    assert!(problems.iter().all(|p| p.warning), "{problems:?}");
+}

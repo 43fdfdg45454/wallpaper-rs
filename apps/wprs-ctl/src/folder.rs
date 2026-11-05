@@ -52,7 +52,7 @@ pub enum Folder {
         dir: PathBuf,
         #[arg(short, long, default_value = "", help = crate::cli::OUTPUT)]
         output: String,
-        #[arg(long, default_value_t = -1.0, allow_hyphen_values = true, help = "Hold this second; plays when negative, and with --layout draws this second instead of the poster time")]
+        #[arg(long, default_value_t = -1.0, allow_hyphen_values = true, value_parser = crate::spanning::second, help = "Hold this second, up to 86400; plays when negative, and with --layout draws this second instead of the poster time")]
         time: f64,
         #[arg(long, help = "End the preview")]
         stop: bool,

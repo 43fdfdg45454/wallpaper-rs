@@ -26,6 +26,8 @@ pub enum Stage {
         origin: Option<[f64; 2]>,
         #[arg(long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
         size: Option<[f64; 2]>,
+        #[arg(long, help = crate::sowing::REPLACE)]
+        replace: bool,
     },
     #[command(
         about = "Blend the layer over what is below it with a mode such as normal, add, multiply or screen"
@@ -63,8 +65,8 @@ pub enum Stage {
 
 pub(crate) fn edit(layer: String, what: Stage) -> L {
     match what {
-        Stage::Transform { position, rotation, scale, skew, origin, size } => {
-            L::Transform { layer, position, rotation, scale, skew, origin, size }
+        Stage::Transform { position, rotation, scale, skew, origin, size, replace } => {
+            L::Transform { layer, position, rotation, scale, skew, origin, size, replace }
         }
         Stage::Blend { blend } => L::Blend { layer, blend },
         Stage::Instance { alpha, size, count, speed, life, time_scale, brightness, color, unset, clear } => {

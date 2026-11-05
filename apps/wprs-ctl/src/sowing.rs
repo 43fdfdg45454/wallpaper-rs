@@ -4,6 +4,7 @@ use clap::{ArgAction, Subcommand};
 const MOMENTS: [&str; 4] = ["static", "spawn", "death", "follow"];
 const LAYER: &str = "A particles layer whose own render changes";
 const RANGE: &str = "MIN,MAX";
+pub(crate) const REPLACE: &str = "Write the plain value over keyframes or another source that drives it";
 
 #[derive(Subcommand, Debug)]
 pub enum Sowing {
@@ -34,6 +35,8 @@ pub enum Sowing {
         rate: Option<f64>,
         #[arg(long, requires = "rate", help = "Set the rate of this emitter only")]
         emitter: Option<usize>,
+        #[arg(long, requires = "rate", help = REPLACE)]
+        replace: bool,
     },
     #[command(about = "Set the ranges new particles start from; the next value is picked between the two")]
     Start {

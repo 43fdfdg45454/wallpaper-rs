@@ -74,3 +74,11 @@ pub fn preview(dir: &Path, layout: &str, out: &Path, time: Option<f64>) -> Resul
     println!("{}", out.display());
     Ok(())
 }
+
+pub(crate) fn second(text: &str) -> Result<f64, String> {
+    let most = f64::from(wprs_scene::MAX_POSTER_TIME);
+    let time: f64 = text.parse().map_err(|_| format!("{text} is not a number of seconds"))?;
+    let fits = time.is_finite() && time <= most;
+    fits.then_some(time)
+        .ok_or_else(|| format!("the time is a finite number of seconds up to {most}, not {text}"))
+}

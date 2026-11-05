@@ -32,6 +32,19 @@ pub(crate) fn refused(dir: &Path, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> 
     Ok(ops)
 }
 
+pub(crate) fn plain(doc: &Value, pointer: &str, replace: bool) -> Result<()> {
+    let driven = doc.pointer(pointer).is_some_and(Value::is_object);
+    ensure!(
+        replace || !driven,
+        said(
+            "editor.follows_another_source",
+            "%1 follows another source; set a plain value first",
+            &[&pointer]
+        )
+    );
+    Ok(())
+}
+
 pub(crate) fn sheet(
     dir: &Path,
     doc: &Value,

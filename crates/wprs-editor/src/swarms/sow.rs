@@ -38,15 +38,20 @@ fn create(
     Ok(ops)
 }
 
-fn rate(doc: &Value, sys: &str, rate: f64, emitter: Option<usize>) -> Result<Vec<Op>> {
+fn rate(doc: &Value, sys: &str, rate: f64, (emitter, replace): (Option<usize>, bool)) -> Result<Vec<Op>> {
     let count = doc.pointer(&format!("{sys}/emitters")).and_then(Value::as_array).map_or(0, Vec::len);
     let missing = emitter.filter(|i| *i >= count).or((count == 0).then_some(0));
     ensure!(
         missing.is_none(),
         said("editor.no_emitter", "the system has no emitter %1", &[&missing.unwrap_or(0)])
     );
-    let which = emitter.map_or(0..count, |i| i..i + 1);
-    Ok(which.flat_map(|i| set(doc, &format!("{sys}/emitters/{i}/rate"), json!(rate))).collect())
+    let mut ops = Vec::new();
+    for i in emitter.map_or(0..count, |i| i..i + 1) {
+        let at = format!("{sys}/emitters/{i}/rate");
+        crate::shaping::plain(doc, &at, replace)?;
+        ops.extend(set(doc, &at, json!(rate)));
+    }
+    Ok(ops)
 }
 
 fn start(doc: &Value, sys: &str, ranges: &Map<String, Value>, clear: &[String]) -> Result<Vec<Op>> {
@@ -90,7 +95,7 @@ pub(super) fn edit(doc: &Value, e: &S) -> Result<Vec<Op>> {
             create(doc, id, from.as_deref(), parent.as_deref(), *on)?
         }
         S::Delete { system: s } => vec![Op::Remove { path: system(doc, s)? }],
-        S::Settings { system: s, capacity, seed, prewarm, space, rate: r, emitter } => {
+        S::Settings { system: s, capacity, seed, prewarm, space, rate: r, emitter, replace } => {
             let sys = system(doc, s)?;
             let mut ops = Vec::new();
             capacity.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/capacity"), json!(c))));
@@ -98,7 +103,7 @@ pub(super) fn edit(doc: &Value, e: &S) -> Result<Vec<Op>> {
             prewarm.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/prewarm"), json!(c))));
             space.iter().for_each(|c| ops.extend(set(doc, &format!("{sys}/space"), json!(c))));
             if let Some(r) = r {
-                ops.extend(rate(doc, &sys, *r, *emitter)?);
+                ops.extend(rate(doc, &sys, *r, (*emitter, *replace))?);
             }
             ops
         }

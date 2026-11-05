@@ -11,7 +11,7 @@ const LIST: &str = "/scene/timelines";
 fn bound(value: &Value, pointer: &str, id: &str, out: &mut Vec<String>) {
     match value {
         Value::Object(map) => {
-            if map.contains_key("keys") && map.get("timeline").and_then(Value::as_str) == Some(id) {
+            if map.get("timeline").and_then(Value::as_str) == Some(id) {
                 out.push(format!("{pointer}/timeline"));
             }
             map.iter().for_each(|(k, v)| bound(v, &format!("{pointer}/{}", escape(k)), id, out));
@@ -107,7 +107,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &TimelineEdit) -> Result<Vec<Op>>
         ensure!(!e.add, said("editor.timeline_add_remove", "add or remove a timeline, not both", &[]));
         let mut ops = vec![Op::Remove { path: format!("{LIST}/{i}") }];
         ops.extend(users.into_iter().map(|path| Op::Remove { path }));
-        return Ok(ops);
+        return crate::shaping::refused(dir, doc, ops);
     }
     fields(&mut line, e)?;
     let mut follow = Vec::new();

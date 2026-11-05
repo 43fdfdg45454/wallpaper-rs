@@ -43,4 +43,10 @@ fn a_script_that_moves_the_camera_or_the_parallax_declares_camera() {
     );
     assert!(!uses("export function update() { const sceneryX = 1; }").to_string().contains("camera"));
     assert!(!uses("export function update() { scene.cameraman = 1; }").to_string().contains("camera"));
+    for other in ["myscene.parallax = 1;", "cutscene.camera.x = 1;", "$scene.bloom = 1;", "a.scene.sky = 1;"]
+    {
+        let source = format!("export function update() {{ {other} }}");
+        assert!(!uses(&source).to_string().contains("camera"), "{other}");
+    }
+    assert!(uses("export function update() {\nscene.sky = 1; }").to_string().contains("camera"));
 }

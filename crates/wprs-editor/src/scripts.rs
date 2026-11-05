@@ -16,10 +16,16 @@ const CALLS: [(&str, ScriptApi); 4] = [
 const STAGE: [&str; 7] = ["camera", "camera3d", "parallax", "bloom", "background", "ambient", "sky"];
 
 fn staged(source: &str) -> bool {
-    let word = |c: char| c.is_alphanumeric() || c == '_';
+    let word = |c: char| c.is_alphanumeric() || c == '_' || c == '$';
+    let left = |before: &str| match before.chars().next_back() {
+        Some('.') => before.ends_with("wprs."),
+        Some(c) => !word(c),
+        None => true,
+    };
     STAGE.iter().any(|key| {
         let call = format!("scene.{key}");
-        source.match_indices(&call).any(|(i, _)| !source[i + call.len()..].starts_with(word))
+        let mut found = source.match_indices(&call);
+        found.any(|(i, _)| left(&source[..i]) && !source[i + call.len()..].starts_with(word))
     })
 }
 

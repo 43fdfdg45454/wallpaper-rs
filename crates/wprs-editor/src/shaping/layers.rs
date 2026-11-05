@@ -12,15 +12,20 @@ const SIZED: [&str; 5] = ["image", "video", "solid", "adjustment", "spectrum"];
 const TUNABLE: [&str; 9] =
     ["alpha", "size", "count", "speed", "life", "time_scale", "brightness", "color", "points"];
 
-fn transform(doc: &Value, path: &str, found: &Value, fields: [(&str, Option<Value>); 5]) -> Vec<Op> {
+type Fields<'a> = [(&'a str, Option<Value>); 5];
+
+fn transform(doc: &Value, path: &str, found: &Value, fields: Fields, replace: bool) -> Result<Vec<Op>> {
     let at = format!("{path}/transform");
     let mut next = found["transform"].as_object().cloned().unwrap_or_default();
     let given: Vec<(&str, Value)> = fields.into_iter().filter_map(|(k, v)| Some((k, v?))).collect();
     if given.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    given.into_iter().for_each(|(k, v)| drop(next.insert(k.into(), v)));
-    set(doc, &at, Value::Object(next))
+    for (k, v) in given {
+        super::plain(doc, &format!("{at}/{k}"), replace)?;
+        next.insert(k.into(), v);
+    }
+    Ok(set(doc, &at, Value::Object(next)))
 }
 
 fn instance(
@@ -56,7 +61,7 @@ fn instance(
 
 pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
     let ops = match e {
-        L::Transform { layer: id, position, rotation, scale, skew, origin, size } => {
+        L::Transform { layer: id, position, rotation, scale, skew, origin, size, replace } => {
             let (path, found) = layer(doc, id)?;
             let turn = rotation.is_none_or(|r| (-360.0..=360.0).contains(&r));
             ensure!(turn, said("editor.rotation_range", "the rotation goes from -360 to 360 degrees", &[]));
@@ -70,7 +75,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
                 ("skew", pair(skew)),
                 ("origin", pair(origin)),
             ];
-            let mut ops = transform(doc, &path, found, fields);
+            let mut ops = transform(doc, &path, found, fields, *replace)?;
             if let Some(s) = size {
                 let kind = found["type"].as_str().unwrap_or_default();
                 ensure!(

@@ -22,7 +22,11 @@ fn a_system_is_created_without_a_layer_and_started_from_another() {
 fn settings_and_starting_ranges_are_set_and_checked() {
     let root = tempfile::tempdir().unwrap();
     let mut p = project(&root);
-    let settings = json!({"capacity": 500, "seed": 7, "prewarm": 2, "space": "world", "rate": 40});
+    let bound = edit(&mut p, "settings", json!({"rate": 40})).unwrap_err().to_string();
+    assert!(bound.contains("another source"), "{bound}");
+    assert_eq!(system(&p)["emitters"][0]["rate"], json!({"prop": "density"}));
+    let settings =
+        json!({"capacity": 500, "seed": 7, "prewarm": 2, "space": "world", "rate": 40, "replace": true});
     edit(&mut p, "settings", settings).unwrap();
     let s = system(&p);
     assert_eq!((&s["capacity"], &s["seed"], &s["space"]), (&json!(500), &json!(7), &json!("world")));

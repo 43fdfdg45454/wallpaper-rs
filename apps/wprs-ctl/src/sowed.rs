@@ -85,7 +85,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             S::Create { system, from, parent, on: on.as_deref().and_then(parsed) }
         }
         Sowing::Delete => S::Delete { system },
-        Sowing::Settings { capacity, seed, prewarm, space, rate, emitter } => S::Settings {
+        Sowing::Settings { capacity, seed, prewarm, space, rate, emitter, replace } => S::Settings {
             system,
             capacity,
             seed,
@@ -93,6 +93,7 @@ pub(crate) fn edit(system: String, what: Sowing) -> P {
             space: space.as_deref().and_then(parsed),
             rate,
             emitter,
+            replace,
         },
         Sowing::Start {
             life,

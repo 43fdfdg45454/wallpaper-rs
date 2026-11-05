@@ -84,3 +84,19 @@ fn the_canvas_glows_and_moves_in_depth_from_its_defaults() {
     act(&mut p, json!({"canvas": {"parallax": {"off": true}}})).unwrap();
     assert_eq!(at(&p, "/scene/canvas/parallax"), serde_json::Value::Null);
 }
+
+#[test]
+fn a_transform_over_keyframes_is_refused_unless_it_replaces_them() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let key = |t: f64, v: [f64; 2]| json!({"keyframe": {"pointer": "/scene/layers/0/transform/position", "time": t, "value": v}});
+    act(&mut p, key(0.0, [0.0, 0.0])).unwrap();
+    act(&mut p, key(2.0, [100.0, 0.0])).unwrap();
+    let place = |replace: bool| json!({"layer": {"transform": {"layer": "card", "position": [50, 50], "replace": replace}}});
+    let words = refused(&mut p, place(false));
+    assert!(words.contains("another source"), "{words}");
+    act(&mut p, json!({"layer": {"transform": {"layer": "card", "rotation": 10}}})).unwrap();
+    assert!(at(&p, "/scene/layers/0/transform/position/keys").is_array());
+    act(&mut p, place(true)).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/position"), json!([50.0, 50.0]));
+}

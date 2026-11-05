@@ -20,6 +20,8 @@ pub enum LayerEdit {
         origin: Option<[f64; 2]>,
         #[serde(default)]
         size: Option<[f64; 2]>,
+        #[serde(default)]
+        replace: bool,
     },
     Blend {
         layer: String,

@@ -98,7 +98,7 @@ impl Renderer {
         assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
         runtime.set_wall(wall);
         runtime.set_language(lang);
-        runtime.seek(time.max(0.0));
+        runtime.seek(time.clamp(0.0, f64::from(wprs_scene::MAX_POSTER_TIME)));
         let frame = runtime.frame(view.view(size), Quality::Q3);
         let image = self.render_scene(&mut view, &runtime, &frame, size, Quality::Q3, &[])?;
         let (mut target, mut pixels) = (self.create_target(size.0, size.1)?, Vec::new());

@@ -42,6 +42,12 @@ ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with every p
 ctl scene layer "$craft" card transform --position 100,-20 --rotation -15 --scale 2,2 --size 300,200 || fail "the layer was not placed"
 ctl scene layer "$craft" card blend screen || fail "the blend mode was not set"
 if ctl scene layer "$craft" card transform --rotation 900 2>/dev/null; then fail "a turn of 900 degrees was kept"; fi
+ctl scene keyframe "$craft" /scene/layers/0/transform/scale 0 1,1 >/dev/null
+if ctl scene layer "$craft" card transform --scale 3,3 2>/dev/null; then fail "a plain scale dropped the keyframes"; fi
+ctl scene layer "$craft" card transform --scale 3,3 --replace || fail "the keyframes were not replaced"
+ctl scene set "$craft" /scene/particles/dust/emitters/0/rate '{"keys": [[0, 10], [1, 30]]}' >/dev/null
+if ctl scene particles "$craft" dust settings --rate 20 2>/dev/null; then fail "a rate over keyframes was kept"; fi
+ctl scene particles "$craft" dust settings --rate 20 --replace || fail "the keyframed rate was not replaced"
 ctl scene layer "$craft" dust instance --alpha 0.5 --count 0.25 --color '#ffcc88' || fail "the instance was not set"
 ctl scene layer "$craft" dust instance --unset count || fail "the instance value was not unset"
 ctl scene manifest "$craft" license CC-BY-4.0 || fail "the license was not set"

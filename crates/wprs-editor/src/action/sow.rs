@@ -31,6 +31,8 @@ pub enum SowEdit {
         rate: Option<f64>,
         #[serde(default)]
         emitter: Option<usize>,
+        #[serde(default)]
+        replace: bool,
     },
     Start {
         system: String,
