@@ -42,7 +42,7 @@ pub const REGISTRY: &[(&str, &str, [Support; 2])] = &[
     ("display2", "sets the color around its picture or spreads over every screen", [Yes, Without]),
     ("accent", "suggests an accent color for the desktop", [Yes, Yes]),
     ("flip", "shows its picture or video mirrored", [Yes, Yes]),
-    ("playback2", "limits its frame rate, starts muted or plays once", [Yes, Without]),
+    ("playback2", "limits its frame rate, starts muted or plays once", [Yes, Yes]),
     ("shortcut", "opens what the user chooses when clicked", [Yes, Without]),
     ("folder2", "reads the subfolders of a chosen folder or fewer of its files", [Yes, Yes]),
     ("folder_lists", "lets its page list a chosen folder", [Yes, Yes]),

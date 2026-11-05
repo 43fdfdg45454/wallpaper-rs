@@ -82,8 +82,16 @@ pub(crate) fn settings(pack: &Pack, preview: bool, privacy: Privacy) -> Value {
     let power = Power::now();
     let locale = languages(pack, privacy).first().cloned().unwrap_or_default();
     let muted = settings::setting("playback.muted", None).map_or(true, |m| m != "false");
-    let volume = if muted { 0.0 } else { f64::from(f32::from_bits(DUCK.load(Relaxed))) };
-    json!({"fps": power.fps(preview), "quality": power.ceiling() as u8, "locale": locale, "volume": volume})
+    let added = pack.web.as_ref().filter(|w| !w.own_volume).map(|_| props::values(pack));
+    let own =
+        added.and_then(|v| v.get(wprs_scene::VOLUME)?.as_f64()).map_or(1.0, |v| v.clamp(0.0, 100.0) / 100.0);
+    let volume = if muted { 0.0 } else { f64::from(f32::from_bits(DUCK.load(Relaxed))) * own };
+    json!({"fps": fps(pack, preview), "quality": power.ceiling() as u8, "locale": locale, "volume": volume})
+}
+
+pub(crate) fn fps(pack: &Pack, preview: bool) -> u32 {
+    let cap = pack.web.as_ref().map_or(wprs_core::settings::fps::DISPLAY, |w| w.fps);
+    wprs_core::settings::fps::lower(Power::now().fps(preview), cap)
 }
 
 pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result<Value, Error> {
@@ -116,7 +124,7 @@ pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result
     Ok(json!({
         "key": key, "url": format!("https://{}/", view.host), "origin": format!("https://{}", view.host),
         "background": web.background, "network": privacy.network, "storage": privacy.storage,
-        "fps": Power::now().fps(preview), "audio": audio && granted[0] && view.audio,
+        "fps": fps(&pack, preview), "audio": audio && granted[0] && view.audio,
         "pointer": pointer && granted[1], "clicks": clicks && granted[2], "tell": tell,
         "guard": script::guard(view),
     }))
@@ -159,7 +167,7 @@ pub(crate) fn form(pack: &Pack) -> Value {
     json!({
         "exposes": wprs_core::model::exposes("web", &facets, &confirmed, online),
         "hidden": {"zone": hidden[0], "language": hidden[1], "gpu": hidden[2], "storage": hidden[3]},
-        "storage": web.storage, "network": !web.network.is_empty(), "online": online,
+        "storage": web.storage, "network": !web.network.is_empty(), "online": online, "own_volume": web.own_volume,
         "origin": format!("https://{}", host(&pack.id, folders::count(&pack.id))),
     })
 }

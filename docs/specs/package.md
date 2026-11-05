@@ -254,7 +254,7 @@ the folder changed, and the stored value is the path of that copy.
 | `shortcut` | has a `shortcut` property | runs | without |
 | `quality_settings` | has properties with `quality` values | runs | runs |
 | `video_properties` | sets `playback` or `display` of a video | runs | runs |
-| `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | without |
+| `playback2` | sets `max_fps`, `muted` or `loop`, or `playback` of a web page or a scene | runs | runs |
 | `display2` | sets `display` of a picture, or its `background` or `span` | runs | without |
 | `flip` | sets `display.flip` to `horizontal` or `vertical` | runs | runs |
 | `accent` | sets `display.accent` | runs | runs |

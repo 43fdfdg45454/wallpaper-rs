@@ -92,8 +92,8 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             TextButton({ keeping.launch(arrayOf(JSON, "text/plain")) }) { Text(stringResource(R.string.import_preset)) }
         }
         val fields = form.optJSONArray("fields") ?: JSONArray()
-        val video = form.optBoolean("video")
-        val all = (0 until fields.length()).map(fields::getJSONObject).map { if (video) reeled(it) else it }
+        val renamed = if (form.optBoolean("video")) REEL.keys else if (form.optJSONObject("web")?.optBoolean("own_volume") == false) setOf("volume") else emptySet()
+        val all = (0 until fields.length()).map(fields::getJSONObject).map { if (it.optString("key") in renamed) reeled(it) else it }
         val folded = all.filter { it.getString("kind") == "group" && it.optBoolean("collapsed") != (it.getString("key") in flipped) }.map { it.getString("key") }
         all.filter { it.optBoolean("visible") && it.optString("group") !in folded }.forEach { field ->
             val key = field.getString("key")

@@ -443,10 +443,12 @@ permiso de lectura de la carpeta y, cada vez que se abre, copia otra vez lo que 
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y
-posición) y sus preajustes, como en el escritorio; con zoom o posición el vídeo pasa por la gráfica.
+posición) y sus preajustes, como en el escritorio; con zoom, posición o límite de fotogramas el
+vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en silencio y la
+reproducción única valen para vídeos y páginas como en el escritorio, y una página sin volumen
+propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos.
 La página de un paquete avisa de todo lo que el teléfono omite: el color alrededor de la imagen y la
-extensión sobre varias pantallas, el límite de fotogramas, el inicio en silencio y la reproducción
-única de vídeos y páginas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
+extensión sobre varias pantallas, los atajos, los sonidos nuevos, lo que no tiene sentido en el teléfono
 (los sonidos de los scripts) y la iluminación RGB. Los scripts de escena guardan datos, crean formas,
 mueven la cámara, cambian los padres de las capas y listan la carpeta elegida igual que en el
 escritorio. *Ajustes > Filtro* elige el filtro de color de la pantalla de inicio y el de la de

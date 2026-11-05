@@ -31,7 +31,10 @@ pub(super) fn values(view: &mut View) -> (Map<String, Value>, Folders) {
     let (pack, mut folders) = (view.pack.clone(), Folders::new());
     let host = view.host.clone();
     let quality = crate::power::Power::now().ceiling();
-    let tuned = wprs_scene::Leveling::of(&pack.properties).tuned(&props::values(&pack), quality);
+    let mut tuned = wprs_scene::Leveling::of(&pack.properties).tuned(&props::values(&pack), quality);
+    if pack.web.as_ref().is_some_and(|w| !w.own_volume) {
+        tuned.remove(wprs_scene::VOLUME);
+    }
     let mut values: Map<String, Value> = tuned.into_iter().collect();
     for (id, value) in values.iter_mut() {
         let path = value.as_str().filter(|v| v.starts_with('/')).map(PathBuf::from);

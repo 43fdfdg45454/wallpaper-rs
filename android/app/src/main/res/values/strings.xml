@@ -34,7 +34,6 @@
     <string name="show_anyway">Show anyway</string>
     <string name="lacks_sound">Its sounds do not play on the phone.</string>
     <string name="lacks_gpu">It needs compute shaders, which the graphics of this phone lack, so it may draw slowly or leave parts out.</string>
-    <string name="lacks_playback2">Its videos and web pages play on the phone without its frame rate limit, its muted start and playing once.</string>
     <string name="lacks_display2">Its color around the picture and its spreading over every screen are not used on the phone.</string>
     <string name="lacks_spanned_scenes">Its scene is not spread over several screens on the phone.</string>
     <string name="lacks_sound2">Its MP3 or long sounds, lists of sounds and sounds started by events do not play on the phone.</string>

@@ -33,7 +33,6 @@
     <string name="show_anyway">Mostrar igualmente</string>
     <string name="lacks_sound">Sus sonidos no suenan en el teléfono.</string>
     <string name="lacks_gpu">Necesita shaders de cálculo, que la gráfica de este teléfono no tiene, así que puede dibujarse lento o con partes de menos.</string>
-    <string name="lacks_playback2">Sus vídeos y páginas web se reproducen en el teléfono sin su límite de fotogramas, su inicio en silencio ni la reproducción única.</string>
     <string name="lacks_display2">Su color alrededor de la imagen y su extensión sobre todas las pantallas no se usan en el teléfono.</string>
     <string name="lacks_spanned_scenes">Su escena no se extiende sobre varias pantallas en el teléfono.</string>
     <string name="lacks_sound2">Sus sonidos MP3 o largos, sus listas de sonidos y los sonidos que inician los eventos no suenan en el teléfono.</string>

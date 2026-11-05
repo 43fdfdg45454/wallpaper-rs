@@ -70,7 +70,7 @@ fn display_and_playback_fields_belong_to_their_kinds() {
     assert_eq!(field(play(Kind::Image, json!({ "volume": 0.5 })).check()), "playback");
     let facts = features::facts(&video, None, None);
     features::playable(&video, &facts, Platform::Desktop).unwrap();
-    assert!(features::lacks("android", &facts.features).contains(&"playback2".to_string()));
+    assert!(features::lacks("android", &facts.features).is_empty());
     let scene = play(Kind::Scene, json!({ "max_fps": 24, "volume": 0.4, "muted": false }));
     scene.check().unwrap();
     assert!(named(&scene).contains(&"playback2".to_string()));
