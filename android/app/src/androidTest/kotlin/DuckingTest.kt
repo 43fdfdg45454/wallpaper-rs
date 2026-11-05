@@ -47,6 +47,7 @@ class DuckingTest {
     @Test
     fun ourOwnSoundKeepsPlayingAndAnotherPlayerSilencesIt() {
         assertEquals(IMAGE, install(still(Color.GRAY)))
+        assertTrue("nothing else plays", waitFor { audio.activePlaybackConfigurations.isEmpty() })
         muted = Native.setting(MUTED, null)
         Native.setting(DUCK, "true")
         Native.setting(MUTED, "false")
@@ -63,7 +64,8 @@ class DuckingTest {
         }
         assertTrue("our video plays its sound", waitFor { audio.activePlaybackConfigurations.isNotEmpty() })
         Thread.sleep(QUIET_MS)
-        assertEquals("our own sound does not silence us", 1f, Duck.gain)
+        val playing = audio.activePlaybackConfigurations.map { it.audioAttributes }
+        assertEquals("our own sound does not silence us: $playing", 1f, Duck.gain)
         other = track().apply { play() }
         assertTrue("another player silences the wallpaper", waitFor { Duck.gain == 0f })
         other?.stop()
