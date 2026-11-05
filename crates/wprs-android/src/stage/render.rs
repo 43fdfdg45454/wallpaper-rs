@@ -1,5 +1,5 @@
-use super::report::wall;
-use super::{AUTO, CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES, Shot, Stage};
+use super::report::{self, Cost, wall};
+use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
@@ -83,13 +83,13 @@ impl Stage {
         self.governor.hold(budget.floor());
         let (quality, why) = self.governor.level(ceiling);
         LEVEL.store(1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32, Relaxed);
-        let over = budget
-            .over(&self.runtime, quality)
-            .map(|(c, b)| u64::from(c.to_bits()) << 32 | u64::from(b.to_bits()));
-        OVER.store(over.unwrap_or_default(), Relaxed);
-        let automatic =
-            super::report::AUTOMATIC.iter().position(|a| *a == budget.automatic(&self.runtime, quality));
-        AUTO.store(automatic.unwrap_or_default() as u32, Relaxed);
+        if self.reports {
+            let (costs, heavy) = (
+                [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q)),
+                budget.heavy(&self.runtime),
+            );
+            report::keep(Cost { budget, auto: auto.0, quality, costs, heavy });
+        }
         let fps = if still { 0 } else { budget.fps(&self.runtime, quality, 0) };
         let retried = RETRIES.load(Relaxed);
         if std::mem::replace(&mut self.retried, retried) != retried {

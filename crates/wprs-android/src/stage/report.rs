@@ -1,8 +1,8 @@
-use super::{AUTO, CALMING, ENGINE, LEFT, LEVEL, OVER, RETRIES};
-use std::sync::PoisonError;
+use super::{CALMING, ENGINE, LEFT, LEVEL, RETRIES};
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::{Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
-use wprs_scene::Why;
+use wprs_scene::{Budget, Quality, Why};
 
 pub(crate) fn retry() {
     wprs_render::retry_effects();
@@ -43,15 +43,42 @@ pub(crate) fn level() -> Option<[String; 3]> {
     Some([format!("T{}", level / 32), format!("Q{}", level / 8 % 4), why.into()])
 }
 
-pub(crate) fn over() -> Option<[f32; 2]> {
-    let bits = OVER.load(Relaxed);
-    (bits != 0).then(|| [f32::from_bits((bits >> 32) as u32), f32::from_bits(bits as u32)])
+#[derive(Clone, Copy)]
+pub(crate) struct Cost {
+    pub(crate) budget: Budget,
+    pub(crate) auto: Quality,
+    pub(crate) quality: Quality,
+    pub(crate) costs: [f32; 4],
+    pub(crate) heavy: bool,
 }
 
-pub(crate) const AUTOMATIC: [&str; 4] = ["", "lower", "stop", "still"];
+static COST: Mutex<Option<Cost>> = Mutex::new(None);
+
+pub(crate) fn keep(cost: Cost) {
+    *COST.lock().unwrap_or_else(PoisonError::into_inner) = Some(cost);
+}
+
+fn judged() -> (&'static str, Option<[f32; 2]>) {
+    let Some(kept) = *COST.lock().unwrap_or_else(PoisonError::into_inner) else { return ("", None) };
+    let budget = Budget { choice: crate::power::choice(), ..kept.budget };
+    let quality = if budget == kept.budget { kept.quality } else { budget.choose((kept.auto, Why::User)).0 };
+    let (cost, most) = (kept.costs[quality as usize], budget.tier.budget());
+    let over = (!budget.choice.is_auto() && cost > most).then_some([cost, most]);
+    let automatic = match () {
+        _ if kept.heavy && budget.choice.is_auto() => "still",
+        _ if kept.heavy => "stop",
+        _ if over.is_some() => "lower",
+        _ => "",
+    };
+    (automatic, over)
+}
+
+pub(crate) fn over() -> Option<[f32; 2]> {
+    judged().1
+}
 
 pub(crate) fn automatic() -> &'static str {
-    AUTOMATIC[AUTO.load(Relaxed).min(3) as usize]
+    judged().0
 }
 
 pub(crate) fn wall() -> f64 {

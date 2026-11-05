@@ -96,6 +96,7 @@ impl Engine {
         let tier = power::tier(gpu.renderer.software(), gpu.renderer.compute()).min(gpu.renderer.tier());
         stage.light(crate::hdr::light(&gpu.renderer, surface, power.charging, stage.top())?);
         stage.turn();
+        stage.reports = !self.preview;
         let wanted = stage.videos();
         let videos = self.clips.frames(&gpu.renderer, gpu.epoch, &wanted);
         let shot =

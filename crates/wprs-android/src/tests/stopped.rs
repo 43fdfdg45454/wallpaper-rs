@@ -39,11 +39,25 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     assert_eq!((report::automatic(), report::over()), ("still", None));
     for choice in ["q0", "q1", "min-q1"] {
         assert_eq!(settings::setting("playback.quality", Some(choice)).unwrap(), choice);
+        assert_eq!(report::automatic(), "stop", "{choice} kept warning of the old choice before a frame");
+        assert!(report::over().is_some(), "{choice} hid its cost before a frame");
         assert!(shoot(1) > 0, "{choice} kept the scene still");
         let [cost, budget] = report::over().expect(choice);
         assert!(cost > budget && budget == wprs_scene::Tier::T0.budget(), "{choice} {cost} {budget}");
         assert_eq!(report::automatic(), "stop", "{choice}");
     }
+    assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
+    assert_eq!((report::automatic(), report::over()), ("still", None), "auto kept the old cost warning");
+    let mut preview = Stage::new(uid.clone(), pack::load(&path).unwrap());
+    preview.reports = false;
+    assert_eq!(settings::setting("playback.quality", Some("q0")).unwrap(), "q0");
+    let at = ((64, 32), 0, 30);
+    assert!(preview.render(r, at, (power, wprs_scene::Tier::T3), &[], false).unwrap().fps > 0);
+    assert_eq!(
+        report::over().map(|[_, b]| b),
+        Some(wprs_scene::Tier::T0.budget()),
+        "a preview wrote the report"
+    );
     assert_eq!(settings::setting("playback.quality", Some("auto")).unwrap(), "auto");
     assert_eq!((shoot(2), report::automatic()), (0, "still"), "automatic did not stop it again");
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);

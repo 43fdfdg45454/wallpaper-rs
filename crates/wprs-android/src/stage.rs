@@ -14,8 +14,6 @@ mod input;
 pub(crate) use heard::allowed as media_allowed;
 
 static LEVEL: AtomicU32 = AtomicU32::new(0);
-static OVER: AtomicU64 = AtomicU64::new(0);
-static AUTO: AtomicU32 = AtomicU32::new(0);
 static CALMING: AtomicU32 = AtomicU32::new(0);
 static ENGINE: AtomicU32 = AtomicU32::new(0);
 static LEFT: Mutex<(u64, Vec<(String, String)>)> = Mutex::new((0, Vec::new()));
@@ -46,6 +44,7 @@ pub(crate) struct Stage {
     calmed: bool,
     stilled: bool,
     pub(crate) moving: bool,
+    pub(crate) reports: bool,
     guard: Option<Box<Guarded>>,
     retried: u64,
     spare: Spare,
@@ -112,6 +111,7 @@ impl Stage {
             calmed: false,
             stilled: false,
             moving,
+            reports: true,
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),

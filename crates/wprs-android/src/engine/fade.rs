@@ -106,6 +106,7 @@ impl Engine {
         if let Some(stage) = self.stage.as_mut() {
             let r = &gpu.renderer;
             let tier = crate::power::tier(r.software(), r.compute()).min(r.tier());
+            stage.reports = !self.preview;
             stage.render(r, (size, nanos, fps), (power, tier), &frames, true)?;
         }
         let (now, now_look) = match (&self.film, &self.stage, &self.image) {
