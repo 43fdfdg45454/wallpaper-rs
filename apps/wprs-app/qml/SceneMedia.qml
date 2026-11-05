@@ -99,12 +99,27 @@ QQC2.ScrollView {
                 onMoved: player.change("position", Math.round(value))
             }
 
-            QQC2.Slider {
-                Kirigami.FormData.label: App.tr("Duration: %1", SceneMediaWords.clock(value))
-                from: 0
-                to: 1200
-                value: player.media.duration ?? 0
-                onMoved: player.change("duration", Math.round(value))
+            RowLayout {
+                Kirigami.FormData.label: App.tr("Duration: %1", SceneMediaWords.clock(player.media.duration ?? 0))
+
+                QQC2.Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 14400
+                    value: player.media.duration ?? 0
+                    onMoved: player.change("duration", Math.round(value))
+                }
+
+                QQC2.SpinBox {
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                    from: 0
+                    to: 10000000
+                    editable: true
+                    value: Math.round(player.media.duration ?? 0)
+                    QQC2.ToolTip.text: App.tr("Seconds")
+                    QQC2.ToolTip.visible: hovered
+                    onValueModified: player.change("duration", value)
+                }
             }
 
             Row {

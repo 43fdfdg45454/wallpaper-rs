@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-04 00:00+0000\n"
+"POT-Creation-Date: 2026-11-05 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -3930,6 +3930,10 @@ msgstr "Posición: %1"
 #: apps/wprs-app/qml/SceneMedia.qml
 msgid "Duration: %1"
 msgstr "Duración: %1"
+
+#: apps/wprs-app/qml/SceneMedia.qml
+msgid "Seconds"
+msgstr "Segundos"
 
 #: apps/wprs-app/qml/SceneMedia.qml
 msgid "Cover colors"

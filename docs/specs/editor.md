@@ -179,7 +179,7 @@ can go back to its default.
 
 The Player tab is a simulated media player for the preview, so that a scene can be made without
 music playing: a switch turns it on, and it has the title, artist and album of a made-up track,
-whether it plays, its position and length (sliders) and its cover, picked among the pictures of the scene, with the five colors that the scene would
+whether it plays, its position and length (sliders up to four hours, with a field in seconds for longer tracks, and times written as `m:ss` or, from one hour, `h:mm:ss` as the scene writes them) and its cover, picked among the pictures of the scene, with the five colors that the scene would
 get from it (or from the placeholder) as swatches. Next track gives the made-up track another title
 and the next picture as its cover, so that what waits for `media:track` and `media:cover` starts in
 the preview, and the playing switch starts what waits for `media:play` or `media:pause`; the track
