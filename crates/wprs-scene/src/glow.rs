@@ -32,3 +32,13 @@ pub(crate) fn pick(glows: &Glows, quality: Quality, battery: bool) -> Option<&La
     let [base, high] = glows;
     high.as_deref().filter(|_| hdr).or(base.as_deref())
 }
+
+pub(crate) fn lend(lent: &mut Glows, canvas: &Canvas, wanted: bool) {
+    if canvas.bloom.is_some() || wanted == lent[0].is_some() {
+        return;
+    }
+    *lent = match wanted {
+        true => glows(&Canvas { bloom: Some(Bloom::default()), ..canvas.clone() }),
+        false => [None, None],
+    };
+}

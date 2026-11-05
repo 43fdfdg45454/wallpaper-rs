@@ -2356,7 +2356,10 @@ interfaz completa; lo esencial:
   cambiar el orden de dibujo; `lookAt(desde, hacia)` de `wprs/math` da el ángulo para mirar hacia un
   punto. Con `uses: ["camera"]`, `scene.camera = {zoom: 2, shake: {amplitude: 6}}`,
   `scene.parallax`, `scene.bloom` y `scene.background` cambian la cámara, el paralaje, el resplandor
-  y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`.
+  y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`. El resplandor
+  también se enciende en escenas que no lo declaran (con los valores por defecto de `canvas.bloom`
+  para lo que el script no nombra) y se apaga con `null`; sigue las mismas reglas de calidad y batería
+  y no cuesta nada hasta que un script lo pide.
 - **Formas propias**: con `uses: ["geometry"]` y un `pools` en `scene.json`,
   `scene.mesh("barras").create({vertices, indices, format: "xyuv"})` crea triángulos con
   `Float32Array` que `update()` cambia y `destroy()` quita, dentro de los límites del pool y de 1 MiB

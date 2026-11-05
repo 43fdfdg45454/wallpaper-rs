@@ -64,6 +64,11 @@ impl Runtime {
             }
         }
         outputs.effects.retain(|_, list| !list.is_empty());
+        crate::glow::lend(
+            &mut self.glow,
+            &self.scene.canvas,
+            outputs.stage.is_some_and(|s| s.bloom.is_some()),
+        );
         if let Some(b) = outputs.stage.and_then(|s| s.bloom) {
             let numbers = [("threshold", b.threshold), ("intensity", b.strength), ("radius", b.radius)];
             let numbers =

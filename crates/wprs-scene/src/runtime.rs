@@ -67,7 +67,7 @@ pub struct Runtime {
     swarms: RefCell<Vec<Swarm>>,
     flocks: Vec<Flock>,
     systems: Vec<System>,
-    glow: crate::glow::Glows,
+    pub(crate) glow: crate::glow::Glows,
     battery: bool,
     pub(crate) tapes: Vec<crate::Tape>,
     pub(crate) ended: Vec<String>,

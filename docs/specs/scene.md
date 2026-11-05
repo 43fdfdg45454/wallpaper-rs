@@ -1925,8 +1925,11 @@ speed } }`), `scene.parallax` (`{ amount, delay }`), `scene.bloom` (`{ threshold
 tint }`), `scene.background`, `scene.ambient` and `scene.sky` (colors) read what the scene sets in
 `canvas` and what the script wrote; writing an object changes only the fields it names, within the ranges of `canvas`, and `null`
 gives the field back to the scene. The camera is the same transformation as `canvas.camera`, without
-passes, its shake stays still with *reduce motion* and at Q0, and bloom changes only a scene whose
-`canvas` sets `bloom`.
+passes, and its shake stays still with *reduce motion* and at Q0. Bloom also reaches a scene whose
+`canvas` sets no `bloom`: writing it adds the glow of `canvas.bloom` with the defaults of that object
+for the fields it does not name (threshold 0.8, strength 1, radius 16, white), kept only while the
+script keeps it (`null` takes it away again), dropped at Q0 and given its plain set on battery like
+the glow a scene declares; until a script writes it nothing is added and nothing costs more.
 
 With `geometry`, `scene.mesh(pool)` gives a pool of `pools`: `create({ vertices, indices, format,
 visible })` adds a shape and returns it, with `update(fields)`, `destroy()`, `id` and `alive`;
