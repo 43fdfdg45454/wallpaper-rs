@@ -151,6 +151,7 @@ pub(super) fn scenes() {
     saved::saved_settings();
     cued::cued();
     acting::scripted();
+    acting::shortcuts_open_only_after_a_press();
     calm::calmed();
     stopped::only_automatic_stops_heavy_scenes();
     flight::flown();

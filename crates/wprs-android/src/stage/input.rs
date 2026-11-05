@@ -20,7 +20,7 @@ impl Stage {
     pub(crate) fn touch(&mut self, at: [f32; 2], down: bool) -> bool {
         let (moves, taps) = self.allowed();
         let buttons = u8::from(down);
-        if taps && down {
+        if taps && down && self.touch.1 == 0 {
             self.gate.clicked(Instant::now());
         }
         if taps && buttons != self.touch.1 && self.presses.len() < MAX_PRESSES {
