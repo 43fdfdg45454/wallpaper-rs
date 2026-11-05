@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 @Composable
-fun Detail(main: Main, uid: String, close: () -> Unit) {
+fun Detail(main: Main, uid: String, open: (String) -> Unit, close: () -> Unit) {
     val languages = listOf(LocalLocale.current.toLanguageTag().replace('-', '_'))
     val item by loaded<Item?>(null, uid, main.revision.intValue) {
         (ask("item", "uid" to uid, "languages" to languages) as? JSONObject)?.let(::Item)
@@ -96,7 +96,7 @@ fun Detail(main: Main, uid: String, close: () -> Unit) {
                 }.map { stringResource(it) }
                 if (notes.isNotEmpty()) Note(notes.joinToString(" "))
             }
-            if (item?.preset == true) Note(stringResource(R.string.preset_note))
+            if (item != null) Kin(main, uid, open)
             if (picture && state.optBoolean("changed")) Note(stringResource(R.string.picture_changed), MaterialTheme.colorScheme.error)
             if (picture) {
                 Framing(main, uid, state)

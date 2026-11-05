@@ -26,6 +26,15 @@ pub(super) fn presets_set_the_values_of_their_base() {
         "requires": { "packages": needs } }),
         &[("preset.json", values.to_string().as_bytes())],
     );
+    let kin = |uid: &str| ask(json!({ "op": "kin", "uid": uid, "languages": [] }));
+    let lonely = kin(&preset);
+    let wanted = json!({ "id": "org.example.based", "version": "^1", "item": null, "repo": null });
+    assert_eq!((&lonely["base"], &lonely["presets"]), (&wanted, &json!([])), "{lonely}");
+    let account = |request: Value| -> Value {
+        serde_json::from_str(&crate::account::request(&request.to_string())).unwrap()
+    };
+    let refused = account(json!({ "op": "install_base", "uid": preset }));
+    assert_eq!(refused["id"], json!("android.no_release"), "{refused}");
     let error = variant::apply(&preset).unwrap_err();
     assert_eq!(error.reply()["id"], json!("android.preset_needs"), "{error}");
     assert!(
@@ -42,8 +51,19 @@ pub(super) fn presets_set_the_values_of_their_base() {
     assert_eq!(reel::of(Some(&path)).rate, 2.0);
     assert_eq!(library::with(|lib| variant::preset(lib, &preset)).unwrap(), Some(base.clone()));
     assert_eq!(library::with(|lib| variant::preset(lib, &base)).unwrap(), None);
+    assert_eq!(kin(&preset)["base"]["item"], json!({ "uid": base, "title": "based" }));
+    let family = kin(&base);
+    assert_eq!(
+        (&family["base"], &family["presets"]),
+        (&Value::Null, &json!([{ "uid": preset, "title": "calm" }]))
+    );
     ask(json!({ "op": "pick", "choice": { "item": preset } }));
     assert_eq!(shown(true), base, "a preset previews its base");
+    let tried = choice::shown_on(true, false).unwrap();
+    assert_eq!(tried.preset.as_deref(), Some(preset.as_str()));
+    let previewed = reel::shown(Some(&tried));
+    assert_eq!((previewed.rate, previewed.volume), (0.5, 0.3), "the preview shows the values of the preset");
+    assert_eq!(reel::of(Some(&path)).rate, 2.0, "previewing a preset changes the settings of its base");
     choice::commit(true, choice::Target::Home).unwrap();
     assert_eq!(shown(false), base, "a preset shows its base with its values");
     let played = reel::of(Some(&path));

@@ -58,3 +58,18 @@ pub(super) fn listed(items: Vec<Item>) -> Result<Value, Error> {
     });
     listed.collect::<Result<_, Error>>().map(Value::Array)
 }
+
+pub(crate) fn drop_playlist(lib: &mut Library, playlist: &str) -> Result<(), Error> {
+    lib.remove_playlist(playlist)?;
+    let config = settings::config();
+    let listed = |o: &wprs_core::config::OutputConfig| o.playlist.as_deref() == Some(playlist);
+    if listed(&config.default) || config.outputs.values().any(listed) {
+        settings::update(|config| {
+            let sections = std::iter::once(&mut config.default).chain(config.outputs.values_mut());
+            sections.filter(|o| listed(o)).for_each(|o| o.playlist = None);
+            config.outputs.retain(|_, o| *o != Default::default());
+            Ok(())
+        })?;
+    }
+    Ok(())
+}

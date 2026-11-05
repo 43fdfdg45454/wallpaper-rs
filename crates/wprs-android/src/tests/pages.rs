@@ -48,7 +48,7 @@ pub(super) fn pages_are_served_from_their_package_only() {
     let found = ask(json!({ "op": "items", "query": "kind:web" }));
     assert!(found.as_array().unwrap().iter().any(|i| i["uid"] == json!(uid)), "{found}");
     assert_eq!(item["package"]["exposes"], json!(["zone", "language", "gpu", "storage"]), "{item}");
-    let spec = page::spec(HANDLE, &uid, &path, false).unwrap();
+    let spec = page::spec(HANDLE, &uid, &path, false, None).unwrap();
     let url = spec["url"].as_str().unwrap().to_owned();
     assert!(url.starts_with("https://") && url.ends_with(".wpak.invalid/") && !url.contains("example"));
     assert_eq!((spec["background"].clone(), spec["network"].clone()), (json!("#102030"), json!(false)));
@@ -83,7 +83,7 @@ pub(super) fn pages_are_served_from_their_package_only() {
 }
 
 fn values_reach_the_running_page(uid: &str, path: &Path, url: &str) {
-    assert!(page::spec(HANDLE, uid, path, false).unwrap()["tell"].is_null());
+    assert!(page::spec(HANDLE, uid, path, false, None).unwrap()["tell"].is_null());
     ask(json!({ "op": "property", "uid": uid, "key": "tint", "value": "#00ff00" }));
     let photos = store::dir().unwrap().join("phone-photos");
     fs::create_dir_all(&photos).unwrap();
@@ -93,7 +93,7 @@ fn values_reach_the_running_page(uid: &str, path: &Path, url: &str) {
         drop(v.insert("photos".into(), toml::Value::String(photos.display().to_string())))
     })
     .unwrap();
-    let tell = page::spec(HANDLE, uid, path, false).unwrap()["tell"].as_str().unwrap().to_owned();
+    let tell = page::spec(HANDLE, uid, path, false, None).unwrap()["tell"].as_str().unwrap().to_owned();
     assert!(
         tell.contains("\"tint\":\"#00ff00\"") && tell.contains(&format!("\"photos\":\"{url}:user/photos/\"")),
         "{tell}"
@@ -106,20 +106,20 @@ fn values_reach_the_running_page(uid: &str, path: &Path, url: &str) {
     assert!(script::heard(HANDLE, r#"{"random":"photos","id":4}"#).unwrap().contains(&token));
     fs::copy(Path::new(FIXTURES).join("green-64x32.png"), photos.join("b.png")).unwrap();
     fs::remove_file(photos.join("a.png")).unwrap();
-    let tell = page::spec(HANDLE, uid, path, false).unwrap()["tell"].as_str().unwrap().to_owned();
+    let tell = page::spec(HANDLE, uid, path, false, None).unwrap()["tell"].as_str().unwrap().to_owned();
     assert!(tell.contains(&format!("\"removed\":[\"{token}\"]")), "{tell}");
-    assert!(page::spec(HANDLE, uid, path, false).unwrap()["tell"].is_null());
+    assert!(page::spec(HANDLE, uid, path, false, None).unwrap()["tell"].is_null());
     assert!(!page::hearing(HANDLE) && script::heard(HANDLE, r#"{"audio":true}"#).is_none());
     ask(json!({ "op": "grant", "uid": uid, "input": "audio", "on": true }));
     assert!(page::hearing(HANDLE) && script::listen(HANDLE).unwrap().contains("\"audio\":[["));
 }
 
 fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
-    let key = page::spec(HANDLE, uid, path, false).unwrap()["key"].clone();
+    let key = page::spec(HANDLE, uid, path, false, None).unwrap()["key"].clone();
     for what in ["hide_zone", "hide_gpu"] {
         ask(json!({ "op": "confirm", "uid": uid, "what": what }));
     }
-    let spec = page::spec(HANDLE, uid, path, false).unwrap();
+    let spec = page::spec(HANDLE, uid, path, false, None).unwrap();
     assert_ne!(spec["key"], key);
     let api = served(&format!("{url}:wprs/api.js"))["text"].as_str().unwrap().to_owned();
     assert!(api.contains("WEBGL_debug_renderer_info") && api.contains("})(true, false, (g) => {"), "{api}");
@@ -135,7 +135,7 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
     assert_eq!((form["uses"]["audio"].clone(), form["web"]["network"].clone()), (json!(true), json!(true)));
     language_is_hidden_on_request(uid, path, url);
     ask(json!({ "op": "grant", "uid": uid, "input": "network", "on": true }));
-    let spec = page::spec(HANDLE, uid, path, false).unwrap();
+    let spec = page::spec(HANDLE, uid, path, false, None).unwrap();
     assert_eq!(spec["network"], json!(true));
     assert_eq!(served("https://api.example.org/x"), json!({ "network": true }));
     assert!(
@@ -148,10 +148,10 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
     let origin = spec["origin"].clone();
     assert_eq!(ask(json!({ "op": "cleared" })), json!([origin]));
     assert_eq!(ask(json!({ "op": "cleared" })), json!([]));
-    let fresh = page::spec(HANDLE, uid, path, false).unwrap();
+    let fresh = page::spec(HANDLE, uid, path, false, None).unwrap();
     assert!(fresh["key"] != spec["key"] && fresh["origin"] != origin, "{fresh}");
     ask(json!({ "op": "confirm", "uid": uid, "what": "hide_storage" }));
-    let passing = page::spec(HANDLE, uid, path, false).unwrap()["origin"].clone();
+    let passing = page::spec(HANDLE, uid, path, false, None).unwrap()["origin"].clone();
     assert!(
         passing.as_str().unwrap().ends_with(".e.wpak.invalid") && passing != fresh["origin"],
         "{passing}"
@@ -167,7 +167,7 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
 fn language_is_hidden_on_request(uid: &str, path: &Path, url: &str) {
     ask(json!({ "op": "scene", "uid": uid, "languages": ["es"] }));
     let api = || {
-        page::spec(HANDLE, uid, path, false).unwrap();
+        page::spec(HANDLE, uid, path, false, None).unwrap();
         served(&format!("{url}:wprs/api.js"))["text"].as_str().unwrap().to_owned()
     };
     let shown = api();

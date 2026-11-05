@@ -2,7 +2,6 @@ use super::fade::{Fading, Gone};
 use super::{Engine, FRAMES};
 use crate::Error;
 use crate::choice::{self, Shown};
-use crate::pack;
 use crate::power::{self, Power};
 use crate::settings;
 use crate::stage::Stage;
@@ -15,8 +14,8 @@ use wprs_render::{Layer, RenderError};
 
 impl Engine {
     pub(super) fn stage(&mut self, shown: Option<&Shown>) {
-        let next = match shown.filter(|shown| shown.scene).map(|shown| (&shown.uid, pack::load(&shown.path)))
-        {
+        let loaded = |s: &Shown| crate::variant::loaded(&s.path, s.preset.as_deref());
+        let next = match shown.filter(|shown| shown.scene).map(|shown| (&shown.uid, loaded(shown))) {
             Some((uid, Ok(pack))) => match self.stage.as_mut() {
                 Some(stage)
                     if stage.uid == *uid && stage.lock == self.lock && Arc::ptr_eq(&stage.pack, &pack) =>

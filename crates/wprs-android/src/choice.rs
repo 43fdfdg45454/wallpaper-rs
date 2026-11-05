@@ -45,6 +45,7 @@ pub(crate) struct Shown {
     pub(crate) web: bool,
     pub(crate) flip: [bool; 2],
     pub(crate) package: Option<PathBuf>,
+    pub(crate) preset: Option<String>,
 }
 
 pub(crate) fn pick(choice: Option<Choice>) {
@@ -91,16 +92,23 @@ pub(crate) fn turn(
     Ok(switched)
 }
 
-fn chosen(lib: &Library, preview: bool, lock: bool) -> Result<Option<String>, Error> {
+fn based(lib: &Library, uid: String) -> (String, Option<String>) {
+    match crate::variant::preset(lib, &uid) {
+        Ok(Some(base)) => (base, Some(uid)),
+        _ => (uid, None),
+    }
+}
+
+fn chosen(lib: &Library, preview: bool, lock: bool) -> Result<Option<(String, Option<String>)>, Error> {
     let pending = preview.then(|| PENDING.lock().unwrap_or_else(PoisonError::into_inner).clone()).flatten();
     let shown = settings::config().resolve(screen(lock));
     let choice = pending.or_else(|| {
         let image = shown.image.and_then(|path| lib.resolve_item(path.to_str()?).ok()).map(Choice::Item);
         shown.playlist.map(Choice::Playlist).or(image)
     });
-    Ok(match choice {
+    let uid = match choice {
         None => None,
-        Some(Choice::Item(uid)) => Some(crate::variant::preset(lib, &uid).ok().flatten().unwrap_or(uid)),
+        Some(Choice::Item(uid)) => Some(uid),
         Some(Choice::Playlist(playlist)) => {
             let synced = lib.playlist(&playlist).is_ok_and(|list| list.rules.synced);
             match lib.rotation(if synced { HOME } else { row(lock) })?.filter(|row| row.playlist == playlist)
@@ -117,7 +125,8 @@ fn chosen(lib: &Library, preview: bool, lock: bool) -> Result<Option<String>, Er
                 }
             }
         }
-    })
+    };
+    Ok(uid.map(|uid| based(lib, uid)))
 }
 
 #[cfg(test)]
@@ -126,17 +135,20 @@ pub(crate) fn shown(preview: bool) -> Option<Shown> {
 }
 
 pub(crate) fn shown_on(preview: bool, lock: bool) -> Option<Shown> {
-    let item = with(|lib| chosen(lib, preview, lock)?.map(|uid| Ok(lib.item(&uid)?)).transpose()).ok()??;
+    let chosen = with(|lib| {
+        chosen(lib, preview, lock)?.map(|(uid, preset)| Ok((lib.item(&uid)?, preset))).transpose()
+    });
+    let (item, preset) = chosen.ok()??;
     let (path, kind) = crate::pack::media(&item).inspect_err(|e| log::warn!("{e}")).ok()?;
     let (video, scene, web) = (kind == "video", kind == "scene", kind == "web");
     let flip = if video || kind == "image" { crate::pack::flip(&item) } else { [false; 2] };
     let package = (item.kind == wprs_library::Kind::Package).then_some(item.path);
-    Some(Shown { video, scene, web, flip, uid: item.uid, path, package })
+    Some(Shown { video, scene, web, flip, uid: item.uid, path, package, preset })
 }
 
 pub(crate) fn colors(preview: bool, lock: bool) -> Result<Option<[i32; 4]>, Error> {
     with(|lib| match chosen(lib, preview, lock)? {
-        Some(uid) => {
+        Some((uid, _)) => {
             let item = lib.item(&uid)?;
             let mut colors = store::colors(lib, &item)?;
             let accent = colors.as_ref().and_then(|_| crate::accent::accent(&item));

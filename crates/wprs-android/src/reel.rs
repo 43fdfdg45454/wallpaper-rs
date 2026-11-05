@@ -3,7 +3,6 @@ use crate::{Error, props};
 use serde_json::{Value, json};
 use std::fs::File;
 use std::io::BufReader;
-use std::path::Path;
 use std::sync::Arc;
 use wprs_core::settings::fps::DISPLAY;
 use wprs_format::Package;
@@ -50,9 +49,15 @@ pub(crate) fn labels() -> [String; 8] {
     LABELS.map(String::from)
 }
 
-pub(crate) fn of(package: Option<&Path>) -> Reel {
+#[cfg(test)]
+pub(crate) fn of(package: Option<&std::path::Path>) -> Reel {
     let pack = package.and_then(|path| pack::load(path).inspect_err(|e| log::warn!("{e}")).ok());
     pack.as_deref().map_or_else(Reel::default, played)
+}
+
+pub(crate) fn shown(shown: Option<&crate::choice::Shown>) -> Reel {
+    let pack = shown.and_then(|s| Some(crate::variant::loaded(s.package.as_deref()?, s.preset.as_deref())));
+    pack.and_then(|p| p.inspect_err(|e| log::warn!("{e}")).ok()).as_deref().map_or_else(Reel::default, played)
 }
 
 pub(crate) fn played(pack: &Pack) -> Reel {
@@ -106,5 +111,6 @@ pub(crate) fn pack(package: &Package<BufReader<File>>) -> Result<Pack, Error> {
         labels,
         web: None,
         video: Some(Arc::new(m)),
+        tried: None,
     })
 }

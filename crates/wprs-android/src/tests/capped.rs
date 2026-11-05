@@ -77,17 +77,17 @@ fn api(spec: &Value) -> String {
 pub(super) fn pages_keep_no_more_than_they_declared() {
     let (uid, path) = installed();
     let full = || ask(json!({ "op": "scene", "uid": uid, "languages": ["en"] }))["web"]["full"].clone();
-    let spec = page::spec(HANDLE, &uid, &path, false).unwrap();
+    let spec = page::spec(HANDLE, &uid, &path, false, None).unwrap();
     let allowed = wprs_format::kept_allowance(4);
     assert_eq!((spec["storage"].clone(), full()), (json!(true), json!(false)));
     assert!(api(&spec).contains("QuotaExceededError") && api(&spec).contains(&format!("({allowed}, ")));
     assert!(spec["guard"].as_str().unwrap().contains("QuotaExceededError"), "frames are not held to the cap");
     for ignored in [r#"{"kept":"lots"}"#, r#"{"used":-1}"#, r#"{"kept":4096}"#] {
         assert!(script::heard(HANDLE, ignored).is_none());
-        assert_eq!(page::spec(HANDLE, &uid, &path, false).unwrap()["key"], spec["key"], "{ignored}");
+        assert_eq!(page::spec(HANDLE, &uid, &path, false, None).unwrap()["key"], spec["key"], "{ignored}");
     }
     script::heard(HANDLE, &json!({ "used": allowed - 4095 }).to_string());
-    let over = page::spec(HANDLE, &uid, &path, false).unwrap();
+    let over = page::spec(HANDLE, &uid, &path, false, None).unwrap();
     assert_eq!((over["storage"].clone(), full()), (json!(false), json!(true)), "{over}");
     assert!(
         over["origin"].as_str().unwrap().ends_with(".e.wpak.invalid")
@@ -96,7 +96,7 @@ pub(super) fn pages_keep_no_more_than_they_declared() {
     );
     assert_eq!(ask(json!({ "op": "clear_data", "uid": uid })), Value::Null);
     assert!(ask(json!({ "op": "cleared" })).as_array().unwrap().contains(&spec["origin"]));
-    let fresh = page::spec(HANDLE, &uid, &path, false).unwrap();
+    let fresh = page::spec(HANDLE, &uid, &path, false, None).unwrap();
     assert_eq!((fresh["storage"].clone(), full()), (json!(true), json!(false)), "{fresh}");
     assert_ne!(fresh["origin"], spec["origin"]);
     page::close(HANDLE);

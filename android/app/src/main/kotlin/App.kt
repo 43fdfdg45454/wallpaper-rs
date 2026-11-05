@@ -81,7 +81,7 @@ fun App(main: Main) {
             Box(Modifier.padding(padding)) {
                 val (shown, list) = item to playlist
                 when {
-                    shown != null -> Detail(main, shown) { item = null }
+                    shown != null -> Detail(main, shown, { item = it }) { item = null }
                     tab == 0 -> Library(main) { item = it }
                     tab == 1 && list != null -> Entries(main, list, { item = it }) { playlist = null }
                     tab == 1 -> Playlists(main) { playlist = it }

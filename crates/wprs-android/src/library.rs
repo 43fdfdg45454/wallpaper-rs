@@ -9,6 +9,7 @@ use wprs_library::{Library, PlaylistInfo, Rules};
 
 mod lists;
 
+pub(crate) use lists::drop_playlist;
 use lists::listed;
 
 const DATABASE: &str = "library.db";
@@ -69,19 +70,23 @@ pub(crate) fn with<T>(work: impl FnOnce(&mut Library) -> Result<T, Error>) -> Re
 }
 
 pub(crate) fn request(text: &str, on_battery: bool) -> String {
-    let answer = match serde_json::from_str(text) {
-        Ok(scene) => props::request(scene),
-        Err(_) => match serde_json::from_str(text) {
-            Ok(graded) => crate::graded::request(graded),
-            Err(_) => match serde_json::from_str(text) {
-                Ok(made) => crate::converted::request(made),
-                Err(_) => serde_json::from_str(text)
-                    .map_err(Error::from)
-                    .and_then(|r| with(|lib| answer(lib, r, on_battery))),
-            },
-        },
-    };
+    let answer = tried(text, props::request)
+        .or_else(|| tried(text, crate::graded::request))
+        .or_else(|| tried(text, crate::converted::request))
+        .or_else(|| tried(text, crate::kin::request))
+        .unwrap_or_else(|| {
+            serde_json::from_str(text)
+                .map_err(Error::from)
+                .and_then(|r| with(|lib| answer(lib, r, on_battery)))
+        });
     answer.unwrap_or_else(|e| e.reply()).to_string()
+}
+
+fn tried<R: serde::de::DeserializeOwned>(
+    text: &str,
+    run: fn(R) -> Result<Value, Error>,
+) -> Option<Result<Value, Error>> {
+    serde_json::from_str(text).ok().map(run)
 }
 
 fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value, Error> {
@@ -182,19 +187,4 @@ fn answer(lib: &mut Library, request: Request, on_battery: bool) -> Result<Value
 
 pub(crate) fn known<'a>(lib: &Library, uids: &'a [String]) -> Vec<&'a str> {
     uids.iter().map(String::as_str).filter(|uid| lib.item(uid).is_ok()).collect()
-}
-
-pub(crate) fn drop_playlist(lib: &mut Library, playlist: &str) -> Result<(), Error> {
-    lib.remove_playlist(playlist)?;
-    let config = settings::config();
-    let listed = |o: &wprs_core::config::OutputConfig| o.playlist.as_deref() == Some(playlist);
-    if listed(&config.default) || config.outputs.values().any(listed) {
-        settings::update(|config| {
-            let sections = std::iter::once(&mut config.default).chain(config.outputs.values_mut());
-            sections.filter(|o| listed(o)).for_each(|o| o.playlist = None);
-            config.outputs.retain(|_, o| *o != Default::default());
-            Ok(())
-        })?;
-    }
-    Ok(())
 }

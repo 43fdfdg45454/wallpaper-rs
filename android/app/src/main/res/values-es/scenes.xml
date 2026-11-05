@@ -76,5 +76,10 @@
     <string name="shortcut_web">Dirección web</string>
     <string name="shortcut_keep">Guardar</string>
     <string name="shortcut_https">Una dirección que empiece con https://</string>
-    <string name="preset_note">Un preajuste de otro paquete: muestra ese paquete, y al usarlo como fondo sus valores quedan como los ajustes de ese paquete.</string>
+    <string name="preset_note">Un preajuste de otro paquete: muestra ese paquete con sus valores, y al usarlo como fondo sus valores quedan como los ajustes de ese paquete.</string>
+    <string name="preset_of">Preajuste de %1$s</string>
+    <string name="preset_of_missing">Preajuste de %1$s, que no está instalado</string>
+    <string name="preset_show">Mostrar</string>
+    <string name="preset_install">Instalarlo</string>
+    <string name="presets_of">Preajustes de este fondo:</string>
 </resources>

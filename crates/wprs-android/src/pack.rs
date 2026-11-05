@@ -29,6 +29,7 @@ pub(crate) type Preview = (Option<RgbaImage>, Option<(u32, u32)>);
 
 static LOADED: Mutex<Vec<(Stamp, Weak<Pack>)>> = Mutex::new(Vec::new());
 
+#[derive(Clone)]
 pub(crate) struct Pack {
     pub(crate) id: String,
     pub(crate) version: String,
@@ -43,6 +44,7 @@ pub(crate) struct Pack {
     pub(crate) labels: serde_json::Value,
     pub(crate) web: Option<crate::page::Web>,
     pub(crate) video: Option<Arc<wprs_format::Manifest>>,
+    pub(crate) tried: Option<wprs_scene::Values>,
 }
 
 pub(crate) fn blank() -> Result<Scene, Error> {
@@ -175,6 +177,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         labels,
         web: None,
         video: None,
+        tried: None,
     });
     loaded.push((stamp, Arc::downgrade(&pack)));
     Ok(pack)

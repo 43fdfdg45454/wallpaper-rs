@@ -438,8 +438,10 @@ escritorio), y *Abrir un paquete*, que importa un `.wpak` con el selector de doc
 Se admiten los cuatro tipos de paquete que son un fondo, como en el escritorio: los de imagen se
 muestran como una foto más (con su ajuste, su encuadre, su edición y su paralaje), los de vídeo como
 un vídeo más, los de escena con el motor de escenas y los de página web con el WebView del sistema
-(ver «Fondos web»); un preajuste publicado aparte se muestra con su paquete base, y al usarlo como
-fondo escribe sus valores en los ajustes de la base (si la base no está instalada lo avisa), y los
+(ver «Fondos web»); un preajuste publicado aparte se muestra con su paquete base y sus valores (la
+vista previa los usa sin guardarlos), y al usarlo como fondo escribe sus valores en los ajustes de
+la base; su página nombra la base con *Mostrar* o, si falta, *Instalarlo* desde el repositorio que la
+ofrece, y la página de la base lista sus preajustes, como en el escritorio. Los
 de recursos se rechazan con un aviso, igual que en el escritorio. La imagen o el vídeo del paquete se extrae al importarlo, por partes y sin cargarlo
 entero en memoria, a los archivos de la app y se borra con el paquete. Las escenas se dibujan con el mismo motor que el
 escritorio: capas, efectos, partículas (en la GPU si admite sombreadores de cálculo y, si no, en la

@@ -41,7 +41,7 @@ impl Engine {
         self.forget_old_gpu();
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| shown.video);
         let flip = shown.as_ref().map_or([false; 2], |s| s.flip);
-        self.reel = crate::reel::of(shown.as_ref().and_then(|s| s.package.as_deref()));
+        self.reel = crate::reel::shown(shown.as_ref());
         let shown = shown.map(|shown| shown.path);
         let current = self.direct.clone().or_else(|| self.film.clone());
         if shown != current {

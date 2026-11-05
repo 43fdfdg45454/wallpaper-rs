@@ -5,7 +5,7 @@ use crate::{choice, gpu, page};
 impl Engine {
     pub(crate) fn page(&mut self, handle: i64) -> Option<String> {
         let shown = choice::shown_on(self.preview, self.lock).filter(|shown| shown.web);
-        let spec = shown.map(|s| page::spec(handle, &s.uid, &s.path, self.preview));
+        let spec = shown.map(|s| page::spec(handle, &s.uid, &s.path, self.preview, s.preset.as_deref()));
         let spec = spec.and_then(|spec| spec.inspect_err(|e| log::warn!("cannot show the page: {e}")).ok());
         let Some(spec) = spec.filter(|s| !s.is_null()) else {
             if self.paged.take().is_some() {

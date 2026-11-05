@@ -33,6 +33,7 @@ mod hearing;
 mod heif;
 mod keeping;
 mod keys;
+mod kin;
 mod library;
 mod link;
 mod listen;

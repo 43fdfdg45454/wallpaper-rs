@@ -10,6 +10,7 @@ use wprs_scene::VOLUME;
 
 const DOMAIN: &str = "wpak.invalid";
 
+#[derive(Clone)]
 pub(crate) struct Web {
     pub(crate) wpak: PathBuf,
     pub(crate) entry: String,
@@ -82,5 +83,6 @@ pub(crate) fn pack(package: &mut Package<BufReader<File>>, path: &Path) -> Resul
         labels,
         web: Some(web),
         video: None,
+        tried: None,
     })
 }

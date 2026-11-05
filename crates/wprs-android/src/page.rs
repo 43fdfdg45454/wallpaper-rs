@@ -98,13 +98,19 @@ pub(crate) fn fps(pack: &Pack, preview: bool) -> u32 {
     wprs_core::settings::fps::lower(Power::now().fps(preview), cap)
 }
 
-pub(crate) fn spec(handle: i64, uid: &str, path: &Path, preview: bool) -> Result<Value, Error> {
-    let pack = crate::pack::load(path)?;
+pub(crate) fn spec(
+    handle: i64,
+    uid: &str,
+    path: &Path,
+    preview: bool,
+    preset: Option<&str>,
+) -> Result<Value, Error> {
+    let pack = crate::variant::loaded(path, preset)?;
     let Some(web) = pack.web.as_ref() else { return Ok(Value::Null) };
     let privacy = privacy(&pack);
     let stamp = std::fs::metadata(path).map(|m| (m.len(), m.modified().ok())).ok();
     let generation = folders::count(&pack.id);
-    let key = format!("{uid}:{privacy:?}:{generation}:{stamp:?}");
+    let key = format!("{}:{privacy:?}:{generation}:{stamp:?}", preset.unwrap_or(uid));
     let fresh = || View {
         key: key.clone(),
         host: if privacy.storage { host(&pack.id, generation) } else { passing() },
