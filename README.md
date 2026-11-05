@@ -465,7 +465,10 @@ a una red así, sin consultar nada mientras tanto);
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y
 posición) y sus preajustes, como en el escritorio; con zoom o posición el vídeo pasa por la
-gráfica, y con límite de fotogramas sigue directo en la pantalla, que se pide a esa frecuencia. El límite de fotogramas del autor, el inicio en silencio y la
+gráfica, y con límite de fotogramas sigue directo en la pantalla, que se pide a esa frecuencia:
+es solo un pedido, así que una pantalla que no baja a esa frecuencia muestra todos los fotogramas
+del vídeo, con el mismo gasto que sin límite. El límite de fotogramas del autor (en los vídeos, con
+ese matiz), el inicio en silencio y la
 reproducción única valen para vídeos y páginas como en el escritorio (al terminar, el último
 fotograma queda en pantalla sin volver a dibujarse), y una página sin volumen
 propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos. Un vídeo en

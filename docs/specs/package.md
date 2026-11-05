@@ -131,7 +131,9 @@ changes) for videos, and `max_fps` (1 to 240, or
 `display` to follow the screen), `volume` (0 to 1) and `muted` (it starts without sound) for videos,
 web pages and scenes; a page decides itself how it repeats, so it ignores `loop`. A setting the user
 makes always wins, and the frame rate never exceeds what the user, the author (`playback.max_fps`,
-and `clock.max_fps` in a scene), the screen, the battery and the quality level allow. Videos, web
+and `clock.max_fps` in a scene), the screen, the battery and the quality level allow, except for a
+video the phone plays straight on the screen, where the author's cap only asks the screen for that
+rate. Videos, web
 pages and scenes with sound layers have a `volume` setting of their own (0 to 100 %, per screen or
 shared like the other settings) that starts at the author's `volume`, or at 0 with `muted`, and
 multiplies the general volume; a page reads the product as `wprs.volume`, and one that declares a
@@ -162,12 +164,14 @@ author gives their defaults in the second version:
 
 Presets of a video package set these ids. The phone shows the same settings and presets on the page
 of the package; a video with a zoom or a position goes through the graphics card there instead of
-playing straight on the screen, a frame cap keeps it playing straight and asks the screen for that
-rate, and the volume applies while video sound is on.
+playing straight on the screen, a frame cap keeps it playing straight and only asks the screen for
+that rate (a screen that cannot run at it shows every frame of the video), and the volume applies
+while video sound is on.
 Once the length of the video is known, `start` stays at least half a second before its end; a part
 that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
 Speed and frame rate are independent: a faster video draws no more frames per second than the
-screen, the battery or `playback.max_fps` allow, and changing the speed, the part or the volume
+screen, the battery or `playback.max_fps` allow (straight on the phone's screen it only asks for
+`playback.max_fps`), and changing the speed, the part or the volume
 applies to the running video without starting it again.
 
 ## Rating and photosensitivity
