@@ -16,7 +16,7 @@ const PARTS: [&str; 7] = ["geometry", "ops", "masks", "span", "depth", "parallax
 const EDIT_BYTES: usize = 64 << 10;
 pub const GPU: &str = "render.gpu";
 pub const QUALITY: &str = "playback.quality";
-pub const DEVICE_KEYS: [&str; 8] = [
+pub const DEVICE_KEYS: [&str; 9] = [
     "playback.volume",
     "playback.muted",
     "playback.software_parallax",
