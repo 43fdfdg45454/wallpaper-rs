@@ -39,15 +39,20 @@ class Videos(private val context: Context) : Ducked {
     fun close() = Duck.unlisten(this)
 
     fun join(uri: String, painter: Painter) = videos.getOrPut(uri) { Video(context, uri) }.run {
-        if (painter !in viewers) viewers += painter
+        if (painter !in viewers) {
+            viewers += painter
+            told()
+        }
         configure()
         update()
     }
 
     fun clip(key: String, path: String, surface: Surface, painter: Painter, audible: Boolean = false) =
         videos.getOrPut(key) { Video(context, "file://$path", surface, audible) }.run {
+            val gained = fixed == null || painter !in viewers
             if (fixed == null) fixed = surface
             if (painter !in viewers) viewers += painter
+            if (gained) told()
             update()
         }
 

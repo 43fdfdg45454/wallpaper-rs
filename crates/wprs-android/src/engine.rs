@@ -136,7 +136,7 @@ impl Engine {
     }
 
     pub(crate) fn ended(&mut self, path: &str, over: bool) -> bool {
-        let ours = self.film.as_deref() == Some(std::path::Path::new(path));
+        let ours = blend::plays(std::path::Path::new(path), self.film.as_deref(), self.direct.as_deref());
         ours && std::mem::replace(&mut self.over, over) && !over
     }
 

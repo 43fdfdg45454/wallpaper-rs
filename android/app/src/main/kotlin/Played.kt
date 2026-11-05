@@ -66,7 +66,10 @@ internal class Video(
             }
             active == null -> start(target)
             else -> {
-                if (output !== target) active.setVideoSurface(target)
+                if (output !== target) {
+                    active.setVideoSurface(target)
+                    Ending.redraw(active.playbackState, active.currentPosition)?.let(active::seekTo)
+                }
                 output = target
                 active.play()
             }
@@ -106,10 +109,11 @@ internal class Video(
 
     private fun heard() = Duck.want(context, this, player?.playWhenReady == true && !muted && loudness > 0f)
 
+    fun told() = player?.let { onPlaybackStateChanged(it.playbackState) }
+
     override fun onPlaybackStateChanged(state: Int) {
-        if (fixed == null) return
         val path = uri.removePrefix(FILE)
-        viewers.toList().forEach { it.ended(path, state == Player.STATE_ENDED) }
+        viewers.toList().forEach { it.ended(path, Ending.over(state)) }
     }
 
     override fun onPlayerError(error: PlaybackException) = Render.post {
@@ -168,4 +172,10 @@ internal class Video(
         output = null
         heard()
     }
+}
+
+internal object Ending {
+    fun over(state: Int) = state == Player.STATE_ENDED
+
+    fun redraw(state: Int, at: Long) = at.takeIf { over(state) }
 }

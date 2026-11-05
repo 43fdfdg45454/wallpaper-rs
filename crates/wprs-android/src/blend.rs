@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::time::Duration;
 
 pub(crate) const PATIENCE_NS: i64 = 2_000_000_000;
@@ -9,6 +10,10 @@ pub(crate) fn begins(gone: bool, coming: bool, waited_ns: i64) -> bool {
 
 pub(crate) fn rests(once: bool, shown: bool, over: bool, since_new_ns: i64) -> bool {
     once && shown && over && since_new_ns > STILL_NS
+}
+
+pub(crate) fn plays(path: &Path, film: Option<&Path>, direct: Option<&Path>) -> bool {
+    film.or(direct) == Some(path)
 }
 
 pub(crate) fn fades(fade: Duration, fps: u32, hidden: bool, from_video: bool) -> bool {
@@ -55,6 +60,15 @@ mod tests {
             !rests(true, false, true, STILL_NS * 10),
             "a video that has not given its first frame is waited for"
         );
+    }
+
+    #[test]
+    fn a_video_on_either_path_tells_its_end() {
+        let clip = Path::new("/w/clip.mp4");
+        assert!(plays(clip, Some(clip), None));
+        assert!(plays(clip, None, Some(clip)), "a video played straight on the screen also ends");
+        assert!(!plays(clip, None, None) && !plays(clip, Some(Path::new("/w/other.mp4")), None));
+        assert!(!plays(clip, None, Some(Path::new("/w/other.mp4"))), "a scene clip is not the shown video");
     }
 
     #[test]
