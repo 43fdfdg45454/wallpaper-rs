@@ -8,13 +8,20 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import org.json.JSONObject
 
-internal data class Reel(val speed: Float, val looped: Boolean, val loudness: Float, val clip: Pair<Long, Long>) {
+internal data class Reel(
+    val speed: Float,
+    val looped: Boolean,
+    val loudness: Float,
+    val clip: Pair<Long, Long>,
+    val capped: Boolean = false,
+) {
     companion object {
         fun of(told: JSONObject) = Reel(
             told.getDouble("rate").toFloat(),
             told.getBoolean("loop"),
             told.getDouble("volume").toFloat(),
             told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE),
+            told.optBoolean("capped"),
         )
     }
 }

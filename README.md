@@ -463,8 +463,8 @@ Una carpeta de una nube que no avisa de sus cambios se pone al día al abrir la 
 *Quitar* borra la copia y devuelve el permiso. Como en el escritorio, la escena muestra el archivo
 de la carpeta que toca, en orden o al azar y cada el tiempo que pide, y solo cambia mientras se ve.
 La página de un paquete de vídeo tiene sus ajustes (velocidad, inicio, final, volumen, zoom y
-posición) y sus preajustes, como en el escritorio; con zoom, posición o límite de fotogramas el
-vídeo pasa por la gráfica. El límite de fotogramas del autor, el inicio en silencio y la
+posición) y sus preajustes, como en el escritorio; con zoom o posición el vídeo pasa por la
+gráfica, y con límite de fotogramas sigue directo en la pantalla, que se pide a esa frecuencia. El límite de fotogramas del autor, el inicio en silencio y la
 reproducción única valen para vídeos y páginas como en el escritorio (al terminar, el último
 fotograma queda en pantalla sin volver a dibujarse), y una página sin volumen
 propio tiene el ajuste *Volumen*, que se multiplica por el sonido de los vídeos. Un vídeo en

@@ -161,8 +161,9 @@ author gives their defaults in the second version:
 ```
 
 Presets of a video package set these ids. The phone shows the same settings and presets on the page
-of the package; a video with a zoom, a position or a frame cap goes through the graphics card there
-instead of playing straight on the screen, and the volume applies while video sound is on.
+of the package; a video with a zoom or a position goes through the graphics card there instead of
+playing straight on the screen, a frame cap keeps it playing straight and asks the screen for that
+rate, and the volume applies while video sound is on.
 Once the length of the video is known, `start` stays at least half a second before its end; a part
 that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
 Speed and frame rate are independent: a faster video draws no more frames per second than the

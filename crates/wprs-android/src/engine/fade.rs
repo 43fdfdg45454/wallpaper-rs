@@ -70,7 +70,6 @@ impl Engine {
         }
         let plain = direct(&settings::Look { flip, ..settings::look(self.lock) }) && self.reel.direct();
         if self.film.is_some() && self.fading.is_none() && plain {
-            self.hint(0);
             self.direct = self.film.take();
             (self.target, self.image, self.raised, self.stage) = (None, None, None, None);
             gpu::trim();
@@ -79,6 +78,9 @@ impl Engine {
         }
         if self.video != self.direct.is_some() {
             (self.video, self.checked, self.dirty) = (self.direct.is_some(), (0, 0, (0, 0)), true);
+        }
+        if self.direct.is_some() {
+            self.hint(self.reel.cap());
         }
         self.unreport();
         self.direct.as_ref().map(|path| format!("file://{}", path.display()))

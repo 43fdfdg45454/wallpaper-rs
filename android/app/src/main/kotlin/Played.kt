@@ -34,6 +34,7 @@ internal class Video(
     var held = true
     var speed = 1f
     var looped = true
+    var capped = false
     var loudness = 1f
     var player: ExoPlayer? = null
     var output: Surface? = null
@@ -92,6 +93,7 @@ internal class Video(
         val hushed = (reel.loudness <= 0f) != (loudness <= 0f)
         speed = reel.speed
         looped = reel.looped
+        capped = reel.capped
         loudness = reel.loudness
         clip = reel.clip
         if (hushed) configure()
@@ -130,6 +132,9 @@ internal class Video(
 
     fun steer(player: ExoPlayer, seek: Long?, cut: Boolean = false) {
         player.repeatMode = if (looped) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        player.setVideoChangeFrameRateStrategy(
+            if (capped) C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF else C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS,
+        )
         player.setPlaybackSpeed(speed.coerceIn(0.1f, 4f))
         duck()
         heard()

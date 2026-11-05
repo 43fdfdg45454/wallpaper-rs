@@ -84,12 +84,17 @@ impl Reel {
     }
 
     pub(crate) fn direct(&self) -> bool {
-        !self.framed() && self.fps == DISPLAY
+        !self.framed()
+    }
+
+    pub(crate) fn cap(&self) -> u32 {
+        if self.fps == DISPLAY { 0 } else { self.fps }
     }
 
     pub(crate) fn told(&self) -> Value {
         let end = self.end.map_or(-1, |end| end as i64);
-        json!({ "rate": self.rate, "start": self.start, "end": end, "loop": !self.once, "volume": self.volume })
+        json!({ "rate": self.rate, "start": self.start, "end": end, "loop": !self.once, "volume": self.volume,
+            "capped": self.cap() > 0 })
     }
 }
 

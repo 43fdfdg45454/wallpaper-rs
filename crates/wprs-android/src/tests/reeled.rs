@@ -48,7 +48,7 @@ pub(super) fn video_settings_play_on_the_phone() {
     assert!(shown.framed() && !shown.direct());
     assert_eq!(
         shown.told(),
-        json!({ "rate": 0.75, "start": 500, "end": 1250, "loop": false, "volume": 0.4 })
+        json!({ "rate": 0.75, "start": 500, "end": 1250, "loop": false, "volume": 0.4, "capped": true })
     );
     let set =
         |key: &str, value: Value| ask(json!({ "op": "property", "uid": uid, "key": key, "value": value }));
@@ -74,13 +74,15 @@ pub(super) fn video_settings_play_on_the_phone() {
     set("zoom", json!(1));
     set("y", json!(0));
     let plain = reel::of(Some(&path));
-    assert!(!plain.framed() && !plain.direct(), "a frame cap still needs the graphics card");
+    assert!(plain.direct(), "a frame cap plays straight on the screen, which is asked for that rate");
+    assert_eq!(plain.cap(), 24);
     assert_eq!(ask(json!({ "op": "preset", "uid": uid, "preset": "calm" })), Value::Null);
     let calm = reel::of(Some(&path));
     assert_eq!((calm.rate, calm.volume), (0.5, 0.2));
     assert_eq!(ask(json!({ "op": "reset", "uid": uid })), Value::Null);
     assert_eq!(reel::of(Some(&path)), authored);
     assert_eq!(reel::of(None), reel::Reel::default());
-    assert!(reel::Reel::default().direct());
+    assert!(reel::Reel::default().direct() && reel::Reel::default().cap() == 0);
+    assert_eq!(reel::Reel::default().told()["capped"], json!(false));
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }
