@@ -44,7 +44,7 @@ pub(crate) struct Pack {
     pub(crate) labels: serde_json::Value,
     pub(crate) web: Option<crate::page::Web>,
     pub(crate) video: Option<Arc<wprs_format::Manifest>>,
-    pub(crate) tried: Option<wprs_scene::Values>,
+    pub(crate) tried: Option<(wprs_scene::Values, Arc<Pack>)>,
 }
 
 pub(crate) fn blank() -> Result<Scene, Error> {

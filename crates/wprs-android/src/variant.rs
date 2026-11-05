@@ -12,7 +12,7 @@ use wprs_scene::{Property, Values};
 
 const DEPTH: u32 = 4;
 
-type Tried = ((String, PathBuf, usize), Weak<Pack>);
+type Tried = ((String, PathBuf), Weak<Pack>);
 
 static TRIED: Mutex<Vec<Tried>> = Mutex::new(Vec::new());
 
@@ -61,7 +61,10 @@ fn chosen(uid: &str, properties: &BTreeMap<String, Property>) -> Result<Values, 
         let ext = Path::new(&file).extension().and_then(|e| e.to_str()).unwrap_or("bin");
         let kept = dir.join(format!("{id}.{ext}"));
         std::fs::create_dir_all(&dir)?;
-        store::write(&kept, &package.read_file(&file)?)?;
+        let bytes = package.read_file(&file)?;
+        if std::fs::read(&kept).ok().as_deref() != Some(bytes.as_slice()) {
+            store::write(&kept, &bytes)?;
+        }
         values.insert(id, json!(kept));
     }
     Ok(values)
@@ -80,14 +83,17 @@ pub(crate) fn apply(uid: &str) -> Result<String, Error> {
 pub(crate) fn loaded(path: &Path, preset: Option<&str>) -> Result<Arc<Pack>, Error> {
     let base = pack::load(path)?;
     let Some(preset) = preset else { return Ok(base) };
-    let key = (preset.to_owned(), path.to_path_buf(), Arc::as_ptr(&base) as usize);
+    let key = (preset.to_owned(), path.to_path_buf());
     let mut tried = TRIED.lock().unwrap_or_else(PoisonError::into_inner);
     tried.retain(|(_, made)| made.strong_count() > 0);
-    if let Some(pack) = tried.iter().find(|(k, _)| *k == key).and_then(|(_, made)| made.upgrade()) {
+    let on = |pack: &Arc<Pack>| pack.tried.as_ref().is_some_and(|(_, on)| Arc::ptr_eq(on, &base));
+    if let Some(pack) =
+        tried.iter().filter(|(k, _)| *k == key).filter_map(|(_, made)| made.upgrade()).find(on)
+    {
         return Ok(pack);
     }
     let values = chosen(preset, &base.properties)?;
-    let pack = Arc::new(Pack { tried: Some(values), ..Pack::clone(&base) });
+    let pack = Arc::new(Pack { tried: Some((values, Arc::clone(&base))), ..Pack::clone(&base) });
     tried.push((key, Arc::downgrade(&pack)));
     Ok(pack)
 }

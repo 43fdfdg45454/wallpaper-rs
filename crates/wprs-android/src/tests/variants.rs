@@ -1,5 +1,6 @@
 use super::*;
 use crate::{reel, variant};
+use std::sync::Arc;
 
 fn built(name: &str, manifest: Value, files: &[(&str, &[u8])]) -> String {
     let source = tempfile::tempdir().unwrap();
@@ -64,6 +65,12 @@ pub(super) fn presets_set_the_values_of_their_base() {
     let previewed = reel::shown(Some(&tried));
     assert_eq!((previewed.rate, previewed.volume), (0.5, 0.3), "the preview shows the values of the preset");
     assert_eq!(reel::of(Some(&path)).rate, 2.0, "previewing a preset changes the settings of its base");
+    let first = variant::loaded(&path, Some(&preset)).unwrap();
+    let base_pack = crate::pack::load(&path).unwrap();
+    assert!(Arc::strong_count(&base_pack) > 1, "a preset keeps its base loaded");
+    let again = variant::loaded(&path, Some(&preset)).unwrap();
+    assert!(Arc::ptr_eq(&first, &again), "a preset shown again is not loaded again");
+    drop((first, again, base_pack));
     choice::commit(true, choice::Target::Home).unwrap();
     assert_eq!(shown(false), base, "a preset shows its base with its values");
     let played = reel::of(Some(&path));

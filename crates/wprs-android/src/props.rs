@@ -80,7 +80,10 @@ pub(crate) fn values(pack: &Pack) -> Values {
         table.iter().filter_map(|(k, v)| Some((k.clone(), serde_json::to_value(v).ok()?))).collect()
     };
     let layers: Vec<Values> = config.scene_values("", &pack.id).iter().map(json).collect();
-    wprs_scene::effective(&pack.properties, &pack.tried.iter().chain(&layers).collect::<Vec<_>>())
+    wprs_scene::effective(
+        &pack.properties,
+        &pack.tried.iter().map(|(values, _)| values).chain(&layers).collect::<Vec<_>>(),
+    )
 }
 
 fn grants() -> Grants {
