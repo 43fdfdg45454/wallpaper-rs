@@ -28,6 +28,7 @@ mod relief;
 mod saved;
 mod scenes;
 mod screens;
+mod stall;
 mod steady;
 mod stopped;
 mod tilted;

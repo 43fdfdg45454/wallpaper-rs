@@ -1,7 +1,8 @@
 use crate::catalog::Catalog;
 use crate::{Result, Text};
 use serde::Serialize;
-use std::path::Path;
+use serde_json::{Value, json};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Stocked {
@@ -43,4 +44,41 @@ pub fn stock(dir: &Path) -> Result<Vec<Stocked>> {
         }
     });
     Ok(stocked.collect())
+}
+
+pub fn opened(dir: &Path) -> Result<Value> {
+    let (status, name) = (crate::status(dir)?, crate::settings(dir)?.name);
+    Ok(json!({ "name": name, "repo_id": status.repo_id, "packages": stock(dir)? }))
+}
+
+pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool, now: i64) -> Result<Value> {
+    let mut done = Vec::new();
+    for file in files {
+        let added = crate::add(dir, file, None, now)?;
+        if unlisted {
+            crate::list(dir, &added.id, Some(&added.release.version), false)?;
+        }
+        done.push(format!("{} {}", added.id, added.release.version));
+    }
+    let mut state = opened(dir)?;
+    state["added"] = json!(done);
+    Ok(state)
+}
+
+#[cfg(feature = "sign")]
+pub fn published(dir: &Path, signer: &crate::Signer, days: u32, now: i64) -> Result<Value> {
+    let done = crate::publish(dir, signer, days, now)?;
+    let mut state = opened(dir)?;
+    state["published"] = serde_json::to_value(&done)?;
+    Ok(state)
+}
+
+pub fn listed(dir: &Path, id: &str, version: Option<&str>, on: bool) -> Result<Value> {
+    crate::list(dir, id, version, on)?;
+    opened(dir)
+}
+
+pub fn featured(dir: &Path, id: &str, note: Option<&str>, on: bool) -> Result<Value> {
+    crate::feature(dir, id, note, on)?;
+    opened(dir)
 }

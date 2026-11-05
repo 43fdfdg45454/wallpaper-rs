@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-private fun JSONArray?.objects() = this?.let { list -> List(list.length(), list::getJSONObject) }.orEmpty()
+fun JSONArray?.objects() = this?.let { list -> List(list.length(), list::getJSONObject) }.orEmpty()
 
 @Composable
 fun Repos(main: Main, status: JSONObject, run: Run) {

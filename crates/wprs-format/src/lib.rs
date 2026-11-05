@@ -43,7 +43,7 @@ mod settings;
 mod shape;
 mod sign;
 mod source;
-mod stall;
+pub mod stall;
 mod store;
 mod update;
 mod upgrade;

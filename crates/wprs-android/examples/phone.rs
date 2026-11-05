@@ -15,6 +15,7 @@ fn main() {
             "account" => host::account(rest),
             "library" => host::library(rest),
             "depth" => host::depth(rest),
+            "stall" => host::stall(rest),
             "import" => host::import(rest),
             "setting" => {
                 let (key, value) = rest.split_once(' ').map_or((rest, None), |(k, v)| (k, Some(v)));

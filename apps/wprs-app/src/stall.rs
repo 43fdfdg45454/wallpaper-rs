@@ -38,6 +38,7 @@ use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::time::{SystemTime, UNIX_EPOCH};
+use wprs_format::stall;
 
 #[derive(Default)]
 pub struct StallRust {
@@ -48,44 +49,13 @@ fn now() -> anyhow::Result<i64> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs().try_into()?)
 }
 
-pub fn opened(dir: &Path) -> anyhow::Result<Value> {
-    let status = wprs_format::status(dir)?;
-    let name = wprs_format::settings(dir)?.name;
-    let packages = wprs_format::stock(dir)?;
-    Ok(json!({ "name": name, "repo_id": status.repo_id, "packages": packages }))
-}
-
 pub fn added(dir: &Path, files: &[PathBuf], unlisted: bool) -> anyhow::Result<Value> {
-    let now = now()?;
-    let mut done = Vec::new();
-    for file in files {
-        let added = wprs_format::add(dir, file, None, now)?;
-        if unlisted {
-            wprs_format::list(dir, &added.id, Some(&added.release.version), false)?;
-        }
-        done.push(format!("{} {}", added.id, added.release.version));
-    }
-    let mut state = opened(dir)?;
-    state["added"] = json!(done);
-    Ok(state)
+    Ok(stall::added(dir, files, unlisted, now()?)?)
 }
 
 pub fn published(dir: &Path, key: &Path, password: Option<String>, days: u32) -> anyhow::Result<Value> {
     let signer = wprs_format::Signer::new(&std::fs::read_to_string(key)?, password)?;
-    let done = wprs_format::publish(dir, &signer, days, now()?)?;
-    let mut state = opened(dir)?;
-    state["published"] = serde_json::to_value(&done)?;
-    Ok(state)
-}
-
-pub fn listed(dir: &Path, id: &str, version: Option<&str>, on: bool) -> anyhow::Result<Value> {
-    wprs_format::list(dir, id, version, on)?;
-    opened(dir)
-}
-
-pub fn featured(dir: &Path, id: &str, note: Option<&str>, on: bool) -> anyhow::Result<Value> {
-    wprs_format::feature(dir, id, note, on)?;
-    opened(dir)
+    Ok(stall::published(dir, &signer, days, now()?)?)
 }
 
 fn answer(result: anyhow::Result<Value>) -> QString {
@@ -113,7 +83,7 @@ impl Stall {
     }
 
     pub fn open(&self, folder: &QString) -> QString {
-        answer(opened(Path::new(&folder.to_string())))
+        answer(stall::opened(Path::new(&folder.to_string())).map_err(Into::into))
     }
 
     pub fn add(self: Pin<&mut Self>, folder: &QString, files: &QString, unlisted: bool) {
@@ -129,11 +99,16 @@ impl Stall {
 
     pub fn list(&self, folder: &QString, id: &QString, version: &QString, listed: bool) -> QString {
         let dir = folder.to_string();
-        answer(self::listed(Path::new(&dir), &id.to_string(), text(version).as_deref(), listed))
+        answer(
+            stall::listed(Path::new(&dir), &id.to_string(), text(version).as_deref(), listed)
+                .map_err(Into::into),
+        )
     }
 
     pub fn feature(&self, folder: &QString, id: &QString, note: &QString, on: bool) -> QString {
         let dir = folder.to_string();
-        answer(featured(Path::new(&dir), &id.to_string(), text(note).as_deref(), on))
+        answer(
+            stall::featured(Path::new(&dir), &id.to_string(), text(note).as_deref(), on).map_err(Into::into),
+        )
     }
 }

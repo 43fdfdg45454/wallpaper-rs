@@ -2,7 +2,7 @@ use crate::engine::FRAMES;
 use crate::exports::on;
 use crate::power::Power;
 use crate::settings::{self, BACKEND};
-use crate::{account, choice, depth, gpu, library, stage, store};
+use crate::{account, choice, depth, gpu, library, stage, stall, store};
 use jni::objects::{JIntArray, JObject, JString};
 use jni::refs::Reference;
 use jni::sys::{jboolean, jint, jlong};
@@ -72,6 +72,14 @@ pub fn account<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, request: JString<'a>
 pub fn depth<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, request: JString<'a>) -> JString<'a> {
     on(&mut env, |env| {
         let answer = depth::request(&request.try_to_string(env)?);
+        Ok(env.new_string(answer)?)
+    })
+}
+
+#[jni_mangle("io.github.wallpaper_rs.Native")]
+pub fn stall<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, request: JString<'a>) -> JString<'a> {
+    on(&mut env, |env| {
+        let answer = stall::request(&request.try_to_string(env)?);
         Ok(env.new_string(answer)?)
     })
 }

@@ -1749,8 +1749,12 @@ add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo
 ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
 confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
 la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Añadir y publicar trabajan fuera
-de la ventana, que sigue respondiendo mientras tanto. El teléfono todavía no opera repositorios
-estáticos.
+de la ventana, que sigue respondiendo mientras tanto. En el teléfono, *Repositorio estático* de
+*Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que
+sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelve a mostrar, destaca o
+deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre
+una copia temporal sin los paquetes ni las vistas previas y escribe en la carpeta solo los archivos
+que cambiaron.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde

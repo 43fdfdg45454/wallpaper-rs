@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stall">Repositorio estático</string>
+    <string name="stall_hint">Una carpeta creada con wprs-ctl repo init</string>
+    <string name="stall_open">Abrir un repositorio estático…</string>
+    <string name="stall_add">Añadir paquetes…</string>
+    <string name="stall_publish">Publicar…</string>
+    <string name="stall_unlisted">Añadir ocultos</string>
+    <string name="stall_unlisted_note">Fuera de la exploración y la búsqueda; instalar por id sigue funcionando</string>
+    <string name="stall_busy">Cambiando el repositorio…</string>
+    <string name="stall_added">Añadido %1$s. Publica el repositorio a continuación.</string>
+    <string name="stall_changed">Cambiado. Publica el repositorio a continuación.</string>
+    <string name="stall_published">Índice %1$d publicado con %2$d paquetes; caduca el %3$s</string>
+    <string name="stall_by">de %1$s</string>
+    <string name="stall_unlist">Ocultar</string>
+    <string name="stall_list_again">Volver a mostrar</string>
+    <string name="stall_feature">Destacar</string>
+    <string name="stall_unfeature">Quitar de destacados</string>
+    <string name="stall_unlist_version">Ocultar esta versión</string>
+    <string name="stall_list_version">Volver a mostrar esta versión</string>
+    <string name="stall_revoked">revocado</string>
+    <string name="stall_unlisted_mark">oculto</string>
+    <string name="stall_ask_unlist">Ocultar %1$s: fuera de la exploración y la búsqueda, todavía instalable por id.</string>
+    <string name="stall_ask_list">Volver a mostrar %1$s en la exploración y la búsqueda.</string>
+    <string name="stall_ask_unlist_version">Ocultar %1$s %2$s: fuera de la exploración y la búsqueda, todavía instalable por id.</string>
+    <string name="stall_ask_list_version">Volver a mostrar %1$s %2$s en la exploración y la búsqueda.</string>
+    <string name="stall_ask_feature">Destacar %1$s, firmado en el repositorio.</string>
+    <string name="stall_ask_unfeature">Dejar de destacar %1$s.</string>
+    <string name="stall_change">Cambiar el repositorio</string>
+    <string name="stall_confirm">Cambiar</string>
+    <string name="stall_note">Nota, opcional</string>
+    <string name="stall_publish_title">Publicar el repositorio</string>
+    <string name="stall_key">Elegir la clave en línea…</string>
+    <string name="stall_key_hint">Un archivo de clave secreta que esté entre las claves en línea</string>
+    <string name="stall_key_chosen">La clave está elegida; solo se lee para esta publicación.</string>
+    <string name="stall_password">Contraseña de la clave</string>
+    <string name="stall_password_hint">Vacía para una clave sin contraseña</string>
+    <string name="stall_days">Días hasta que caduque el índice</string>
+    <string name="stall_publish_now">Publicar</string>
+</resources>

@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 wprs-audio.workspace = true
 wprs-core.workspace = true
 wprs-depth = { workspace = true, features = ["infer"] }
-wprs-format.workspace = true
+wprs-format = { workspace = true, features = ["sign"] }
 wprs-library.workspace = true
 wprs-providers.workspace = true
 wprs-render.workspace = true

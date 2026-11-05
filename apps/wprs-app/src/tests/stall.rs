@@ -1,6 +1,7 @@
-use crate::stall::{added, featured, listed, opened, published};
+use crate::stall::{added, published};
 use std::fs;
 use std::path::{Path, PathBuf};
+use wprs_format::stall::{featured, listed, opened};
 use wprs_format::{
     Kind, Limits, Manifest, SCHEMA_V1, Settings, Signer, Text, build, init, keygen, sign_root,
 };
