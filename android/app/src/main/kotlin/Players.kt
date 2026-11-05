@@ -11,15 +11,25 @@ import android.os.SystemClock
 import android.provider.Settings
 import org.json.JSONObject
 
+class Pictured {
+    private var sent = false
+
+    fun read(fresh: Boolean): Boolean = (fresh || !sent).also { sent = true }
+
+    fun forget() {
+        sent = false
+    }
+}
+
 class Players(private val context: Context) : MediaSessionManager.OnActiveSessionsChangedListener {
     private val listeners = mutableSetOf<Painter>()
     private val component = ComponentName(context, Listener::class.java)
     private var manager: MediaSessionManager? = null
     private var controller: MediaController? = null
-    private var art: Bitmap? = null
+    private val pictured = Pictured()
     private val callback = object : MediaController.Callback() {
-        override fun onMetadataChanged(metadata: MediaMetadata?) = send()
-        override fun onPlaybackStateChanged(state: PlaybackState?) = send()
+        override fun onMetadataChanged(metadata: MediaMetadata?) = send(true)
+        override fun onPlaybackStateChanged(state: PlaybackState?) = send(false)
         override fun onSessionDestroyed() = pick(null)
     }
 
@@ -46,24 +56,24 @@ class Players(private val context: Context) : MediaSessionManager.OnActiveSessio
     }
 
     private fun pick(next: MediaController?) {
-        if (next?.sessionToken == controller?.sessionToken && next != null) return send()
+        if (next?.sessionToken == controller?.sessionToken && next != null) return send(false)
         controller?.unregisterCallback(callback)
         controller = next
-        art = null
+        pictured.forget()
         next?.registerCallback(callback, Render.handler)
-        send()
+        send(true)
     }
 
-    private fun send() {
+    private fun send(fresh: Boolean) {
         val chosen = controller
         val metadata = chosen?.metadata
         if (chosen == null || metadata == null || manager == null) {
+            pictured.forget()
             Native.media(null, null, 0, manager != null && allowed(context))
         } else {
             val state = chosen.playbackState
-            val picture = metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
-            val same = picture != null && picture === art
-            art = picture
+            val same = !pictured.read(fresh)
+            val picture = if (same) null else metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)
             val text = { key: String -> metadata.getString(key).orEmpty() }
             val told = JSONObject()
                 .put("title", text(MediaMetadata.METADATA_KEY_TITLE))
@@ -76,7 +86,7 @@ class Players(private val context: Context) : MediaSessionManager.OnActiveSessio
                 .put("duration", metadata.getLong(MediaMetadata.METADATA_KEY_DURATION).coerceAtLeast(0) / 1000.0)
                 .put("rate", state?.playbackSpeed?.toDouble() ?: 1.0)
                 .put("keep_cover", same)
-            val small = if (same) null else picture?.let(::shrink)
+            val small = picture?.let(::shrink)
             val pixels = small?.let { IntArray(it.width * it.height).also { all -> it.getPixels(all, 0, it.width, 0, 0, it.width, it.height) } }
             Native.media(told.toString(), pixels, small?.width ?: 0, true)
         }

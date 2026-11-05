@@ -48,14 +48,6 @@
     <string name="lacks_script_shortcuts">Its scripts open no shortcuts on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
     <string name="lacks_rgb">Its colors are not sent to RGB lighting on the phone.</string>
-    <string name="show_media">Show what plays</string>
-    <string name="media_note">While it is shown, the title, artist, album, cover and progress of what a player on the phone plays reach it; nothing of it is kept, logged or sent.</string>
-    <string name="media_access_off">The phone has not given this app access to what plays yet, so the wallpaper shows its placeholders.</string>
-    <string name="media_access_open">Open the setting</string>
-    <string name="media_access_title">Allow access to what plays</string>
-    <string name="media_access_why">Android lets an app see what other players play only through notification access. This app uses it only to read the title, artist, album, cover and progress of the track while a wallpaper you allowed shows them; it never reads your notifications and keeps, logs or sends nothing. Turn on wallpaper-rs in the list that opens.</string>
-    <string name="show_media_network">Show what plays even though it can reach the network</string>
-    <string name="media_network_note">This web wallpaper may also reach the sites it names, so the title, artist and cover of what plays could leave the phone.</string>
     <string name="lacks_media_info">It shows its placeholders instead of the cover, title and progress of what plays on the phone.</string>
     <string name="failed_without_reason">Something failed without giving a reason.</string>
     <string name="cancel">Cancel</string>
