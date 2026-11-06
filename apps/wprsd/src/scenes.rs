@@ -12,6 +12,7 @@ use wprs_render::{Pixels, SceneAssets};
 use wprs_scene::{Control, Scene, Uses, Values};
 use wprs_video::Bank;
 
+pub(crate) mod films;
 mod load;
 #[cfg(test)]
 mod tests;
@@ -156,6 +157,7 @@ impl Daemon {
                 _ => PathBuf::from(chosen),
             };
             if wprs_video::is_video(&file) {
+                films::measure(&file);
                 reels.extend(keys.into_iter().map(|key| (key, Reel::plain(file.clone()))));
                 reels.extend(picked(&pack.scene, id, &file));
                 continue;

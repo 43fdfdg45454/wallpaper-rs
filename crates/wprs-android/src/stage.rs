@@ -190,11 +190,11 @@ impl Stage {
             (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
         }
         let user = |(k, _): &&(String, PathBuf)| !self.pack.videos.iter().any(|(o, _)| o == k);
-        for (key, path) in
-            fresh.videos.iter().filter(user).filter(|(k, _)| !self.extras.videos.iter().any(|(o, _)| o == k))
-        {
-            wprs_scene::film_file(path).into_iter().for_each(|s| self.runtime.set_length(key, s));
-        }
+        let new = |(k, _): &&(String, PathBuf)| !self.extras.videos.iter().any(|(o, _)| o == k);
+        let films = fresh.videos.iter().filter(user).filter(new).cloned().collect();
+        let mut fresh = fresh;
+        fresh.lengths = std::mem::take(&mut self.extras.lengths);
+        fresh.measure(films);
         self.extras = fresh;
     }
 }
