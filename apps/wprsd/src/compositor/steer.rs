@@ -10,6 +10,7 @@ pub(super) struct Steer {
     pub(super) jumps: u32,
     pub(super) at: f64,
     pub(super) wants: bool,
+    pub(super) volume: f32,
 }
 
 pub(super) fn steer(outputs: &BTreeMap<String, Output>, reel: &Reel) -> Option<Steer> {
@@ -21,8 +22,12 @@ pub(super) fn steer(outputs: &BTreeMap<String, Output>, reel: &Reel) -> Option<S
         let speed = ((t.rate * 100.0).round() as u32).clamp(10, 400);
         let cut = Cut { speed, start: ms(t.start), end: t.end.map_or(0, ms) };
         let wants = t.shown && t.playing && !t.ended && t.rate > 0.0;
-        Some(Steer { cut, jumps: t.jumps, at: t.at, wants })
+        Some(Steer { cut, jumps: t.jumps, at: t.at, wants, volume: t.volume })
     })
+}
+
+pub(super) fn loud(volume: u32, steer: Option<&Steer>) -> u32 {
+    steer.map_or(volume, |s| (f64::from(volume) * f64::from(s.volume.clamp(0.0, 1.0))).round() as u32)
 }
 
 impl PlayerSlot {

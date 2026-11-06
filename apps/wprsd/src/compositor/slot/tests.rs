@@ -47,7 +47,9 @@ fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
     assert!(slot.player.as_ref().is_some_and(Player::audio_enabled), "the video opened without sound");
     frames(&slot, Duration::from_millis(300));
     let cut = Cut { speed: 200, start: 300, end: 700 };
-    slot.steer(Some(Steer { cut, jumps: 0, at: 0.0, wants: true }));
+    let steer = Steer { cut, jumps: 0, at: 0.0, wants: true, volume: 0.25 };
+    assert_eq!((super::super::steer::loud(80, Some(&steer)), super::super::steer::loud(80, None)), (20, 80));
+    slot.steer(Some(steer));
     assert_eq!(slot.steered, Some((cut, 0)));
     frames(&slot, Duration::from_millis(400));
     let seen = frames(&slot, Duration::from_secs(2));

@@ -1881,7 +1881,10 @@ the `down`. They reach the scripts in the next frame, at most 64 a frame.
 `layer.video` controls the video the layer shows (`uses: ["animations"]`): `play()` (from `start`
 once it ended), `pause()`, `stop()` (back to `start`, paused), `seek(seconds)` (at most one jump a
 frame: the last `seek` of a frame counts), `time`, `duration` (`undefined` while it is not known),
-`playing`, `rate` (0 to 16, read and written) and `on("ended", handler)`, called with `{ layer,
+`playing`, `rate` (0 to 16, read and written), `volume` (0 to 1, 1 by default, read and written: it
+scales the sound of the video under the volume of the videos of the package and the general volume;
+layers that share a clock share it; the phone plays scenes without sound, so there it changes
+nothing) and `on("ended", handler)`, called with `{ layer,
 name }` in the frame after a video without `loop` reaches its end. Calls take the video over from the
 `playback` of the layer until the scene starts again.
 
@@ -1979,8 +1982,9 @@ when shown again. Where the system gives no change notices (a network or user sp
 folder that is missing, or one removed, moved or unmounted until it can be watched again) it looks
 every 2 s while the scene is shown. The phone looks again while it draws. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
 with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
-the `playback` of the layer and that `layer.video` (play, pause, seek, rate, `ended`) controls like the
-videos of the package, with its sound at the volume of the videos of the package, instead of its own
+the `playback` of the layer and that `layer.video` (play, pause, seek, rate, volume, `ended`) controls like the
+videos of the package, with its sound at the volume of the videos of the package on the desktop (the
+phone plays scenes without sound, folder videos too), instead of its own
 (`null` gives it back), at most eight files at once, any of them videos; a video on another
 kind of layer throws. Scripts never see paths, and the phone lists the folder the user chose in the same way.
 

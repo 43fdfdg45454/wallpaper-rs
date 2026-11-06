@@ -18,6 +18,7 @@ pub struct Tape {
     pub jumps: u32,
     pub shown: bool,
     pub ended: bool,
+    pub volume: f32,
     pub(crate) held: Option<bool>,
     pub(crate) speed: Option<f32>,
 }
@@ -83,12 +84,13 @@ fn fresh(id: &str, owner: Option<(&Layer, Option<&Playback>)>) -> Tape {
         jumps,
         shown,
         ended,
+        volume: 1.0,
         held,
         speed,
     }
 }
 
-fn played(l: &Layer) -> Option<&Playback> {
+pub(crate) fn played(l: &Layer) -> Option<&Playback> {
     match &l.kind {
         Kind::Video { playback, .. } | Kind::Image { playback, .. } => playback.as_ref(),
         _ => None,

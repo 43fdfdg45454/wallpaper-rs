@@ -123,10 +123,19 @@ fn a_folder_video_a_script_shows_runs_on_a_clock_scripts_steer() {
     rt.set_script(shows(Default::default()));
     let tape = rt.tapes().iter().find(|t| t.asset == file).cloned().expect("a clock for the shown file");
     assert_eq!((tape.layer.as_deref(), tape.repeat), (Some("a"), true));
-    let seek = VideoControl { commands: vec![VideoCommand::Seek(3.0), VideoCommand::Pause] };
+    let seek = VideoControl {
+        commands: vec![VideoCommand::Seek(3.0), VideoCommand::Pause, VideoCommand::Volume(2.0)],
+    };
     rt.set_script(shows([("a".to_string(), seek)].into()));
     let tape = rt.tapes().iter().find(|t| t.asset == file).unwrap();
-    assert!((tape.at - 3.0).abs() < 0.01, "{tape:?}");
+    assert!((tape.at - 3.0).abs() < 0.01 && tape.volume == 1.0, "{tape:?}");
+    let quiet = VideoControl { commands: vec![VideoCommand::Volume(0.25), VideoCommand::Volume(f32::NAN)] };
+    rt.set_script(shows([("a".to_string(), quiet)].into()));
+    assert_eq!(
+        rt.tapes().iter().find(|t| t.asset == file).unwrap().volume,
+        0.25,
+        "a script turns the video down"
+    );
     rt.set_script(ScriptOutputs::default());
     assert!(!rt.tapes().iter().any(|t| t.asset == file), "the clock goes with the file");
 }

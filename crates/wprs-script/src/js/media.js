@@ -142,7 +142,19 @@ function playback(id, more = () => ({})) {
     return Object.freeze(handle);
 }
 
-export const video = (id) => playback(String(id));
+const loudness = {};
+
+export const video = (id) =>
+    playback(String(id), (send, number) => ({
+        get volume() {
+            return loudness[id] ?? 1;
+        },
+        set volume(v) {
+            const level = Math.min(1, Math.max(0, number(v, "volume")));
+            if (loudness[id] !== level) send({ volume: level });
+            loudness[id] = level;
+        },
+    }));
 
 const weights = {};
 

@@ -1160,8 +1160,9 @@ distancias que la GPU construye una vez por cada cambio del texto en texturas de
 GPU pueden dibujar, también las que no tienen texturas de coma flotante de 16 bits (y que deja
 escalarlo sin volver a dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
 vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y el control desde
-scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, tiempo, duración y aviso de
-fin).
+scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, volumen de 0 a 1, tiempo,
+duración y aviso de fin; el teléfono reproduce las escenas sin sonido, así que allí el volumen no
+cambia nada).
 
 El escritorio y el teléfono ya dibujan también los efectos propios del paquete. El inspector de cada
 uso de efecto muestra sus reglas para despertar la escena (qué entrada pide cada parámetro, a cuál
@@ -2429,7 +2430,7 @@ interfaz completa; lo esencial:
   qué foto muestra una capa. Con `folder("fotos", {videos: true})` también lista sus vídeos si la
   propiedad acepta `video` (`kind(id)` dice `image` o `video`) y `show("pantalla", id)` reproduce uno
   en una capa `video` con su sonido, con un reloj propio que sigue el `playback` de la capa y que
-  `layer.video` controla (reproducir, pausar, saltar, velocidad, fin) como los vídeos del paquete,
+  `layer.video` controla (reproducir, pausar, saltar, velocidad, volumen, fin) como los vídeos del paquete,
   hasta ocho archivos a la vez, vídeos o fotos, en el escritorio y en el teléfono. En el escritorio,
   mientras la escena se ve, la carpeta se vigila con avisos de cambios del sistema y solo se vuelve a
   leer cuando llega uno, fuera del hilo que dibuja; oculta, deja de vigilarla y la mira una vez al
