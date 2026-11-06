@@ -9,6 +9,8 @@ ColumnLayout {
 
     required property var host
     readonly property var rows: Array.isArray(host.value) ? host.value : []
+    readonly property var entry: String(host.field?.pointer ?? "").match(/^(.*)\/params\/emitters\/map\/([^/]+)$/)
+    readonly property string key: entry ? entry[2].replace(/~1/g, "/").replace(/~0/g, "~") : ""
 
     function put(index, key, value, gesture) {
         const next = rows.map(row => Object.assign({}, row));
@@ -49,6 +51,19 @@ ColumnLayout {
         }
     }
 
+    QQC2.Button {
+        visible: list.entry !== null
+        checkable: true
+        checked: list.entry !== null && list.host.page.emitterEntry[list.entry[1]] === list.key
+        text: App.tr("Place these emitters on the canvas")
+        icon.name: "transform-move"
+        onToggled: {
+            const picked = Object.assign({}, list.host.page.emitterEntry);
+            picked[list.entry[1]] = list.key;
+            list.host.page.emitterEntry = picked;
+        }
+    }
+
     QQC2.Label {
         Layout.fillWidth: true
         visible: list.rows.length > 0
@@ -68,6 +83,24 @@ ColumnLayout {
 
             QQC2.Label {
                 text: row.modelData.to !== undefined ? App.tr("Line %1", row.index + 1) : App.tr("Point %1", row.index + 1)
+            }
+
+            Repeater {
+                model: ["from", "to"].filter(end => row.modelData[end] !== undefined)
+
+                delegate: QQC2.TextField {
+                    required property string modelData
+
+                    implicitWidth: Kirigami.Units.gridUnit * 5
+                    text: row.modelData[modelData].join(", ")
+                    onEditingFinished: {
+                        const at = text.split(/[;,]\s*|\s+/).map(Number);
+                        if (at.length === 2 && at.every(Number.isFinite))
+                            list.put(row.index, modelData, at.map(v => Math.round(Math.min(4, Math.max(-2, v)) * 1000) / 1000));
+                    }
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.text: modelData === "from" ? App.tr("Start: x, y in fractions of the layer") : App.tr("End: x, y in fractions of the layer")
+                }
             }
 
             QQC2.Dial {

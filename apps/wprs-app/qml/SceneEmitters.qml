@@ -12,6 +12,8 @@ Item {
     readonly property var effects: JSON.parse(page.view && pointer ? page.editor.value(pointer + "/effects") || "null" : "null") ?? []
     readonly property var lists: effects.map((e, k) => {
         const v = e.effect === "fluid" ? e.params?.emitters : null;
+        if (v?.map && v.prop !== undefined)
+            return Array.isArray(v.map[entry(k, v)]) ? v.map[entry(k, v)] : null;
         if (Array.isArray(v) || !v?.keys || page.editor.time < 0)
             return Array.isArray(v) ? v : null;
         const field = JSON.parse(page.editor.inspect(pointer + "/effects/" + k) || "[]").find(f => f.key === "emitters");
@@ -34,17 +36,16 @@ Item {
         return out;
     }
 
-    function reach(strength) {
-        return Kirigami.Units.gridUnit * (0.8 + Math.min(strength ?? 0, 64) / 16);
+    function entry(k, v) {
+        const keys = Object.keys(v.map ?? {}), picked = page.emitterEntry[pointer + "/effects/" + k];
+        const now = JSON.parse(page.editor.value("/manifest/properties/" + SceneFluid.escaped(v.prop) + "/default") || "null");
+        const current = now === null ? "null" : String(now);
+        return keys.includes(picked) ? picked : keys.includes(current) ? current : keys[0] ?? "";
     }
 
-    function aimed(from, x, y) {
-        const dx = x - from[0], dy = y - from[1];
-        const strength = (Math.hypot(dx, dy) / Kirigami.Units.gridUnit - 0.8) * 16;
-        return {
-            "angle": Math.round(Math.atan2(dy, dx) * 180 / Math.PI),
-            "strength": Math.round(Math.max(0, Math.min(64, strength)) * 10) / 10
-        };
+    function target(k) {
+        const v = effects[k]?.params?.emitters, at = pointer + "/effects/" + k + "/params/emitters";
+        return v?.map && v.prop !== undefined ? at + "/map/" + SceneFluid.escaped(entry(k, v)) : at;
     }
 
     function drawn(spot) {
@@ -56,8 +57,8 @@ Item {
                 "from": from,
                 "to": to,
                 "tip": [l.x, l.y]
-            }, aimed(from, l.x, l.y));
-        const a = (m.angle ?? -90) * Math.PI / 180, r = reach(m.strength);
+            }, SceneFluid.aimed(from, l.x, l.y));
+        const a = (m.angle ?? -90) * Math.PI / 180, r = SceneFluid.reach(m.strength);
         return {
             "from": from,
             "to": to,
@@ -84,7 +85,7 @@ Item {
         live = null;
         const list = lists[spot.effect].map(m => Object.assign({}, m));
         change(list[spot.index]);
-        page.change(pointer + "/effects/" + spot.effect + "/params/emitters", list, true);
+        page.change(target(spot.effect), list, true);
     }
 
     function place(spot, x, y) {
@@ -92,7 +93,7 @@ Item {
     }
 
     function aim(spot, x, y) {
-        write(spot, m => Object.assign(m, aimed(drawn(spot).from, x, y)));
+        write(spot, m => Object.assign(m, SceneFluid.aimed(drawn(spot).from, x, y)));
     }
 
     onSpotsChanged: lines.requestPaint()
