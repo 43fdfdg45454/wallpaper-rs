@@ -46,4 +46,11 @@ case $first_kind in
       fail "the card chosen by kind $first_kind: $(ctl gpu)"
     ;;
 esac
+ctl gpu "no such card 42" >/dev/null
+ctl restart | grep -q "^the daemon started again on " || fail "wprs-ctl restart did not see the daemon come back"
+kill -0 "$daemon" 2>/dev/null || fail "the daemon did not start again in its own process"
+[ "$(gpu "g['gpu'], g['restart']")" = "('no such card 42', False)" ] || fail "the restart did not take the choice: $(ctl gpu)"
+gpu "g['warning']" | grep -q "no such card 42" || fail "the restarted daemon did not warn: $(ctl gpu --json)"
+ctl gpu auto >/dev/null && ctl restart >/dev/null
+[ "$(gpu "g['gpu'], g['warning'], g['restart']")" = "('auto', None, False)" ] || fail "back to auto: $(ctl gpu)"
 echo "graphics card choice checks passed ($first, $first_kind)"

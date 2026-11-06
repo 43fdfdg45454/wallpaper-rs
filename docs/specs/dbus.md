@@ -231,7 +231,7 @@ driver is loaded. When no adapter matches, or the matching adapter cannot open a
 starts with the automatic choice, logs a warning and sets `GetState().gpu_warning`; it never fails
 to start because of this setting. The renderer is made once at start and shared by every output, video and scene,
 so a change of `render.gpu` takes effect the next time the daemon starts
-(`systemctl --user restart wprsd`); until then `GetState().gpu_restart` is true, and both
+(`Restart()`, `wprs-ctl restart` or the app's button); until then `GetState().gpu_restart` is true, and both
 `wprs-ctl gpu` and `wprs-ctl config render.gpu` say so. Names are compared without regard to case,
 so changing only the case of the name asks for no restart. The class of the
 card (see "Cost and frame rate" in `scene.md`) is measured and kept for each card and driver, so
@@ -607,6 +607,18 @@ Only the changed key is validated. Unknown keys and invalid or out-of-range valu
 
 Re-reads the configuration file and applies it. If the file is invalid, the current
 configuration stays, `config_error` is set and the call returns `Failed`.
+
+### `Restart()`
+
+Starts the daemon again, to take a new `render.gpu` or `surfaces.layer_namespace`. Under systemd
+(`INVOCATION_ID` set) it asks systemd to restart its own unit (`GetUnitByPID`, then `Restart` with
+`replace`, only when the daemon is the main process of that unit), so the unit stays in charge; otherwise, or when systemd refuses, it replies, stops as on
+`SIGTERM` (the RGB devices get their own mode back) and runs its own program again in the same
+process with the same arguments and environment. Clients see the bus name go and come back.
+`wprs-ctl restart` waits for the new daemon and prints the card it renders with; the app shows
+*Restart the daemon now* next to the notices of both settings. The renderer is made once and shared
+by every output, video, stream and DMA-BUF export, and a lost device stops the process, so a new card
+needs this restart rather than a switch in place.
 
 ### `RetryEffects()`
 

@@ -30,6 +30,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Gpu(args) => crate::gpus::run(client, args).await?,
         Command::Quality(args) => crate::levels::run(client, args).await?,
         Command::Reload => daemon.reload().await?,
+        Command::Restart => crate::gpus::restart(client).await?,
         Command::RetryEffects => daemon.retry_effects().await?,
         Command::State { .. } => {
             let state = daemon.get_state().await?;

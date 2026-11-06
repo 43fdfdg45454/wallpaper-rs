@@ -717,9 +717,11 @@ tarjeta sin distinguir mayúsculas, como `Graphics A`, que sirve para elegir ent
 La app lo ofrece en *Ajustes* → *Tarjeta gráfica* con las tarjetas que encontró el daemon (nombre,
 tipo y API) y marca la que está en uso; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
 `wprs-ctl config render.gpu dedicated` elige una. El cambio vale desde el siguiente arranque del
-daemon (`systemctl --user restart wprsd`), porque el render se crea una sola vez y lo comparten
-todas las pantallas, vídeos y escenas; hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config
-render.gpu` lo avisan (`gpu_restart` en `wprs-ctl state`); cambiar solo mayúsculas y minúsculas del
+daemon, porque el render se crea una sola vez y lo comparten todas las pantallas, vídeos y escenas;
+hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config render.gpu` lo avisan (`gpu_restart` en
+`wprs-ctl state`), y la app ofrece *Reiniciar el daemon ahora* junto al aviso, igual que
+`wprs-ctl restart` (con systemd, se lo pide a systemd; si no, el daemon se vuelve a ejecutar a sí
+mismo).; cambiar solo mayúsculas y minúsculas del
 nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede abrir, el daemon
 arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
 `gpu_warning`. Una tarjeta que solo se alcanza con OpenGL ES, cuyo controlador no dice de qué tipo

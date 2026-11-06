@@ -1598,6 +1598,10 @@ msgstr "En uso: %1 (%2)."
 msgid "The new choice takes effect the next time the daemon starts."
 msgstr "La nueva elección vale desde el próximo arranque del daemon."
 
+#: apps/wprs-app/qml/GpuPicker.qml apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "Restart the daemon now"
+msgstr "Reiniciar el daemon ahora"
+
 #: apps/wprs-app/qml/HdrPicker.qml
 msgid ""
 "Automatic: on HDR screens, on mains power, for scenes with bright colors at "

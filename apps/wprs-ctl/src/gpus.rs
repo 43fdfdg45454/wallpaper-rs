@@ -16,8 +16,30 @@ pub struct GpuArgs {
     pub json: bool,
 }
 
-pub const LATER: &str =
-    "the change takes effect the next time the daemon starts (systemctl --user restart wprsd)";
+pub const LATER: &str = "the change takes effect the next time the daemon starts (wprs-ctl restart)";
+
+async fn owner(client: &Client) -> Option<String> {
+    let bus = zbus::fdo::DBusProxy::new(&client.bus).await.ok()?;
+    let name = wprs_core::dbus::BUS_NAME.try_into().ok()?;
+    bus.get_name_owner(name).await.ok().map(|owner| owner.to_string())
+}
+
+pub async fn restart(client: &Client) -> Result<()> {
+    let before = owner(client).await;
+    client.daemon.restart().await?;
+    for _ in 0..60 {
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        let now = owner(client).await;
+        if now.is_none() || now == before {
+            continue;
+        }
+        let Ok(text) = client.daemon.get_state().await else { continue };
+        let state: State = serde_json::from_str(&text)?;
+        println!("the daemon started again on {}", clean(&state.adapter));
+        return Ok(());
+    }
+    anyhow::bail!("the daemon did not start again within 30 seconds")
+}
 
 pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
     if let Some(choice) = &args.choice {

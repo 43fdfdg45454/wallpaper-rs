@@ -90,6 +90,13 @@ ColumnLayout {
         color: Kirigami.Theme.neutralTextColor
     }
 
+    QQC2.Button {
+        visible: App.state.gpu_restart === true
+        text: App.tr("Restart the daemon now")
+        icon.name: "view-refresh"
+        onClicked: App.act("Restart", [], "Daemon1")
+    }
+
     QQC2.Label {
         visible: !!App.state.gpu_warning
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30

@@ -56,6 +56,7 @@ calls! {
         PressSceneButton press_scene_button(output: str, id: str);
         ShareSceneValues share_scene_values(output: str, shared: bool);
         Reload reload();
+        Restart restart();
         RetryEffects retry_effects();
         GetState get_state() json;
         GetSchema get_schema() json;

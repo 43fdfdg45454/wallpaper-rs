@@ -45,6 +45,7 @@ pub trait Daemon1 {
     fn press_scene_button(&self, output: &str, id: &str) -> Result<()>;
     fn share_scene_values(&self, output: &str, shared: bool) -> Result<()>;
     fn reload(&self) -> Result<()>;
+    fn restart(&self) -> Result<()>;
     fn retry_effects(&self) -> Result<()>;
     fn get_state(&self) -> Result<String>;
     fn get_schema(&self) -> Result<String>;

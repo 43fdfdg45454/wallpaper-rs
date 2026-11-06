@@ -67,3 +67,12 @@ fn identical_cards_are_offered_by_their_pci_bus() {
     assert!(picker.contains(r#"const value = twins ? "pci:" + card.bus : card.name;"#));
     assert!(picker.contains(r#"App.tr("%1 · on PCI bus %2", label(card.name, same), card.bus)"#));
 }
+
+#[test]
+fn a_choice_that_waits_for_a_restart_offers_one() {
+    let files = qml_files();
+    for name in ["GpuPicker.qml", "LayerNamespaceField.qml"] {
+        let text = files.iter().find(|(n, _)| n == name).map(|(_, t)| t.clone()).unwrap();
+        assert!(text.contains(r#"onClicked: App.act("Restart", [], "Daemon1")"#), "{name} offers no restart");
+    }
+}

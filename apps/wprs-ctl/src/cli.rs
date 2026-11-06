@@ -66,6 +66,10 @@ pub enum Command {
     Quality(crate::levels::QualityArgs),
     #[command(about = "Re-read the configuration file")]
     Reload,
+    #[command(
+        about = "Start the daemon again, through systemd when it runs it, to use a new graphics card or surface name"
+    )]
+    Restart,
     #[command(about = "Draw again the effects left out after they stopped the graphics card or a program")]
     RetryEffects,
     #[command(about = "Print the daemon state as JSON")]
