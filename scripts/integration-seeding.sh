@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-declare scene
+declare scene WORK
 craft=$scene/craft
 ctl scene particles "$craft" dust emitter 0 --burst 20 --every 2 --periodic 1,2:0.5,1 --delay 0.5 --follow true --audio-gate true --inherit 0.3 ||
   fail "the emitter was not set"
@@ -34,6 +34,9 @@ if ctl scene particles "$craft" dust force vortex p9 --strength 10 2>/dev/null; 
 if ctl scene particles "$craft" dust force slow-near p0 --inner 50 --outer 10 --factor 0.5 2>/dev/null; then fail "a slowing that ends before it starts was kept"; fi
 if ctl scene particles "$craft" dust force slow-near p0 --inner 1 --outer 10 --factor 2 2>/dev/null; then fail "a slowing factor of 2 was kept"; fi
 ctl scene layer "$craft" dust instance --point 10,20 --point 30,-40 || fail "the instance took no control points"
-ctl scene particles "$craft" sparks rename embers || fail "the system was not renamed"
+printf 'const system = "sparks";\nexport function update() { return system; }\n' >"$WORK/sparks.js"
+ctl scene import-script "$craft" "$WORK/sparks.js" >/dev/null || fail "the script that names the system was not imported"
+ctl scene particles "$craft" sparks rename embers 2>"$WORK/renamed.err" || fail "the system was not renamed"
+grep -q 'names "sparks"; scripts are not rewritten' "$WORK/renamed.err" || fail "renaming did not warn about the script that names the system"
 [ "$(ctl scene show "$craft" /scene/particles/dust/children/0/system)" = '"embers"' ] || fail "the child did not follow the new name"
 ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with every emitter and color field was not previewed"

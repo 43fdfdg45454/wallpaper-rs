@@ -2182,7 +2182,7 @@ puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles 
 `emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
 
 El inspector de un sistema empieza con la lista de los sistemas de la escena, donde cada uno se
-renombra (las capas y los sistemas que lo usan lo siguen), se abre o se quita, y se añade uno sin
+renombra (las capas y los sistemas que lo usan lo siguen; los scripts que lo nombran entre comillas no se reescriben y la app y `wprs-ctl` avisan de cada uno), se abre o se quita, y se añade uno sin
 capa. Los rangos iniciales (vida, velocidad, dirección, tamaño, giro, rotación y alfa) tienen un
 deslizador de dos puntas, una curva que reparte los valores hacia un extremo con su dibujo y un
 selector por extremo que lo enlaza a un ajuste del paquete. Los colores iniciales salen de dos

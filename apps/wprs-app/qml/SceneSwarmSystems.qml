@@ -13,16 +13,22 @@ ColumnLayout {
         return Object.keys(JSON.parse(tools.page.editor.value("/scene/particles") || "null") ?? {});
     }
 
+    property string named: ""
+
     function rename(from, to) {
         if (to === from || to === "")
             return;
+        const scripts = JSON.parse(tools.page.editor.scripts(from) || "[]");
         tools.page.run("particles", {
                 "rename": {
                     "system": from,
                     "to": to
                 }
             });
-        if (tools.page.editor.error === "" && from === tools.system)
+        if (tools.page.editor.error !== "")
+            return;
+        named = scripts.length ? App.tr("These scripts name %1 and are not rewritten: %2", from, scripts.join(", ")) : "";
+        if (from === tools.system)
             tools.page.editor.select(SceneSwarmKnobs.pointer(to, ""));
     }
 
@@ -74,6 +80,18 @@ ColumnLayout {
                         }
                     })
             }
+        }
+    }
+
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: systems.named !== ""
+        type: Kirigami.MessageType.Warning
+        text: systems.named
+        showCloseButton: true
+        onVisibleChanged: {
+            if (!visible)
+                systems.named = "";
         }
     }
 
