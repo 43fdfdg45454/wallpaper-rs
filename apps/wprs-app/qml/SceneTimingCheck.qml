@@ -93,5 +93,8 @@ QtObject {
         Qt.createComponent("SceneTimelineCheck.qml").createObject(page, {
             "page": page
         }).exercise();
+        Qt.createComponent("SceneCurveCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
     }
 }

@@ -557,8 +557,9 @@ msgstr ""
 "vecino; llega hasta %3 s"
 
 #: crates/wprs-editor/src/handles.rs
-msgid "Bézier handles shape keyframes of single numbers"
-msgstr "los tiradores Bézier dan forma a fotogramas clave de un solo número"
+msgid "Bézier handles shape keyframes of numbers, lists of numbers and colors"
+msgstr ""
+"las asas Bézier dan forma a claves de números, listas de números y colores"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "only a value with keyframes adds them to a base"

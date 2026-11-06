@@ -1,5 +1,6 @@
 use crate::action::KeyframeEdit;
-use crate::handles::{added, based, end, key, reach, shaped};
+use crate::blend::added;
+use crate::handles::{based, end, key, reach, shaped};
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, bail, ensure};
 use serde_json::{Value, json};
@@ -10,7 +11,7 @@ pub(crate) fn time_of(key: &Value) -> f64 {
     key[0].as_f64().unwrap_or(0.0)
 }
 
-fn mix(a: &Value, b: &Value, f: f32) -> Value {
+pub(crate) fn mix(a: &Value, b: &Value, f: f32) -> Value {
     let lerp = |x: f64, y: f64| ((x + (y - x) * f64::from(f)) * 1e6).round() / 1e6;
     match (a, b) {
         (Value::Number(x), Value::Number(y)) => {

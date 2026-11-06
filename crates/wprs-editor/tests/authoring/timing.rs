@@ -73,7 +73,41 @@ fn keyframes_take_a_base_and_bezier_handles_that_the_editor_samples() {
         &mut p,
         json!({"keyframe": {"pointer": "/scene/layers/0/color", "time": 0, "in_handle": [1, 0]}}),
     );
-    assert!(words.contains("single numbers"), "{words}");
+    assert!(words.contains("neighbouring keyframe"), "{words}");
+}
+
+#[test]
+fn bezier_handles_time_positions_and_colors_as_a_share_of_the_way() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let keyed = |pointer: &str, more: serde_json::Value| {
+        let mut edit = json!({ "pointer": pointer });
+        edit.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());
+        json!({ "keyframe": edit })
+    };
+    let (place, color) = ("/scene/layers/0/transform/position", "/scene/layers/0/color");
+    act(&mut p, keyed(place, json!({"time": 0, "value": [0, 0]}))).unwrap();
+    act(&mut p, keyed(place, json!({"time": 2, "value": [100, 50]}))).unwrap();
+    act(&mut p, keyed(place, json!({"time": 0, "out_handle": [1, 0]}))).unwrap();
+    act(&mut p, keyed(place, json!({"time": 2, "in_handle": [1, 0]}))).unwrap();
+    let keys = at(&p, &format!("{place}/keys"));
+    let keys = keys.as_array().unwrap();
+    assert_eq!(wprs_editor::keys::sample(keys, 1.0), Some(json!([50.0, 25.0])));
+    let early = wprs_editor::keys::sample(keys, 0.4).unwrap();
+    assert!(early[0].as_f64().unwrap() < 10.0 && early[1].as_f64().unwrap() < 5.0, "{early}");
+    act(&mut p, keyed(color, json!({"time": 0, "value": "#000000"}))).unwrap();
+    act(&mut p, keyed(color, json!({"time": 2, "value": "#ffffff"}))).unwrap();
+    act(&mut p, keyed(color, json!({"time": 0, "out_handle": [1, 0.9]}))).unwrap();
+    let keys = at(&p, &format!("{color}/keys"));
+    let late = wprs_editor::keys::sample(keys.as_array().unwrap(), 1.0).unwrap();
+    assert!(late.as_str().is_some_and(|c| c > "#808080"), "{late}");
+    act(&mut p, json!({"add_layer": {"kind": "text", "id": "words"}})).unwrap();
+    let path = wprs_editor::layers::find(&p.doc, "words").unwrap();
+    let text = format!("{path}/text");
+    act(&mut p, keyed(&text, json!({"time": 0, "value": "one"}))).unwrap();
+    act(&mut p, keyed(&text, json!({"time": 2, "value": "two"}))).unwrap();
+    let words = refused(&mut p, keyed(&text, json!({"time": 0, "out_handle": [1, 0]})));
+    assert!(words.contains("lists of numbers and colors"), "{words}");
 }
 
 #[test]

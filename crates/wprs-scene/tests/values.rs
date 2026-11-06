@@ -93,3 +93,27 @@ fn time_of_day_and_dates_follow_the_local_clock() {
     assert!(matches!(&frame.draws[0].content, Content::Text { text, .. } if text == "octubre"));
     assert_eq!(frame.wake, Wake::At(43_200.0));
 }
+
+#[test]
+fn handles_time_positions_and_colors_by_their_share_of_the_way() {
+    let curve = json!([[0, [0, 0], { "out": [1, 0] }], [2, [40, 20], { "in": [1, 0] }]]);
+    let moved = json!([{ "id": "s", "type": "solid", "color": "#ffffff", "size": [10, 10],
+        "transform": { "position": { "keys": curve } } }]);
+    let mut rt = runtime(moved);
+    let world = at(&mut rt, 1.0).draws[0].world.0;
+    assert!((world[4] - 20.0).abs() < 1e-2 && (world[5] - 10.0).abs() < 1e-2, "{world:?}");
+    let world = at(&mut rt, 0.4).draws[0].world.0;
+    assert!(world[4] < 4.0 && world[5] < 2.0, "a flat handle starts slowly: {world:?}");
+    let solid = |keys: Json| json!([{ "id": "s", "type": "solid", "color": { "keys": keys } }]);
+    let mid = color(&at(&mut runtime(solid(json!([[0, "#000000"], [2, "#ffffff"]]))), 1.0))[0];
+    let mut rt = runtime(solid(json!([[0, "#000000", { "out": [1, 0.9] }], [2, "#ffffff"]])));
+    let [r, g, b, _] = color(&at(&mut rt, 1.0));
+    assert!(
+        (r - g).abs() < 1e-3 && (g - b).abs() < 1e-3 && r > mid + 0.1,
+        "an early rise is not past {mid}: {r}"
+    );
+    let text = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] }, "layers": [{ "id": "t", "type": "text",
+        "text": { "keys": [[0, "a", { "out": [1, 0] }], [2, "b"]] } }] });
+    let refused = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_err();
+    assert!(format!("{refused:?}").contains("/layers/0/text/keys/0/2"), "{refused:?}");
+}

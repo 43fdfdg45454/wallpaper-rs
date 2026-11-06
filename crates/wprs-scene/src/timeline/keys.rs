@@ -40,10 +40,11 @@ pub fn sample<T: Animate>(keys: &[Key<T>], t: f32) -> T {
 
 fn curve<T: Animate>(a: &Key<T>, b: &Key<T>, t: f32) -> Option<T> {
     let (out, back) = (a.handles.and_then(|h| h.out), b.handles.and_then(|h| h.before));
-    let (([v0, ..], n), ([v1, ..], _)) = (a.v.comps(), b.v.comps());
-    if n != 1 || (out.is_none() && back.is_none()) {
+    if out.is_none() && back.is_none() {
         return None;
     }
+    let (([v0, ..], n), ([v1, ..], _)) = (a.v.comps(), b.v.comps());
+    let (v0, v1) = if n == 1 { (v0, v1) } else { (0.0, 1.0) };
     let third = [(b.t - a.t) / 3.0, (v1 - v0) / 3.0];
     let ([dt0, dv0], [dt1, dv1]) = (out.unwrap_or(third), back.unwrap_or(third));
     let at = |p: [f32; 4], s: f32| {
@@ -57,7 +58,7 @@ fn curve<T: Animate>(a: &Key<T>, b: &Key<T>, t: f32) -> Option<T> {
         (lo, hi) = if at(xs, mid) < t { (mid, hi) } else { (lo, mid) };
     }
     let v = at([v0, v0 + dv0, v1 - dv1, v1], (lo + hi) / 2.0);
-    Some(a.v.with_comps([v, 0.0, 0.0, 0.0]))
+    Some(if n == 1 { a.v.with_comps([v, 0.0, 0.0, 0.0]) } else { a.v.lerp(&b.v, v) })
 }
 
 impl<T: Serialize> Serialize for Key<T> {

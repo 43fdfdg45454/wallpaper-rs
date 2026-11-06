@@ -3947,6 +3947,14 @@ msgstr "Curva hasta el siguiente fotograma clave"
 
 #: apps/wprs-app/qml/SceneKeyCurve.qml
 msgid ""
+"Handles bend the curve between two keyframes of numbers, lists of numbers or "
+"colors; pick one that has another after it."
+msgstr ""
+"Las asas curvan el tramo entre dos claves de números, listas de números o "
+"colores; elige una que tenga otra después."
+
+#: apps/wprs-app/qml/SceneKeyCurve.qml
+msgid ""
 "Drag the two handles to bend how the number moves between the keyframes."
 msgstr ""
 "Arrastra los dos tiradores para curvar cómo cambia el número entre los "
@@ -3954,11 +3962,11 @@ msgstr ""
 
 #: apps/wprs-app/qml/SceneKeyCurve.qml
 msgid ""
-"Handles bend the curve between two keyframes of a single number; pick one "
-"that has another after it."
+"Drag the two handles to bend how fast the value goes from one keyframe to "
+"the next: the height is the share of the way, from 0 to 1."
 msgstr ""
-"Los tiradores curvan el tramo entre dos fotogramas clave de un solo número; "
-"elige uno que tenga otro después."
+"Arrastra las dos asas para curvar lo rápido que va el valor de una clave a "
+"la siguiente: la altura es la parte del camino, de 0 a 1."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "Desktop graphics cards (BC7)"
