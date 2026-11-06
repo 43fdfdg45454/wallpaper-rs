@@ -43,7 +43,9 @@ public class Seeder extends ContentProvider {
         remove(base);
         try {
             unpack("stall", new File(base, Folder.REPOSITORY));
-            unpack("stall-anchor.json", new File(new File(base, Folder.REPOSITORY), "root/1.json"));
+            File anchor = new File(new File(base, Folder.REPOSITORY), "root/1.json");
+            unpack("stall-anchor.json", anchor);
+            Anchor.renew(anchor);
             unpack("stall-dawn.wpak", new File(base, INCOMING));
         } catch (IOException e) {
             throw new IllegalStateException(e);
