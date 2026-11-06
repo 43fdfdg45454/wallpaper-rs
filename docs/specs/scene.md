@@ -169,7 +169,10 @@ its own texels and the composite scales the result up, as it scales the picture 
 image that is neither turned nor stretched lines its target up with its texels, so the picture is
 copied as it is and only the effects change; a turned image or a mesh keeps one and a half times
 that density. Lower levels multiply the density by 0.75 at Q2, 0.6 at Q1 and 0.5 at Q0, also on a
-screen that does not magnify the canvas. The cost counts each such layer at that density, from the
+screen that does not magnify the canvas. The canvas itself renders at full size at Q3 and half size
+at Q0; at Q2 it renders at one pixel per canvas unit, between three quarters and full size, and at Q1
+at 0.85 pixels per unit, between 0.6 and three quarters, so a screen that magnifies the canvas draws
+fewer pixels that hold no more detail. The cost counts each such layer at that density, from the
 magnification of the screen (pixels per canvas unit), the fixed scale of the layer and one texel
 per unit of its `size`. A scene
 that costs more at level `q2` than the 8 units of older integrated and phone GPUs gets a warning

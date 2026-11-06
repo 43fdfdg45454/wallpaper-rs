@@ -36,7 +36,7 @@ impl Scene {
             return 1.0;
         }
         let loose = if mesh && quality == Quality::Q3 { 1.5 } else { 1.0 };
-        let shown = magnify * quality.render_scale() * self.zoom(l);
+        let shown = magnify * quality.render_scale_for(magnify) * self.zoom(l);
         (quality.density() * loose / shown.max(1e-6)).clamp(0.125, 1.0)
     }
 
@@ -83,7 +83,7 @@ impl Scene {
             stack.extend(l.children());
             units += if l.flat() { self.units(l, quality, magnify) } else { 0.0 };
         }
-        let scale = quality.render_scale();
+        let scale = quality.render_scale_for(magnify);
         units * scale * scale
     }
 
@@ -119,7 +119,7 @@ impl Scene {
             particles.map(|s| (s.capacity as f32 / 100_000.0 + s.overdraw(canvas)) * quality.particles());
         let read: std::collections::HashSet<&str> = self.layers().flat_map(crate::links::reads).collect();
         let apart = read.into_iter().filter_map(|id| self.layer(id)).map(|l| APART * area(l));
-        let scale = quality.render_scale();
+        let scale = quality.render_scale_for(magnify);
         BASE + (layers.sum::<f32>() + particles.sum::<f32>() + apart.sum::<f32>() + glow) * scale * scale
     }
 }

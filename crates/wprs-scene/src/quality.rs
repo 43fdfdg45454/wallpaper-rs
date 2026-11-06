@@ -2,6 +2,8 @@ use crate::{Scene, Tier};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+const DENSE: f32 = 0.85;
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize, JsonSchema,
 )]
@@ -29,6 +31,15 @@ impl Quality {
 
     pub fn render_scale(self) -> f32 {
         [0.5, 0.75, 1.0, 1.0][self as usize]
+    }
+
+    pub fn render_scale_for(self, magnify: f32) -> f32 {
+        let fine = 1.0 / magnify.max(1e-3);
+        match self {
+            Quality::Q2 => fine.clamp(0.75, 1.0),
+            Quality::Q1 => (fine * DENSE).clamp(0.6, 0.75),
+            q => q.render_scale(),
+        }
     }
 
     pub fn density(self) -> f32 {

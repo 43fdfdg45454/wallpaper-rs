@@ -616,7 +616,9 @@ ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Los efectos de
 o una malla corren a la densidad de su imagen: si la pantalla la amplía (un lienzo de 2560×1440 en un
 teléfono de 1440×3040 muestra cada texel en 2,1 píxeles), trabajan sobre sus propios texeles y el
 resultado se amplía al componer, como la imagen misma, así que en Q3 se ven igual y cuestan una
-cuarta parte; Q2, Q1 y Q0 bajan esa densidad a 0,75, 0,6 y 0,5, y el coste las cuenta así. Las GPU integradas antiguas (Intel
+cuarta parte; Q2, Q1 y Q0 bajan esa densidad a 0,75, 0,6 y 0,5, y el coste las cuenta así. Si la
+pantalla amplía el lienzo, Q2 lo dibuja a un píxel por unidad del lienzo (entre tres cuartos y el
+tamaño completo) y Q1 a 0,85 (entre 0,6 y tres cuartos), píxeles que no tendrían más detalle. Las GPU integradas antiguas (Intel
 HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
 nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
 corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
