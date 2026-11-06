@@ -17,7 +17,7 @@ Kirigami.Dialog {
     function start(uid) {
         stop();
         trial.uid = uid;
-        output = "preview:page-lights-" + Date.now();
+        output = "preview:page-lights";
         strip = null;
         problem = "";
         missing = false;

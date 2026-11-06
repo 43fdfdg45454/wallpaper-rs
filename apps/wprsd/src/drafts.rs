@@ -19,6 +19,12 @@ pub fn virtual_output(name: &str) -> bool {
     name.starts_with(PREVIEW)
 }
 
+pub(crate) fn forget_previews(config: &mut wprs_core::Config) -> bool {
+    let before = config.outputs.len();
+    config.outputs.retain(|name, _| !virtual_output(name));
+    config.outputs.len() != before
+}
+
 pub(crate) struct Draft {
     pub(crate) pack: Arc<ScenePack>,
     pub(crate) hold: Option<f64>,
@@ -118,5 +124,19 @@ async fn expire(daemon: Weak<Daemon>) {
         let Some(next) = next else { return };
         drop(d);
         tokio::time::sleep_until(next.into()).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn previews_left_in_the_settings_are_forgotten_and_screens_kept() {
+        let mut config = wprs_core::Config::default();
+        for name in ["preview:page-lights", "preview:1", "DP-1"] {
+            config.outputs.insert(name.into(), Default::default());
+        }
+        assert!(super::forget_previews(&mut config));
+        assert_eq!(config.outputs.keys().collect::<Vec<_>>(), ["DP-1"]);
+        assert!(!super::forget_previews(&mut config), "nothing left to forget was reported");
     }
 }

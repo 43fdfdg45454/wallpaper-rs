@@ -43,7 +43,11 @@ fn a_page_preview_shows_its_lights_and_gives_its_stream_back() {
     let files = qml_files();
     let text = |name: &str| files.iter().find(|(n, _)| n == name).map(|(_, t)| t.clone()).unwrap();
     let lights = text("PageLights.qml");
-    assert!(lights.contains(r#""preview:page-lights-" + Date.now()"#), "the preview is not a preview output");
+    assert!(
+        lights.contains(r#"output = "preview:page-lights";"#),
+        "the preview is not one fixed preview output"
+    );
+    assert!(!lights.contains("Date.now()"), "each try names a new preview output");
     assert!(lights.contains(r#"App.query("GetStrip", [trial.output], "Rgb1""#));
     assert!(
         lights.contains(r#"App.act("ReleaseStream", [output], "Daemon1")"#)
