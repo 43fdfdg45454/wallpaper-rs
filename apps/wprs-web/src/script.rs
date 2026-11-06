@@ -183,7 +183,7 @@ pub fn heard(heard: Value) {
 }
 
 pub fn replay(view: u32) {
-    if let Some(last) = live(|l| l.heard.clone().filter(|_| l.media)) {
-        tell_view(view, &json!({ "media": last }));
+    for message in live(|l| crate::replay::missed(l, view)) {
+        tell_view(view, &message);
     }
 }

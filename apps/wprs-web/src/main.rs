@@ -5,6 +5,7 @@ mod frames;
 mod gbm;
 mod glib;
 mod quit;
+mod replay;
 mod ring;
 mod run;
 mod scheme;
