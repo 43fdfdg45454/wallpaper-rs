@@ -54,12 +54,13 @@ struct Lights {
 
 static LIGHTS: OnceLock<Lights> = OnceLock::new();
 static WAKE: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
+static DISK: OnceLock<std::path::PathBuf> = OnceLock::new();
 
 fn lights() -> &'static Lights {
     LIGHTS.get_or_init(|| {
         let (asks, taken) = channel();
         let status = Arc::new(Mutex::new(Status::default()));
-        worker::spawn(taken, status.clone());
+        worker::spawn(taken, status.clone(), DISK.get().cloned());
         Lights { asks, status, strips: Mutex::default(), sent: Mutex::default() }
     })
 }
@@ -70,6 +71,7 @@ pub(crate) fn follow(daemon: &Daemon) {
         return;
     }
     WAKE.get_or_init(|| Box::new(daemon.compositor.waker()));
+    DISK.get_or_init(|| daemon.store.data.join("rgb-modes.json"));
     let l = lights();
     if lock(&l.status).rgb != wanted {
         lock(&l.status).rgb = wanted.clone();
@@ -162,9 +164,9 @@ pub(crate) fn status(rgb: &Rgb) -> Value {
                 "matrix": z.matrix.as_ref().map(|(w, h, _)| [w, h]) })
                 })
                 .collect();
-            let saved = s.saved.iter().find(|v| v.index == d.index && v.name == d.name);
+            let saved = s.saved.iter().find(|v| v.index == d.index && v.key == d.key);
             let own = saved.unwrap_or(d).mode.as_ref().map(|m| m.name.clone());
-            json!({ "index": d.index, "name": d.name, "kind": d.kind, "leds": d.leds, "zones": zones,
+            json!({ "index": d.index, "name": d.name, "key": d.key, "kind": d.kind, "leds": d.leds, "zones": zones,
                 "own_mode": own, "taken": saved.is_some() })
         })
         .collect();

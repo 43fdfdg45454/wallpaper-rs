@@ -9,8 +9,8 @@ const WAIT: Duration = Duration::from_secs(2);
 fn shapes() -> Vec<Shape> {
     let keys = (6, Some((3, 2, vec![0, 1, 2, 3, 4, 5])));
     vec![
-        Shape { name: "Example keyboard", kind: 5, zones: vec![keys, (2, None)] },
-        Shape { name: "Example mouse", kind: 6, zones: vec![(1, None)] },
+        Shape { name: "Example keyboard", serial: "", kind: 5, zones: vec![keys, (2, None)] },
+        Shape { name: "Example mouse", serial: "", kind: 6, zones: vec![(1, None)] },
     ]
 }
 
@@ -80,7 +80,7 @@ fn broken_servers_and_addresses_are_refused() {
     assert_eq!(controller(0, &short[..short.len() / 2], 3), Err(Error::Broken));
     assert_eq!(controller(0, &short, 4), Err(Error::Broken));
     let (address, _) =
-        serve(vec![Shape { name: "Example strip", kind: 99, zones: vec![(3, None)] }], Some(3));
+        serve(vec![Shape { name: "Example strip", serial: "", kind: 99, zones: vec![(3, None)] }], Some(3));
     let mut client = Client::connect(&address, WAIT).unwrap();
     assert_eq!(client.devices().unwrap()[0].kind, "other");
 }
@@ -147,4 +147,21 @@ fn each_device_and_zone_takes_its_own_part_of_the_picture() {
     });
     assert!(zoned[..6].iter().all(|c| *c == [0, 0, 0]), "a zone left dark got colors");
     assert_eq!((zoned[6], zoned[7]), ([0, 0, 7], [0, 0, 7]), "a placed zone did not take its own corner");
+}
+
+#[test]
+fn devices_with_one_name_are_told_apart_by_serial_then_order() {
+    let twin = |serial| Shape { name: "Example stick", serial, kind: 1, zones: vec![(1, None)] };
+    for (serials, keys) in [
+        (["", "B2"], ["Example stick (1)", "Example stick (B2)"]),
+        (["A1", "B2"], ["Example stick (A1)", "Example stick (B2)"]),
+        (["A1", "A1"], ["Example stick (1)", "Example stick (2)"]),
+    ] {
+        let fan = Shape { name: "Example fan", serial: "", kind: 3, zones: vec![(1, None)] };
+        let (address, _) = serve(vec![twin(serials[0]), fan, twin(serials[1])], Some(4));
+        let devices = Client::connect(&address, WAIT).unwrap().devices().unwrap();
+        let found: Vec<&str> = devices.iter().map(|d| d.key.as_str()).collect();
+        assert_eq!(found, [keys[0], "Example fan", keys[1]], "{serials:?}");
+        assert_eq!((devices[2].serial.as_str(), devices[2].location.as_str()), (serials[1], "local"));
+    }
 }

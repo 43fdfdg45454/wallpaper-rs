@@ -11,9 +11,10 @@ impl Session {
             wanted.iter().copied().filter(|d| !self.direct.contains(&d.index)).collect();
         for device in fresh {
             let mut status = lock(&self.status);
-            let same = |d: &Device| d.index == device.index && d.name == device.name;
+            let same = |d: &Device| d.index == device.index && d.key == device.key;
             if !status.saved.iter().any(same) {
                 status.saved.push(device.clone());
+                self.disk.iter().for_each(|path| super::disk::save(path, &status.saved));
             }
             drop(status);
             client.direct(device.index)?;
@@ -56,10 +57,11 @@ impl Session {
     pub(super) fn restore(&mut self) {
         self.direct.clear();
         let saved = std::mem::take(&mut lock(&self.status).saved);
+        self.owed = !saved.is_empty();
         let Some(client) = self.client.as_mut() else { return lock(&self.status).saved = saved };
         let devices = lock(&self.status).devices.clone();
-        let same = |a: &Device, b: &Device| a.index == b.index && a.name == b.name;
-        let (mut left, mut failed) = (Vec::new(), None);
+        let same = |a: &Device, b: &Device| a.index == b.index && a.key == b.key;
+        let (mut left, mut failed, before) = (Vec::new(), None, saved.len());
         for device in saved {
             if failed.is_some() || !devices.iter().any(|d| same(d, &device)) {
                 left.push(device);
@@ -78,7 +80,13 @@ impl Session {
                 }
             }
         }
-        lock(&self.status).saved = left;
+        let mut status = lock(&self.status);
+        if let Some(path) = self.disk.as_ref().filter(|_| before != left.len()) {
+            super::disk::save(path, &left);
+        }
+        self.owed = !left.is_empty();
+        status.saved = left;
+        drop(status);
         if let Some(e) = failed {
             (self.client, self.failed) = (None, Some(Instant::now()));
             self.publish(Some(e.to_string()), Vec::new());

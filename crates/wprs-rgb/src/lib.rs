@@ -4,7 +4,7 @@ mod read;
 
 pub use client::{Client, Error};
 pub use paint::{Area, Flow, Strip, colors, pattern, shrink};
-pub use read::{Device, Mode, Zone, controller};
+pub use read::{Device, Mode, Zone, controller, keyed};
 
 pub const PORT: u16 = 6742;
 pub const VERSION: u32 = 4;

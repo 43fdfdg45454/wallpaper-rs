@@ -23,6 +23,9 @@ pub struct Mode {
 pub struct Device {
     pub index: u32,
     pub name: String,
+    pub key: String,
+    pub serial: String,
+    pub location: String,
     pub kind: &'static str,
     pub leds: u32,
     pub zones: Vec<Zone>,
@@ -122,8 +125,9 @@ pub fn controller(index: u32, data: &[u8], version: u32) -> Result<Device, Error
     r.u32()?;
     let kind = crate::kind(r.u32()? as i32);
     let name = r.text()?;
-    let texts = if version >= 1 { 5 } else { 4 };
+    let texts = if version >= 1 { 3 } else { 2 };
     (0..texts).try_for_each(|_| r.text().map(drop))?;
+    let (serial, location) = (r.text()?, r.text()?);
     let mode = modes(&mut r, version)?;
     let count = r.u16()?;
     if count > MAX_ZONES {
@@ -141,5 +145,26 @@ pub fn controller(index: u32, data: &[u8], version: u32) -> Result<Device, Error
         return Err(Error::Broken);
     }
     let colors = colors(&mut r, leds).unwrap_or_default();
-    Ok(Device { index, name, kind, leds, zones, mode, colors })
+    let key = name.clone();
+    Ok(Device { index, name, key, serial, location, kind, leds, zones, mode, colors })
+}
+
+pub fn keyed(devices: &mut [Device]) {
+    let names: Vec<String> = devices.iter().map(|d| d.name.clone()).collect();
+    for (i, name) in names.iter().enumerate() {
+        let twins: Vec<usize> = (0..names.len()).filter(|j| names[*j] == *name).collect();
+        if twins.len() < 2 {
+            continue;
+        }
+        let unique = |part: fn(&Device) -> &str| {
+            let mine = part(&devices[i]);
+            (!mine.is_empty() && twins.iter().filter(|j| part(&devices[**j]) == mine).count() == 1)
+                .then(|| mine.to_owned())
+        };
+        let order = twins.iter().position(|j| *j == i).unwrap_or_default() + 1;
+        let tail = unique(|d| &d.serial).or_else(|| unique(|d| &d.location)).unwrap_or(order.to_string());
+        let tail: String = tail.chars().filter(|c| *c != '#').take(48).collect();
+        let kept: String = name.chars().take(128 - 3 - tail.chars().count()).collect();
+        devices[i].key = format!("{kept} ({tail})");
+    }
 }

@@ -3,7 +3,7 @@ mod hub;
 mod keys;
 mod kwin;
 mod parallax;
-mod store;
+pub(crate) mod store;
 #[cfg(test)]
 mod tests;
 

@@ -1588,7 +1588,9 @@ la elección y si las luces están en pausa ahora. Cada dispositivo pasa a su mo
 se le pintan colores y recupera su propio modo (y sus colores, si ese modo fija cada luz) en cuanto
 nada manda colores: al detenerse o cambiar el paquete, al quitar la pantalla, al apagar la
 iluminación, al cambiar de servidor, al terminar una prueba sin nada que pintar y al detenerse el
-servicio. La lista de dispositivos de la app y `wprs-ctl rgb devices` muestran ese modo propio y si
+servicio. Ese modo propio se guarda en este equipo mientras el dispositivo está tomado, así que si el
+servicio se cierra de golpe o el servidor no responde al devolverlo, vuelve en cuanto el servicio
+alcanza de nuevo el servidor. La lista de dispositivos de la app y `wprs-ctl rgb devices` muestran ese modo propio y si
 volverá cuando paren las luces. Cada dispositivo toma toda la imagen hasta que lo ubicas: en la
 misma sección, el tablero de luces muestra la imagen que reciben (la tira de 64 × 16 del fondo que
 las manda) y eliges un dispositivo o una de sus zonas, arrastras su marco sobre la imagen y tiras de
@@ -1596,7 +1598,8 @@ su esquina para darle tamaño; también eliges hacia dónde corre una fila de lu
 derecha, al revés, de arriba abajo o de abajo arriba), *Toda la imagen*, *Dejar el dispositivo en
 paz* (no se le toca el modo) o *Dejar la zona apagada*. En la terminal es `wprs-ctl rgb place
 "NOMBRE" "x y ancho alto [right|left|down|up]"` (fracciones de la imagen; `--zone N` para una zona,
-`off` o `none`), y `wprs-ctl rgb place` lista lo ubicado; se guarda en este equipo y no se
+`off` o `none`; si dos dispositivos se llaman igual, el nombre lleva entre paréntesis su número de
+serie, o su orden si no lo tienen, como lo muestra `wprs-ctl rgb devices`), y `wprs-ctl rgb place` lista lo ubicado; se guarda en este equipo y no se
 sincroniza. Para probar una página web con sus luces, su ficha de la biblioteca tiene *Probar la
 página y sus luces…*: la muestra en una vista previa con la tira que mandaría a las luces, aunque la
 iluminación esté apagada o el paquete no tenga permiso (ahí `setImage` devuelve `true` y los colores

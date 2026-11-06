@@ -18,9 +18,9 @@ fn placed(place: Place) -> Option<Area> {
 }
 
 pub(super) fn area(rgb: &Rgb, device: &Device) -> Area {
-    rgb.place(&device.name).and_then(placed).unwrap_or_default()
+    rgb.place(&device.key).and_then(placed).unwrap_or_default()
 }
 
 pub(super) fn zone(rgb: &Rgb, device: &Device, zone: usize) -> Option<Option<Area>> {
-    rgb.zone_place(&device.name, zone).map(placed)
+    rgb.zone_place(&device.key, zone).map(placed)
 }

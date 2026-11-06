@@ -97,6 +97,7 @@ impl Client {
             devices.push(crate::controller(index, &data, self.version)?);
         }
         self.changed = false;
+        crate::keyed(&mut devices);
         Ok(devices)
     }
 

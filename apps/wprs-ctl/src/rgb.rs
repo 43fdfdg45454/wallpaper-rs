@@ -47,7 +47,9 @@ pub enum Rgb {
         about = "Show or choose the part of the picture each device or zone takes; list every place without a device"
     )]
     Place {
-        #[arg(help = "The device name as wprs-ctl rgb devices shows it")]
+        #[arg(
+            help = "The device name as wprs-ctl rgb devices shows it, with its serial or number when two share a name"
+        )]
         device: Option<String>,
         #[arg(help = PLACES)]
         place: Option<String>,
@@ -89,7 +91,7 @@ fn devices(s: &Value) -> String {
             true => format!(", own mode {m} comes back when the lights stop"),
             false => format!(", own mode {m}"),
         });
-        let name = d["name"].as_str().unwrap_or("?");
+        let name = d["key"].as_str().or(d["name"].as_str()).unwrap_or("?");
         format!("{:>3}  {kind:<14} {name}  ({} lights{own})", d["index"], d["leds"])
     });
     let list: Vec<String> = rows.collect();

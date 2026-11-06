@@ -18,6 +18,7 @@ pub type Matrix = (u32, u32, Vec<u32>);
 
 pub struct Shape {
     pub name: &'static str,
+    pub serial: &'static str,
     pub kind: u32,
     pub zones: Vec<(u32, Option<Matrix>)>,
 }
@@ -27,7 +28,8 @@ pub fn blob(shape: &Shape, version: u32) -> Vec<u8> {
     word(&mut out, shape.kind);
     text(&mut out, shape.name);
     let texts = if version >= 1 { 5 } else { 4 };
-    (0..texts).for_each(|i| text(&mut out, ["Example", "A test device", "1.0", "", "local"][i]));
+    let all = ["Example", "A test device", "1.0", shape.serial, "local"];
+    all[5 - texts..].iter().for_each(|t| text(&mut out, t));
     out.extend(2u16.to_le_bytes());
     word(&mut out, shape.kind % 2);
     for (name, per_led) in [("Direct", 1), ("Rainbow", 0)] {

@@ -1,6 +1,7 @@
 use super::{Ask, Status};
 use crate::compositor::lock;
 use placed::{area, zone};
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -25,10 +26,14 @@ struct Session {
     test: Option<(Instant, Option<u32>)>,
     opened: bool,
     direct: Vec<u32>,
+    disk: Option<PathBuf>,
+    owed: bool,
 }
 
-pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>) {
-    let session = Session { status, ..Session::default() };
+pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>, disk: Option<PathBuf>) {
+    lock(&status).saved = disk.as_deref().map(disk::load).unwrap_or_default();
+    let owed = !lock(&status).saved.is_empty();
+    let session = Session { status, disk, owed, ..Session::default() };
     let started = std::thread::Builder::new().name("wprsd-rgb".into()).spawn(move || run(asks, session));
     if let Err(e) = started {
         tracing::warn!("cannot start the RGB lighting: {e}");
@@ -116,7 +121,13 @@ impl Session {
             Ok((devices, client)) => {
                 (self.client, self.direct) = (Some(client), Vec::new());
                 self.publish(None, devices);
-                Ok(())
+                if self.owed && self.last.is_none() && self.test.is_none() {
+                    self.restore();
+                }
+                self.client
+                    .as_ref()
+                    .map(drop)
+                    .ok_or_else(|| lock(&self.status).error.clone().unwrap_or_default())
             }
             Err(e) => {
                 (self.client, self.failed) = (None, Some(Instant::now()));
@@ -131,7 +142,7 @@ impl Session {
             return;
         }
         let devices = lock(&self.status).devices.clone();
-        let off = |d: &Device| only.is_none() && self.rgb.place(&d.name) == Some(Place::Off);
+        let off = |d: &Device| only.is_none() && self.rgb.place(&d.key) == Some(Place::Off);
         let wanted: Vec<&Device> =
             devices.iter().filter(|d| only.is_none_or(|i| i == d.index) && !off(d)).collect();
         let taken = self.take(&wanted);
@@ -179,7 +190,10 @@ impl Session {
     }
 }
 
+mod disk;
 mod kept;
+#[cfg(test)]
+mod owed;
 mod placed;
 #[cfg(test)]
 mod restored;

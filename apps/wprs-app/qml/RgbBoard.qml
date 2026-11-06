@@ -15,13 +15,13 @@ ColumnLayout {
         const found = [];
         for (const d of status.devices ?? []) {
             found.push({
-                    "key": d.name,
-                    "text": d.name,
+                    "key": d.key ?? d.name,
+                    "text": d.key ?? d.name,
                     "zone": -1
                 });
             (d.zones ?? []).forEach((z, i) => found.push({
-                        "key": d.name + "#" + i,
-                        "text": App.tr("%1, zone %2", d.name, z.name),
+                        "key": (d.key ?? d.name) + "#" + i,
+                        "text": App.tr("%1, zone %2", d.key ?? d.name, z.name),
                         "zone": i
                     }));
         }

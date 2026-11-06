@@ -32,7 +32,7 @@ fn device(active: u32) -> Vec<u8> {
     [((out.len() + 4) as u32).to_le_bytes().to_vec(), out].concat()
 }
 
-fn server() -> (String, Heard<(u32, i32)>) {
+pub(super) fn server() -> (String, Heard<(u32, i32)>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap().to_string();
     let (sent, heard) = channel();
@@ -69,7 +69,7 @@ fn server() -> (String, Heard<(u32, i32)>) {
     (address, heard)
 }
 
-fn told(heard: &Heard<(u32, i32)>) -> Vec<(u32, i32)> {
+pub(super) fn told(heard: &Heard<(u32, i32)>) -> Vec<(u32, i32)> {
     std::iter::from_fn(|| heard.recv_timeout(Duration::from_millis(500)).ok()).collect()
 }
 
