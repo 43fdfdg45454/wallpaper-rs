@@ -2,10 +2,12 @@ use image::{Rgba, RgbaImage};
 use wprs_core::Fit;
 use wprs_render::{GpuImage, Layer, Planes, Renderer, TargetLimits};
 
+mod bright;
 mod cost;
 mod deep;
 mod layers;
 mod looks;
+mod peak;
 mod readback;
 
 fn renderer() -> Option<&'static Renderer> {

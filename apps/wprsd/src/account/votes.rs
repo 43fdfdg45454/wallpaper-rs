@@ -27,18 +27,19 @@ impl Daemon {
     pub fn votes(&self, specs: &[String]) -> Result<String> {
         let server = self.server_repo();
         let Some(asked) = wprs_format::voted(specs, server.as_deref()) else {
-            return Err(invalid("give at most 100 package ids, each as ID or REPO/ID"));
+            return Err(invalid("give at most 1000 package ids, each as ID or REPO/ID"));
         };
         let none = json!({ "items": {}, "shown": false, "repo_id": server }).to_string();
         if asked.is_empty() || !self.state().config.repos.vote_counts || self.saved().url.is_empty() {
             return Ok(none);
         }
         let Ok((api, _)) = self.account_api(false) else { return Ok(none) };
-        let mut ids: Vec<&str> = asked.iter().map(|(_, id)| *id).collect();
-        ids.sort_unstable();
-        ids.dedup();
-        let found = block_on(api.get(&format!("/api/v1/votes?ids={}", ids.join(",")))).map_err(sync_error)?;
-        let count = |id: &str| found["items"].get(id).cloned().unwrap_or(Value::Null);
+        let mut found = Map::new();
+        for query in wprs_format::vote_queries(&asked) {
+            let page = block_on(api.get(&query)).map_err(sync_error)?;
+            found.extend(page["items"].as_object().cloned().unwrap_or_default());
+        }
+        let count = |id: &str| found.get(id).cloned().unwrap_or(Value::Null);
         let items: Map<String, Value> = asked
             .iter()
             .filter(|(_, id)| !count(id).is_null())

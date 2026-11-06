@@ -23,6 +23,7 @@ pub(crate) enum Ask {
     Test(Option<u32>, Sender<Result<(), String>>),
     Connect(Sender<Result<(), String>>),
     Covered,
+    Stop(Sender<()>),
 }
 
 #[derive(Default)]
@@ -35,6 +36,7 @@ pub(crate) struct Status {
     pub(crate) frames: u64,
     pub(crate) testing: bool,
     pub(crate) held: bool,
+    pub(crate) saved: Vec<Device>,
 }
 
 impl Status {
@@ -52,12 +54,13 @@ struct Lights {
 
 static LIGHTS: OnceLock<Lights> = OnceLock::new();
 static WAKE: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
+static DISK: OnceLock<std::path::PathBuf> = OnceLock::new();
 
 fn lights() -> &'static Lights {
     LIGHTS.get_or_init(|| {
         let (asks, taken) = channel();
         let status = Arc::new(Mutex::new(Status::default()));
-        worker::spawn(taken, status.clone());
+        worker::spawn(taken, status.clone(), DISK.get().cloned());
         Lights { asks, status, strips: Mutex::default(), sent: Mutex::default() }
     })
 }
@@ -68,6 +71,7 @@ pub(crate) fn follow(daemon: &Daemon) {
         return;
     }
     WAKE.get_or_init(|| Box::new(daemon.compositor.waker()));
+    DISK.get_or_init(|| daemon.store.data.join("rgb-modes.json"));
     let l = lights();
     if lock(&l.status).rgb != wanted {
         lock(&l.status).rgb = wanted.clone();
@@ -104,8 +108,18 @@ pub(crate) fn frame(source: &str, strip: Strip, send: bool) {
 
 pub(crate) fn forget(source: &str) {
     if let Some(l) = LIGHTS.get() {
-        lock(&l.strips).remove(source);
-        l.asks.send(Ask::Forget(source.into())).ok();
+        let kept = lock(&l.strips).remove(source).is_some();
+        if kept || lock(&l.status).source.as_deref() == Some(source) {
+            l.asks.send(Ask::Forget(source.into())).ok();
+        }
+    }
+}
+
+pub(crate) fn stop() {
+    if let Some(l) = LIGHTS.get() {
+        let (tx, rx) = channel();
+        l.asks.send(Ask::Stop(tx)).ok();
+        rx.recv_timeout(Duration::from_secs(3)).ok();
     }
 }
 
@@ -135,7 +149,7 @@ pub(crate) fn status(rgb: &Rgb) -> Value {
     let Some(l) = LIGHTS.get() else {
         return json!({ "enabled": rgb.enabled, "server": rgb.server, "local": rgb.local(), "connected": false,
             "error": null, "devices": [], "source": null, "frames": 0, "testing": false, "strips": [],
-            "when_covered": rgb.when_covered, "held": false });
+            "when_covered": rgb.when_covered, "held": false, "places": rgb.places });
     };
     let s = lock(&l.status);
     let devices: Vec<Value> = s
@@ -150,10 +164,14 @@ pub(crate) fn status(rgb: &Rgb) -> Value {
                 "matrix": z.matrix.as_ref().map(|(w, h, _)| [w, h]) })
                 })
                 .collect();
-            json!({ "index": d.index, "name": d.name, "kind": d.kind, "leds": d.leds, "zones": zones })
+            let saved = s.saved.iter().find(|v| v.index == d.index && v.key == d.key);
+            let own = saved.unwrap_or(d).mode.as_ref().map(|m| m.name.clone());
+            json!({ "index": d.index, "name": d.name, "key": d.key, "kind": d.kind, "leds": d.leds, "zones": zones,
+                "own_mode": own, "taken": saved.is_some() })
         })
         .collect();
     json!({ "enabled": s.rgb.enabled, "server": s.rgb.server, "local": s.rgb.local(), "connected": s.connected,
         "error": s.error, "devices": devices, "source": s.source, "frames": s.frames, "testing": s.testing,
-        "strips": lock(&l.strips).keys().collect::<Vec<_>>(), "when_covered": s.rgb.when_covered, "held": s.held })
+        "strips": lock(&l.strips).keys().collect::<Vec<_>>(), "when_covered": s.rgb.when_covered, "held": s.held,
+        "places": s.rgb.places })
 }

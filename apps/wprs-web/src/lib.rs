@@ -69,6 +69,7 @@ pub enum ToWeb {
     Resize { view: u32, size: (u32, u32), scale: f64 },
     Visible { view: u32, visible: bool },
     Fps { view: u32, fps: u32 },
+    Lights { view: u32, on: bool },
     Settings(Settings),
     Properties { view: u32, values: Map<String, Value> },
     Allowed(Allowed),

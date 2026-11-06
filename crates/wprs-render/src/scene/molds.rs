@@ -83,7 +83,9 @@ impl Renderer {
     fn fresh_mold(&self, view: &SceneView, size: (u32, u32), skin: Option<&str>) -> Mold {
         let usage = U::RENDER_ATTACHMENT | U::TEXTURE_BINDING | U::COPY_SRC;
         let image = gpu_image(create_texture(&self.device, "wprs-render mold", size, FORMAT, usage));
-        let skin = skin.and_then(|id| view.images.get(id)).map_or(&view.pool.white.view, |i| &i.0.view);
+        let found = skin.and_then(|id| view.images.get(id)).map(|i| &i.0);
+        let exact = found.and_then(|i| self.exact(i));
+        let skin = exact.as_ref().or(found).map_or(&view.pool.white.view, |i| &i.view);
         let values = [size.0 as f32, size.1 as f32, 0.0, 0.0];
         let uniform = crate::filled::filled(
             (&self.device, &self.queue),

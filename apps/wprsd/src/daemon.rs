@@ -79,7 +79,7 @@ impl Daemon {
     pub fn new(config_path: PathBuf, display: Option<wprs_render::Display>) -> anyhow::Result<Self> {
         let store = Store::open();
         let closed = || Config { models: Models { allow_download: false }, ..Config::default() };
-        let (config, config_error) = load(&config_path, &store)
+        let (config, config_error) = load(&config_path, &store, true)
             .map_or_else(|e| (closed(), Some(e.to_string())), |config| (config, None));
         match &config_error {
             Some(e) => {
@@ -90,8 +90,9 @@ impl Daemon {
         }
         let chosen = Renderer::with_choice(display, &config.render.gpu)
             .context("cannot initialize the GPU renderer")?;
-        let (gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
+        let (mut gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
         let renderer = renderer.install();
+        gpus.renderer = Some(renderer);
         let adapter = renderer.adapter().to_owned();
         crate::streams::share_video(renderer);
         let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());
@@ -161,8 +162,8 @@ impl Daemon {
     pub fn reload(&self) -> anyhow::Result<()> {
         let settings = {
             let mut st = self.state();
-            let loaded =
-                load(&st.config_path, &self.store).inspect_err(|e| st.config_error = Some(e.to_string()))?;
+            let loaded = load(&st.config_path, &self.store, false)
+                .inspect_err(|e| st.config_error = Some(e.to_string()))?;
             (st.config, st.config_error) = (loaded, None);
             st.installed = wprs_format::installed(&self.store.data).unwrap_or_default();
             settings(&st.config)
@@ -179,9 +180,10 @@ impl Daemon {
     }
 }
 
-fn load(path: &Path, store: &Store) -> Result<Config, wprs_core::ConfigError> {
+fn load(path: &Path, store: &Store, starting: bool) -> Result<Config, wprs_core::ConfigError> {
     let mut config = Config::load(path)?;
-    if store.drop_dangling(&mut config) {
+    let previews = starting && crate::drafts::forget_previews(&mut config);
+    if store.drop_dangling(&mut config) || previews {
         config.save(path)?;
     }
     Ok(config)

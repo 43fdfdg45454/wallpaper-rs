@@ -112,7 +112,7 @@ ColumnLayout {
     }
 
     QualityPicker {
-        visible: host.scene && host.name !== ""
+        visible: (host.scene || host.info?.kind === "web") && host.name !== ""
         daemon: host.daemon
         output: host.name
         info: host.info

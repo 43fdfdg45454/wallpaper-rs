@@ -62,7 +62,9 @@ impl State {
             }
             slot.steer(steer);
             slot.tick(reel, heard, &self.tx, now);
+            slot.lit = super::light::video(outputs, reel);
         }
+        super::light::bright_videos(&self.players, &mut self.outputs);
     }
 
     pub(super) fn take_video_frames(&mut self) {
@@ -79,7 +81,7 @@ impl State {
         let status = |name: &str, o: &Output| {
             let slot = o.shown.content.video().and_then(|p| self.players.get(p));
             let scene_error = o.shown.scene.as_ref().and_then(|s| s.error.as_ref());
-            let page = o.shown.content.page().and_then(|p| self.pages.get(&p.pack.path));
+            let page = o.shown.content.page().and_then(|p| self.pages.get(&p.key(self.power.choice)));
             let page_error = page.and_then(|p| p.error.as_ref());
             let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).or(page_error).cloned();
             let stops = error.is_some();
@@ -150,7 +152,7 @@ impl State {
                     (flashes, particles, level, decode),
                     (sandbox, helper),
                 ) = status(name, o);
-                let frames = published.get(name).map_or(0, |s| s.frames);
+                let (frames, page_frames) = published.get(name).map_or((0, 0), |s| (s.frames, s.page_frames));
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
                 let status = OutputStatus {
                     kind,
@@ -158,6 +160,7 @@ impl State {
                     error,
                     parallax,
                     frames,
+                    page_frames,
                     fps,
                     sound,
                     flashes,

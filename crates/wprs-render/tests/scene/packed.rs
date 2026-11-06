@@ -41,6 +41,29 @@ fn ktx2_pictures_look_like_their_source_on_every_target_the_card_offers() {
 }
 
 #[test]
+fn ktx2_pictures_with_odd_sides_stay_compressed_and_exact() {
+    let Some(r) = renderer() else { return };
+    let source = RgbaImage::from_fn(30, 18, |x, y| match (x >= 27, y >= 15) {
+        (true, _) => Rgba([255, 0, 0, 255]),
+        (_, true) => Rgba([0, 0, 255, 255]),
+        _ => Rgba([0, 200, 0, 255]),
+    });
+    let plain = shot(r, json!({ "path": "p.png" }), [90, 54], Pixels::new(source.clone()));
+    for target in r.ktx2_targets() {
+        r.force_ktx2(Some(target));
+        let seen = shot(r, json!({ "path": "p.ktx2" }), [90, 54], packed(&source, Codec::Uastc, false));
+        let off = apart(&plain, &seen);
+        assert!(off < 12.0, "{target:?}: {off}");
+        for ((x, y), channel) in [((83, 25), 1), ((91, 25), 0), ((40, 41), 1), ((40, 49), 2)] {
+            let c = at(&seen, x, y);
+            let top = (0..3).max_by_key(|i| c[*i]).unwrap();
+            assert!(top == channel && c[channel] > 150, "{target:?} at {x},{y}: {c:?}");
+        }
+    }
+    r.force_ktx2(None);
+}
+
+#[test]
 fn ktx2_mipmaps_come_from_the_file_and_can_be_left_out() {
     let Some(r) = renderer() else { return };
     let checker =
@@ -84,13 +107,51 @@ fn ktx2_pictures_are_read_like_other_pictures() {
     let asset: wprs_scene::Asset = serde_json::from_value(json!({ "path": "p.ktx2" })).unwrap();
     let mut pictures = wprs_render::Pictures::default();
     let total = pictures
-        .add::<image::ImageError>((&mut assets, "p", &asset), || Ok(bytes), |_| unreachable!())
+        .add::<image::ImageError>((&mut assets, "p", &asset), || Ok(bytes), |_, _| unreachable!())
         .unwrap();
     assert_eq!(total, 64 * 32 * 4);
     assert!(assets.images["p"].packed().is_some() && !assets.images["p"].resident());
     assert_eq!(assets.images["p"].image().unwrap().dimensions(), (64, 32));
     let other: wprs_scene::Asset = serde_json::from_value(json!({ "path": "q.ktx2" })).unwrap();
     let read = || Ok(wprs_ktx2::MAGIC.to_vec());
-    let broken = pictures.add::<image::ImageError>((&mut assets, "q", &other), read, |_| unreachable!());
+    let broken = pictures.add::<image::ImageError>((&mut assets, "q", &other), read, |_, _| unreachable!());
     assert!(broken.is_err());
+}
+
+#[test]
+fn the_card_draws_each_ktx2_class_it_reads_like_the_processor_decodes_it() {
+    let Some(r) = renderer() else { return };
+    let source = gradient();
+    let options = Options { codec: Codec::Uastc, quality: 90, srgb: true, mips: false, repeat: false };
+    let bytes = encode(&source, &options).unwrap();
+    assert!(r.look_ktx2(&bytes, Target::Rgba).is_none(), "plain pixels need no drawing");
+    for target in r.ktx2_targets().into_iter().filter(|t| t.compressed()) {
+        let drawn = r.look_ktx2(&bytes, target).unwrap();
+        let decoded = wprs_ktx2::look(&bytes, target).unwrap();
+        assert_eq!(drawn.dimensions(), (64, 32));
+        let off = apart(drawn.as_raw(), decoded.as_raw());
+        assert!(off < 3.0, "{target:?}: {off}");
+    }
+}
+
+#[test]
+fn the_card_keeps_the_alpha_of_the_crops_it_draws() {
+    let Some(r) = renderer() else { return };
+    let source = image::RgbaImage::from_fn(64, 32, |x, _| image::Rgba([220, 120, 40, (x * 4) as u8]));
+    let options = Options { codec: Codec::Uastc, quality: 90, srgb: true, mips: false, repeat: false };
+    let bytes = encode(&source, &options).unwrap();
+    for target in r.ktx2_targets().into_iter().filter(|t| t.compressed()) {
+        let drawn = r.look_ktx2(&bytes, target).unwrap();
+        let decoded = wprs_ktx2::look(&bytes, target).unwrap();
+        let alpha = |i: &image::RgbaImage, x: u32| i.get_pixel(x, 16).0[3];
+        for x in [0, 20, 40, 63] {
+            assert!(
+                alpha(&drawn, x).abs_diff(alpha(&decoded, x)) <= 3,
+                "{target:?} at {x}: {}",
+                alpha(&drawn, x)
+            );
+        }
+        let color = drawn.get_pixel(40, 16).0;
+        assert!(color[0].abs_diff(220) <= 6 && color[2].abs_diff(40) <= 6, "{target:?}: {color:?}");
+    }
 }

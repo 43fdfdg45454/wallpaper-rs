@@ -26,6 +26,8 @@ struct Item {
     lit_basis: vec4<f32>,
     lit_at: vec4<f32>,
     lit_env: vec4<f32>,
+    lit_scale: vec4<f32>,
+    lit_more: vec4<f32>,
 };
 
 struct Out {

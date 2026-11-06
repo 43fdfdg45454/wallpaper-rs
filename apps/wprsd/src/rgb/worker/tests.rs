@@ -30,7 +30,8 @@ fn server(during: impl FnOnce() + Send + 'static) -> (String, Heard<()>) {
 
 fn follower(source: &str, address: String) -> Session {
     let mut s = session(source);
-    (s.last, s.rgb) = (None, Rgb { enabled: true, server: address, when_covered: Covered::Follow });
+    (s.last, s.rgb) =
+        (None, Rgb { enabled: true, server: address, when_covered: Covered::Follow, ..Rgb::default() });
     s
 }
 
@@ -39,11 +40,11 @@ fn released(s: &Session, heard: &Heard<()>) -> bool {
     closed && s.client.is_none() && s.wait() == IDLE && !lock(&s.status).connected
 }
 
-fn session(source: &str) -> Session {
+pub(super) fn session(source: &str) -> Session {
     let status = Arc::new(Mutex::new(Status { source: Some(source.into()), ..Status::default() }));
     let strip = Strip::new(1, 1, vec![0, 255, 0]).unwrap();
     let last = Some((source.to_owned(), strip));
-    Session { status, rgb: Rgb::default(), client: None, failed: None, last, test: None, opened: false }
+    Session { status, last, ..Session::default() }
 }
 
 #[test]
@@ -82,13 +83,13 @@ fn the_lights_idle_only_while_the_screen_they_follow_is_covered_and_they_pause()
 #[test]
 fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawing_for_nothing() {
     let _serial = lock(&SERIAL);
-    let device =
-        wprs_rgb::Device { index: 0, name: "keys".into(), kind: "keyboard", leds: 1, zones: Vec::new() };
+    let device = wprs_rgb::Device { name: "keys".into(), kind: "keyboard", leds: 1, ..Default::default() };
     let empty = Status { connected: true, ..Status::default() };
     assert!(!empty.receiving(), "a server without devices counted as receiving");
     assert!(Status { connected: true, devices: vec![device], ..Status::default() }.receiving());
     let mut s = session("TEST-RETRY");
-    s.rgb = Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow };
+    s.rgb =
+        Rgb { enabled: true, server: "127.0.0.1:1".into(), when_covered: Covered::Follow, ..Rgb::default() };
     super::super::cover("TEST-RETRY", true);
     s.retry();
     assert_eq!(s.wait(), IDLE, "a covered screen that sends no lights kept retrying the server");
@@ -107,8 +108,7 @@ fn covered_lights_that_follow_a_server_without_devices_retry_it_instead_of_drawi
 
 #[test]
 fn a_server_that_finds_its_first_device_wakes_the_covered_scene() {
-    let device =
-        wprs_rgb::Device { index: 0, name: "keys".into(), kind: "keyboard", leds: 1, zones: Vec::new() };
+    let device = wprs_rgb::Device { name: "keys".into(), kind: "keyboard", leds: 1, ..Default::default() };
     let mut status = Status { connected: true, ..Status::default() };
     assert!(status.show(true, vec![device.clone()], None), "a new device list never woke the scene");
     assert!(!status.show(true, vec![device.clone()], None), "the same devices woke the scene again");

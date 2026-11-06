@@ -13,6 +13,16 @@ ctl gpu | grep "next time the daemon starts" >/dev/null || fail "wprs-ctl gpu do
 ctl gpu auto >/dev/null
 [ "$(gpu "g['restart']")" = False ] || fail "going back to auto: $(ctl gpu)"
 if ctl config render.gpu "" 2>/dev/null; then fail "an empty card name was accepted"; fi
+if ctl gpu "pci:zz" 2>/dev/null; then fail "a bad PCI bus id was accepted"; fi
+[ "$(gpu "all('bus' in a for a in g['adapters'])")" = True ] || fail "the cards carry no bus: $(ctl gpu --json)"
+ctl gpu >"$WORK/cards.txt"
+head -n 1 "$WORK/cards.txt" | grep -q "BUS" || fail "wprs-ctl gpu shows no bus: $(cat "$WORK/cards.txt")"
+bus=$(gpu "[a['bus'] for a in g['adapters'] if a['used']][0]")
+if [ -n "$bus" ]; then
+  ctl gpu "pci:$bus" >/dev/null
+  [ "$(gpu "g['gpu']")" = "pci:$bus" ] || fail "the card on bus $bus was not kept: $(ctl gpu)"
+  ctl gpu auto >/dev/null
+fi
 started() {
   kill "$daemon"
   wait "$daemon" 2>/dev/null || true
@@ -37,4 +47,11 @@ case $first_kind in
       fail "the card chosen by kind $first_kind: $(ctl gpu)"
     ;;
 esac
+ctl gpu "no such card 42" >/dev/null
+ctl restart | grep -q "^the daemon started again on " || fail "wprs-ctl restart did not see the daemon come back"
+kill -0 "$daemon" 2>/dev/null || fail "the daemon did not start again in its own process"
+[ "$(gpu "g['gpu'], g['restart']")" = "('no such card 42', False)" ] || fail "the restart did not take the choice: $(ctl gpu)"
+gpu "g['warning']" | grep -q "no such card 42" || fail "the restarted daemon did not warn: $(ctl gpu --json)"
+ctl gpu auto >/dev/null && ctl restart >/dev/null
+[ "$(gpu "g['gpu'], g['warning'], g['restart']")" = "('auto', None, False)" ] || fail "back to auto: $(ctl gpu)"
 echo "graphics card choice checks passed ($first, $first_kind)"

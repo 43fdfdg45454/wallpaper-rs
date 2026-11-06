@@ -1,9 +1,11 @@
 use super::{Ask, Status};
 use crate::compositor::lock;
+use placed::{area, zone};
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use wprs_core::rgb::Rgb;
+use wprs_core::rgb::{Place, Rgb};
 use wprs_rgb::{Client, Device, Strip, colors, pattern};
 
 const WAIT: Duration = Duration::from_secs(2);
@@ -13,6 +15,7 @@ const STEP: Duration = Duration::from_millis(33);
 const LISTEN: Duration = Duration::from_secs(1);
 const IDLE: Duration = Duration::from_secs(3600);
 
+#[derive(Default)]
 struct Session {
     status: Arc<Mutex<Status>>,
     rgb: Rgb,
@@ -21,18 +24,15 @@ struct Session {
     last: Option<(String, Strip)>,
     test: Option<(Instant, Option<u32>)>,
     opened: bool,
+    direct: Vec<u32>,
+    disk: Option<PathBuf>,
+    owed: bool,
 }
 
-pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>) {
-    let session = Session {
-        status,
-        rgb: Rgb::default(),
-        client: None,
-        failed: None,
-        last: None,
-        test: None,
-        opened: false,
-    };
+pub(super) fn spawn(asks: Receiver<Ask>, status: Arc<Mutex<Status>>, disk: Option<PathBuf>) {
+    lock(&status).saved = disk.as_deref().map(disk::load).unwrap_or_default();
+    let owed = !lock(&status).saved.is_empty();
+    let session = Session { status, disk, owed, ..Session::default() };
     let started = std::thread::Builder::new().name("wprsd-rgb".into()).spawn(move || run(asks, session));
     if let Err(e) = started {
         tracing::warn!("cannot start the RGB lighting: {e}");
@@ -43,16 +43,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
     loop {
         lock(&s.status).held = s.held();
         match asks.recv_timeout(s.wait()) {
-            Ok(Ask::Settings(rgb)) => {
-                if rgb != s.rgb {
-                    if !rgb.enabled {
-                        s.forget(None);
-                    }
-                    (s.client, s.failed, s.rgb, s.opened) = (None, None, rgb, false);
-                    s.publish(None, Vec::new());
-                    s.retry();
-                }
-            }
+            Ok(Ask::Settings(rgb)) => s.settle(rgb),
             Ok(Ask::Forget(source)) => s.forget(Some(&source)),
             Ok(Ask::Covered) => s.retry(),
             Ok(Ask::Frame(source, strip)) => {
@@ -63,7 +54,7 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 }
             }
             Ok(Ask::Connect(reply)) => {
-                (s.client, s.failed, s.opened) = (None, None, false);
+                (s.client, s.failed, s.opened, s.direct) = (None, None, false, Vec::new());
                 reply.send(s.ready()).ok();
             }
             Ok(Ask::Test(device, reply)) => {
@@ -79,8 +70,12 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 }
                 reply.send(ready).ok();
             }
+            Ok(Ask::Stop(reply)) => {
+                s.stop();
+                reply.send(()).ok();
+            }
             Err(RecvTimeoutError::Timeout) => s.tick(),
-            Err(RecvTimeoutError::Disconnected) => return,
+            Err(RecvTimeoutError::Disconnected) => return s.stop(),
         }
     }
 }
@@ -91,6 +86,7 @@ impl Session {
             self.last = None;
             lock(&self.status).source = None;
         }
+        self.idle();
     }
 
     fn repaint(&mut self) {
@@ -118,16 +114,18 @@ impl Session {
         if self.failed.is_some_and(|at| at.elapsed() < RETRY) {
             return Err(lock(&self.status).error.clone().unwrap_or_default());
         }
-        let opened = Client::connect(&self.rgb.server, WAIT).and_then(|mut c| {
-            let devices = c.devices()?;
-            devices.iter().try_for_each(|d| c.direct(d.index))?;
-            Ok((c, devices))
-        });
+        let opened = Client::connect(&self.rgb.server, WAIT).and_then(|mut c| Ok((c.devices()?, c)));
         match opened {
-            Ok((client, devices)) => {
-                self.client = Some(client);
+            Ok((devices, client)) => {
+                (self.client, self.direct) = (Some(client), Vec::new());
                 self.publish(None, devices);
-                Ok(())
+                if self.owed && self.last.is_none() && self.test.is_none() {
+                    self.restore();
+                }
+                self.client
+                    .as_ref()
+                    .map(drop)
+                    .ok_or_else(|| lock(&self.status).error.clone().unwrap_or_default())
             }
             Err(e) => {
                 (self.client, self.failed) = (None, Some(Instant::now()));
@@ -142,9 +140,17 @@ impl Session {
             return;
         }
         let devices = lock(&self.status).devices.clone();
+        let off = |d: &Device| only.is_none() && self.rgb.place(&d.key) == Some(Place::Off);
+        let wanted: Vec<&Device> =
+            devices.iter().filter(|d| only.is_none_or(|i| i == d.index) && !off(d)).collect();
+        let taken = self.take(&wanted);
         let Some(client) = self.client.as_mut() else { return };
-        let wanted = devices.iter().filter(|d| only.is_none_or(|i| i == d.index));
-        let painted = wanted.into_iter().try_for_each(|d| client.paint(d.index, &colors(d, strip)));
+        let rgb = &self.rgb;
+        let painted = taken.and_then(|()| {
+            wanted.iter().try_for_each(|d| {
+                client.paint(d.index, &colors(d, strip, area(rgb, d), &|z| zone(rgb, d, z)))
+            })
+        });
         match painted {
             Ok(()) => lock(&self.status).frames += 1,
             Err(e) => {
@@ -161,7 +167,8 @@ impl Session {
             }
             self.test = None;
             lock(&self.status).testing = false;
-            return self.repaint();
+            self.repaint();
+            return self.idle();
         }
         let changed = self.client.as_mut().map(Client::heard);
         match changed {
@@ -181,6 +188,13 @@ impl Session {
     }
 }
 
+mod disk;
+mod kept;
+#[cfg(test)]
+mod owed;
+mod placed;
+#[cfg(test)]
+mod restored;
 #[cfg(test)]
 mod tests;
 mod waits;

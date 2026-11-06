@@ -19,5 +19,6 @@ fun hdrState(hdr: JSONObject?): String? {
         stringResource(R.string.hdr_state_off, stringResource(why))
     }
     val answer = stringResource(if (hdr.optBoolean("display")) R.string.yes else R.string.no)
-    return "$state. " + stringResource(R.string.hdr_screen, answer, "%.0f".format(hdr.optDouble("peak_nits")))
+    val pq = if (hdr.optBoolean("active") && hdr.optString("encoding") == "pq") stringResource(R.string.hdr_pq) + ". " else ""
+    return "$state. $pq" + stringResource(R.string.hdr_screen, answer, "%.0f".format(hdr.optDouble("peak_nits")))
 }

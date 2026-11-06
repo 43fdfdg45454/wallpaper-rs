@@ -24,7 +24,7 @@ fn repository() -> Result<Option<String>, Error> {
 
 pub(crate) fn counts(ids: &[String]) -> Result<Value, Error> {
     if voted(ids, None).is_none() {
-        return Err(said("android.vote_ids", "give at most 100 package ids", &[]));
+        return Err(said("android.vote_ids", "give at most 1000 package ids", &[]));
     }
     let none = |repo: &Option<String>| json!({"items": {}, "shown": false, "repo_id": repo});
     if ids.is_empty() || linked().is_err() {
@@ -35,11 +35,11 @@ pub(crate) fn counts(ids: &[String]) -> Result<Value, Error> {
     if asked.is_empty() || !settings::config().repos.vote_counts {
         return Ok(none(&repo));
     }
-    let mut wanted: Vec<&str> = asked.iter().map(|(_, id)| *id).collect();
-    wanted.sort_unstable();
-    wanted.dedup();
-    let found = answer(format!("/api/v1/votes?ids={}", wanted.join(",")), None)?;
-    let count = |id: &str| found["items"].get(id).cloned().unwrap_or(Value::Null);
+    let mut found = Map::new();
+    for query in wprs_format::vote_queries(&asked) {
+        found.extend(answer(query, None)?["items"].as_object().cloned().unwrap_or_default());
+    }
+    let count = |id: &str| found.get(id).cloned().unwrap_or(Value::Null);
     let items: Map<String, Value> = asked
         .iter()
         .filter(|(_, id)| !count(id).is_null())

@@ -8,6 +8,8 @@ pub struct Layout {
     pub bezel_mm: f64,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub monitors: BTreeMap<String, Placed>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub follow: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

@@ -39,6 +39,7 @@ impl Session {
             && self.client.is_some()
             && self.unwanted(self.last.as_ref().map(|(source, _)| source.as_str()))
         {
+            self.restore();
             (self.client, self.opened) = (None, false);
             self.publish(None, Vec::new());
         }

@@ -30,6 +30,7 @@ impl Painter<'_, '_, '_> {
                     _ => [0, 1].map(|k| size[k] / natural[k].max(1e-3)),
                 };
                 let nearest = s.is_some_and(|s| s.nearest) && video.is_none();
+                let rect = crate::texture::within(rect, found.crop);
                 (item.uv, item.color) = (rect, toned(d.tint, d.brightness, srgb, opacity));
                 item.shape = [1.0 + wrap as u8 as f32, f32::from(u8::from(nearest)), tiles[0], tiles[1]];
                 Some(("fs_picture", item, self.ext(found)))

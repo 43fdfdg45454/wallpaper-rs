@@ -15,7 +15,7 @@ fn fs_lit_particle(in: Corner) -> @location(0) vec4<f32> {
     let albedo = c.rgb / c.a;
     var n = vec3<f32>(0.0, 0.0, 1.0);
     if look.light.y > 0.5 {
-        let t = textureSampleLevel(normal_map, samp, in.uv, 0.0).xyz * 2.0 - 1.0;
+        let t = textureSampleLevel(normal_map, samp, in.uv * look.crops.xy, 0.0).xyz * 2.0 - 1.0;
         n = normalize(vec3<f32>(turned(t.xy, in.turn), max(t.z, 0.0) + 1e-3));
     }
     let p = in.position.xy + look.place.xy;
@@ -36,7 +36,7 @@ fn fs_lit_particle(in: Corner) -> @location(0) vec4<f32> {
 @fragment
 fn fs_bend_particle(in: Corner) -> @location(0) vec4<f32> {
     let a = painted(in).a;
-    let t = textureSampleLevel(bend_map, samp, in.uv, 0.0).xy * 2.0 - 1.0;
+    let t = textureSampleLevel(bend_map, samp, in.uv * look.crops.zw, 0.0).xy * 2.0 - 1.0;
     let shift = turned(t, in.turn) * look.bend.x * 0.5 * in.turn.z;
     return vec4<f32>(shift * a, 0.0, a);
 }

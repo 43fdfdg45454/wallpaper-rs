@@ -85,3 +85,88 @@ fn a_new_mask_starts_from_the_paint_of_its_parameter() {
     assert_eq!(picture.get_pixel(10, 10).0, [255; 4]);
     assert_eq!(picture.get_pixel(256, 256).0, [255, 0, 255, 255]);
 }
+
+#[test]
+fn a_first_mask_on_a_ktx2_picture_is_written_as_ktx2() {
+    let root = tempfile::tempdir().unwrap();
+    state();
+    let dir = root.path().join("veil");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.veil", "Veil", "en").unwrap()).unwrap();
+    let picture = image::RgbaImage::from_pixel(16, 16, image::Rgba([200, 100, 50, 255]));
+    let options = wprs_ktx2::Options {
+        codec: wprs_ktx2::Codec::Uastc,
+        quality: 40,
+        srgb: true,
+        mips: false,
+        repeat: false,
+    };
+    std::fs::create_dir_all(dir.join("assets")).unwrap();
+    std::fs::write(dir.join("assets/wall.ktx2"), wprs_ktx2::encode(&picture, &options).unwrap()).unwrap();
+    act(
+        &mut project,
+        json!({ "set": { "pointer": "/scene/assets/wall", "value": { "path": "assets/wall.ktx2" } } }),
+    )
+    .unwrap();
+    let layer =
+        json!([{ "id": "w", "type": "image", "image": "wall", "effects": [{ "effect": "blend_gradient" }] }]);
+    act(&mut project, json!({ "set": { "pointer": "/scene/layers", "value": layer } })).unwrap();
+    let pointer = "/scene/layers/0/effects/0/params/map";
+    let stroke = json!({ "paint_mask": { "pointer": pointer, "channel": 1, "radius": 0.1, "value": 1.0,
+        "points": [[0.4, 0.5], [0.6, 0.5]] } });
+    act(&mut project, stroke).unwrap();
+    let id = project.doc.pointer(pointer).and_then(Value::as_str).unwrap().to_owned();
+    let path = project.doc["scene"]["assets"][&id]["path"].as_str().unwrap().to_owned();
+    assert!(path.starts_with("masks/") && path.ends_with(".ktx2"), "{path}");
+    let bytes = std::fs::read(dir.join(&path)).unwrap();
+    assert_eq!(wprs_ktx2::quality(&bytes), Some(40), "the mask did not take the picture's quality");
+}
+
+#[test]
+fn strokes_on_a_ktx2_map_start_from_the_exact_picture_of_the_last_stroke() {
+    let root = tempfile::tempdir().unwrap();
+    state();
+    let dir = root.path().join("veil");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.veil", "Veil", "en").unwrap()).unwrap();
+    let picture =
+        image::RgbaImage::from_fn(64, 64, |x, y| image::Rgba([(x * 4) as u8, (y * 4) as u8, 90, 255]));
+    let options = wprs_ktx2::Options {
+        codec: wprs_ktx2::Codec::Etc1s,
+        quality: 10,
+        srgb: true,
+        mips: false,
+        repeat: false,
+    };
+    std::fs::create_dir_all(dir.join("assets")).unwrap();
+    std::fs::write(dir.join("assets/wall.ktx2"), wprs_ktx2::encode(&picture, &options).unwrap()).unwrap();
+    act(
+        &mut project,
+        json!({ "set": { "pointer": "/scene/assets/wall", "value": { "path": "assets/wall.ktx2" } } }),
+    )
+    .unwrap();
+    let layer = json!([{ "id": "w", "type": "image", "image": "wall", "lighting": {} }]);
+    act(&mut project, json!({ "set": { "pointer": "/scene/layers", "value": layer } })).unwrap();
+    let stroke = |x: f32| json!({ "paint_map": { "layer": "w", "map": "roughness", "radius": 0.05, "value": 0.3, "points": [[x, 0.5]] } });
+    act(&mut project, stroke(0.2)).unwrap();
+    let id = project.doc["scene"]["layers"][0]["lighting"]["roughness_map"].as_str().unwrap().to_owned();
+    let path = |p: &Project| dir.join(p.doc["scene"]["assets"][&id]["path"].as_str().unwrap());
+    let first = path(&project);
+    assert!(first.extension().is_some_and(|e| e == "ktx2"), "{first:?}");
+    let kept = wprs_editor::pictures::exact(&first).expect("the painted map was not kept exact");
+    let decoded = wprs_editor::pictures::raw(&first).unwrap().into_rgba8();
+    assert_eq!((kept.width(), kept.height()), (decoded.width(), decoded.height()));
+    act(&mut project, stroke(0.8)).unwrap();
+    let second = wprs_editor::pictures::exact(&path(&project)).unwrap();
+    let left = |img: &image::RgbaImage| {
+        let half = img.width() / 2;
+        img.enumerate_pixels().filter(|(x, ..)| *x < half).map(|(.., p)| p.0).collect::<Vec<_>>()
+    };
+    assert_ne!(left(&decoded), left(&kept), "the file kept the stroke exactly, so nothing was tested");
+    assert_eq!(left(&second), left(&kept), "the second stroke started from the lossy file");
+    std::fs::write(&first, std::fs::read(path(&project)).unwrap()).unwrap();
+    assert!(
+        wprs_editor::pictures::exact(&first).is_none() || first == path(&project),
+        "a rewritten file kept its exact copy"
+    );
+}

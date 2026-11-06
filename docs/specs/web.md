@@ -31,7 +31,11 @@ The daemon finds the helper in `WPRS_WEB`, next to `wprsd` or in `PATH`, and run
 The helper takes over the `render_buffer` and `buffers_changed` steps of the headless view, so it
 decides when a frame is done: it reports a frame as presented only at the frame rate the daemon asks
 for (the output's cap, battery and power saving included), and WebKit paces animation frames, CSS
-animations and video by that. A page that does not change draws nothing.
+animations and video by that, so the cap limits every frame the page draws, not only
+`requestAnimationFrame`. A page that does not change draws nothing. `GetState().outputs[x].page_frames`
+counts the frames the page drew for an output. A fade to a page waits for its first frame (or for
+the page to fail), so the wallpaper before it never fades into an empty output; a fade from a page
+starts from its last frame.
 
 When the daemon's GPU can import them, the helper asks WebKit to render into the formats and
 modifiers that GPU samples in place (`XRGB8888`/`ARGB8888` with one plane, on the render node of the
@@ -148,14 +152,14 @@ The helper injects `window.wprs` before the page's own scripts (and before `web.
 | Member | What it does |
 |--------|--------------|
 | `properties`, `onProperties(cb)` | all values when the callback is added, then only the changed ones; colors as `{hex, r, g, b, a}` (0 to 1), combos as `{value, label}`, files as `wpak-user://` tokens, folders as `wpak-user://<id>/` |
-| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at (never above `playback.max_fps`), the quality level (0 to 3, lower on battery, in power saving or with heat; properties with `quality` values change with it), the language picked among the package's, and the wallpaper volume (0 to 1, the general volume times the page's own `volume` setting) for its own sound: the page may play sound without a gesture, its `<audio>` and `<video>` play at their own volume times the wallpaper's (`volume` reads what the page set) and an `AudioContext` sends its `destination` through a gain at the wallpaper's volume; the page is muted at 0 |
+| `fps`, `quality`, `locale`, `volume`, `onSettings(cb)` | the frame rate it is drawn at (never above `playback.max_fps`), the quality level (0 to 3, from `playback.quality` or the own level of the output that shows the page, lower on battery, in power saving or with heat; properties with `quality` values change with it; outputs with different own levels run the page apart), the language picked among the package's, and the wallpaper volume (0 to 1, the general volume times the page's own `volume` setting) for its own sound: the page may play sound without a gesture, its `<audio>` and `<video>` play at their own volume times the wallpaper's (`volume` reads what the page set) and an `AudioContext` sends its `destination` through a gain at the wallpaper's volume; the page is muted at 0 |
 | `paused`, `onPause(cb)` | `true` while hidden |
 | `onAudio(cb)` | `{left, right}`, 64 bands each from bass to treble, at most 30 times a second, once the user allows `audio` for the package; the first callback subscribes |
 | pointer and clicks | real DOM events: `pointermove` while `pointer` is allowed, and `click`s only from real clicks on screens where the user turned clicks on and the package holds `clicks` |
 | `files(prop)`, `randomFile(prop)`, `onFiles(prop, cb)` | the tokens of a chosen folder: `files` (and the `{prop, added, removed, changed}` notices, `changed` as `[old, new]` pairs for files rewritten in place) only with `mode: all`; `randomFile` in both modes; a token changes with the size and time of its file, so a rewritten file loads anew |
 | `onAction(cb)` | the id of a pressed `button` property |
 | `openShortcut(prop)` | asks to open what the user chose for a `shortcut` property; it returns `false` outside a user activation, and the daemon opens it only within 2 s of a real click that reached the page, at most once a second; the page never learns the target |
-| `rgb.setImage(bytes, w, h)` | RGBA bytes shrunk on the page to at most 64 × 16 and checked again by the helper (at most 64 × 16, 30 times a second); the daemon sends them only for packages with `permissions.rgb`, the `rgb` grant and RGB lighting on (`package.md`) |
+| `rgb.setImage(bytes, w, h)` | RGBA bytes shrunk on the page to at most 64 × 16 and checked again by the helper (at most 64 × 16, 30 times a second); the daemon tells each view whether it may light (`permissions.rgb`, the `rgb` grant of its output and RGB lighting on, or a preview) and the call returns `false` and posts nothing otherwise; the helper drops strips of a view that may not light, and the daemon sends them only under the same conditions (`package.md`) |
 | `onMedia(cb)` | what the media player plays, once the user allows `media` for a package that declares it (and `media_network` as well when it declares network origins): `{enabled, state, title, artist, album, cover, colors, position, duration, rate}`, with `state` `playing`, `paused` or `stopped`, `cover` a `blob:` address of a PNG of at most 256 pixels a side made on the page (or `null`), `colors` the `primary`, `secondary`, `tertiary`, `text` and `contrast` colors of the cover as `{hex, r, g, b, a}`, and `position` and `duration` in seconds at the moment of the call (the page runs the position on at `rate`); `{enabled: false}` otherwise. The first callback subscribes and gets the last state at once; then every callback gets each change of the track, the cover, the playback or a jump. Never a path, an address of the cover or the name of the player |
 
 Audio and video files of the package and of the user's folder play from a `blob:` copy that the

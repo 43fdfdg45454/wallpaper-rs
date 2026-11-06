@@ -1,6 +1,7 @@
 use crate::show::{clean, table};
 use anyhow::Result;
 use clap::Args;
+use futures_util::StreamExt;
 use serde_json::json;
 use wprs_client::Client;
 use wprs_core::LayerNamespace;
@@ -9,15 +10,37 @@ use wprs_core::model::State;
 #[derive(Args, Debug)]
 pub struct GpuArgs {
     #[arg(
-        help = "Choose the card: auto, integrated, dedicated, software or part of its name; list the cards without it"
+        help = "Choose the card: auto, integrated, dedicated, software, part of its name or pci: and its bus id to tell identical cards apart; list the cards without it"
     )]
     pub choice: Option<String>,
     #[arg(long, help = crate::cli::JSON)]
     pub json: bool,
 }
 
-pub const LATER: &str =
-    "the change takes effect the next time the daemon starts (systemctl --user restart wprsd)";
+pub const LATER: &str = "the change takes effect the next time the daemon starts (wprs-ctl restart)";
+
+pub async fn restart(client: &Client) -> Result<()> {
+    let bus = zbus::fdo::DBusProxy::new(&client.bus).await?;
+    let mut owners = bus.receive_name_owner_changed_with_args(&[(0, wprs_core::dbus::BUS_NAME)]).await?;
+    let name = wprs_core::dbus::BUS_NAME.try_into()?;
+    let before = bus.get_name_owner(name).await.ok().map(|owner| owner.to_string());
+    client.daemon.restart().await?;
+    let back = async {
+        while let Some(signal) = owners.next().await {
+            let Ok(args) = signal.args() else { continue };
+            let now = args.new_owner.as_ref().map(ToString::to_string);
+            if now.is_some() && now != before {
+                return true;
+            }
+        }
+        false
+    };
+    let started = tokio::time::timeout(std::time::Duration::from_secs(30), back).await;
+    anyhow::ensure!(matches!(started, Ok(true)), "the daemon did not start again within 30 seconds");
+    let state: State = serde_json::from_str(&client.daemon.get_state().await?)?;
+    println!("the daemon started again on {}", clean(&state.adapter));
+    Ok(())
+}
 
 pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
     if let Some(choice) = &args.choice {
@@ -33,9 +56,10 @@ pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
     }
     let rows = state.adapters.iter().map(|a| {
         let used = if a.used { "*" } else { "" };
-        vec![used.into(), a.name.clone(), a.kind.clone(), a.backend.clone()]
+        let bus = if a.bus.is_empty() { "-".into() } else { format!("pci:{}", a.bus) };
+        vec![used.into(), a.name.clone(), a.kind.clone(), a.backend.clone(), bus]
     });
-    print!("{}", table(&["USED", "NAME", "KIND", "BACKEND"], rows));
+    print!("{}", table(&["USED", "NAME", "KIND", "BACKEND", "BUS"], rows));
     println!("render.gpu = {}", clean(&chosen));
     if let Some(warning) = &state.gpu_warning {
         println!("warning: {}", clean(warning));

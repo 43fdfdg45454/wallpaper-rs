@@ -9,6 +9,7 @@ mod air;
 mod baked;
 mod beams;
 mod cached;
+mod cropped;
 mod gobos;
 mod shafts;
 mod surfaces;

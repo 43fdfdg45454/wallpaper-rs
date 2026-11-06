@@ -499,9 +499,10 @@ msgstr ""
 "daemon"
 
 #: apps/wprs-ctl/src/cli.rs
+#, fuzzy
 msgid ""
-"Show the quality level of each screen and why, or keep it automatic, fixed "
-"or above a floor"
+"Show the quality of each screen and why, or keep it automatic, fixed or "
+"floored"
 msgstr ""
 "Mostrar el nivel de calidad de cada pantalla y por qué, o dejarlo "
 "automático, fijo o por encima de un mínimo"
@@ -509,6 +510,12 @@ msgstr ""
 #: apps/wprs-ctl/src/cli.rs
 msgid "Re-read the configuration file"
 msgstr "Volver a leer el archivo de configuración"
+
+#: apps/wprs-ctl/src/cli.rs
+msgid ""
+"Start the daemon again, through systemd if it runs it, for a new card or "
+"surface"
+msgstr ""
 
 #: apps/wprs-ctl/src/cli.rs
 msgid ""
@@ -527,10 +534,11 @@ msgid "Accepted for symmetry: the state is always JSON"
 msgstr "Aceptado por simetría: el estado siempre es JSON"
 
 #: apps/wprs-ctl/src/cli.rs
+#, fuzzy
 msgid ""
 "Show a pattern of lines and circles over the screens to check where they "
 "are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one "
-"by hand"
+"by hand and layout.follow.<output> to another output shows the same part"
 msgstr ""
 "Mostrar un patrón de líneas y círculos sobre las pantallas para comprobar "
 "dónde están; fijar layout.monitors.<pantalla> en X,Y,W,H en milímetros ubica "
@@ -2136,9 +2144,10 @@ msgstr ""
 "Mostrar el desplazamiento y lo que conserva cada nivel de calidad en su lugar"
 
 #: apps/wprs-ctl/src/gpus.rs
+#, fuzzy
 msgid ""
-"Choose the card: auto, integrated, dedicated, software or part of its name; "
-"list the cards without it"
+"Choose the card: auto, integrated, dedicated, software, part of its name or "
+"pci: and its bus id to tell identical cards apart; list the cards without it"
 msgstr ""
 "Elegir la tarjeta: auto, integrated, dedicated, software o parte de su "
 "nombre; sin ella lista las tarjetas"
@@ -4874,6 +4883,13 @@ msgstr ""
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid ""
+"x y w h as parts of the picture from 0 to 1, then right, left, down or up "
+"for the way a line of lights runs; off leaves the device alone (a zone stays "
+"dark); none takes the whole picture again"
+msgstr ""
+
+#: apps/wprs-ctl/src/rgb.rs
+msgid ""
 "Show whether RGB lighting is on, its OpenRGB server, the connection and what "
 "sends colors"
 msgstr ""
@@ -4902,6 +4918,23 @@ msgid ""
 msgstr ""
 "Mostrar o elegir qué hacen las luces mientras una ventana cubre el fondo: "
 "seguirlo o pausar"
+
+#: apps/wprs-ctl/src/rgb.rs
+msgid ""
+"Show or choose the part of the picture each device or zone takes; list every "
+"place without a device"
+msgstr ""
+
+#: apps/wprs-ctl/src/rgb.rs
+msgid ""
+"The device name as wprs-ctl rgb devices shows it, with its serial or number "
+"when two share a name"
+msgstr ""
+
+#: apps/wprs-ctl/src/rgb.rs
+msgid ""
+"Place one zone of the device, counted from 0 in wprs-ctl rgb devices --json"
+msgstr ""
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid "Print the colors a screen sends to RGB lighting, at most 64 by 16"
@@ -6467,19 +6500,22 @@ msgstr ""
 
 #: apps/wprs-ctl/src/texturing.rs
 msgid ""
+"Make a cube map of this panorama, an equirectangular picture twice as wide "
+"as tall"
+msgstr ""
+
+#: apps/wprs-ctl/src/texturing.rs
+msgid ""
+"Make a cube map of six square picture assets of one size, given in this order"
+msgstr ""
+
+#: apps/wprs-ctl/src/texturing.rs
+msgid ""
 "current or previous makes the picture the cover of what the media player "
 "plays or played before; none makes it a plain picture again"
 msgstr ""
 "current o previous hace de la imagen la portada de lo que reproduce o "
 "reprodujo antes el reproductor multimedia; none la vuelve una imagen simple"
-
-#: apps/wprs-ctl/src/texturing.rs
-msgid ""
-"Show a picture asset and what it takes on graphics cards; --ktx2 turns it "
-"into a KTX2 texture"
-msgstr ""
-"Mostrar un recurso de imagen y lo que ocupa en las tarjetas gráficas; --ktx2 "
-"lo convierte en una textura KTX2"
 
 #: apps/wprs-ctl/src/texturing.rs
 msgid "Asset id"
@@ -6526,6 +6562,14 @@ msgstr ""
 "Mostrar esa portada en este campo, como /scene/layers/0/image, en un solo "
 "paso: se vuelve a usar un recurso de portada de ese tipo o se hace uno "
 "nuevo, y una imagen simple nunca se vuelve portada"
+
+#: apps/wprs-ctl/src/texturing.rs
+msgid ""
+"Show a picture asset and what it takes on graphics cards; --ktx2 turns it "
+"into a KTX2 texture"
+msgstr ""
+"Mostrar un recurso de imagen y lo que ocupa en las tarjetas gráficas; --ktx2 "
+"lo convierte en una textura KTX2"
 
 #: apps/wprs-ctl/src/texturing.rs
 msgid ""

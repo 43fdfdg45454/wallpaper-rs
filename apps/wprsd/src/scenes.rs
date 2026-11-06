@@ -1,6 +1,5 @@
 use crate::compositor::Reel;
 use crate::daemon::Daemon;
-use crate::decode::decode;
 use crate::sceneprops::Props;
 use image::{ImageReader, RgbaImage};
 use serde_json::Value as Json;
@@ -17,7 +16,7 @@ mod load;
 #[cfg(test)]
 mod tests;
 
-const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
+const IMAGES: [&str; 9] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2", "hdr", "exr"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 const DECODED: u64 = 512 << 20;
@@ -114,10 +113,9 @@ fn kind(path: &str) -> String {
     Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or_default().to_ascii_lowercase()
 }
 
-pub fn image(bytes: Vec<u8>) -> anyhow::Result<RgbaImage> {
-    decode(ImageReader::new(Cursor::new(bytes))).map(|i| i.into_rgba8()).map_err(|e| match e {
-        crate::decode::Problem::Missing(e) | crate::decode::Problem::Decode(e) => anyhow::anyhow!(e),
-    })
+pub fn image(bytes: Vec<u8>, linear: bool) -> anyhow::Result<RgbaImage> {
+    let reader = ImageReader::new(Cursor::new(bytes));
+    Ok(wprs_render::decode_asset(reader, wprs_render::picture_limits(), linear)?)
 }
 
 impl Daemon {

@@ -23,6 +23,7 @@
     return out;
   };
   let lit = 0;
+  let lights = init.lights === true;
   const shrink = (bytes, w, h) => {
     const scale = Math.min(64 / w, 16 / h, 1);
     const sw = Math.max(1, Math.round(w * scale)), sh = Math.max(1, Math.round(h * scale));
@@ -79,7 +80,7 @@
         const now = Date.now();
         const width = Math.floor(Number(w)), height = Math.floor(Number(h));
         const fine = width > 0 && height > 0 && width <= 4096 && height <= 4096 && bytes && bytes.length >= width * height * 4;
-        if (!fine || now - lit < 33) return false;
+        if (!fine || !lights || now - lit < 33) return false;
         lit = now;
         post({ rgb: shrink(bytes, width, height) });
         return true;
@@ -119,6 +120,7 @@
       heard = m.enabled ? { enabled: true, state, title, artist, album, cover: picture, colors, position, duration, rate } : { enabled: false };
       call(handlers.media, Object.assign({}, heard));
     }
+    if (typeof message.lights === "boolean") lights = message.lights;
     if (message.files) call(handlers.files.get(message.files.prop) || [], message.files);
     if (message.action) call(handlers.action, message.action);
     if (message.reply && waiting.has(message.reply.id)) {

@@ -61,12 +61,12 @@ pub enum Command {
     },
     #[command(about = "List the graphics cards and the one in use, or choose the one the daemon starts with")]
     Gpu(crate::gpus::GpuArgs),
-    #[command(
-        about = "Show the quality level of each screen and why, or keep it automatic, fixed or above a floor"
-    )]
+    #[command(about = "Show the quality of each screen and why, or keep it automatic, fixed or floored")]
     Quality(crate::levels::QualityArgs),
     #[command(about = "Re-read the configuration file")]
     Reload,
+    #[command(about = "Start the daemon again, through systemd if it runs it, for a new card or surface")]
+    Restart,
     #[command(about = "Draw again the effects left out after they stopped the graphics card or a program")]
     RetryEffects,
     #[command(about = "Print the daemon state as JSON")]
@@ -75,7 +75,7 @@ pub enum Command {
         json: bool,
     },
     #[command(
-        about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand"
+        about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand and layout.follow.<output> to another output shows the same part"
     )]
     Calibrate {
         #[arg(value_parser = ["on", "off"], help = "Show the pattern or hide it")]

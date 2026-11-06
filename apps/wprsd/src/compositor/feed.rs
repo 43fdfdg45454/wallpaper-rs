@@ -11,6 +11,9 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
     let named = pack.map(|p| (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str()));
     let uses = scene.map(SceneState::uses).unwrap_or_default();
     let lit = pack.is_some_and(|p| wprs_render::lit(&p.scene));
+    if !lit {
+        crate::rgb::forget(output);
+    }
     inputs::needs(
         output,
         named.unwrap_or_default(),
@@ -20,6 +23,9 @@ pub(super) fn declare(output: &str, scene: Option<&SceneState>) {
 
 pub(super) fn declare_page(output: &str, page: &crate::pages::PageSpec) {
     let (p, [audio, pointer, clicks, rgb, media]) = (&page.pack, page.pack.uses);
+    if !rgb {
+        crate::rgb::forget(output);
+    }
     let named = (p.props.id.as_str(), p.props.title.as_str(), p.key.as_str());
     inputs::needs(output, named, [audio, pointer, clicks, !p.network.is_empty(), rgb, media]);
 }

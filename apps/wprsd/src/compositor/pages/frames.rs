@@ -12,7 +12,7 @@ use wprs_web::{FromWeb, ToWeb};
 impl State {
     pub(super) fn sync_link(&self, slot: &mut PageSlot, now: Instant) {
         let (mut out, mut files) = (Vec::new(), Vec::new());
-        let quality = self.power.steady();
+        let quality = super::level(self.power, &slot.spec);
         for view in slot.views.values_mut() {
             let (values, own) = values(view.spec.as_ref().unwrap_or(&slot.spec), &slot.salt, quality);
             files.extend(own);
@@ -75,9 +75,12 @@ impl State {
                 take(slot, renderer, message, fds, now);
             }
         }
+        let general = self.power.choice;
         for (name, output) in &mut self.outputs {
-            let Some(path) = output.shown.content.page().map(|p| p.pack.path.clone()) else { continue };
+            let Some(path) = output.shown.content.page().map(|p| p.key(general)) else { continue };
             let view = self.pages.get_mut(&path).and_then(|s| s.views.get_mut(name));
+            let drawn = view.as_ref().map_or(0, |v| v.drawn);
+            lock(&self.status).get_mut(name).into_iter().for_each(|s| s.page_frames = drawn);
             if let Some(view) = view.filter(|v| v.fresh) {
                 view.fresh = false;
                 output.shown.image = view.texture.clone();
@@ -137,7 +140,7 @@ fn take(
                 _ => Some(buffer),
             };
             release.into_iter().for_each(|buffer| slot.send(&ToWeb::Released { view, buffer }));
-            drawn(slot);
+            drawn(slot, view);
         }
         FromWeb::Pixels { view, slot: index, size, stride, fresh } => {
             let mapped = match (view_of(slot, view), fds.first().filter(|_| fresh)) {
@@ -152,7 +155,7 @@ fn take(
                 tracing::debug!("cannot upload a web frame: {e}");
             }
             slot.send(&ToWeb::Freed { view, slot: index });
-            drawn(slot);
+            drawn(slot, view);
         }
         FromWeb::Wants { audio } => slot.audio = audio,
         FromWeb::Loaded { .. } => tracing::debug!("the web page loaded"),
@@ -179,7 +182,8 @@ fn open(slot: &mut PageSlot, id: u32, prop: &str, now: Instant) {
     }
 }
 
-fn drawn(slot: &mut PageSlot) {
+fn drawn(slot: &mut PageSlot, view: u32) {
+    view_of(slot, view).into_iter().for_each(|v| v.drawn += 1);
     if slot.waiting.take().is_some() {
         (slot.failures, slot.error) = (0, slot.full.then(crate::words::web_full));
     }

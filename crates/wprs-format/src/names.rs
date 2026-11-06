@@ -54,6 +54,14 @@ pub(crate) fn valid_license(expr: &str) -> bool {
 }
 
 pub const MAX_VOTED: usize = 100;
+pub const MAX_ASKED: usize = 1000;
+
+pub fn vote_queries(asked: &[(&str, &str)]) -> Vec<String> {
+    let mut ids: Vec<&str> = asked.iter().map(|(_, id)| *id).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    ids.chunks(MAX_VOTED).map(|chunk| format!("/api/v1/votes?ids={}", chunk.join(","))).collect()
+}
 
 pub fn voted<'a>(specs: &'a [String], server: Option<&str>) -> Option<Vec<(&'a str, &'a str)>> {
     let split = |spec: &'a str| match spec.split_once('/') {
@@ -62,7 +70,7 @@ pub fn voted<'a>(specs: &'a [String], server: Option<&str>) -> Option<Vec<(&'a s
     };
     let parts: Vec<_> = specs.iter().map(|s| (s.as_str(), split(s))).collect();
     let fine = |(repo, id): (Option<&str>, &str)| valid_id(id) && repo.is_none_or(|r| within(r, 128));
-    if specs.len() > MAX_VOTED || !parts.iter().all(|(_, p)| fine(*p)) {
+    if specs.len() > MAX_ASKED || !parts.iter().all(|(_, p)| fine(*p)) {
         return None;
     }
     let ours = |repo: Option<&str>| repo.is_none_or(|r| server.is_some_and(|s| !s.is_empty() && s == r));

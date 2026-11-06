@@ -1,6 +1,6 @@
 use crate::Renderer;
 use crate::scene::{Image, Pixels};
-use crate::texture::gpu_image;
+use crate::texture::cropped;
 use image::error::{DecodingError, ImageFormatHint, LimitError, LimitErrorKind};
 use image::{DynamicImage, ImageError, ImageReader, ImageResult, Limits};
 use std::io::{BufRead, Read, Seek};
@@ -9,11 +9,12 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use wgpu::util::{DeviceExt, TextureDataOrder};
 use wgpu::{AstcBlock, AstcChannel, Features, TextureFormat as F};
-use wprs_ktx2::{MAX_BYTES, MAX_SIDE, TARGETS, Target};
+use wprs_ktx2::{HDR_TARGETS, MAX_BYTES, MAX_SIDE, TARGETS, Target};
 
 pub(crate) const COMPRESSED: Features = Features::TEXTURE_COMPRESSION_BC
     .union(Features::TEXTURE_COMPRESSION_ETC2)
-    .union(Features::TEXTURE_COMPRESSION_ASTC);
+    .union(Features::TEXTURE_COMPRESSION_ASTC)
+    .union(Features::TEXTURE_COMPRESSION_ASTC_HDR);
 
 fn format(target: Target, linear: bool) -> F {
     match (target, linear) {
@@ -25,12 +26,17 @@ fn format(target: Target, linear: bool) -> F {
         (Target::Etc2, true) => F::Etc2Rgba8Unorm,
         (Target::Rgba, false) => F::Rgba8UnormSrgb,
         (Target::Rgba, true) => F::Rgba8Unorm,
+        (Target::Bc6h, _) => F::Bc6hRgbUfloat,
+        (Target::AstcHdr, _) => F::Astc { block: AstcBlock::B4x4, channel: AstcChannel::Hdr },
+        (Target::Half, _) => F::Rgba16Float,
     }
 }
 
 pub(crate) fn drawable(format: F) -> F {
+    let lit = matches!(format, F::Bc6hRgbUfloat | F::Astc { channel: AstcChannel::Hdr, .. });
     match (format.is_compressed(), format.is_srgb()) {
         (false, _) => format,
+        _ if lit => F::Rgba16Float,
         (true, true) => F::Rgba8UnormSrgb,
         (true, false) => F::Rgba8Unorm,
     }
@@ -53,10 +59,10 @@ pub(crate) fn picture<R: BufRead + Seek>(
     }
     let mut bytes = Vec::new();
     inner.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
-    let info = wprs_ktx2::info(&bytes).map_err(failure)?;
-    let wide = limits.max_image_width.is_some_and(|w| info.width > w);
-    let tall = limits.max_image_height.is_some_and(|h| info.height > h);
-    let bytes_needed = u64::from(info.width) * u64::from(info.height) * 4;
+    let (width, height) = wprs_ktx2::info(&bytes).map_err(failure)?.picture(0);
+    let wide = limits.max_image_width.is_some_and(|w| width > w);
+    let tall = limits.max_image_height.is_some_and(|h| height > h);
+    let bytes_needed = u64::from(width) * u64::from(height) * 4;
     if wide || tall || limits.max_alloc.is_some_and(|a| bytes_needed > a) {
         return Err(ImageError::Limits(LimitError::from_kind(LimitErrorKind::DimensionError)));
     }
@@ -67,19 +73,27 @@ pub(crate) fn size(path: &Path) -> Option<(u32, u32)> {
     let file = std::fs::File::open(path).ok()?;
     let mut bytes = Vec::new();
     file.take(MAX_BYTES + 1).read_to_end(&mut bytes).ok()?;
-    wprs_ktx2::info(&bytes).ok().map(|i| (i.width, i.height))
+    wprs_ktx2::info(&bytes).ok().map(|i| i.picture(0))
 }
 
 impl Renderer {
-    pub fn ktx2_targets(&self) -> Vec<Target> {
+    fn offered(&self, target: Target) -> bool {
         let features = self.device.features();
-        let offered = |t: &Target| match t {
-            Target::Bc7 => features.contains(Features::TEXTURE_COMPRESSION_BC),
+        match target {
+            Target::Bc7 | Target::Bc6h => features.contains(Features::TEXTURE_COMPRESSION_BC),
             Target::Astc => features.contains(Features::TEXTURE_COMPRESSION_ASTC),
             Target::Etc2 => features.contains(Features::TEXTURE_COMPRESSION_ETC2),
-            Target::Rgba => true,
-        };
-        TARGETS.into_iter().filter(offered).collect()
+            Target::AstcHdr => features.contains(Features::TEXTURE_COMPRESSION_ASTC_HDR),
+            Target::Rgba | Target::Half => true,
+        }
+    }
+
+    pub fn ktx2_targets(&self) -> Vec<Target> {
+        TARGETS.into_iter().filter(|t| self.offered(*t)).collect()
+    }
+
+    pub fn ktx2_hdr_targets(&self) -> Vec<Target> {
+        HDR_TARGETS.into_iter().filter(|t| self.offered(*t)).collect()
     }
 
     pub fn ktx2_target(&self) -> Target {
@@ -87,6 +101,10 @@ impl Renderer {
         let offered = self.ktx2_targets();
         let chosen = TARGETS.get(forced.wrapping_sub(1)).filter(|t| offered.contains(t));
         chosen.copied().unwrap_or(offered[0])
+    }
+
+    pub fn ktx2_hdr_target(&self) -> Target {
+        Some(self.ktx2_target().lit()).filter(|t| self.offered(*t)).unwrap_or(Target::Half)
     }
 
     pub fn force_ktx2(&self, target: Option<Target>) {
@@ -102,19 +120,33 @@ impl Renderer {
         mips: Option<bool>,
     ) -> Option<Image> {
         let info = wprs_ktx2::info(bytes).ok()?;
-        let target = self.ktx2_target();
-        let mipped = mips != Some(false) && info.levels > 1;
-        if !target.compressed() || (mips == Some(true) && info.levels == 1) {
+        let target = if info.hdr { self.ktx2_hdr_target() } else { self.ktx2_target() };
+        let mipped = mips != Some(false) && info.levels > 1 && !info.shaped();
+        if (!target.compressed() && !info.hdr) || (mips == Some(true) && info.levels == 1 && !info.shaped()) {
             return None;
         }
-        let made = wprs_ktx2::levels(bytes, target, self.max_edge(), mipped).ok()?;
+        let edge = self.max_edge();
+        let made = wprs_ktx2::levels(bytes, target, edge, mipped);
+        let made = made.or_else(|e| {
+            if info.hdr { wprs_ktx2::levels(bytes, Target::Half, edge, mipped) } else { Err(e) }
+        });
+        let made = made.ok().filter(|m| m.target.compressed() || info.hdr)?;
+        let (w, h) = info.picture(0);
+        let image = Arc::new((self.packed_image(&made, linear), [w as f32, h as f32]));
+        self.keep(pixels, [linear, mipped], &image);
+        Some(image)
+    }
+}
+
+impl Renderer {
+    pub(crate) fn packed_image(&self, made: &wprs_ktx2::Levels, linear: bool) -> crate::GpuImage {
         let descriptor = wgpu::TextureDescriptor {
             label: Some("wprs-render ktx2"),
-            size: wgpu::Extent3d { width: made.width, height: made.height, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d { width: made.padded.0, height: made.padded.1, depth_or_array_layers: 1 },
             mip_level_count: made.count,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: format(target, linear),
+            format: format(made.target, linear),
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         };
@@ -124,8 +156,7 @@ impl Renderer {
             TextureDataOrder::LayerMajor,
             &made.data,
         );
-        let image = Arc::new((gpu_image(texture), [info.width as f32, info.height as f32]));
-        self.keep(pixels, [linear, mipped], &image);
-        Some(image)
+        let crop = [made.width as f32 / made.padded.0 as f32, made.height as f32 / made.padded.1 as f32];
+        cropped(texture, crop)
     }
 }

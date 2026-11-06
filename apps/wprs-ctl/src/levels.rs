@@ -32,7 +32,13 @@ const HDR: &str = "Show colors brighter than white on HDR screens: auto (on main
 fn hdr(o: &OutputState) -> String {
     let h = &o.hdr;
     let peak = h.peak_nits.map(|n| format!(", {n} nits")).unwrap_or_default();
-    format!("{} {} ({}{peak})", h.choice, if h.active { "on" } else { "off" }, h.reason)
+    let way = match (h.active, h.encoding.as_str(), h.max_cll) {
+        (true, "pq-own", Some(cll)) => format!(", PQ with its own description, MaxCLL {cll}"),
+        (true, "pq", _) => ", PQ".to_string(),
+        (true, "scrgb", _) => ", scRGB".to_string(),
+        _ => String::new(),
+    };
+    format!("{} {} ({}{peak}{way})", h.choice, if h.active { "on" } else { "off" }, h.reason)
 }
 
 pub fn note(o: &OutputState) -> Option<String> {

@@ -8,6 +8,7 @@ use wprs_core::GpuChoice;
 use wprs_core::model::GpuAdapter;
 
 mod listing;
+mod sysfs;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fallback {
@@ -38,24 +39,28 @@ pub(crate) fn backend(b: Backend) -> String {
     }
 }
 
-pub(crate) fn pick(choice: &GpuChoice, found: &[(String, DeviceType, Backend)]) -> Option<usize> {
-    let fits = |(name, t, _): &(String, DeviceType, Backend)| match choice {
+pub(crate) type Card = (String, DeviceType, Backend, String);
+
+pub(crate) fn pick(choice: &GpuChoice, found: &[Card]) -> Option<usize> {
+    let fits = |(name, t, _, bus): &Card| match choice {
         GpuChoice::Auto => false,
         GpuChoice::Integrated => *t == DeviceType::IntegratedGpu,
         GpuChoice::Dedicated => *t == DeviceType::DiscreteGpu,
         GpuChoice::Software => *t == DeviceType::Cpu,
         GpuChoice::Named(part) => name.to_lowercase().contains(&part.to_lowercase()),
+        GpuChoice::Bus(_) => choice.bus().is_some_and(|id| !bus.is_empty() && bus.eq_ignore_ascii_case(id)),
     };
     let found = found.iter().enumerate().filter(|(_, a)| fits(a));
-    found.min_by_key(|(i, (.., b))| (*b != Backend::Vulkan, *i)).map(|(i, _)| i)
+    found.min_by_key(|(i, (_, _, b, _))| (*b != Backend::Vulkan, *i)).map(|(i, _)| i)
 }
 
 pub(crate) fn listed(instance: &wgpu::Instance, backends: Backends) -> Vec<wgpu::Adapter> {
     pollster::block_on(instance.enumerate_adapters(backends))
 }
 
-fn described(adapters: &[wgpu::Adapter]) -> Vec<(String, DeviceType, Backend)> {
-    adapters.iter().map(|a| a.get_info()).map(|i| (i.name, i.device_type, i.backend)).collect()
+fn described(adapters: &[wgpu::Adapter]) -> Vec<Card> {
+    let card = |i: wgpu::AdapterInfo| (i.name.clone(), sysfs::kind_of(&i), i.backend, i.device_pci_bus_id);
+    adapters.iter().map(|a| card(a.get_info())).collect()
 }
 
 fn hardware(adapters: &[wgpu::Adapter]) -> bool {

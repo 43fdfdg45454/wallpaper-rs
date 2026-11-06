@@ -59,7 +59,9 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         .map(|(id, a)| {
             let path = a["path"].as_str().unwrap_or_default();
             let size = std::fs::metadata(project.dir.join(path)).map_or(0, |m| m.len());
-            json!({"id": id, "path": path, "kind": asset_kind(path), "size": size, "media": a["media"], "pointer": format!("/scene/assets/{}", escape(id))})
+            let texture = crate::pictures::glance(&project.dir.join(path));
+            json!({"id": id, "path": path, "kind": asset_kind(path), "size": size, "media": a["media"], "pointer": format!("/scene/assets/{}", escape(id)),
+                "texture": texture.map(|t| json!({"hdr": t.hdr, "frames": t.frames, "cube": t.cube}))})
         })
         .collect();
     let timelines = doc["scene"]["timelines"].as_array().into_iter().flatten().enumerate();

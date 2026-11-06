@@ -32,6 +32,8 @@ pub(in crate::compositor) struct ViewSlot {
     pub(in crate::compositor) fresh: bool,
     pub(in crate::compositor) pointer: Option<(f64, f64)>,
     pub(in crate::compositor) pressed: [Option<std::time::Instant>; 2],
+    pub(in crate::compositor) lights: Option<bool>,
+    pub(in crate::compositor) drawn: u64,
     imported: HashMap<u32, GpuImage>,
     ring: Option<Mapped>,
     copied: Option<GpuImage>,
@@ -55,6 +57,7 @@ impl ViewSlot {
 
     pub(super) fn reset(&mut self) {
         (self.opened, self.visible, self.fps, self.shown, self.pointer) = (false, None, 0, None, None);
+        self.lights = None;
         self.imported.clear();
         self.ring = None;
     }

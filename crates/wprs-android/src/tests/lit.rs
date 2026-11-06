@@ -15,6 +15,7 @@ pub(super) fn hdr_follows_the_setting_and_the_display() {
     screen(true, 1e9, 1e9);
     assert_eq!(report()["peak_nits"], json!(100_000.0));
     assert_eq!(report()["active"], json!(false), "nothing was drawn in HDR");
+    assert_eq!(report()["encoding"], json!("sdr"));
     let at = |hdr, peak_nits, ratio| headroom(Screen { hdr, peak_nits, ratio });
     assert_eq!(at(true, 1000.0, 3.0), 3.0);
     assert!((at(true, 812.0, 0.0) - 4.0).abs() < 1e-3);

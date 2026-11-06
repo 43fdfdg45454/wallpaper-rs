@@ -75,6 +75,13 @@ ColumnLayout {
         color: Kirigami.Theme.neutralTextColor
     }
 
+    QQC2.Button {
+        visible: field.shell.restart === true
+        text: App.tr("Restart the daemon now")
+        icon.name: "view-refresh"
+        onClicked: App.act("Restart", [], "Daemon1")
+    }
+
     QQC2.Label {
         visible: !!field.shell.ignored
         Layout.maximumWidth: Kirigami.Units.gridUnit * 30

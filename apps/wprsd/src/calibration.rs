@@ -129,9 +129,13 @@ impl Daemon {
 }
 
 pub(crate) fn monitors(st: &State) -> Vec<Monitor> {
-    let shown = st.outputs.iter().filter(|(name, _)| !crate::drafts::virtual_output(name));
-    let screens = shown.filter_map(|(name, info)| Some((name.as_str(), info.size, info.screen.as_ref()?)));
-    st.config.layout.arrange(screens)
+    let shown: Vec<_> = st.outputs.iter().filter(|(name, _)| !crate::drafts::virtual_output(name)).collect();
+    let screens =
+        shown.iter().filter_map(|(name, info)| Some((name.as_str(), info.size, info.screen.as_ref()?)));
+    let mut monitors = st.config.layout.arrange(screens);
+    let loose = shown.iter().filter(|(_, info)| info.screen.is_none()).map(|(name, _)| name.as_str());
+    monitors.extend(st.config.layout.loose(loose));
+    monitors
 }
 
 pub(crate) fn calibrating(st: &State) -> bool {

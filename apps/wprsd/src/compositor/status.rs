@@ -5,6 +5,7 @@ pub struct OutputStatus {
     pub error: Option<String>,
     pub parallax: bool,
     pub frames: u64,
+    pub page_frames: u64,
     pub fps: u32,
     pub sound: &'static str,
     pub flashes: &'static str,

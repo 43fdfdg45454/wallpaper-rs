@@ -14,10 +14,14 @@ pub struct Planes<'a> {
     pub headroom: f32,
 }
 
-type Key = ((u32, u32), bool, bool, Coding, u32);
+type Key = ((u32, u32), bool, bool, Coding, bool);
+
+const LIGHT_AT: u64 = 8 * 16;
 
 pub struct Yuv {
     key: Key,
+    light: f32,
+    rows: wgpu::Buffer,
     luma: wgpu::Texture,
     chroma: wgpu::Texture,
     group: wgpu::BindGroup,
@@ -115,28 +119,22 @@ impl Renderer {
         })
     }
 
-    fn yuv_slot(&self, key: Key) -> Yuv {
-        let ((w, h), bt709, full, coding, light) = key;
-        let headroom = f32::from_bits(light);
+    fn yuv_slot(&self, key: Key, headroom: f32) -> Yuv {
+        let ((w, h), bt709, full, coding, _) = key;
         let (sampled, drawn) =
             (Usage::TEXTURE_BINDING | Usage::COPY_DST, Usage::TEXTURE_BINDING | Usage::COPY_SRC);
         let luma = create_texture(&self.device, "wprs-render luma", (w, h), Format::R8Unorm, sampled);
         let half = (w.div_ceil(2), h.div_ceil(2));
         let chroma = create_texture(&self.device, "wprs-render chroma", half, Format::Rg8Unorm, sampled);
         let target = if headroom > 1.0 { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
-        let image = gpu_image(create_texture(
-            &self.device,
-            "wprs-render video",
-            (w, h),
-            target,
-            drawn | Usage::RENDER_ATTACHMENT,
-        ));
+        let usage = drawn | Usage::RENDER_ATTACHMENT;
+        let image = gpu_image(create_texture(&self.device, "wprs-render video", (w, h), target, usage));
         let rows = match coding {
             Coding::Sdr => uniform(self, bt709, full, 0),
             hdr => crate::coded::uniform(self, full, hdr, headroom),
         };
         let group = group(self, &rows, [&luma, &chroma]);
-        Yuv { key, luma, chroma, group, image }
+        Yuv { key, light: headroom, rows, luma, chroma, group, image }
     }
 
     pub fn convert_yuv<'a>(
@@ -149,16 +147,19 @@ impl Renderer {
         if !self.limits.fits(w, h) || !covers(planes.luma, (w, h), 1) || !covers(planes.chroma, half, 2) {
             return Err(RenderError::InvalidSize(w, h));
         }
-        let light = crate::coded::lighting(planes.coding, planes.headroom).to_bits();
-        let key = (planes.size, planes.bt709, planes.full, planes.coding, light);
+        let light = crate::coded::lighting(planes.coding, planes.headroom);
+        let key = (planes.size, planes.bt709, planes.full, planes.coding, light > 1.0);
         if slot.as_ref().is_none_or(|yuv| yuv.key != key) {
-            *slot = Some(self.scoped(|| self.yuv_slot(key))?);
+            *slot = Some(self.scoped(|| self.yuv_slot(key, light))?);
         }
         let yuv = slot.as_mut().expect("created above");
+        if yuv.light != light && yuv.key.3 != Coding::Sdr {
+            yuv.light = crate::coded::relight(&self.queue, &yuv.rows, LIGHT_AT, light);
+        }
         self.scoped(|| {
             write(&self.queue, &yuv.luma, planes.luma);
             write(&self.queue, &yuv.chroma, planes.chroma);
-            match (yuv.key.3, f32::from_bits(yuv.key.4) > 1.0) {
+            match (yuv.key.3, yuv.key.4) {
                 (Coding::Sdr, _) => self.convert(&yuv.group, &yuv.image),
                 (_, false) => self.draw_with(&self.converter().coded, &yuv.group, &yuv.image),
                 (_, true) => self.draw_with(&self.converter().lit, &yuv.group, &yuv.image),

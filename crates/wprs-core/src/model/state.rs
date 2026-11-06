@@ -44,7 +44,14 @@ model! {
         pub layer_shell: LayerShellState,
     }
 
-    pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }
+    pub struct GpuAdapter {
+        pub name: String,
+        pub kind: String,
+        pub backend: String,
+        pub used: bool,
+        #[serde(default)]
+        pub bus: String,
+    }
 
     pub struct OutputState {
         pub width: u32,
@@ -70,9 +77,13 @@ model! {
         #[serde(default)]
         pub mm: Option<[f64; 4]>,
         #[serde(default)]
+        pub follows: Option<String>,
+        #[serde(default)]
         pub parallax: bool,
         #[serde(default)]
         pub frames: u64,
+        #[serde(default)]
+        pub page_frames: u64,
         #[serde(default)]
         pub refresh: u32,
         #[serde(default)]

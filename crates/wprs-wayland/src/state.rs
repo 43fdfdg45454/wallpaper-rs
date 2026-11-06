@@ -137,8 +137,10 @@ impl State {
         let presentation = self.presentation.clone();
         let (wanted, light) = Default::default();
         let feedback = crate::color::watch(self.color.as_ref(), layer.wl_surface(), qh, &name);
+        let (color, own) = (self.color.clone(), Default::default());
         let parts =
-            Arc::new(Parts { layer, viewport, fractional, empty, presentation, wanted, light, feedback });
+            Parts { layer, viewport, fractional, empty, presentation, wanted, light, feedback, color, own };
+        let parts = Arc::new(parts);
         let (name, integer, fractional, rate) = (name.clone(), info.scale_factor, None, Rate::default());
         let screen = Screen {
             output,

@@ -18,6 +18,7 @@ mod device;
 #[cfg(target_os = "linux")]
 mod dmabuf;
 mod draw;
+mod encoding;
 mod export;
 #[cfg(target_os = "linux")]
 mod exported;
@@ -25,6 +26,8 @@ mod filled;
 pub mod hdr;
 #[cfg(target_os = "linux")]
 mod import;
+mod lit;
+mod looked;
 mod lost;
 mod luma;
 mod packed;
@@ -35,6 +38,7 @@ mod parallax;
 #[cfg(target_os = "linux")]
 mod plane;
 mod platform;
+mod pq;
 mod readback;
 mod save;
 mod scene;
@@ -50,24 +54,27 @@ pub use bench::{Bench, Ceiling, Level, WARMUP, ceiling, save_frame, scene_bench,
 pub use choose::{Chosen, Fallback};
 pub use coded::Coding;
 pub use decode::{
-    decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
-    picture_limits, thumbnails,
+    decode_asset, decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size,
+    needed_edge, picture_limits, thumbnails,
 };
 pub use deep::{Deep, DeepPlanes, GAMUT, KNEE, PEAK_NITS, REFERENCE_NITS, deep_rows};
 pub use device::{Display, Renderer};
 #[cfg(target_os = "linux")]
 pub use dmabuf::{Dmabuf, Dmabufs};
 pub use draw::Target;
+pub use encoding::Encoding;
 #[cfg(target_os = "linux")]
 pub use exported::Exported;
 #[cfg(target_os = "linux")]
 pub use import::{Imported, Shared};
+pub use lit::{Lit, bright_picture, light_texels};
 pub use luma::Meter;
 #[cfg(target_os = "linux")]
 pub use page::{ARGB8888, PageBuffer, XRGB8888};
 pub use palette::{Palette, palette};
 pub use parallax::{DepthMap, Relief};
 pub use platform::{Platform, heif, set_platform_decoder};
+pub use pq::pq_code;
 pub use readback::TargetLimits;
 pub use save::{FORMATS, save};
 pub use scene::{

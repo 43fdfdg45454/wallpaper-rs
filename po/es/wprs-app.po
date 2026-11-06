@@ -1165,6 +1165,36 @@ msgstr "Mostrar un patrón en las pantallas para comprobarlas"
 msgid "Place the screens automatically"
 msgstr "Colocar las pantallas automáticamente"
 
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "The whole wallpaper"
+msgstr "El fondo entero"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Placed by hand on the board"
+msgstr "Colocada a mano en el tablero"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "The same part as %1"
+msgstr "La misma parte que %1"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Outputs that do not say where they are"
+msgstr "Salidas que no dicen dónde están"
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid ""
+"Streams, previews and some screens have no place on the desktop. Choose what "
+"part of a spread wallpaper they show; one placed by hand appears on the "
+"board above to be dragged."
+msgstr ""
+"Las transmisiones, las vistas previas y algunas pantallas no tienen lugar en "
+"el escritorio. Elige qué parte de un fondo extendido muestran; una colocada "
+"a mano aparece en el tablero de arriba para arrastrarla."
+
+#: apps/wprs-app/qml/EditLayoutLoose.qml
+msgid "Part shown by %1"
+msgstr "Parte que muestra %1"
+
 #: apps/wprs-app/qml/EditLight.qml
 msgid "Exposure (EV)"
 msgstr "Exposición (EV)"
@@ -1362,7 +1392,7 @@ msgstr "Quitar"
 msgid "Strength"
 msgstr "Fuerza"
 
-#: apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/RgbBoard.qml
 msgid "Whole picture"
 msgstr "Toda la imagen"
 
@@ -1533,6 +1563,14 @@ msgid "Software rendering, for tests"
 msgstr "Render por software, para pruebas"
 
 #: apps/wprs-app/qml/GpuPicker.qml
+msgid "%1 · on PCI bus %2"
+msgstr "%1 · en el bus PCI %2"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "The card on PCI bus %1, which is not connected now"
+msgstr "La tarjeta del bus PCI %1, que ahora no está conectada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
 msgid "The first card whose name has “%1”"
 msgstr "La primera tarjeta cuyo nombre tiene «%1»"
 
@@ -1564,6 +1602,10 @@ msgstr "En uso: %1 (%2)."
 #: apps/wprs-app/qml/GpuPicker.qml
 msgid "The new choice takes effect the next time the daemon starts."
 msgstr "La nueva elección vale desde el próximo arranque del daemon."
+
+#: apps/wprs-app/qml/GpuPicker.qml apps/wprs-app/qml/LayerNamespaceField.qml
+msgid "Restart the daemon now"
+msgstr "Reiniciar el daemon ahora"
 
 #: apps/wprs-app/qml/HdrPicker.qml
 msgid ""
@@ -1602,8 +1644,11 @@ msgid "on battery"
 msgstr "con batería"
 
 #: apps/wprs-app/qml/HdrPicker.qml
-msgid "no scene with bright colors is shown at the highest quality"
-msgstr "no se muestra una escena con colores brillantes en la calidad más alta"
+msgid ""
+"no HDR video and no scene with bright colors at the highest quality is shown"
+msgstr ""
+"no se muestra ningún vídeo HDR ni ninguna escena con colores brillantes en "
+"la calidad más alta"
 
 #: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/QualityPicker.qml
 msgid "Like every screen: %1"
@@ -1622,10 +1667,38 @@ msgid "The screen reaches %1 nits and shows white at %2 nits."
 msgstr "La pantalla llega a %1 nits y muestra el blanco a %2 nits."
 
 #: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"The screen does not say how bright it gets, so the brightest colors are kept "
+"at twice its white."
+msgstr ""
+"La pantalla no dice cuánto brilla, así que los colores más brillantes se "
+"quedan en el doble de su blanco."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid "Colors go to the desktop as linear extended sRGB."
+msgstr "Los colores van al escritorio en sRGB lineal extendido."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"Colors go to the desktop encoded in PQ (BT.2100), the only HDR way the "
+"driver offers."
+msgstr ""
+"Los colores van al escritorio codificados en PQ (BT.2100), la única forma de "
+"HDR que ofrece el controlador."
+
+#: apps/wprs-app/qml/HdrPicker.qml
+msgid ""
+"Colors go to the desktop encoded in PQ with a description of their own, "
+"brightest %1 nits and %2 nits on average."
+msgstr ""
+"Los colores van al escritorio codificados en PQ con una descripción propia: "
+"%1 nits como máximo y %2 nits de media."
+
+#: apps/wprs-app/qml/HdrPicker.qml
 msgid "HDR of %1"
 msgstr "HDR de %1"
 
-#: apps/wprs-app/qml/HdrPicker.qml
+#: apps/wprs-app/qml/HdrPicker.qml apps/wprs-app/qml/SceneAssets.qml
 msgid "HDR"
 msgstr "HDR"
 
@@ -1694,6 +1767,10 @@ msgstr "Mostrar el contenido para adultos"
 #: apps/wprs-app/qml/ItemDrawer.qml
 msgid "Keep moving when the desktop asks for reduced motion"
 msgstr "Seguir en movimiento cuando el escritorio pide reducir el movimiento"
+
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Try the page and its lights…"
+msgstr "Probar la página y sus luces…"
 
 #: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/SceneEditors.qml
 msgid "Edit…"
@@ -2303,6 +2380,36 @@ msgstr ""
 #: apps/wprs-app/qml/PackageAbout.qml
 msgid "Open this address in the browser?"
 msgstr "¿Abrir esta dirección en el navegador?"
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid "The page and its lights"
+msgstr "La página y sus luces"
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid "Install the KPipeWire QML module to see the page here."
+msgstr "Instala el módulo QML de KPipeWire para ver aquí la página."
+
+#: apps/wprs-app/qml/PageLights.qml apps/wprs-app/qml/SceneRgb.qml
+msgid "What the lights get, %1 × %2:"
+msgstr "Lo que reciben las luces, %1 × %2:"
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid ""
+"The page has sent no colors to the lights yet; pages that call window.wprs."
+"rgb.setImage show them here."
+msgstr ""
+"La página todavía no mandó colores a las luces; las páginas que llaman a "
+"window.wprs.rgb.setImage los muestran aquí."
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid ""
+"Here window.wprs.rgb.setImage returns true and its colors are only shown, "
+"never sent. On the desktop it returns false and sends nothing until RGB "
+"lighting is on and you allow it for this package."
+msgstr ""
+"Aquí window.wprs.rgb.setImage devuelve true y sus colores solo se muestran, "
+"nunca se mandan. En el escritorio devuelve false y no manda nada hasta que "
+"enciendas la iluminación RGB y lo permitas para este paquete."
 
 #: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
 #: apps/wprs-app/qml/PresetDialog.qml apps/wprs-app/qml/ProfilesPage.qml
@@ -3127,6 +3234,78 @@ msgstr "Quitar el repositorio"
 msgid "Also uninstall its packages"
 msgstr "Desinstalar también sus paquetes"
 
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "%1, zone %2"
+msgstr "%1, zona %2"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run left to right"
+msgstr "Las luces van de izquierda a derecha"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run right to left"
+msgstr "Las luces van de derecha a izquierda"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run top to bottom"
+msgstr "Las luces van de arriba abajo"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Lights run bottom to top"
+msgstr "Las luces van de abajo arriba"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid ""
+"Every device takes the whole picture until you place it. Choose a device or "
+"one of its zones, drag its frame over the picture and pull its corner to "
+"size it."
+msgstr ""
+"Cada dispositivo toma toda la imagen hasta que lo ubicas. Elige un "
+"dispositivo o una de sus zonas, arrastra su marco sobre la imagen y tira de "
+"su esquina para darle tamaño."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Device or zone to place"
+msgstr "Dispositivo o zona que ubicar"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Direction of the lights"
+msgstr "Dirección de las luces"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Keep the zone dark"
+msgstr "Dejar la zona apagada"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Leave the device alone"
+msgstr "Dejar el dispositivo en paz"
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid ""
+"This zone stays dark while the rest of the device follows the wallpaper."
+msgstr ""
+"Esta zona queda apagada mientras el resto del dispositivo sigue al fondo."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "This device keeps its own mode and gets no colors."
+msgstr "Este dispositivo conserva su propio modo y no recibe colores."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Takes the whole picture."
+msgstr "Toma toda la imagen."
+
+#: apps/wprs-app/qml/RgbBoard.qml
+msgid "Takes the framed part of the picture."
+msgstr "Toma la parte enmarcada de la imagen."
+
+#: apps/wprs-app/qml/RgbPicture.qml
+msgid "The picture the lights take their colors from"
+msgstr "La imagen de la que las luces toman sus colores"
+
+#: apps/wprs-app/qml/RgbPicture.qml
+msgid "Size of the frame"
+msgstr "Tamaño del marco"
+
 #: apps/wprs-app/qml/SavedPresets.qml apps/wprs-app/qml/SceneBoneRow.qml
 #: apps/wprs-app/qml/SceneShapes.qml
 msgid "Rename"
@@ -3210,6 +3389,14 @@ msgstr "Solo estos huesos"
 #: apps/wprs-app/qml/SceneAnimLayers.qml
 msgid "Add a layer playing…"
 msgstr "Añadir una capa que reproduzca…"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "cube map, shown as a panorama"
+msgstr "mapa cúbico, visto como panorama"
+
+#: apps/wprs-app/qml/SceneAssets.qml
+msgid "%1 frames"
+msgstr "%1 cuadros"
 
 #: apps/wprs-app/qml/SceneAssets.qml
 msgid "cover of what plays"
@@ -4114,11 +4301,23 @@ msgstr "Archivo: %1 ahora, %2 como KTX2, con %3 niveles de detalle."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid ""
-"Widened from %1 × %2 to %3 × %4 pixels so that every card keeps it "
-"compressed."
+"The %1 frames become one texture array that keeps their timing; the crops "
+"show the first frame."
 msgstr ""
-"Ampliada de %1 × %2 a %3 × %4 píxeles para que todas las tarjetas la "
-"mantengan comprimida."
+"Los %1 cuadros pasan a ser un arreglo de texturas que conserva su ritmo; los "
+"recortes muestran el primer cuadro."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid ""
+"The six faces become one cube map, shown as a panorama; the crops show a "
+"corner of it."
+msgstr ""
+"Las seis caras forman un mapa cúbico, que se muestra como panorama; los "
+"recortes muestran una esquina."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "The picture keeps its light above white as an HDR texture."
+msgstr "La imagen conserva su luz por encima del blanco como textura HDR."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "The picture now"
@@ -4127,6 +4326,34 @@ msgstr "La imagen ahora"
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "%1 on the card"
 msgstr "%1 en la tarjeta"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "kept uncompressed: the card cannot hold this shape compressed"
+msgstr "sin comprimir: la tarjeta no puede guardar esta forma comprimida"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "drawn by this graphics card"
+msgstr "dibujado por esta tarjeta gráfica"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "decoded on the processor: this card does not read it"
+msgstr "decodificado en el procesador: esta tarjeta no lo lee"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A flat picture"
+msgstr "Una imagen plana"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A cube map made from this panorama"
+msgstr "Un mapa cúbico hecho con este panorama"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A cube map made from six square pictures"
+msgstr "Un mapa cúbico hecho con seis imágenes cuadradas"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "Face %1"
+msgstr "Cara %1"
 
 #: apps/wprs-app/qml/SceneLayerFiles.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml
@@ -5402,10 +5629,6 @@ msgstr "Todo el lienzo"
 #: apps/wprs-app/qml/SceneRgb.qml
 msgid "A strip of it"
 msgstr "Una franja"
-
-#: apps/wprs-app/qml/SceneRgb.qml
-msgid "What the lights get, %1 × %2:"
-msgstr "Lo que reciben las luces, %1 × %2:"
 
 #: apps/wprs-app/qml/SceneRgb.qml
 msgid "Play the preview to see what the lights get."
@@ -7501,6 +7724,14 @@ msgstr "Sin conectar."
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid "%1, with %2 lights"
 msgstr "%1, con %2 luces"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "%1, with %2 lights; its own mode %3 comes back when the lights stop"
+msgstr "%1, con %2 luces; su propio modo %3 vuelve cuando paran las luces"
+
+#: apps/wprs-app/qml/SettingsRgb.qml
+msgid "%1, with %2 lights, in its own mode %3"
+msgstr "%1, con %2 luces, en su propio modo %3"
 
 #: apps/wprs-app/qml/SettingsRgb.qml
 msgid "Test"

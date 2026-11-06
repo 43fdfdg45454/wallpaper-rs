@@ -165,6 +165,12 @@ impl Service {
         self.d()?.render(move |d| d.set_option(&key, &value).inspect(|_| crate::duck::follow(d))).await
     }
 
+    async fn restart(&self, #[zbus(connection)] bus: &zbus::Connection) -> Result<()> {
+        self.d()?;
+        crate::restart::ask(bus).await;
+        Ok(())
+    }
+
     async fn reload(&self) -> Result<()> {
         self.d()?.render(|d| d.reload().inspect(|_| crate::duck::follow(d))).await
     }

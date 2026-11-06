@@ -98,23 +98,28 @@ impl Daemon {
 
     pub(crate) fn place(&self, output: &str, fit: Fit, edit: Option<&Edit>) -> Place {
         let st = self.state();
-        let screen = st.outputs.get(output).and_then(|info| info.screen.as_ref());
-        if let Some(crop) = edit.and_then(|e| e.crop_for(output, screen.map(|s| s.identity.as_str()))) {
+        let lead =
+            Some(st.config.layout.leader(output)).filter(|l| st.outputs.contains_key(*l)).unwrap_or(output);
+        let screen = st.outputs.get(lead).and_then(|info| info.screen.as_ref());
+        if let Some(crop) = edit.and_then(|e| e.crop_for(lead, screen.map(|s| s.identity.as_str()))) {
             return Place::Crop(crop);
         }
-        if fit != Fit::Span || screen.is_none() {
+        if fit != Fit::Span || (screen.is_none() && st.config.layout.loose([lead]).is_empty()) {
             return Place::Fit;
         }
         let spread = |name: &str, info: &OutputInfo| {
-            name == output || info.spread || st.config.resolve(name).fit == Fit::Span
+            name == lead || info.spread || st.config.resolve(name).fit == Fit::Span
         };
         let spanned = st.outputs.iter().filter(|(name, info)| spread(name, info));
-        let spanned = spanned.filter(|(name, _)| !crate::drafts::virtual_output(name));
+        let spanned: Vec<_> =
+            spanned.filter(|(name, _)| *name == lead || !crate::drafts::virtual_output(name)).collect();
         let screens =
-            spanned.filter_map(|(name, info)| Some((name.as_str(), info.size, info.screen.as_ref()?)));
+            spanned.iter().filter_map(|(name, info)| Some((name.as_str(), info.size, info.screen.as_ref()?)));
         let span = edit.and_then(|e| e.span.clone()).unwrap_or_default();
-        let monitors = st.config.layout.arrange(screens);
-        Place::Span { monitors, output: output.into(), center: span.center, zoom: span.zoom }
+        let mut monitors = st.config.layout.arrange(screens);
+        let loose = spanned.iter().filter(|(_, info)| info.screen.is_none()).map(|(name, _)| name.as_str());
+        monitors.extend(st.config.layout.loose(loose));
+        Place::Span { monitors, output: lead.into(), center: span.center, zoom: span.zoom }
     }
 
     pub(crate) fn respan(&self, st: MutexGuard<'_, State>) {

@@ -591,7 +591,11 @@ extendida se dibuja en cada pantalla solo en su parte, con su propio nivel de ca
 reloj para todas, así que sus animaciones siguen a la par de una pantalla a otra. Si el autor la
 hizo para varias pantallas (`display.span: "all-outputs"`), la app propone `span` al aplicarla y
 muestra dónde están las pantallas; cada fila de pantalla lo deja cambiar y abre el mismo esquema.
-`wprs-ctl lib apply ID --span` hace lo mismo desde la terminal. Las pantallas que muestran la misma
+`wprs-ctl lib apply ID --span` hace lo mismo desde la terminal. Las salidas que no dicen dónde
+están (transmisiones, vistas previas o pantallas que el escritorio no ubica) muestran la imagen o la
+escena entera, salvo que el esquema de pantallas de la app las coloque a mano sobre el tablero o
+les haga mostrar la misma parte que otra salida (`layout.monitors.<salida>` y
+`layout.follow.<salida>` en la terminal). Las pantallas que muestran la misma
 imagen con la misma edición, como las de `span` o las que tienen su propio recorte, comparten una
 sola copia en la GPU, y los JPEG grandes se decodifican directamente a un tamaño reducido. Con una
 escena pasa lo mismo: cada imagen del paquete se sube una vez y la usan todas las pantallas que la
@@ -670,8 +674,9 @@ cualquier elección los límites que protegen la memoria y el controlador: los d
 modelos que puede cargar una escena, el tamaño de las texturas y los efectos que quedan fuera por
 el presupuesto fijo o porque detuvieron la GPU, que el aviso cuenta. Las bajadas
 automáticas solo valen en `auto` o por encima del mínimo elegido, y el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* y en cada pantalla con
-escena, con su propio valor (*Como todas las pantallas* vuelve al general); el teléfono, en sus
-ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
+escena o página web, con su propio valor (*Como todas las pantallas* vuelve al general; una página
+toma el nivel de la pantalla que la muestra, y las pantallas con niveles distintos la ejecutan por
+separado); el teléfono, en sus ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
 o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
 `wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla;
 `wprs-ctl config playback.quality.DP-1` lee el valor propio de una pantalla aunque no esté
@@ -681,11 +686,20 @@ Las pantallas HDR muestran los colores más brillantes que el blanco de las esce
 `canvas.hdr`: si el escritorio y el controlador gráfico ofrecen una superficie HDR (en Wayland, con el
 protocolo de gestión de color), la escena guarda 16 bits hasta el final y dobla lo que pasa de 0,8
 del blanco hacia el brillo máximo de esa pantalla, que el escritorio comunica junto a su blanco de
-referencia (si no lo dice, se supone el doble del blanco). `playback.hdr` vale `auto` (solo si
+referencia (si no lo dice, se supone el doble del blanco, una decisión que se mantiene). Los colores
+van al escritorio en sRGB lineal extendido si el controlador lo ofrece; si solo ofrece PQ (BT.2100),
+el daemon los codifica en PQ; y si no ofrece ninguno de los dos pero el escritorio acepta
+descripciones de imagen propias, el daemon codifica en PQ y describe la superficie él mismo con
+sus metadatos HDR (MaxCLL, la luz más alta que puede dibujar, y MaxFALL, su blanco). La app,
+`wprs-ctl quality` y `wprs-ctl state` dicen cuál de las tres se usa. `playback.hdr` vale `auto` (solo si
 el escritorio o el teléfono dicen que la pantalla muestra HDR, con corriente y con una escena con
-`canvas.hdr` y mapeo de tonos en `q3`, porque gasta más; las imágenes, los vídeos y las páginas
-siguen en SDR), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el
-suyo (`playback.hdr.DP-1`); si la pantalla no puede, se ve en SDR como siempre. La app lo ofrece en
+`canvas.hdr` y mapeo de tonos en `q3`, con un vídeo HDR o con una imagen KTX2 HDR, porque gasta más), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el
+suyo (`playback.hdr.DP-1`); si la pantalla no puede, se ve en SDR como siempre. Con el HDR encendido, un vídeo HDR (PQ o HLG)
+conserva sus luces por encima del blanco, ajustadas al pico de la pantalla (el más bajo de las
+pantallas que lo muestran); una imagen KTX2 HDR (UASTC HDR, sin retoques de foto) conserva también su
+luz por encima del blanco, doblada con suavidad hacia el pico de la pantalla, en el escritorio y en el
+teléfono; y las demás imágenes, los vídeos normales y las páginas, hechos para el rango
+estándar, ponen su blanco en el blanco de la pantalla. La app lo ofrece en
 *Ajustes* → *HDR* y en cada pantalla, con lo que la pantalla admite y por qué está activado o no; el
 panel de tonos del editor avisa de cómo se ven esas escenas en una pantalla HDR. En el teléfono
 (Android 14 o posterior) está en sus ajustes, la app usa `COLOR_MODE_HDR` en su ventana y el
@@ -720,12 +734,23 @@ tarjeta sin distinguir mayúsculas, como `Graphics A`, que sirve para elegir ent
 La app lo ofrece en *Ajustes* → *Tarjeta gráfica* con las tarjetas que encontró el daemon (nombre,
 tipo y API) y marca la que está en uso; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
 `wprs-ctl config render.gpu dedicated` elige una. El cambio vale desde el siguiente arranque del
-daemon (`systemctl --user restart wprsd`), porque el render se crea una sola vez y lo comparten
-todas las pantallas, vídeos y escenas; hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config
-render.gpu` lo avisan (`gpu_restart` en `wprs-ctl state`); cambiar solo mayúsculas y minúsculas del
+daemon, porque el render se crea una sola vez y lo comparten todas las pantallas, vídeos y escenas;
+hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config render.gpu` lo avisan (`gpu_restart` en
+`wprs-ctl state`), y la app ofrece *Reiniciar el daemon ahora* junto al aviso, igual que
+`wprs-ctl restart` (con systemd, se lo pide a systemd; si no, el daemon se vuelve a ejecutar a sí
+mismo).; cambiar solo mayúsculas y minúsculas del
 nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede abrir, el daemon
 arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
-`gpu_warning`. Con `WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
+`gpu_warning`. Una tarjeta que solo se alcanza con OpenGL ES, cuyo controlador no dice de qué tipo
+es, toma el tipo que el sistema le da en `/sys/class/drm` (Intel integrada en el bus PCI 0 o, sin
+dirección PCI, según su modelo; NVIDIA dedicada; AMD integrada con 2 GiB de memoria propia o menos;
+con varias tarjetas de una marca y de tipos distintos, el de la que arranca la pantalla, o el de la
+otra si `DRI_PRIME` pide otra), así que `integrated` también la elige. Si hay dos
+tarjetas idénticas, la app las distingue por su bus PCI y `wprs-ctl gpu pci:0000:03:00.0` elige la
+de ese bus (la columna `BUS` de `wprs-ctl gpu`); la lista sigue los nodos de `/dev/dri`, así que una
+tarjeta que conectas o quitas aparece o se va al segundo, sin reiniciar ni consultar nada mientras
+tanto. Con
+`WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
 al listar las tarjetas. La clase de cada
 tarjeta se mide y se guarda aparte, así que volver a una no la mide otra vez. La dedicada dibuja
 las escenas pesadas con más calidad y gasta más energía. El ajuste no se sincroniza ni entra en los
@@ -921,6 +946,7 @@ wprs-ctl edit fit foto.jpg center                    # su propio ajuste; none vu
 wprs-ctl set foto.jpg -f span && wprs-ctl edit span foto.jpg --zoom 1.2
 wprs-ctl config layout.bezel_mm 8                    # ancho del marco de cada pantalla al extender
 wprs-ctl config layout.monitors.DP-1 0,0,597,336     # colocar una pantalla a mano, en milímetros
+wprs-ctl config layout.follow.STREAM-1 DP-1         # una salida sin ubicación muestra la parte de DP-1
 wprs-ctl calibrate on                                # patrón para comprobarlo; off lo quita
 ```
 
@@ -1547,7 +1573,13 @@ servicio arranca para cada página que se ve y para en cuanto ninguna pantalla l
 WPE WebKit 2.54 o posterior (`wpewebkit` en Arch y Fedora); donde no está (Ubuntu 24.04, el Flatpak)
 el fondo se rechaza con el motivo en lugar de quedarse en blanco. `docs/specs/web.md` explica el
 motor, el aislamiento y la interfaz de la página, y `docs/guia-fondos-web.md` es la guía para quien
-los hace.
+los hace. El fundido hacia una página empieza cuando la página dibuja su primer fotograma (o falla),
+así que el fondo anterior no se funde en una pantalla vacía, y al salir de una página se funde desde
+su último fotograma. El límite de FPS frena todos los fotogramas de la página, no solo
+`requestAnimationFrame`: el motor web no dibuja el siguiente hasta que pasa el periodo, también para
+animaciones CSS, vídeos y lienzos; `wprs-ctl state` cuenta los que dibujó cada pantalla
+(`page_frames`). En el teléfono la página se dibuja directamente en la superficie del fondo, sin
+fundido, y el límite solo frena `requestAnimationFrame`.
 
 La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
 (`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,
@@ -1595,7 +1627,9 @@ no dibuja ni usa el procesador.
 Un fondo puede pintar el teclado, el ratón y otras luces RGB a través de un servidor de OpenRGB
 (con su protocolo SDK; el cliente es propio). Una escena lo hace con una capa `adjustment` con
 `rgb: true`, que manda lo que capta (todo el lienzo o la región de su `size`) reducido a 64 × 16
-como mucho; una página web, con `window.wprs.rgb.setImage(bytes, ancho, alto)`. En ambos casos el
+como mucho; una página web, con `window.wprs.rgb.setImage(bytes, ancho, alto)`, que devuelve `true`
+solo cuando los colores llegan a las luces (o a la vista previa) y `false` sin el permiso, con la
+iluminación apagada o en el teléfono. En ambos casos el
 paquete declara `permissions.rgb`, se envía como mucho 30 veces por segundo y solo cuando cambia el
 fotograma, y nada sale hasta que haces dos cosas: encender la iluminación en *Ajustes → Iluminación
 RGB* (`wprs-ctl config rgb.enabled true`) y permitirla para ese paquete (el aviso de permisos de la
@@ -1617,9 +1651,30 @@ dispositivos (si no, el fondo tapado sigue en pausa y el servicio vuelve a proba
 nunca por una imagen, un video, un paquete sin colores, la sesión bloqueada o la batería; si el
 servicio se conectó solo para ese fondo tapado, cierra la conexión en cuanto nada tapado pide las
 luces, al bloquear, pausar, pasar a batería, cambiar de fondo o quitar la pantalla, salvo que una
-pantalla a la vista mande colores, y los dispositivos quedan con sus últimos colores). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
+pantalla a la vista mande colores). Si el fondo tapado no se pausa, sigue dibujándose y las luces lo
 siguen como siempre, elijas lo que elijas. `wprs-ctl rgb covered` y `wprs-ctl rgb status` muestran
-la elección y si las luces están en pausa ahora. Cada zona con matriz (las teclas) toma la celda de
+la elección y si las luces están en pausa ahora. Cada dispositivo pasa a su modo directo solo cuando
+se le pintan colores y recupera su propio modo (y sus colores, si ese modo fija cada luz) en cuanto
+nada manda colores: al detenerse o cambiar el paquete, al quitar la pantalla, al apagar la
+iluminación, al cambiar de servidor, al terminar una prueba sin nada que pintar y al detenerse el
+servicio. Ese modo propio se guarda en este equipo mientras el dispositivo está tomado, así que si el
+servicio se cierra de golpe o el servidor no responde al devolverlo, vuelve en cuanto el servicio
+alcanza de nuevo el servidor. La lista de dispositivos de la app y `wprs-ctl rgb devices` muestran ese modo propio y si
+volverá cuando paren las luces. Cada dispositivo toma toda la imagen hasta que lo ubicas: en la
+misma sección, el tablero de luces muestra la imagen que reciben (la tira de 64 × 16 del fondo que
+las manda) y eliges un dispositivo o una de sus zonas, arrastras su marco sobre la imagen y tiras de
+su esquina para darle tamaño; también eliges hacia dónde corre una fila de luces (de izquierda a
+derecha, al revés, de arriba abajo o de abajo arriba), *Toda la imagen*, *Dejar el dispositivo en
+paz* (no se le toca el modo) o *Dejar la zona apagada*. En la terminal es `wprs-ctl rgb place
+"NOMBRE" "x y ancho alto [right|left|down|up]"` (fracciones de la imagen; `--zone N` para una zona,
+`off` o `none`; si dos dispositivos se llaman igual, el nombre lleva entre paréntesis su número de
+serie, o su orden si no lo tienen, como lo muestra `wprs-ctl rgb devices`), y `wprs-ctl rgb place` lista lo ubicado; se guarda en este equipo y no se
+sincroniza. Para probar una página web con sus luces, su ficha de la biblioteca tiene *Probar la
+página y sus luces…*: la muestra en una vista previa con la tira que mandaría a las luces, aunque la
+iluminación esté apagada o el paquete no tenga permiso (ahí `setImage` devuelve `true` y los colores
+solo se ven); al cerrarla se olvida. Desde la terminal, `wprs-ctl stream preview:NOMBRE`, `wprs-ctl
+lib apply ID -o preview:NOMBRE`, `wprs-ctl rgb strip -o preview:NOMBRE` y `wprs-ctl release
+preview:NOMBRE` hacen lo mismo. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
 `adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
 scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista
@@ -2152,7 +2207,23 @@ otra página no cierra un editor con cambios sin guardar.
   ETC2 en teléfonos viejos y sin comprimir en las demás). Es un paso que se deshace; `wprs-ctl scene
   asset DIR ID` muestra lo mismo y `--ktx2 [--codec uastc|etc1s] [--quality N]` convierte, o solo
   informa con `--dry-run [--looks CARPETA]`. Al cargar, la escena pasa cada textura KTX2 al formato
-  comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps.
+  comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps;
+  la imagen conserva su tamaño exacto aunque un lado no sea múltiplo de 4 píxeles, porque la textura
+  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales, también cuando la imagen
+  es una máscara, un mapa de luz, un reflejo o una proyección. Una imagen animada
+  (GIF o WebP) se convierte en un arreglo de cuadros que conserva el tiempo de cada cuadro; una imagen
+  HDR (`.hdr` o `.exr`) en una textura HDR que conserva su luz por encima del blanco; y un panorama, o
+  seis imágenes cuadradas elegidas una por cara, en un mapa cúbico (`--cube` o `--faces` en
+  `wprs-ctl scene asset`). Cada clase de tarjeta que guarda una forma sin comprimir lo indica. También se leen KTX2
+  HDR (BC6H en escritorio, ASTC HDR donde la tarjeta lo lee y medios flotantes en las demás), que
+  ganan rango en lienzos `hdr`; arreglos de cuadros, que se ven como hojas de sprites y se animan
+  con `animated`; y mapas cúbicos, que se ven como panoramas equirectangulares. El panel de
+  recursos indica en cada KTX2 si es HDR, cuántos cuadros tiene o si es un cubo, y `wprs-ctl scene
+  asset` lo dice igual. Los recortes de cada clase de tarjeta los dibuja la propia tarjeta gráfica
+  cuando lee ese formato y el procesador los decodifica cuando no, y cada recorte dice cuál fue. El
+  teléfono no convierte a KTX2: no tiene editor de escenas y solo lleva el transcodificador en Rust,
+  no el codificador en C++ de Basis Universal; los paquetes hechos en el escritorio se ven igual en
+  él.
 - **Problemas**: los mensajes del validador cambian con cada edición; al pulsar uno se elige la
   capa o el campo afectado. Esos mensajes y los rechazos del editor llevan un identificador con sus
   argumentos (`scene.color`, `editor.step.add_layer`…) y salen en el idioma del escritorio en la
@@ -2167,7 +2238,12 @@ El editor de escenas pinta también las máscaras de los efectos que las piden p
 cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, azul o alfa), un modo
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
-hace lo mismo desde la terminal). Al elegir un efecto de una capa, el inspector ofrece su máscara:
+hace lo mismo desde la terminal). Si la máscara, el mapa o la imagen de partida es KTX2, la imagen
+nueva también lo es, con el mismo códec y la misma calidad, en lugar de un PNG. Mientras la app
+sigue abierta, cada trazo parte de una copia exacta del trazo anterior, así que la pérdida de la
+compresión no se acumula trazo a trazo; desde la terminal cada llamada parte del archivo, así que ahí
+conviene pintar sobre PNG y convertir al final.
+Al elegir un efecto de una capa, el inspector ofrece su máscara:
 ninguna, una imagen, otra capa o una forma (rectángulo, elipse, anillo, polígono, estrella o línea),
 el canal, invertir, el borde suave (con un deslizador de hasta 200 px y un campo de hasta 10 000) y
 la intensidad, y el lienzo la dibuja sobre la capa: la imagen encima (también una KTX2, que la app

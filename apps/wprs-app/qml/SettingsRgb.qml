@@ -123,7 +123,7 @@ ColumnLayout {
             QQC2.Label {
                 Layout.fillWidth: true
                 textFormat: Text.PlainText
-                text: App.tr("%1, with %2 lights", modelData.name, modelData.leds)
+                text: !modelData.own_mode ? App.tr("%1, with %2 lights", (modelData.key ?? modelData.name), modelData.leds) : modelData.taken ? App.tr("%1, with %2 lights; its own mode %3 comes back when the lights stop", (modelData.key ?? modelData.name), modelData.leds, modelData.own_mode) : App.tr("%1, with %2 lights, in its own mode %3", (modelData.key ?? modelData.name), modelData.leds, modelData.own_mode)
             }
 
             QQC2.Button {
@@ -133,6 +133,13 @@ ColumnLayout {
                 onClicked: lights.ask("Test", [modelData.index])
             }
         }
+    }
+
+    RgbBoard {
+        visible: (lights.status.devices ?? []).length > 0
+        status: lights.status
+        onSaved: lights.load()
+        onFailed: error => lights.failed(error)
     }
 
     QQC2.Button {

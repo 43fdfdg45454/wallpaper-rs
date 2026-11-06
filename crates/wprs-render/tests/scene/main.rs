@@ -16,6 +16,8 @@ mod covers;
 mod gl;
 mod packed;
 mod passes;
+mod radiance;
+mod shaped;
 mod stage;
 mod strips;
 

@@ -37,7 +37,7 @@ ColumnLayout {
                 return;
             browse.packages = reply.packages.filter(p => p.featured).concat(reply.packages.filter(p => !p.featured));
             browse.total = reply.total;
-            App.query("GetVotes", [reply.packages.slice(0, 100).map(p => p.repo_id + "/" + p.id)], "Sync1", found => browse && (browse.votes = found.items ?? {}, browse.counted = found.shown === true, browse.voteRepo = found.repo_id ?? ""), () => browse && (browse.counted = false, browse.voteRepo = ""));
+            App.query("GetVotes", [reply.packages.map(p => p.repo_id + "/" + p.id)], "Sync1", found => browse && (browse.votes = found.items ?? {}, browse.counted = found.shown === true, browse.voteRepo = found.repo_id ?? ""), () => browse && (browse.counted = false, browse.voteRepo = ""));
             App.query("RequestPreviews", [reply.packages.filter(p => p.preview).map(browse.spec)], "Repos1", found => browse && (browse.previews = Object.assign({}, browse.previews, found[0])));
         });
     }

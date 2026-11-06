@@ -47,11 +47,22 @@ fn levels_start_at_the_first_one_that_fits_and_count_the_memory() {
 }
 
 #[test]
-fn sides_that_are_not_a_multiple_of_four_are_widened_for_compressed_targets() {
-    let bytes = encode(&picture(30, 18), &options(Codec::Uastc)).unwrap();
+fn sides_that_are_not_a_multiple_of_four_are_padded_and_kept_exact() {
+    let source = picture(30, 18);
+    let bytes = encode(&source, &options(Codec::Uastc)).unwrap();
     let found = info(&bytes).unwrap();
-    assert_eq!((found.width, found.height), (32, 20));
-    assert!(levels(&bytes, Target::Bc7, 4096, false).is_ok());
+    assert_eq!((found.width, found.height), (30, 18));
+    let made = levels(&bytes, Target::Bc7, 4096, true).unwrap();
+    assert_eq!((made.width, made.height, made.padded), (30, 18, (32, 20)));
+    assert_eq!(made.count, 2, "only levels whose blocks match the padded texture are kept");
+    assert_eq!(made.data.len(), (8 * 5 + 4 * 3) * 16);
+    let plain = levels(&bytes, Target::Rgba, 4096, false).unwrap();
+    assert_eq!((plain.padded, plain.data.len()), ((30, 18), 30 * 18 * 4));
+    for target in TARGETS {
+        let seen = look(&bytes, target).unwrap();
+        assert_eq!(seen.dimensions(), (30, 18));
+        assert!(error(&source, &seen) < 6.0, "{target:?}");
+    }
 }
 
 #[test]

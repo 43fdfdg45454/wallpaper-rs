@@ -4,11 +4,11 @@ use crate::RenderError;
 use wgpu::{Backend, Backends, DeviceType};
 use wprs_core::GpuChoice;
 
-fn card(name: &str, t: DeviceType, b: Backend) -> (String, DeviceType, Backend) {
-    (name.into(), t, b)
+fn card(name: &str, t: DeviceType, b: Backend) -> super::Card {
+    (name.into(), t, b, String::new())
 }
 
-fn desk() -> Vec<(String, DeviceType, Backend)> {
+fn desk() -> Vec<super::Card> {
     vec![
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Gl),
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Vulkan),
@@ -34,7 +34,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
         [3, 2, 2, 1].map(Some)
     );
     assert_eq!([named("venus"), named("Unknown")], [Some(4), Some(7)]);
-    assert_eq!(named("Arc A770"), None, "a missing name finds nothing");
+    assert_eq!(named("Example missing card"), None, "a missing name finds nothing");
     let laptop = vec![all[0].clone(), all[5].clone()];
     assert_eq!(pick(&GpuChoice::Software, &laptop), Some(1), "OpenGL ES when Vulkan has none");
     assert_eq!(
@@ -42,7 +42,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
         [None, Some(0)]
     );
     assert_eq!(pick(&GpuChoice::Dedicated, &[]), None);
-    let kinds = all.iter().map(|(_, t, _)| kind(*t)).collect::<Vec<_>>();
+    let kinds = all.iter().map(|(_, t, ..)| kind(*t)).collect::<Vec<_>>();
     assert_eq!(
         kinds,
         ["integrated", "integrated", "dedicated", "dedicated", "virtual", "software", "software", "other"]
@@ -53,7 +53,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
 fn a_chosen_card_that_cannot_open_falls_back_to_the_automatic_choice() {
     let failed = Some(Err::<u8, _>(RenderError::Device("no device for these limits".into())));
     assert_eq!(settle(failed, "dedicated"), Err(Fallback::Unusable));
-    assert_eq!(settle(None::<Result<u8, RenderError>>, "Arc A770"), Err(Fallback::Missing));
+    assert_eq!(settle(None::<Result<u8, RenderError>>, "Example missing card"), Err(Fallback::Missing));
     assert_eq!(settle(Some(Ok(7)), "dedicated"), Ok(7));
 }
 
@@ -63,4 +63,31 @@ fn a_backend_limit_keeps_other_drivers_unloaded_when_listing_cards() {
     assert_eq!(extra(Backend::Gl, None), Some(Backends::VULKAN));
     assert_eq!(extra(Backend::Vulkan, None), None);
     assert_eq!(extra(Backend::Vulkan, Some(Backends::VULKAN)), None);
+}
+
+#[test]
+fn two_identical_cards_are_told_apart_by_their_pci_bus() {
+    let twin = |bus: &str| {
+        ("Example Dedicated Graphics".to_owned(), DeviceType::DiscreteGpu, Backend::Vulkan, bus.to_owned())
+    };
+    let all = vec![
+        twin("0000:03:00.0"),
+        twin("0000:04:00.0"),
+        card("Example Soft", DeviceType::Cpu, Backend::Vulkan),
+    ];
+    let on = |bus: &str| pick(&GpuChoice::parse(&format!("pci:{bus}")).unwrap(), &all);
+    assert_eq!(
+        [on("0000:04:00.0"), on("0000:03:00.0"), on("0000:04:00.0".to_uppercase().as_str())],
+        [Some(1), Some(0), Some(1)]
+    );
+    assert_eq!(on("0000:05:00.0"), None, "a card on another bus was taken");
+    assert_eq!(
+        pick(&GpuChoice::parse("Example Dedicated").unwrap(), &all),
+        Some(0),
+        "a name takes the first twin"
+    );
+    assert_eq!(
+        pick(&GpuChoice::parse("pci:0").unwrap(), &[card("Example", DeviceType::Cpu, Backend::Gl)]),
+        None
+    );
 }

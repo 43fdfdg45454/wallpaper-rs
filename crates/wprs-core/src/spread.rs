@@ -54,3 +54,51 @@ pub fn bounds(monitors: &[Monitor]) -> [f64; 4] {
     }
     [lo(0), lo(1), (hi(0) - lo(0)).max(1e-3), (hi(1) - lo(1)).max(1e-3)]
 }
+
+fn named(name: &str) -> bool {
+    (1..=128).contains(&name.len()) && !name.chars().any(char::is_control)
+}
+
+impl Layout {
+    pub const FOLLOW: &str = "layout.follow.";
+
+    pub fn follow(&mut self, output: &str, value: &str) -> Result<(), String> {
+        let (output, value) = (output.trim(), value.trim());
+        named(output)
+            .then_some(())
+            .ok_or_else(|| format!("invalid output name in {}<output>", Self::FOLLOW))?;
+        if matches!(value, "" | "none") {
+            self.follow.remove(output);
+            return Ok(());
+        }
+        if !named(value) || value == output {
+            return Err(format!("{value:?} is not another output for {}{output}", Self::FOLLOW));
+        }
+        if !self.follow.contains_key(output) && self.follow.len() >= Self::MAX_MONITORS {
+            return Err(format!("at most {} outputs can follow another", Self::MAX_MONITORS));
+        }
+        self.follow.insert(output.into(), value.into());
+        Ok(())
+    }
+
+    pub(crate) fn tidy(&mut self) {
+        self.follow.retain(|output, leader| named(output) && named(leader) && output != leader);
+        while self.follow.len() > Self::MAX_MONITORS {
+            self.follow.pop_last();
+        }
+    }
+
+    pub fn leader<'a>(&'a self, output: &'a str) -> &'a str {
+        self.follow.get(output).map_or(output, String::as_str)
+    }
+
+    pub fn placed(&self, output: &str) -> bool {
+        self.follow.contains_key(output) || !self.loose([output]).is_empty()
+    }
+
+    pub fn loose<'a>(&self, outputs: impl IntoIterator<Item = &'a str>) -> Vec<Monitor> {
+        let fine = |mm: &[f64; 4]| mm.iter().all(|v| v.is_finite()) && mm[2] > 0.0 && mm[3] > 0.0;
+        let placed = |id: &str| self.monitors.get(id).map(|p| p.mm).filter(fine);
+        outputs.into_iter().filter_map(|id| Some(Monitor { id: id.into(), mm: placed(id)? })).collect()
+    }
+}

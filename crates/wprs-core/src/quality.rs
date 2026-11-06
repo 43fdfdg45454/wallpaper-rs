@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum QualityChoice {
     #[default]
     Auto,

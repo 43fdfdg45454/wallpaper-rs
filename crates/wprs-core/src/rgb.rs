@@ -1,4 +1,9 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+mod places;
+
+pub use places::{Flow, MAX_PLACES, PLACE, Place};
 
 pub const SERVER: &str = "127.0.0.1:6742";
 
@@ -25,11 +30,13 @@ pub struct Rgb {
     pub enabled: bool,
     pub server: String,
     pub when_covered: Covered,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub places: BTreeMap<String, String>,
 }
 
 impl Default for Rgb {
     fn default() -> Self {
-        Self { enabled: false, server: SERVER.into(), when_covered: Covered::Pause }
+        Self { enabled: false, server: SERVER.into(), when_covered: Covered::Pause, places: BTreeMap::new() }
     }
 }
 
@@ -46,7 +53,8 @@ pub fn valid(server: &str) -> bool {
 }
 
 impl Rgb {
-    pub fn sanitized(self) -> Rgb {
+    pub fn sanitized(mut self) -> Rgb {
+        self.tidy_places();
         match valid(&self.server) {
             true => self,
             false => Rgb { server: SERVER.into(), ..self },

@@ -34,9 +34,14 @@ pub(super) struct PlayerSlot {
     deep: Option<wprs_render::Deep>,
     held: Option<Frame>,
     pub(super) steered: Option<(wprs_video::Cut, u32)>,
+    pub(super) lit: f32,
 }
 
 impl PlayerSlot {
+    pub(super) fn bright(&self) -> bool {
+        self.deep.is_some()
+    }
+
     pub(super) fn new((max_size, playing, fps, volume): Demand, open_at: Instant) -> Self {
         let (player, texture, error, inbox, due) = (None, None, None, Arc::default(), Some(open_at));
         let (decode, shares, imported, held) =
@@ -58,6 +63,7 @@ impl PlayerSlot {
             deep: None,
             held,
             steered: None,
+            lit: 1.0,
         }
     }
 

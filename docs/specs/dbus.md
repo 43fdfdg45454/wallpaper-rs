@@ -202,7 +202,8 @@ often than the lowest of:
 - for parallax images with software rendering, 15;
 - for videos with `display` and software rendering, 30.
 
-A fade between two wallpapers runs at 60 frames per second on mains power, or faster when the
+A fade to a video or a web page starts once its first frame is there, or once it failed. A fade
+between two wallpapers runs at 60 frames per second on mains power, or faster when the
 rate above is higher, never above a known refresh rate; on battery it keeps the rate above.
 Videos play at their own frame rate and drop the frames above the rate of the fastest output that
 shows them, never repeating one. Nothing is rendered while nothing changes, whatever the rate. A
@@ -220,13 +221,25 @@ frame it gave.
 with an integrated and a dedicated card renders on the integrated one. `integrated`, `dedicated`
 and `software` take the first Vulkan adapter of that kind, and any other value the first one whose
 name contains it, without regard to case, so two cards of the same kind are told apart by their
-names; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`,
-and `WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
+names, and `pci:` with a PCI bus id (`pci:0000:03:00.0`) the card on that bus, which tells two
+identical cards apart (`GetState().adapters[x].bus`, empty when the driver gives none; the app offers
+it only for cards that share a name). The list of cards follows the graphics nodes of `/dev/dri`: a
+card plugged in or taken out shows up or goes away a second later, without polling; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`.
+An OpenGL ES adapter whose driver names no kind takes the kind the system gives its card in
+`/sys/class/drm` (Intel integrated on PCI bus 0 and dedicated on another bus, or, without a PCI
+address, dedicated for the device ids of its dedicated families and integrated for the others;
+NVIDIA dedicated; AMD integrated when its own memory is at most 2 GiB and dedicated above), matched
+by vendor or, with a single card, that card; with several cards of the vendor and different kinds
+it takes the kind of the card that starts the screen (`boot_vga`), which OpenGL uses by default, or
+of the other cards when `DRI_PRIME` asks for another one, and stays `other` when those still differ
+or no card starts the screen. So `integrated` also picks an integrated card
+that only OpenGL ES reaches.
+`WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
 driver is loaded. When no adapter matches, or the matching adapter cannot open a device, the daemon
 starts with the automatic choice, logs a warning and sets `GetState().gpu_warning`; it never fails
 to start because of this setting. The renderer is made once at start and shared by every output, video and scene,
 so a change of `render.gpu` takes effect the next time the daemon starts
-(`systemctl --user restart wprsd`); until then `GetState().gpu_restart` is true, and both
+(`Restart()`, `wprs-ctl restart` or the app's button); until then `GetState().gpu_restart` is true, and both
 `wprs-ctl gpu` and `wprs-ctl config render.gpu` say so. Names are compared without regard to case,
 so changing only the case of the name asks for no restart. The class of the
 card (see "Cost and frame rate" in `scene.md`) is measured and kept for each card and driver, so
@@ -358,7 +371,10 @@ tools that exit right after the call.
 
 ### `ReleaseStream(s output)`
 
-Removes one claim of the caller on `output`, or the held claim if the caller has none.
+Removes one claim of the caller on `output`, or the held claim if the caller has none. When the
+last claim of a `preview:*` output goes, the settings applied to it (such as a wallpaper shown there
+with `Library1.Apply`) are forgotten too. Settings of `preview:*` outputs live only in memory while
+they are claimed: they never reach the saved configuration file.
 
 ### `SetOutputCovered(s output, b covered)`
 
@@ -566,9 +582,9 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
 | `playback.quality` | the quality level of scenes: `auto` lets the engine choose it from the cost of the scene, the GPU class, the GPU time of the frames, battery, power saving and heat (see "Cost and frame rate" in `scene.md`); `q0` to `q3` fix it, and `min-q1` or `min-q2` keep the automatic choice but never below that level; a level the user sets holds on battery, with power saving, while warm and over the cost, and a heavy scene shows fewer frames a second instead, also one that `auto` keeps still because it is too heavy for the device; it is not synced and profiles leave it out | `auto` |
-| `playback.hdr` | HDR output (`auto`, `on` or `off`): on a screen whose surface the graphics driver can present in extended linear sRGB (half floats, which on Wayland the driver announces through the color management protocol of the desktop), scenes keep their colors brighter than white and tone map them to the peak brightness of that screen, read from the preferred image description the desktop gives the surface (its target or maximum luminance over its reference white; twice the white when the desktop says nothing); `auto` does it only when the desktop says the screen shows HDR, on mains power and while the scene of the screen has `canvas.hdr` with a tone map and draws at `q3`, `on` whenever the surface can even if the desktop says nothing, `off` never; other screens, streams and X11 keep standard colors, and pictures and videos look the same either way | `auto` |
+| `playback.hdr` | HDR output (`auto`, `on` or `off`): on a screen whose surface the graphics driver can present in extended linear sRGB (half floats, which on Wayland the driver announces through the color management protocol of the desktop), or else in PQ (BT.2100, 10 bits, encoded by the daemon from the same linear picture with the white of the screen as its reference), or else, when the driver offers neither but the desktop takes parametric image descriptions with the PQ transfer and BT.2020 primaries, in 10 bits that the daemon encodes in PQ itself and describes to the desktop with `wp_color_management_surface_v1` (with MaxCLL, the brightest light it may draw: the peak of the screen, or twice its white when it says nothing; MaxFALL, its white; and, when the desktop takes them, BT.709 mastering primaries and that range as mastering luminance), scenes keep their colors brighter than white and tone map them to the peak brightness of that screen, read from the preferred image description the desktop gives the surface (its target or maximum luminance over its reference white; twice the white when the desktop says nothing); `auto` does it only when the desktop says the screen shows HDR, on mains power and while the scene of the screen has `canvas.hdr` with a tone map and draws at `q3` or the screen shows an HDR video or an HDR KTX2 picture, `on` whenever the surface can even if the desktop says nothing, `off` never; other screens, streams and X11 keep standard colors. With HDR on, an HDR video (PQ or HLG) keeps its highlights above white and is tone mapped to the peak of the screen (the lowest peak among the screens that show it), an HDR KTX2 picture (UASTC HDR, shown without photo edits) keeps its light above white, bent softly toward the peak of that screen from half its white up, and other pictures, standard videos and web pages, made for standard range, keep their white at the white of the screen; the phone does the same for its pictures | `auto` |
 | `playback.hdr.<output>` | the same values for one output, or `none` to follow `playback.hdr`; kept as `hdr` in `[outputs."<output>"]`, not listed in `options` but in `hdrs`, read back with `wprs-ctl config playback.hdr.<output>` and kept when a profile is used | none |
-| `playback.quality.<output>` | the same values for the scenes of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options` but in `qualities`, read back with `wprs-ctl config playback.quality.<output>` even while the output is not connected, kept when a profile is used; web pages follow `playback.quality` | none |
+| `playback.quality.<output>` | the same values for the scenes and web pages of one output, or `none` (or an empty value) to follow `playback.quality` again; kept as `quality` in `[outputs."<output>"]`, not listed in `options` but in `qualities`, read back with `wprs-ctl config playback.quality.<output>` even while the output is not connected, kept when a profile is used; outputs that show the same page share one helper while the choice they end up with is the same, whether their own or the general one, so a page reads the level of the output that shows it, and a page whose choice changes without splitting keeps its helper and only hears the new level | none |
 | `playback.duck` | fade the sound of every wallpaper (videos, scene sounds and web pages) out in 0.5 s while another application plays sound, and back in when it stops; a PipeWire watcher counts the running playback streams of other processes (not the daemon, its helpers or their children), reading neither their names nor their sound | `false` |
 | `transition.kind` | `fade`, `none` | `fade` |
 | `transition.duration_ms` | `0` to `10000` | `600` |
@@ -583,10 +599,12 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `repos.vote_counts` | fetch and show vote counts from the linked server in the catalog (`GetVotes`); voting itself stays possible | `true` |
 | `layout.bezel_mm` | `0` to `100`, frame width of every screen side for the `span` fit | `0.0` |
 | `layout.monitors.<screen>` | `x,y,w,h` in millimetres places the screen whose identity or output name is `<screen>` on the canvas of the `span` fit (see "Edits and spanning"), `none` or an empty value lets the daemon place it again; at most 64 screens, positions within ±100 m and sizes up to 10 m; not listed in `options` | none |
+| `layout.follow.<output>` | another output name: `<output>` shows the part of a `span` wallpaper or spread scene that the named output shows, also when `<output>` has no place on the desktop (streams, previews); one step only, an output never follows itself; `none` or an empty value clears it; at most 64; not listed in `options`, `GetState().outputs[x].follows` tells it | none |
 | `models.allow_download` | let `wprs-ctl models download` and the app download the depth model and ONNX Runtime after asking | `true` |
 | `rgb.enabled` | send the colors of packages granted `rgb` to RGB lighting through the OpenRGB server (see `Rgb1`) | `false` |
 | `rgb.when_covered` | what the lights do while a window covers the output they follow and the wallpaper pauses for it: `pause` sends nothing, samples nothing and leaves the devices with their last colors until the output shows again (with `pause.when_covered` off the covered wallpaper keeps drawing and the lights keep following it, as before this key existed); `follow` keeps the lights following the scene or page while covered: a scene paused by `pause.when_covered` keeps running at most 30 times a second, drawn at most 320 pixels a side for the strip and never to the screen or the stream, without those frames changing its quality level, and a page keeps running at the same rate without being shown, both only while the server is connected and has devices (otherwise the covered wallpaper stays paused and, while it holds the `rgb` grant, sends colors and nothing else pauses it, the daemon tries the server again every 10 seconds); synced like the other `rgb` keys | `pause` |
 | `media.remote_covers` | download covers that media players give as `http` or `https` addresses (at most 4 MiB, within 5 s, kept in memory only); turning it on fetches the cover of the track that plays at once, and turning it off drops the covers fetched that way; off, only `file://` covers are read. Kept on each device, never synced | `false` |
+| `rgb.place.<device>[#<zone>]` | the part of the strip a device, or one zone of it (`#` and its index from 0), takes: `x y w h` as fractions of the strip from 0 to 1 (inside it, `w` and `h` above 0) and then `right` (default), `left`, `down` or `up` for the way a line of lights runs, or `off` to leave the device alone or keep the zone dark; `none` or an empty value takes the whole strip again; device keys (the `key` of `Rgb1.GetStatus().devices`: the name, with the serial or order in parentheses when devices share it) of 1 to 128 characters without control characters, at most 256 places; not listed in `options`, kept on this computer and never synced, `Rgb1.GetStatus().places` tells them | none |
 | `rgb.server` | `host:port` of the OpenRGB server, at most 255 characters; an address that is not this computer sends the colors over the network | `127.0.0.1:6742` |
 | `render.gpu` | the graphics card the daemon renders with: `auto` (the one that saves the most power, an integrated card before a dedicated one), `integrated`, `dedicated`, `software` (emulated on the processor, for tests) or part of the name of a card, without regard to case, such as `Graphics A` (see "Graphics card"); it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
 | `surfaces.layer_namespace` | the namespace of the layer-shell surfaces (see "Layer-shell and X11 outputs"): `auto` (or an empty value) for the automatic choice, or 1 to 64 ASCII letters, digits, `-`, `_` or `.`; it takes effect the next time the daemon starts, it is not synced and profiles leave it out | `auto` |
@@ -598,6 +616,18 @@ Only the changed key is validated. Unknown keys and invalid or out-of-range valu
 
 Re-reads the configuration file and applies it. If the file is invalid, the current
 configuration stays, `config_error` is set and the call returns `Failed`.
+
+### `Restart()`
+
+Starts the daemon again, to take a new `render.gpu` or `surfaces.layer_namespace`. Under systemd
+(`INVOCATION_ID` set) it asks systemd to restart its own unit (`GetUnitByPID`, then `Restart` with
+`replace`, only when the daemon is the main process of that unit), so the unit stays in charge; otherwise, or when systemd refuses, it replies, stops as on
+`SIGTERM` (the RGB devices get their own mode back) and runs its own program again in the same
+process with the same arguments and environment. Clients see the bus name go and come back.
+`wprs-ctl restart` waits for the new daemon and prints the card it renders with; the app shows
+*Restart the daemon now* next to the notices of both settings. The renderer is made once and shared
+by every output, video, stream and DMA-BUF export, and a lost device stops the process, so a new card
+needs this restart rather than a switch in place.
 
 ### `RetryEffects()`
 
@@ -1554,15 +1584,24 @@ on another computer sends the colors over the network, which the app says next t
 daemon connects when a granted package sends colors, when a covered wallpaper that holds the grant
 and sends colors would follow with `rgb.when_covered` set to `follow` (never for an image, a video, a
 package without colors or an output paused, locked or on battery), on `Connect` or `Test`, names itself
-`wallpaper-rs`, puts every device in its direct mode and tries again 10 s after a failure. A
-connection made only for a covered wallpaper closes again, leaving the devices with their last
-colors, as soon as nothing covered wants the lights (the session locks or pauses, the computer goes
+`wallpaper-rs`, reads the mode each device is in (and its colors) and tries again 10 s after a
+failure. A device goes to its direct mode only when colors are first painted on it, and gets its own
+mode back (the colors too when that mode sets each light) as soon as nothing sends colors any more:
+when the package that sent them stops or changes to one without colors, its output goes away, RGB
+lighting is turned off, the server changes, after a test with nothing else to paint, and when the
+daemon stops. A connection made only for a covered wallpaper closes again, giving the devices their
+own mode back, as soon as nothing covered wants the lights (the session locks or pauses, the computer goes
 on battery, the wallpaper changes or the output goes away), unless an uncovered output sends colors;
 the daemon then sleeps until something asks for the lights again. A strip of
 at most 64 × 16 pixels comes from the shown scene or page of each output that holds the `rgb` grant
 (`Inputs1`), at most 30 times a second for all of them together; the daemon spreads it over each
 device: a zone with a matrix takes the cell of the strip under each key, the other zones the column
-under each light, averaged over the height. The devices keep the last colors when the scene stops.
+under each light, averaged over the height. `rgb.place.<device>` gives a device its own part of the
+strip and `rgb.place.<device>#<zone>` one of its zones (counted from 0 in the order of `devices`):
+the matrix or the line of lights is laid over that rectangle, and the line runs `right`, `left`,
+`down` (each light takes a row, averaged over the width) or `up`; `off` leaves a device out (it is
+never put in direct mode and keeps its own) or keeps a zone dark. A change of places gives the devices
+their own mode back and paints again at once, without a new connection.
 While a window covers the output that sends the colors and the wallpaper pauses for it (`pause.when_covered`), `rgb.when_covered` decides: `pause` (the
 default) sends nothing until it shows again and lets the connection rest without even listening for
 device changes, leaving the lights as they are (gentler than switching the devices back to their own
@@ -1572,12 +1611,17 @@ Previews (`preview:*` outputs) keep their strip for the editor but never send it
 ### `GetStatus() → (s json)`
 
 `{enabled, server, local, connected, error, devices, source, frames, testing, strips, when_covered,
-held}`: `local` is
+held, places}`: `local` is
 `true` for addresses on this computer, `error` the last failure (`null` when fine), `devices` lists
-`{index, name, kind, leds, zones: [{name, leds, matrix: [w, h] | null}]}` as the server names them,
+`{index, name, key, kind, leds, zones: [{name, leds, matrix: [w, h] | null}], own_mode, taken}` as the
+server names them, with `key` the name that `rgb.place.*` uses: the device name, or, when several
+devices share a name, that name followed by its serial in parentheses (its order among them, from
+1, when the serials are missing or equal), `own_mode` the name of the mode the device had before the daemon took it
+(`null` when the server names none; kept in `~/.local/share/wallpaper-rs/rgb-modes.json` (mode 600) while the device is taken, so a daemon that was killed, or a server that did not answer, gives it back at the next connection while nothing sends colors) and `taken` `true` while it is in direct mode for the lights,
 `source` the output whose colors were sent last, `frames` how many were sent and `strips` the
 outputs with a strip kept; `when_covered` is `rgb.when_covered` and `held` is `true` while the
-lights pause because the output they follow is covered and paused.
+lights pause because the output they follow is covered and paused; `places` maps each placed device
+or `device#zone` to its `rgb.place.*` value.
 
 ### `Connect()`
 
@@ -1961,9 +2005,11 @@ and the vote of this account. `InvalidArgs` for another vote, an id that is not 
 
 ### `GetVotes(as ids) → (s json)`
 
-`{items: {id: {up, down, mine}}, shown, repo_id}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 100 package ids, each a package id of the
+`{items: {id: {up, down, mine}}, shown, repo_id}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 1000 package ids, each a package id of the
 server's repository or `repo_id/id`; `items` is keyed by the ids as given, and ids whose `repo_id` is
-not the server's repository are never sent and get no item. `repo_id` is the repository of the linked
+not the server's repository are never sent and get no item. Clients pass every row they show; the
+daemon keeps the ids of the server's repository and asks for them at most 100 at a time, so its
+packages get counts however many rows of other repositories come first. `repo_id` is the repository of the linked
 server (`null` when none is linked or it announces none), so a client shows vote buttons only on its
 packages. `shown` is
 `false`, with no items and without reaching the network, while no server is linked, no id is of its
@@ -2159,10 +2205,14 @@ outside 2 to 20 px/mm). Screens that touch in the logical layout touch on the ca
 the shared edge and `2 × layout.bezel_mm` apart; `[layout.monitors."<identity or output>"]` with
 `mm = [x, y, w, h]` places a screen by hand. The edited image covers the canvas, moved by
 `span.zoom` and `span.center`, and every output shows its part of it, so a picture keeps its
-physical size across screens of different densities. An output without `SetOutputInfo` shows
-`span` like `fill`. `GetState().outputs[x].mm` tells where each screen sits on the canvas; the
+physical size across screens of different densities. An output without `SetOutputInfo` (a
+stream, a preview or a screen the desktop does not place) shows `span` like `fill` until the user
+places it: `layout.monitors.<output>` puts it on the canvas like any screen, and
+`layout.follow.<output>` makes it show the part of the output it follows. The same holds for the
+parts of a spread scene. `GetState().outputs[x].mm` tells where each screen sits on the canvas; the
 *Screens* section of the image editor draws them to scale, a screen dragged there is placed with
-`layout.monitors`, and `ShowCalibration` shows a pattern to check the result on the real screens.
+`layout.monitors`, the outputs without a place get a choice there (the whole picture, placed by
+hand on the board, or the same part as another output), and `ShowCalibration` shows a pattern to check the result on the real screens.
 
 ## Scenes
 
@@ -2340,7 +2390,8 @@ removing, renaming or retyping something increases it. Times are Unix seconds; `
 spanning"), or `null` before `SetOutputInfo`. `calibrating` tells whether `ShowCalibration` shows
 its pattern.
 `parallax` tells whether the image moves in depth and `frames` counts the frames rendered for the
-output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
+output since it appeared; `page_frames` counts the frames the web page of the output drew (`0` for
+other wallpapers), which the frame rate cap limits. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
@@ -2374,9 +2425,10 @@ Clients tell a still scene from a playing one by this value, never by `quality_r
 the automatic reason (or `"slow"`) when a floor does not raise the level. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
 render set it rather than the model of the card alone. `adapters` lists the graphics cards the
-daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,
-`"virtual"`, `"software"` or `"other"`), `backend` (`"vulkan"` or `"gl"`) and `used`, true for the
-one it renders with. `gpu_warning` says, in the language of the daemon, that no card matched
+daemon finds, at start and again a second after a card is plugged in or taken out, each with its
+`name`, `kind` (`"integrated"`, `"dedicated"`, `"virtual"`, `"software"` or `"other"`), `backend`
+(`"vulkan"` or `"gl"`), `used`, true for the one it renders with, and `bus`, its PCI bus id in lower
+case (empty when the driver gives none). `gpu_warning` says, in the language of the daemon, that no card matched
 `render.gpu`, or that the matching card could not be opened, and the automatic choice was taken, or
 is `null`; `gpu_restart` is true while `render.gpu` differs from the value the daemon started with,
 without regard to case. `qualities` maps every output that has its own `playback.quality.<output>`
@@ -2384,7 +2436,9 @@ in the configuration, connected or not, to that value, and `hdrs` does the same 
 `playback.hdr.<output>`. `hdr` of an output tells its HDR output: `choice` (the value in use),
 `own` (its own `playback.hdr.<output>` or `null`), `active` (it presents brighter than white now),
 `offered` (its surface can), `display` (the desktop says the screen shows HDR), `peak_nits` and
-`reference_nits` (from the desktop, or `null`) and `reason`: `"auto"`, `"on"`, `"off"`, `"display"`
+`reference_nits` (from the desktop, or `null`), `encoding` (`"scrgb"`, `"pq"`, `"pq-own"` for the
+description of its own, `"sdr"`, or empty on streams), `max_cll` and `max_fall` (the metadata of
+that description, `null` otherwise) and `reason`: `"auto"`, `"on"`, `"off"`, `"display"`
 (the screen, the desktop or the driver offers no HDR, with `auto` also when the desktop does not say the screen shows HDR, and always on streams), `"battery"` or
 `"quality"` (no scene with `canvas.hdr` and a tone map is shown, or it draws below `q3`). `console` holds, only for
 the `preview:` outputs of the scene editor, the last 50 lines its scripts wrote with `console`, as
@@ -2403,12 +2457,12 @@ struct State {
     qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>, layer_shell: LayerShellState,
 }
 struct LayerShellState { namespace: Option<String>, from: String, restart: bool, ignored: Option<String> }
-struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
+struct GpuAdapter { name: String, kind: String, backend: String, used: bool, bus: String }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
-    edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
+    edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, page_frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
     particles: String, quality: String, quality_reason: String, quality_choice: Option<String>,
     quality_cost: f64, quality_budget: f64, quality_auto: String, console: Vec<String>, sandbox: String,
@@ -2416,7 +2470,8 @@ struct OutputState {
 }
 struct HdrState {
     choice: String, own: Option<String>, active: bool, offered: bool, display: bool,
-    peak_nits: Option<f64>, reference_nits: Option<f64>, reason: String,
+    peak_nits: Option<f64>, reference_nits: Option<f64>, reason: String, encoding: String,
+    max_cll: Option<u32>, max_fall: Option<u32>,
 }
 struct Filter { look: String, strength: f32, exposure: f32, contrast: f32, saturation: f32, warmth: f32, hue: f32 }
 struct Screen { x: i32, y: i32, width: u32, height: u32, scale: f64, px_per_mm: f64, identity: String }

@@ -56,6 +56,7 @@ mod relief;
 mod remote;
 mod repos;
 mod repos1;
+mod restart;
 mod reveals;
 mod rgb;
 mod rgb1;

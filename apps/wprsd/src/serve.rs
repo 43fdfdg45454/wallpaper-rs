@@ -40,6 +40,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     remote::start(&daemon, connection.clone());
     account::start(&daemon, connection.clone());
     edits::start(&daemon);
+    gpus::watch(&daemon);
     tokio::task::spawn_blocking({
         let daemon = daemon.clone();
         move || daemon.tidy()
@@ -77,10 +78,16 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}
         _ = terminate.recv() => {}
+        _ = crate::restart::asked() => {}
     }
     tracing::info!("shutting down");
+    tokio::task::spawn_blocking(crate::rgb::stop).await.ok();
     wprs_scene::end_trials();
     inputs::stop(&connection).await;
     wprs_render::finish_builds(0);
+    if crate::restart::wanted() {
+        connection.release_name(dbus::BUS_NAME).await.ok();
+        crate::restart::again();
+    }
     Ok(())
 }

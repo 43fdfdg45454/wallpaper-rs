@@ -18,6 +18,7 @@ pub type Matrix = (u32, u32, Vec<u32>);
 
 pub struct Shape {
     pub name: &'static str,
+    pub serial: &'static str,
     pub kind: u32,
     pub zones: Vec<(u32, Option<Matrix>)>,
 }
@@ -27,13 +28,17 @@ pub fn blob(shape: &Shape, version: u32) -> Vec<u8> {
     word(&mut out, shape.kind);
     text(&mut out, shape.name);
     let texts = if version >= 1 { 5 } else { 4 };
-    (0..texts).for_each(|i| text(&mut out, ["Example", "A test device", "1.0", "", "local"][i]));
-    out.extend(1u16.to_le_bytes());
-    word(&mut out, 0);
-    text(&mut out, "Direct");
-    let words = 4 + if version >= 3 { 2 } else { 0 } + 3 + if version >= 3 { 1 } else { 0 } + 2;
-    (0..words).for_each(|_| word(&mut out, 0));
-    out.extend(0u16.to_le_bytes());
+    let all = ["Example", "A test device", "1.0", shape.serial, "local"];
+    all[5 - texts..].iter().for_each(|t| text(&mut out, t));
+    out.extend(2u16.to_le_bytes());
+    word(&mut out, shape.kind % 2);
+    for (name, per_led) in [("Direct", 1), ("Rainbow", 0)] {
+        text(&mut out, name);
+        let words = 4 + if version >= 3 { 2 } else { 0 } + 3 + if version >= 3 { 1 } else { 0 } + 1;
+        (0..words).for_each(|_| word(&mut out, 0));
+        word(&mut out, per_led);
+        out.extend(0u16.to_le_bytes());
+    }
     out.extend((shape.zones.len() as u16).to_le_bytes());
     for (i, (leds, matrix)) in shape.zones.iter().enumerate() {
         text(&mut out, &format!("zone {i}"));
@@ -60,7 +65,7 @@ pub fn blob(shape: &Shape, version: u32) -> Vec<u8> {
         word(&mut out, 0);
     });
     out.extend((total as u16).to_le_bytes());
-    (0..total).for_each(|_| word(&mut out, 0));
+    (0..total).for_each(|i| out.extend([i as u8 + 1, 2, 3, 0]));
     let mut sized = ((out.len() + 4) as u32).to_le_bytes().to_vec();
     sized.extend(out);
     sized
@@ -100,7 +105,7 @@ pub fn serve(shapes: Vec<Shape>, version: Option<u32>) -> (String, Painted) {
                         [reply(0, 100, &[]), reply(device, 1, &blob(&shapes[device as usize], agreed))]
                             .concat(),
                     ),
-                    1050 | 1100 => {
+                    1050 | 1100 | 1101 => {
                         kept.lock().unwrap().push((device, id, data));
                         None
                     }

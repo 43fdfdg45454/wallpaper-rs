@@ -11,13 +11,26 @@ pub struct Zone {
     pub matrix: Option<(u32, u32, Vec<u32>)>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Mode {
+    pub index: i32,
+    pub name: String,
+    pub data: Vec<u8>,
+    pub per_led: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Device {
     pub index: u32,
     pub name: String,
+    pub key: String,
+    pub serial: String,
+    pub location: String,
     pub kind: &'static str,
     pub leds: u32,
     pub zones: Vec<Zone>,
+    pub mode: Option<Mode>,
+    pub colors: Vec<[u8; 3]>,
 }
 
 struct Reader<'a> {
@@ -53,18 +66,33 @@ impl<'a> Reader<'a> {
     }
 }
 
-fn modes(r: &mut Reader<'_>, version: u32) -> Result<(), Error> {
+fn modes(r: &mut Reader<'_>, version: u32) -> Result<Option<Mode>, Error> {
     let count = r.u16()?;
-    r.u32()?;
-    for _ in 0..count {
-        r.text()?;
+    let active = r.u32()? as i32;
+    let mut found = None;
+    for index in 0..i32::from(count) {
+        let start = r.at;
+        let name = r.text()?;
         r.skip(16 + if version >= 3 { 8 } else { 0 })?;
         r.skip(12 + if version >= 3 { 4 } else { 0 })?;
-        r.skip(8)?;
+        r.u32()?;
+        let per_led = r.u32()? == 1;
         let colors = usize::from(r.u16()?);
         r.skip(4 * colors)?;
+        if index == active {
+            found = Some(Mode { index, name, data: r.data[start..r.at].to_vec(), per_led });
+        }
     }
-    Ok(())
+    Ok(found)
+}
+
+fn colors(r: &mut Reader<'_>, leds: u32) -> Result<Vec<[u8; 3]>, Error> {
+    for _ in 0..leds {
+        r.text()?;
+        r.u32()?;
+    }
+    let count = r.u16()?;
+    (0..count).map(|_| r.take(4).map(|c| [c[0], c[1], c[2]])).collect()
 }
 
 fn zone(r: &mut Reader<'_>, version: u32, start: u32) -> Result<Zone, Error> {
@@ -97,9 +125,10 @@ pub fn controller(index: u32, data: &[u8], version: u32) -> Result<Device, Error
     r.u32()?;
     let kind = crate::kind(r.u32()? as i32);
     let name = r.text()?;
-    let texts = if version >= 1 { 5 } else { 4 };
+    let texts = if version >= 1 { 3 } else { 2 };
     (0..texts).try_for_each(|_| r.text().map(drop))?;
-    modes(&mut r, version)?;
+    let (serial, location) = (r.text()?, r.text()?);
+    let mode = modes(&mut r, version)?;
     let count = r.u16()?;
     if count > MAX_ZONES {
         return Err(Error::Broken);
@@ -115,5 +144,27 @@ pub fn controller(index: u32, data: &[u8], version: u32) -> Result<Device, Error
     if leds as usize > MAX_LEDS || start > leds {
         return Err(Error::Broken);
     }
-    Ok(Device { index, name, kind, leds, zones })
+    let colors = colors(&mut r, leds).unwrap_or_default();
+    let key = name.clone();
+    Ok(Device { index, name, key, serial, location, kind, leds, zones, mode, colors })
+}
+
+pub fn keyed(devices: &mut [Device]) {
+    let names: Vec<String> = devices.iter().map(|d| d.name.clone()).collect();
+    for (i, name) in names.iter().enumerate() {
+        let twins: Vec<usize> = (0..names.len()).filter(|j| names[*j] == *name).collect();
+        if twins.len() < 2 {
+            continue;
+        }
+        let unique = |part: fn(&Device) -> &str| {
+            let mine = part(&devices[i]);
+            (!mine.is_empty() && twins.iter().filter(|j| part(&devices[**j]) == mine).count() == 1)
+                .then(|| mine.to_owned())
+        };
+        let order = twins.iter().position(|j| *j == i).unwrap_or_default() + 1;
+        let tail = unique(|d| &d.serial).or_else(|| unique(|d| &d.location)).unwrap_or(order.to_string());
+        let tail: String = tail.chars().filter(|c| *c != '#').take(48).collect();
+        let kept: String = name.chars().take(128 - 3 - tail.chars().count()).collect();
+        devices[i].key = format!("{kept} ({tail})");
+    }
 }

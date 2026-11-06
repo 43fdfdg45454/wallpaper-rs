@@ -23,6 +23,7 @@ mod scenes;
 mod steer;
 
 pub(crate) use parked::forget;
+use parked::size;
 
 pub(crate) static FRAMES: AtomicU64 = AtomicU64::new(0);
 
@@ -63,10 +64,7 @@ pub(crate) struct Engine {
     reel: crate::reel::Reel,
     still: Option<i64>,
     over: bool,
-}
-
-fn size(width: i32, height: i32) -> (u32, u32) {
-    (width.max(1).unsigned_abs(), height.max(1).unsigned_abs())
+    lit: wprs_render::Lit,
 }
 
 impl Engine {
@@ -117,6 +115,7 @@ impl Engine {
             reel: Default::default(),
             still: None,
             over: false,
+            lit: Default::default(),
         }
     }
 

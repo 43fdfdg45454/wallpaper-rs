@@ -9,7 +9,7 @@ fn spec(language: bool) -> PageSpec {
     page(language, json!({}))
 }
 
-fn page(language: bool, more: Json) -> PageSpec {
+pub(in crate::compositor) fn page(language: bool, more: Json) -> PageSpec {
     let mut properties = json!({"mood": {"type": "combo", "default": "calm", "label": "Mood",
         "options": [{"value": "calm", "label": {"en": "Calm", "es": "Calma"}}]}});
     properties.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());
@@ -45,7 +45,7 @@ fn page(language: bool, more: Json) -> PageSpec {
     };
     let privacy = Privacy { language, ..Privacy::default() };
     let (files, folders, values) = (Vec::new(), Vec::new(), Default::default());
-    PageSpec { pack: Arc::new(pack), values, privacy, files, folders, storage: None }
+    PageSpec { pack: Arc::new(pack), values, privacy, files, folders, storage: None, quality: None }
 }
 
 #[test]

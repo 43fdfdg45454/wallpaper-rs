@@ -82,7 +82,7 @@ pub use manifest::{
     Kind, Manifest, SCHEMA, SCHEMA_V1, Strings, manifest_schema, newer_names, newer_spelling,
 };
 pub use meta::{Content, Credit, Descriptor, Links, Previews, Rating, Source};
-pub use names::{MAX_VOTED, valid_id, voted};
+pub use names::{MAX_ASKED, MAX_VOTED, valid_id, vote_queries, voted};
 pub use needs::{Dependency, Gpu, Input, Network, Permissions, Platform, Requires, origin};
 #[cfg(feature = "sign")]
 pub use online::sign_rotation;

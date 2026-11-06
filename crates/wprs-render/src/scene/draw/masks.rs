@@ -5,6 +5,11 @@ use super::super::pipes::Mode;
 use super::super::{Op, Src};
 use wprs_scene::{Affine, Blend, Mask};
 
+pub(crate) fn within(item: &mut Item, crop: [f32; 2]) {
+    item.mask_m0[..3].iter_mut().for_each(|v| *v *= crop[0]);
+    item.mask_m1[..3].iter_mut().for_each(|v| *v *= crop[1]);
+}
+
 impl Painter<'_, '_, '_> {
     pub(crate) fn mask(
         &mut self,
@@ -19,8 +24,11 @@ impl Painter<'_, '_, '_> {
         let weak = 1.0 - strength;
         item.mask_info = [1.0, f32::from(u8::from(mask.invert)), mask.feather, weak];
         item.channel = channel(mask.channel, mask.texture.is_some());
+        let mut crop = [1.0; 2];
         let (affine, src) = if let Some(id) = texture {
-            (to_local, self.picture(id).map_or(Src::White, |image| self.ext(image)))
+            let found = self.picture(id);
+            crop = found.map_or(crop, |image| image.crop);
+            (to_local, found.map_or(Src::White, |image| self.ext(image)))
         } else if let Some(id) = &mask.layer {
             item.mask_info[0] = 2.0;
             let found = self.frame.draws.iter().position(|d| &d.layer.id == id).and_then(|j| self.shared(j));
@@ -45,6 +53,7 @@ impl Painter<'_, '_, '_> {
             return Src::White;
         };
         affine.sample(item);
+        within(item, crop);
         src
     }
 

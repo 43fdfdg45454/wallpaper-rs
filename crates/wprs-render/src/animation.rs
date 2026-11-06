@@ -1,51 +1,13 @@
 use crate::SceneAssets;
-use image::codecs::gif::GifDecoder;
-use image::codecs::webp::WebPDecoder;
-use image::error::{ImageFormatHint, LimitError, LimitErrorKind};
-use image::{AnimationDecoder, Frames, ImageDecoder, ImageError, ImageFormat, RgbaImage};
+use image::{ImageError, RgbaImage};
 use std::collections::HashMap;
-use std::io::Cursor;
 use std::sync::Arc;
-use wprs_scene::{Asset, MAX_FRAMES};
+use wprs_scene::Asset;
 
-pub const MAX_ANIMATION: u64 = 64 << 20;
-
-fn unsupported(format: ImageFormat) -> ImageError {
-    ImageError::Unsupported(ImageFormatHint::Exact(format).into())
-}
-
-fn too_large() -> ImageError {
-    ImageError::Limits(LimitError::from_kind(LimitErrorKind::DimensionError))
-}
-
-fn bounded<'a, D: AnimationDecoder<'a> + ImageDecoder>(mut decoder: D) -> Result<Frames<'a>, ImageError> {
-    let (w, h) = decoder.dimensions();
-    if u64::from(w) * u64::from(h) * 4 > MAX_ANIMATION {
-        return Err(too_large());
-    }
-    let mut limits = crate::picture_limits();
-    limits.max_alloc = Some(MAX_ANIMATION * 3);
-    decoder.set_limits(limits)?;
-    Ok(decoder.into_frames())
-}
+pub use wprs_ktx2::moving::MAX_ANIMATION;
 
 pub fn animation(bytes: &[u8]) -> Result<(RgbaImage, Vec<f32>), ImageError> {
-    let frames = match image::guess_format(bytes)? {
-        ImageFormat::Gif => bounded(GifDecoder::new(Cursor::new(bytes))?)?,
-        format => bounded(WebPDecoder::new(Cursor::new(bytes)).map_err(|_| unsupported(format))?)?,
-    };
-    let (mut list, mut bytes) = (Vec::new(), 0u64);
-    for frame in frames.take(MAX_FRAMES as usize + 1) {
-        let frame = frame?;
-        let (num, den) = frame.delay().numer_denom_ms();
-        let seconds = num as f32 / den.max(1) as f32 / 1000.0;
-        let image = frame.into_buffer();
-        bytes += u64::from(image.width()) * u64::from(image.height()) * 4;
-        if bytes > MAX_ANIMATION || list.len() == MAX_FRAMES as usize {
-            return Err(too_large());
-        }
-        list.push((image, if seconds < 0.02 { 0.1 } else { seconds.min(60.0) }));
-    }
+    let list = wprs_ktx2::moving::frames(bytes, crate::picture_limits())?;
     let (w, h) = list.first().map_or((1, 1), |(i, _)| i.dimensions());
     let (rows, columns) = crate::scene::layout(list.len());
     let mut atlas = RgbaImage::new(w * columns, h * rows);
@@ -64,7 +26,7 @@ impl Pictures {
         &mut self,
         (assets, id, asset): (&mut SceneAssets, &str, &Asset),
         read: impl FnOnce() -> Result<Vec<u8>, E>,
-        still: impl FnOnce(Vec<u8>) -> Result<RgbaImage, E>,
+        still: impl FnOnce(Vec<u8>, bool) -> Result<RgbaImage, E>,
     ) -> Result<u64, E> {
         let key = format!("{}#{}", asset.path, asset.animated);
         let (image, sheet) = match self.0.get(&key) {
@@ -72,9 +34,15 @@ impl Pictures {
             None => {
                 let bytes = read()?;
                 let (image, sheet) = match (asset.animated, wprs_ktx2::is_ktx2(&bytes)) {
-                    (true, _) => animation(&bytes).map(|(atlas, d)| (crate::Pixels::new(atlas), Some(d)))?,
+                    (true, true) => {
+                        let durations = wprs_ktx2::durations(&bytes).map_err(crate::packed::failure)?;
+                        (crate::Pixels::ktx2(bytes).map_err(crate::packed::failure)?, Some(durations))
+                    }
+                    (true, false) => {
+                        animation(&bytes).map(|(atlas, d)| (crate::Pixels::new(atlas), Some(d)))?
+                    }
                     (false, true) => (crate::Pixels::ktx2(bytes).map_err(crate::packed::failure)?, None),
-                    (false, false) => (crate::Pixels::new(still(bytes)?), None),
+                    (false, false) => (crate::Pixels::new(still(bytes, asset.linear)?), None),
                 };
                 self.0.entry(key).or_insert((image, sheet)).clone()
             }

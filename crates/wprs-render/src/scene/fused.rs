@@ -15,7 +15,7 @@ impl Painter<'_, '_, '_> {
     ) -> Src {
         let key =
             self.r.pipes().chain(&self.r.device, list.iter().map(|e| e.descriptor), Some(&mut *self.lease));
-        let (mut fx, _) = self.base(&list[0], uv);
+        let mut fx = super::placed::uniforms(&list[0], uv);
         let (mut tex, mut fed, mut base, mut first) = (EMPTY, [Src::Void; MASK_SLOTS], 0, None);
         tex[0] = input;
         for e in list {
@@ -28,13 +28,11 @@ impl Painter<'_, '_, '_> {
                         let fed = self.fed(i, e, (rect, uv), self.mask_reach(e, list));
                         (fed.mask, fed.crop)
                     }
-                    None => (
-                        e.mask_texture
-                            .as_deref()
-                            .and_then(|id| self.picture(id))
-                            .map(|image| self.ext(image)),
-                        [0.0; 4],
-                    ),
+                    None => {
+                        let image = e.mask_texture.as_deref().and_then(|id| self.picture(id));
+                        let crop = image.map_or([0.0; 4], |i| [0.0, 0.0, 1.0 / i.crop[0], 1.0 / i.crop[1]]);
+                        (image.map(|image| self.ext(image)), crop)
+                    }
                 };
                 let src = src.unwrap_or(Src::White);
                 if m.layer.is_some()

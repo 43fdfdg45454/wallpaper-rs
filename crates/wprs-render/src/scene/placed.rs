@@ -75,8 +75,12 @@ impl Painter<'_, '_, '_> {
 
     pub(crate) fn base(&mut self, e: &EffectDraw<'_>, layer_uv: Affine) -> (Fx, Src) {
         let mask = e.mask_texture.as_deref().and_then(|id| self.picture(id));
+        let crop = mask.map_or([1.0; 2], |image| image.crop);
         let mask = mask.map_or(Src::White, |image| self.ext(image));
-        (uniforms(e, layer_uv), mask)
+        let mut fx = uniforms(e, layer_uv);
+        fx.mask_m0[..3].iter_mut().for_each(|v| *v *= crop[0]);
+        fx.mask_m1[..3].iter_mut().for_each(|v| *v *= crop[1]);
+        (fx, mask)
     }
 }
 

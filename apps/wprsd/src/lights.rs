@@ -13,6 +13,9 @@ pub(crate) fn state(config: &Config, output: &str, hdr: &Hdr) -> HdrState {
         peak_nits: nits(hdr.peak_nits),
         reference_nits: nits(hdr.reference_nits),
         reason: hdr.reason.into(),
+        encoding: hdr.encoding.into(),
+        max_cll: hdr.described.map(|m| m.max_cll),
+        max_fall: hdr.described.map(|m| m.max_fall),
     }
 }
 
@@ -31,6 +34,8 @@ mod tests {
             peak_nits: Some(799.6),
             reference_nits: Some(203.0),
             reason: "on",
+            encoding: "pq-own",
+            described: Some(wprs_wayland::Mastered { max_cll: 800, max_fall: 203 }),
         };
         let shown = state(&config, "DP-1", &hdr);
         assert_eq!((shown.choice.as_str(), shown.own.as_deref()), ("on", Some("on")));
@@ -41,5 +46,18 @@ mod tests {
             ("auto", None, false, None)
         );
         assert!((hdr.headroom() - 799.6 / 203.0).abs() < 1e-4 && Hdr::default().headroom() == 1.0);
+        assert_eq!(
+            (shown.encoding.as_str(), shown.max_cll, shown.max_fall),
+            ("pq-own", Some(800), Some(203))
+        );
+        assert_eq!(hdr.mastered(), wprs_wayland::Mastered { max_cll: 800, max_fall: 203 });
+        let unknown = Hdr { active: true, ..Hdr::default() };
+        let guessed = wprs_core::hdr::UNKNOWN_HEADROOM * wprs_render::REFERENCE_NITS;
+        assert_eq!(
+            unknown.mastered().max_cll,
+            guessed.round() as u32,
+            "an unknown screen gets the documented guess"
+        );
+        assert_eq!(plain.encoding, "");
     }
 }

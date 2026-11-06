@@ -13,7 +13,7 @@ impl State {
             let live: Vec<String> =
                 slot.views.iter().filter(|(_, v)| v.opened && v.live).map(|(n, _)| n.clone()).collect();
             let mut allowed = Allowed::default();
-            let mut out = Vec::new();
+            let mut out = lights(slot);
             for (name, view) in slot.views.iter_mut().filter(|(_, v)| v.opened && v.live) {
                 let (state, presses, [moves, presses_allowed]) = inputs::touch(name);
                 let hears = audio && inputs::hears(name);
@@ -70,6 +70,17 @@ impl State {
         let scan = listed.filter_map(|s| s.scanned).map(|at| at + super::SCAN);
         audio.chain(due).chain(hide).chain(scan).min()
     }
+}
+
+pub(super) fn lights(slot: &mut super::PageSlot) -> Vec<ToWeb> {
+    let uses = slot.spec.pack.uses[3];
+    let on = |name: &str| {
+        uses && (name.starts_with("preview:") || (crate::rgb::enabled() && inputs::lights(name)))
+    };
+    let opened = slot.views.iter_mut().filter(|(_, v)| v.opened);
+    let changed = opened
+        .filter_map(|(name, v)| (v.lights.replace(on(name)) != Some(on(name))).then_some((v.id, on(name))));
+    changed.map(|(view, on)| ToWeb::Lights { view, on }).collect()
 }
 
 pub(super) fn lit(slot: &super::PageSlot, id: u32, (w, h): (u32, u32), rgb: Vec<u8>) {

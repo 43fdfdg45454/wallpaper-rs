@@ -158,6 +158,17 @@ Kirigami.OverlayDrawer {
                 pkg: drawer.pkg
             }
 
+            QQC2.Button {
+                visible: drawer.pkg?.kind === "web"
+                text: App.tr("Try the page and its lights…")
+                icon.name: "color-management"
+                onClicked: lights.start(drawer.uid)
+            }
+
+            PageLights {
+                id: lights
+            }
+
             RowLayout {
                 QQC2.Button {
                     text: App.tr("Edit…")

@@ -50,29 +50,78 @@ pub fn shrink(width: u32, height: u32, pixels: &[u8], channels: u32) -> Option<S
     Strip::new(w, h, rgb.collect())
 }
 
-pub fn colors(device: &Device, strip: &Strip) -> Vec<[u8; 3]> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Flow {
+    #[default]
+    Right,
+    Left,
+    Down,
+    Up,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Area {
+    pub rect: [f32; 4],
+    pub flow: Flow,
+}
+
+impl Default for Area {
+    fn default() -> Self {
+        Area { rect: [0.0, 0.0, 1.0, 1.0], flow: Flow::Right }
+    }
+}
+
+type Span = ([f32; 2], [f32; 2]);
+
+impl Area {
+    fn span(&self, [a, b]: [f32; 2], [c, d]: [f32; 2]) -> Span {
+        let [x, y, w, h] = self.rect;
+        let (u, v) = match self.flow {
+            Flow::Left => ([1.0 - b, 1.0 - a], [c, d]),
+            Flow::Up => ([a, b], [1.0 - d, 1.0 - c]),
+            _ => ([a, b], [c, d]),
+        };
+        ([x + u[0] * w, x + u[1] * w], [y + v[0] * h, y + v[1] * h])
+    }
+
+    fn along(&self, j: u32, n: u32) -> Span {
+        let cell = [j as f32 / n as f32, (j + 1) as f32 / n as f32];
+        match self.flow {
+            Flow::Right | Flow::Left => self.span(cell, [0.0, 1.0]),
+            Flow::Down | Flow::Up => self.span([0.0, 1.0], cell),
+        }
+    }
+}
+
+pub fn colors(
+    device: &Device,
+    strip: &Strip,
+    area: Area,
+    zone: &dyn Fn(usize) -> Option<Option<Area>>,
+) -> Vec<[u8; 3]> {
     let mut out = vec![[0u8; 3]; device.leds as usize];
-    let line = |out: &mut Vec<[u8; 3]>, start: u32, n: u32| {
+    let line = |out: &mut Vec<[u8; 3]>, area: Area, start: u32, n: u32| {
         for j in 0..n {
-            let c = strip.mean([j as f32 / n as f32, (j + 1) as f32 / n as f32], [0.0, 1.0]);
-            out.get_mut((start + j) as usize).into_iter().for_each(|slot| *slot = c);
+            let (x, y) = area.along(j, n);
+            out.get_mut((start + j) as usize).into_iter().for_each(|slot| *slot = strip.mean(x, y));
         }
     };
     if device.zones.is_empty() {
-        line(&mut out, 0, device.leds);
+        line(&mut out, area, 0, device.leds);
     }
-    for zone in &device.zones {
-        let Some((w, h, map)) = &zone.matrix else {
-            line(&mut out, zone.start, zone.leds);
+    for (i, z) in device.zones.iter().enumerate() {
+        let Some(area) = zone(i).unwrap_or(Some(area)) else { continue };
+        let Some((w, h, map)) = &z.matrix else {
+            line(&mut out, area, z.start, z.leds);
             continue;
         };
-        for (k, led) in map.iter().enumerate().filter(|(_, led)| **led < zone.leds) {
+        for (k, led) in map.iter().enumerate().filter(|(_, led)| **led < z.leds) {
             let (x, y) = (k as u32 % w, k as u32 / w);
-            let c = strip.mean(
+            let (x, y) = area.span(
                 [x as f32 / *w as f32, (x + 1) as f32 / *w as f32],
                 [y as f32 / *h as f32, (y + 1) as f32 / *h as f32],
             );
-            out.get_mut((zone.start + led) as usize).into_iter().for_each(|slot| *slot = c);
+            out.get_mut((z.start + led) as usize).into_iter().for_each(|slot| *slot = strip.mean(x, y));
         }
     }
     out

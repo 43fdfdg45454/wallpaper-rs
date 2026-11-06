@@ -43,6 +43,10 @@ pub fn handle(message: ToWeb) {
             crate::script::tell_view(view, &json!({"properties": values}));
         }
         ToWeb::Allowed(allowed) => live(|l| l.allowed = allowed),
+        ToWeb::Lights { view, on } => {
+            live(|l| if on { l.lights.insert(view) } else { l.lights.remove(&view) });
+            crate::script::tell_view(view, &json!({"lights": on}));
+        }
         ToWeb::Audio { left, right } => {
             if live(|l| l.audio && l.allowed.audio) {
                 tell(&json!({"audio": [left, right]}));

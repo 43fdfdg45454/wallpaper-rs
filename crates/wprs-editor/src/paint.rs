@@ -32,14 +32,14 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let named = doc.pointer(s.pointer).and_then(Value::as_str).filter(|id| doc.pointer(&asset(id)).is_some());
     let id = named.map_or_else(|| unique(doc, s.pointer.rsplit('/').next().unwrap_or("mask")), String::from);
     let path = named.and_then(|id| doc.pointer(&format!("{}/path", asset(id)))?.as_str());
-    let old = path.and_then(|p| crate::pictures::open(dir.join(p)).ok()).map(|i| i.into_rgba8());
+    let old = named.and_then(|id| crate::pictures::asset(dir, doc, id).ok()).map(|i| i.into_rgba8());
     let mut picture =
         old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba(blank(dir, doc, s.pointer))));
     stroke(&mut picture, s);
-    let saved =
-        (1..).map(|n| format!("masks/{id}-{n}.png")).find(|p| !dir.join(p).exists()).unwrap_or_default();
-    std::fs::create_dir_all(dir.join("masks"))?;
-    picture.save(dir.join(&saved))?;
+    let layer = s.pointer.rsplit_once("/effects/").and_then(|(at, _)| doc.pointer(at));
+    let image = layer.and_then(|l| l["image"].as_str()).filter(|i| doc.pointer(&asset(i)).is_some());
+    let like = path.or_else(|| doc.pointer(&format!("{}/path", asset(image?)))?.as_str());
+    let saved = crate::pictures::store(dir, ("masks", &id), &picture, like.map(|p| dir.join(p)).as_deref())?;
     let mut ops = set(doc, &asset(&id), json!({ "path": saved, "linear": true }));
     ops.extend(set(doc, s.pointer, json!(id)));
     Ok(ops)

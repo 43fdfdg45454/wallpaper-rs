@@ -15,8 +15,12 @@ pub(super) fn draw(
     let (renderer, exporter, players, power, limits) = shared;
     let moved = limits.map(|steps| (output.offset, steps));
     let refresh = output.refresh;
+    super::super::pictures::follow(output);
     super::super::light::light(output, renderer, power)?;
     let (lit, lights) = (output.hdr.headroom(), output.lights_only(name));
+    if output.lit.iter_mut().fold(false, |relit, l| l.relight(renderer, lit) | relit) {
+        (output.dirty, output.composed) = (true, None);
+    }
     output.shown.scene.iter_mut().for_each(|s| (s.lit, s.lights) = (lit, lights));
     let size = if lights { super::super::hidden::small(output.size) } else { output.size };
     if let Some(scene) = output.shown.scene.as_mut()
@@ -31,8 +35,9 @@ pub(super) fn draw(
     let unchanged = output.unchanged(moved, exporter.starved(name));
     let progress = output.progress(now, output.shown.transition.map_or(transition, |d| d.as_secs_f32()));
     let opacity = if output.fade.is_some() { smoothstep(progress) } else { 1.0 };
-    let shown = output.shown.layer(players, opacity, moved, output.size);
+    let shown = output.shown.layer(players, opacity, moved, output.size).lit(output.lit[0].image());
     let from = output.fade.as_ref().map(|(from, _)| from.layer(players, 1.0, moved, output.size));
+    let from = from.map(|layer| layer.lit(output.lit[1].image()));
     let layers = [from.unwrap_or(shown), shown];
     let layers = &layers[usize::from(from.is_none())..];
     let damage = output.damage();

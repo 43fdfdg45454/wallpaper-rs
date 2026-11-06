@@ -1,7 +1,6 @@
 use super::state::State;
 use crate::pages::PageSpec;
 use serde_json::{Map, Value as Json, json};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use wprs_web::{Folder, Settings, Start, ToWeb, token};
@@ -10,20 +9,22 @@ mod ending;
 mod feed;
 mod frames;
 mod heard;
+mod keys;
+#[cfg(test)]
+mod lit;
 mod slot;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 mod view;
 
 pub(super) use ending::settle;
+use keys::Views;
+pub(super) use keys::level;
 pub(super) use slot::PageSlot;
 use view::ViewSlot;
 
 const SCAN: Duration = Duration::from_secs(5);
 const GRACE: Duration = Duration::from_secs(2);
-
-type Views = Vec<(String, (u32, u32), (bool, bool), u32, PageSpec)>;
-type Wanted = BTreeMap<PathBuf, (PageSpec, Views)>;
 
 pub(super) fn values(
     spec: &PageSpec,
@@ -69,22 +70,9 @@ pub(super) fn language(spec: &PageSpec) -> (String, &Json) {
 }
 
 impl State {
-    fn wanted(&self) -> Wanted {
-        let mut wanted = Wanted::new();
-        for (name, o) in &self.outputs {
-            let (visible, fps) = o.page_view(name, self.exporter.is_streaming(name), self.power);
-            for spec in o.layers().filter_map(|l| l.content.page()) {
-                let entry =
-                    wanted.entry(spec.pack.path.clone()).or_insert_with(|| (spec.clone(), Vec::new()));
-                entry.1.push((name.clone(), o.size, visible, fps, spec.clone()));
-            }
-        }
-        wanted
-    }
-
     fn start(&self, slot: &PageSlot) -> Start {
         let (spec, privacy) = (&slot.spec, slot.spec.privacy);
-        let (properties, files) = values(spec, &slot.salt, self.power.steady());
+        let (properties, files) = values(spec, &slot.salt, level(self.power, spec));
         let device = self.page_device(slot);
         let shared = slot.shared && device.is_some();
         Start {
@@ -125,12 +113,13 @@ impl State {
             .filter(|_| !slot.spec.pack.own_volume);
         let own = own.map_or(1.0, |v| v.clamp(0.0, 100.0) / 100.0);
         let volume = if silent { 0.0 } else { self.settings.volume * self.settings.duck * own };
-        Settings { fps, quality: self.power.steady() as u8, locale: language(&slot.spec).0, volume }
+        let quality = level(self.power, &slot.spec) as u8;
+        Settings { fps, quality, locale: language(&slot.spec).0, volume }
     }
 
     pub(super) fn sync_pages(&mut self) {
         let (now, wanted) = (Instant::now(), self.wanted());
-        self.pages.retain(|path, _| wanted.contains_key(path));
+        keys::rekey(&mut self.pages, &wanted);
         for (path, (spec, views)) in wanted {
             let renew = self.pages.get(&path).is_none_or(|s| {
                 let old = (s.spec.privacy, &s.spec.pack.key, &s.spec.storage);

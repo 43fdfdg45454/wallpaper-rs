@@ -11,6 +11,9 @@ Kirigami.Dialog {
     property string asset: ""
     property string pointer: ""
     property string codec: "uastc"
+    property string shape: "flat"
+    property var faces: ["", "", "", "", "", ""]
+    readonly property var pictures: (page.view.assets ?? []).filter(a => a.kind === "image" && !a.path.toLowerCase().endsWith(".ktx2"))
     property var settings: ({
             "quality": 80
         })
@@ -25,16 +28,31 @@ Kirigami.Dialog {
     function show(id, at) {
         asset = id;
         pointer = at;
+        shape = "flat";
+        faces = [id, id, id, id, id, id];
         weigh();
         open();
     }
 
+    function chosen() {
+        return shape === "faces" ? faces : [];
+    }
+
     function weigh() {
+        const entries = {};
+        for (const id of chosen()) {
+            const found = pictures.find(a => a.id === id);
+            if (found)
+                entries[id] = JSON.parse(page.editor.value(found.pointer) || "{}");
+        }
         packer.weigh(page.editor.folder, JSON.stringify({
             "asset": asset,
             "entry": JSON.parse(page.editor.value(pointer) || "{}"),
             "codec": codec,
-            "quality": Math.round(settings.quality)
+            "quality": Math.round(settings.quality),
+            "cube": shape === "panorama",
+            "faces": chosen(),
+            "entries": entries
         }));
     }
 
@@ -51,7 +69,9 @@ Kirigami.Dialog {
                     "asset": dialog.asset,
                     "ktx2": true,
                     "codec": dialog.codec,
-                    "quality": Math.round(dialog.settings.quality)
+                    "quality": Math.round(dialog.settings.quality),
+                    "cube": dialog.shape === "panorama",
+                    "faces": dialog.chosen()
                 });
                 dialog.close();
             }
@@ -96,6 +116,12 @@ Kirigami.Dialog {
             }
         }
 
+        SceneKtx2Shape {
+            Layout.fillWidth: true
+            dialog: dialog
+            onPicked: later.restart()
+        }
+
         SceneSliders {
             Layout.fillWidth: true
             value: dialog.settings
@@ -124,8 +150,15 @@ Kirigami.Dialog {
         QQC2.Label {
             Layout.fillWidth: true
             wrapMode: Text.Wrap
-            visible: dialog.trial?.resized ?? false
-            text: App.tr("Widened from %1 × %2 to %3 × %4 pixels so that every card keeps it compressed.", dialog.trial?.source?.[0] ?? 0, dialog.trial?.source?.[1] ?? 0, dialog.trial?.size?.[0] ?? 0, dialog.trial?.size?.[1] ?? 0)
+            visible: (dialog.trial?.frames ?? 1) > 1
+            text: App.tr("The %1 frames become one texture array that keeps their timing; the crops show the first frame.", dialog.trial?.frames ?? 0)
+        }
+
+        QQC2.Label {
+            Layout.fillWidth: true
+            wrapMode: Text.Wrap
+            visible: dialog.trial?.cube === true || dialog.trial?.hdr === true
+            text: [dialog.trial?.cube ? App.tr("The six faces become one cube map, shown as a panorama; the crops show a corner of it.") : "", dialog.trial?.hdr ? App.tr("The picture keeps its light above white as an HDR texture.") : ""].filter(t => t).join(" ")
         }
 
         GridLayout {
@@ -150,7 +183,10 @@ Kirigami.Dialog {
 
                     source: modelData.look ?? ""
                     label: dialog.classes[modelData.target] ?? modelData.target
-                    detail: App.tr("%1 on the card", App.bytes(modelData.gpu))
+                    detail: [App.tr("%1 on the card", App.bytes(modelData.gpu)), modelData.plain ? App.tr("kept uncompressed: the card cannot hold this shape compressed") : "", ({
+                                "gpu": App.tr("drawn by this graphics card"),
+                                "cpu": App.tr("decoded on the processor: this card does not read it")
+                            })[modelData.drawn] ?? ""].filter(t => t).join("\n")
                 }
             }
         }

@@ -13,7 +13,7 @@ const IMAGES: &[&str] = &["png", "jpg", "jpeg", "webp", "avif", "gif", "bmp", "k
 const VIDEOS: &[&str] = &["webm", "mp4", "mkv"];
 const SCENES: &[&str] = &[
     "json", "wgsl", "js", "gltf", "glb", "bin", "ogg", "opus", "flac", "mp3", "wav", "ttf", "otf", "ttc",
-    "otc", "woff2", "cube",
+    "otc", "woff2", "cube", "hdr", "exr",
 ];
 const PAGES: &[&str] = &[
     "html", "htm", "js", "mjs", "css", "json", "wasm", "svg", "hdr", "exr", "ogg", "opus", "flac", "mp3",

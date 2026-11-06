@@ -19,7 +19,7 @@ pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
 pub(crate) use lanes::lanes;
 pub(crate) use mirror::flip;
 
-const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
+const IMAGES: [&str; 9] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2", "hdr", "exr"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const VIDEOS: [&str; 6] = ["webm", "mp4", "mkv", "mov", "m4v", "3gp"];
 const SCENE_VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
@@ -78,10 +78,14 @@ fn scene_of(package: Package<BufReader<fs::File>>) -> Result<Package<BufReader<f
 }
 
 fn decode(bytes: Vec<u8>) -> Result<RgbaImage, Error> {
+    drawn(bytes, false)
+}
+
+fn drawn(bytes: Vec<u8>, linear: bool) -> Result<RgbaImage, Error> {
     let mut limits = Limits::default();
     (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
         (Some(1 << 14), Some(1 << 14), Some(1 << 28));
-    Ok(wprs_render::decode_limited(ImageReader::new(Cursor::new(bytes)), limits)?.into_rgba8())
+    Ok(wprs_render::decode_asset(ImageReader::new(Cursor::new(bytes)), limits, linear)?)
 }
 
 pub(crate) fn folder(path: &Path) -> Result<PathBuf, Error> {
@@ -127,7 +131,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         let kind = extension(&asset.path);
         if IMAGES.contains(&kind.as_str()) {
             let read = || Ok(package.read_file(&asset.path)?);
-            if decoded.add::<Error>((&mut assets, id, asset), read, decode)? > DECODED {
+            if decoded.add::<Error>((&mut assets, id, asset), read, drawn)? > DECODED {
                 return Err(said(
                     "android.images_too_large",
                     "the images of %1 are too large",

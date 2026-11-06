@@ -32,6 +32,9 @@ a remote votes "$server_repo/org.example.noon" | jq_ "r['items']['$server_repo/o
 [ "$(a remote votes "$other/org.example.noon" | jq_ "(r['shown'], len(r['items']))")" = "(False, 0)" ] ||
   fail "ids of another repository were sent to the server"
 if a remote vote "$other/org.example.noon" up 2>/dev/null; then fail "a vote for another repository was sent"; fi
+mapfile -t rows < <(for i in $(seq 1 150); do echo "$other/org.example.row$i"; done)
+[ "$(a remote votes "${rows[@]}" "$server_repo/org.example.noon" | jq_ "r['items']['$server_repo/org.example.noon']['down']")" = 1 ] ||
+  fail "a package of the server after 150 rows of another repository got no counts"
 a remote votes org.example.noon | grep '"down":1,"mine":"down","up":0' >/dev/null || fail "a refused vote changed the counts"
 a config repos.vote_counts false
 a remote votes org.example.noon | grep '"shown":false' >/dev/null || fail "hidden counts were fetched"

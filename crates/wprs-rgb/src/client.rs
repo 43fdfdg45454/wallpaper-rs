@@ -1,5 +1,5 @@
 use crate::{
-    COUNT, CUSTOM, DATA, Device, LEDS, MAGIC, MAX_DEVICES, MAX_PACKET, NAME, PROTOCOL, UPDATED, VERSION,
+    COUNT, CUSTOM, DATA, Device, LEDS, MAGIC, MAX_DEVICES, MAX_PACKET, MODE, NAME, PROTOCOL, UPDATED, VERSION,
 };
 use std::io::{ErrorKind, Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -97,6 +97,7 @@ impl Client {
             devices.push(crate::controller(index, &data, self.version)?);
         }
         self.changed = false;
+        crate::keyed(&mut devices);
         Ok(devices)
     }
 
@@ -106,6 +107,18 @@ impl Client {
 
     pub fn paint(&mut self, device: u32, colors: &[[u8; 3]]) -> Result<(), Error> {
         self.send(device, LEDS, &crate::leds(colors))
+    }
+
+    pub fn restore(&mut self, device: &Device) -> Result<(), Error> {
+        let Some(mode) = &device.mode else { return Ok(()) };
+        let mut data = ((8 + mode.data.len()) as u32).to_le_bytes().to_vec();
+        data.extend(mode.index.to_le_bytes());
+        data.extend(&mode.data);
+        self.send(device.index, MODE, &data)?;
+        match mode.per_led && device.colors.len() == device.leds as usize {
+            true => self.paint(device.index, &device.colors),
+            false => Ok(()),
+        }
     }
 
     pub fn heard(&mut self) -> Result<bool, Error> {

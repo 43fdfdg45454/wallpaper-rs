@@ -14,10 +14,17 @@ pub struct DeepPlanes<'a> {
     pub planes: [(&'a [u8], u32); 3],
     pub hlg: bool,
     pub full: bool,
+    pub headroom: f32,
 }
 
+type Key = ((u32, u32), bool, bool, bool);
+
+const LIGHT_AT: u64 = 7 * 16;
+
 pub struct Deep {
-    key: ((u32, u32), bool, bool),
+    key: Key,
+    light: f32,
+    uniform: wgpu::Buffer,
     planes: [wgpu::Texture; 3],
     group: wgpu::BindGroup,
     image: GpuImage,
@@ -26,6 +33,7 @@ pub struct Deep {
 pub(crate) struct Mapper {
     layout: wgpu::BindGroupLayout,
     pipeline: wgpu::RenderPipeline,
+    lit: wgpu::RenderPipeline,
 }
 
 pub fn deep_rows(full: bool) -> [[f32; 4]; 3] {
@@ -74,28 +82,25 @@ impl Renderer {
         self.deep.get_or_init(|| {
             let layout = layout(&self.device);
             let shader = module(&self.device, concat!(include_str!("tone.wgsl"), include_str!("deep.wgsl")));
-            let pipeline = pipeline(&self.device, &layout, &shader, "fs_main", Format::Rgba8UnormSrgb.into());
-            Mapper { layout, pipeline }
+            let made = |format: Format| pipeline(&self.device, &layout, &shader, "fs_main", format.into());
+            Mapper { pipeline: made(Format::Rgba8UnormSrgb), lit: made(Format::Rgba16Float), layout }
         })
     }
 
-    fn deep_slot(&self, key: ((u32, u32), bool, bool)) -> Deep {
-        let ((w, h), hlg, full) = key;
+    fn deep_slot(&self, key: Key, headroom: f32) -> Deep {
+        let ((w, h), hlg, full, lit) = key;
+        let target = if lit { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
         let half = (w.div_ceil(2), h.div_ceil(2));
         let sampled = Usage::TEXTURE_BINDING | Usage::COPY_DST;
         let plane =
             |size| create_texture(&self.device, "wprs-render deep plane", size, Format::R16Uint, sampled);
         let planes = [plane((w, h)), plane(half), plane(half)];
         let usage = Usage::TEXTURE_BINDING | Usage::COPY_SRC | Usage::RENDER_ATTACHMENT;
-        let image = gpu_image(create_texture(
-            &self.device,
-            "wprs-render deep video",
-            (w, h),
-            Format::Rgba8UnormSrgb,
-            usage,
-        ));
+        let image = gpu_image(create_texture(&self.device, "wprs-render deep video", (w, h), target, usage));
         let tone = [if hlg { 2.0 } else { 1.0 }, REFERENCE_NITS, PEAK_NITS, KNEE];
-        let values = deep_rows(full).into_iter().chain([tone]).chain(GAMUT).flatten();
+        let values =
+            deep_rows(full).into_iter().chain([tone]).chain(GAMUT).chain([[headroom, 0.0, 0.0, 0.0]]);
+        let values = values.flatten();
         let contents: Vec<u8> = values.flat_map(f32::to_le_bytes).collect();
         let devices = (&self.device, &self.queue);
         let uniform =
@@ -113,7 +118,7 @@ impl Renderer {
             layout,
             entries: &entries,
         });
-        Deep { key, planes, group, image }
+        Deep { key, light: headroom, uniform, planes, group, image }
     }
 
     pub fn convert_deep<'a>(
@@ -127,11 +132,15 @@ impl Renderer {
         if !self.limits.fits(w, h) || !deep.planes.iter().zip(sizes).all(|(p, s)| fits(*p, s)) {
             return Err(RenderError::InvalidSize(w, h));
         }
-        let key = (deep.size, deep.hlg, deep.full);
+        let light = crate::coded::lighting(crate::Coding::Pq, deep.headroom);
+        let key = (deep.size, deep.hlg, deep.full, light > 1.0);
         if slot.as_ref().is_none_or(|d| d.key != key) {
-            *slot = Some(self.scoped(|| self.deep_slot(key))?);
+            *slot = Some(self.scoped(|| self.deep_slot(key, light))?);
         }
         let made = slot.as_mut().expect("created above");
+        if made.light != light {
+            made.light = crate::coded::relight(&self.queue, &made.uniform, LIGHT_AT, light);
+        }
         self.scoped(|| {
             for (texture, (data, stride)) in made.planes.iter().zip(deep.planes) {
                 let layout = wgpu::TexelCopyBufferLayout {
@@ -141,7 +150,9 @@ impl Renderer {
                 };
                 self.queue.write_texture(texture.as_image_copy(), data, layout, texture.size());
             }
-            self.draw_with(&self.mapper().pipeline, &made.group, &made.image);
+            let lit = made.key.3;
+            let mapper = self.mapper();
+            self.draw_with(if lit { &mapper.lit } else { &mapper.pipeline }, &made.group, &made.image);
         })?;
         Ok(&made.image)
     }

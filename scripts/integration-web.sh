@@ -38,6 +38,8 @@ else
   drawn=$(field "s['outputs']['TEST-W']['decode'], s['outputs']['TEST-W']['sandbox']")
   echo "web page drawn (decode, sandbox): $drawn"
   [[ $drawn != *"''"* ]] || fail "no frame or sandbox state: $drawn"
+  source "$(dirname "$0")"/integration-web-quality.sh
+  source "$(dirname "$0")"/integration-web-pace.sh
   ctl lib confirm hide_zone "$tint"
   [ "$(ctl lib show "$tint" --json | from "r['item']['package']['exposes']")" = "['language', 'gpu', 'storage']" ] ||
     fail "the time zone is still exposed"
@@ -69,8 +71,20 @@ else
   [ "$(painted)" = "$before" ] || fail "a covered page sent colors while the lights pause"
   ctl covered TEST-W false
   wait_for 10 sends || fail "the lights did not follow the page once shown again"
-  ctl input revoke org.example.glow-page rgb && ctl config rgb.enabled false
   kill "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true
+  seen "$web" "0, 255, 0"
+  ctl config rgb.enabled false
+  seen "$web" "255, 0, 0"
+  ctl config rgb.enabled true && ctl input revoke org.example.glow-page rgb
+  seen "$web" "255, 0, 0"
+  ctl config rgb.enabled false
+  read -r _ _ _ pv < <(ctl stream preview:page-lights 160 90)
+  ctl lib apply "$(uid org.example.glow-page)" -o preview:page-lights 2>/dev/null
+  previewed() { "$BIN/probe" "$pv" 3 >/dev/null 2>&1; [ "$(ctl rgb strip -o preview:page-lights --json 2>/dev/null | from "r['colors']")" = "['#00ff00', '#00ff00']" ]; }
+  wait_for 20 previewed || fail "a page preview showed no strip with the lights off and no grant"
+  seen "$pv" "0, 255, 0"
+  if grep -q "page-lights" "$XDG_CONFIG_HOME/wallpaper-rs/config.toml"; then fail "a live preview reached the saved settings"; fi
+  ctl release preview:page-lights
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"

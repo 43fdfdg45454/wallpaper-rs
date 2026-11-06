@@ -35,18 +35,20 @@ ColumnLayout {
                     });
         }
         for (const card of adapters) {
-            const same = adapters.filter(a => a.name === card.name);
-            if (found.some(c => c.value === card.name))
+            const twins = adapters.some(a => a.name === card.name && a.bus && card.bus && a.bus !== card.bus);
+            const value = twins ? "pci:" + card.bus : card.name;
+            if (found.some(c => c.value === value))
                 continue;
+            const same = adapters.filter(a => a.name === card.name && (!twins || a.bus === card.bus));
             found.push({
-                    "value": card.name,
-                    "text": label(card.name, same)
+                    "value": value,
+                    "text": twins ? App.tr("%1 · on PCI bus %2", label(card.name, same), card.bus) : label(card.name, same)
                 });
         }
         if (!found.some(c => c.value.toLowerCase() === chosen.toLowerCase()))
             found.push({
                     "value": chosen,
-                    "text": adapters.some(a => a.name.toLowerCase().includes(chosen.toLowerCase())) ? App.tr("The first card whose name has “%1”", chosen) : App.tr("“%1”, which no card matches", chosen)
+                    "text": chosen.toLowerCase().startsWith("pci:") ? App.tr("The card on PCI bus %1, which is not connected now", chosen.slice(4)) : adapters.some(a => a.name.toLowerCase().includes(chosen.toLowerCase())) ? App.tr("The first card whose name has “%1”", chosen) : App.tr("“%1”, which no card matches", chosen)
                 });
         return found;
     }
@@ -86,6 +88,13 @@ ColumnLayout {
         wrapMode: Text.Wrap
         text: App.tr("The new choice takes effect the next time the daemon starts.")
         color: Kirigami.Theme.neutralTextColor
+    }
+
+    QQC2.Button {
+        visible: App.state.gpu_restart === true
+        text: App.tr("Restart the daemon now")
+        icon.name: "view-refresh"
+        onClicked: App.act("Restart", [], "Daemon1")
     }
 
     QQC2.Label {

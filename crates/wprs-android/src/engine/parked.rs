@@ -48,3 +48,7 @@ impl Drop for Engine {
         park(self.preview, self.lock, Parked { stage, image, raised, epoch });
     }
 }
+
+pub(super) fn size(width: i32, height: i32) -> (u32, u32) {
+    (width.max(1).unsigned_abs(), height.max(1).unsigned_abs())
+}
