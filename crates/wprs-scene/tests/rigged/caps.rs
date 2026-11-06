@@ -64,3 +64,17 @@ fn drawn_primitives_and_nodes_are_capped() {
     gl.doc["nodes"] = json!(vec![json!({}); MAX_RIG_NODES]);
     assert!(Rigged::decode(&gl.bytes()).is_ok());
 }
+
+#[test]
+fn blend_shapes_move_the_depth_their_part_is_sorted_by() {
+    let mut gl = arm();
+    let out = gl.floats("VEC3", &(0..10).flat_map(|_| [0.0, 0.0, 5.0]).collect::<Vec<_>>());
+    gl.doc["meshes"][0]["primitives"][0]["targets"] = json!([{ "POSITION": out }]);
+    let rig = Rigged::decode(&gl.bytes()).unwrap();
+    let id = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0];
+    let palette = vec![id; rig.palette.len()];
+    let part = rig.parts.iter().position(|p| p == "body").unwrap();
+    let (flat, lifted) = (rig.part_depth(&palette, part, &[0.0]), rig.part_depth(&palette, part, &[1.0]));
+    assert!((lifted - flat - 5.0).abs() < 1e-3, "{flat} {lifted}");
+    assert!((rig.part_depth(&palette, part, &[0.5]) - flat - 2.5).abs() < 1e-3);
+}

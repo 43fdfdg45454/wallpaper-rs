@@ -64,6 +64,7 @@ pub struct Rigged {
     pub picture: Option<Vec<u8>>,
     pub stack: Vec<Vec<(u16, [f32; 4])>>,
     pub digest: u64,
+    pub swells: Vec<Vec<(u16, u16, [f32; 3])>>,
 }
 
 impl PartialEq for Rigged {
@@ -81,7 +82,7 @@ impl Rigged {
         build::joints(&doc, &mut rig)?;
         geometry::pieces(&bin, &mut rig)?;
         motion::motions(&bin, &mut rig)?;
-        rig.stack = stack::stack(&rig);
+        (rig.stack, rig.swells) = (stack::stack(&rig), stack::swells(&rig));
         rig.picture = geometry::picture(&bin);
         Ok(rig)
     }

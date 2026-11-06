@@ -111,15 +111,17 @@ impl Renderer {
             pass.set_vertex_buffer(0, skin.vertices.slice(..));
             pass.set_index_buffer(skin.indices.slice(..), wgpu::IndexFormat::Uint32);
             let deep = relief.map_or(0, |r| 2 + 2 * usize::from(r.cull));
-            let mut clipped = None;
-            for d in &posed.draws {
-                let Some(piece) = rig.pieces.get(d.piece as usize) else { continue };
-                if clipped != Some(d.clip.is_some()) {
-                    clipped = Some(d.clip.is_some());
-                    pass.set_pipeline(&skinner.pipes[usize::from(d.clip.is_some()) + deep]);
+            for round in if deep > 0 { [0, 4].as_slice() } else { &[0] } {
+                let mut clipped = None;
+                for d in &posed.draws {
+                    let Some(piece) = rig.pieces.get(d.piece as usize) else { continue };
+                    if clipped != Some(d.clip.is_some()) {
+                        clipped = Some(d.clip.is_some());
+                        pass.set_pipeline(&skinner.pipes[usize::from(d.clip.is_some()) + deep + round]);
+                    }
+                    pass.set_stencil_reference(u32::from(d.clip.unwrap_or(d.part)) % 255 + 1);
+                    pass.draw_indexed(piece.first..piece.first + piece.count, 0, 0..1);
                 }
-                pass.set_stencil_reference(u32::from(d.clip.unwrap_or(d.part)) % 255 + 1);
-                pass.draw_indexed(piece.first..piece.first + piece.count, 0, 0..1);
             }
         }
         drop(pass);

@@ -9,6 +9,7 @@ struct In {
     @location(4) piece: f32,
 };
 struct Out { @builtin(position) position: vec4<f32>, @location(0) uv: vec2<f32>, @location(1) color: vec4<f32> };
+struct Solid { @location(0) color: vec4<f32>, @builtin(frag_depth) depth: f32 };
 
 @group(0) @binding(0) var<uniform> bones: Bones;
 @group(0) @binding(1) var<uniform> pieces: Pieces;
@@ -50,6 +51,27 @@ fn vs_skin(v: In) -> Out {
 fn fs_skin(in: Out) -> @location(0) vec4<f32> {
     let c = textureSample(picture, smp, in.uv) * in.color;
     if c.a < 0.001 {
+        discard;
+    }
+    return vec4<f32>(c.rgb * c.a, c.a);
+}
+
+@fragment
+fn fs_solid(in: Out) -> Solid {
+    let c = textureSample(picture, smp, in.uv) * in.color;
+    if c.a < 0.001 {
+        discard;
+    }
+    if c.a < 0.999 {
+        return Solid(vec4<f32>(0.0), 1.0);
+    }
+    return Solid(vec4<f32>(c.rgb, 1.0), in.position.z);
+}
+
+@fragment
+fn fs_edge(in: Out) -> @location(0) vec4<f32> {
+    let c = textureSample(picture, smp, in.uv) * in.color;
+    if c.a < 0.001 || c.a >= 0.999 {
         discard;
     }
     return vec4<f32>(c.rgb * c.a, c.a);

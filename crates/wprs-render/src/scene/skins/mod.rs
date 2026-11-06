@@ -19,7 +19,7 @@ pub(crate) const PIECES: usize = 2 + 384;
 
 pub(crate) struct Skinner {
     pub(crate) layout: wgpu::BindGroupLayout,
-    pub(crate) pipes: [wgpu::RenderPipeline; 6],
+    pub(crate) pipes: [wgpu::RenderPipeline; 10],
 }
 
 fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -50,7 +50,14 @@ fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 }
 
 fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> wgpu::RenderPipeline {
-    let (clipped, deep, cull) = (k % 2 == 1, k >= 2, k >= 4);
+    let (clipped, deep, cull, edge) = (k % 2 == 1, k >= 2, matches!(k, 4 | 5 | 8 | 9), k >= 6);
+    let entry = if edge {
+        "fs_edge"
+    } else if deep {
+        "fs_solid"
+    } else {
+        "fs_skin"
+    };
     let shader = crate::shader::module(device, include_str!("skin.wgsl"));
     let attributes = wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32x4, 3 => Float32x4, 4 => Float32];
     let buffers = [Some(wgpu::VertexBufferLayout {
@@ -67,7 +74,7 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> 
     let stencil = wgpu::StencilState { front: face, back: face, read_mask: 0xFF, write_mask: 0xFF };
     let depth_stencil = Some(wgpu::DepthStencilState {
         format: DEPTH,
-        depth_write_enabled: Some(deep),
+        depth_write_enabled: Some(deep && !edge),
         depth_compare: Some(if deep {
             wgpu::CompareFunction::LessEqual
         } else {
@@ -93,7 +100,7 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> 
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: Some("fs_skin"),
+            entry_point: Some(entry),
             compilation_options: Default::default(),
             targets: &[Some(wgpu::ColorTargetState { blend, ..FORMAT.into() })],
         }),

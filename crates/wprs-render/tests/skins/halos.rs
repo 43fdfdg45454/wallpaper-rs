@@ -27,16 +27,17 @@ fn with_depth_parts_are_drawn_from_back_to_front_unless_told_not_to() {
 }
 
 #[test]
-fn a_see_through_part_in_front_shows_the_part_behind_it_without_a_halo() {
+fn a_see_through_part_in_front_shows_the_part_behind_it_without_a_halo_in_any_order() {
     let Some(r) = renderer() else { return };
     let draw = |depth: Value| render(r, scene(layer(depth), colored(4.0, SEE_THROUGH)), 0.0, Quality::Q3);
     let sorted = draw(json!({ "scale": 0 }));
     let [red, green, _] = rgb(&sorted, 32, 32);
     assert!(red > 60 && green > 60, "the far part shows through the near one: {:?}", rgb(&sorted, 32, 32));
     let unsorted = draw(json!({ "scale": 0, "sort": false }));
-    assert!(
-        rgb(&unsorted, 32, 32)[1] < 20,
-        "in file order the near part hides it: {:?}",
-        rgb(&unsorted, 32, 32)
-    );
+    let [red, green, _] = rgb(&unsorted, 32, 32);
+    assert!(red > 60 && green > 60, "soft parts never hide what lies behind: {:?}", rgb(&unsorted, 32, 32));
+    let solid = [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0]];
+    let near =
+        render(r, scene(layer(json!({ "scale": 0, "sort": false })), colored(4.0, solid)), 0.0, Quality::Q3);
+    assert!(rgb(&near, 32, 32)[0] > 200 && rgb(&near, 32, 32)[1] < 20, "{:?}", rgb(&near, 32, 32));
 }

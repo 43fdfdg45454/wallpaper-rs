@@ -29,12 +29,45 @@ pub(crate) fn stack(rig: &Rigged) -> Vec<Vec<(u16, [f32; 4])>> {
     out
 }
 
+pub(crate) fn swells(rig: &Rigged) -> Vec<Vec<(u16, u16, [f32; 3])>> {
+    let mut out: Vec<Vec<(u16, u16, [f32; 3])>> = vec![Vec::new(); rig.parts.len()];
+    let mut counts = vec![0.0f32; rig.parts.len()];
+    rig.pieces.iter().for_each(|p| counts[p.part as usize] += p.vertices as f32);
+    for piece in &rig.pieces {
+        let list = &mut out[piece.part as usize];
+        for &(shape, base) in &piece.targets {
+            for v in 0..piece.vertices {
+                let f = &rig.vertices[(piece.base + v) as usize * VERTEX_FLOATS..][..VERTEX_FLOATS];
+                let Some(d) = rig.morphs.get((base + v) as usize) else { continue };
+                for k in (0..4).filter(|k| f[9 + k] > 0.0) {
+                    let (joint, w) = (f[5 + k] as u16, f[9 + k]);
+                    let at =
+                        list.iter().position(|(s, j, _)| *s == shape && *j == joint).unwrap_or_else(|| {
+                            list.push((shape, joint, [0.0; 3]));
+                            list.len() - 1
+                        });
+                    (0..3).for_each(|c| list[at].2[c] += d[c] * w);
+                }
+            }
+        }
+    }
+    for (list, n) in out.iter_mut().zip(counts) {
+        list.iter_mut().for_each(|(.., s)| s.iter_mut().for_each(|x| *x /= n.max(1.0)));
+    }
+    out
+}
+
 impl Rigged {
-    pub fn part_depth(&self, palette: &[Mat], part: usize) -> f32 {
+    pub fn part_depth(&self, palette: &[Mat], part: usize, shapes: &[f32]) -> f32 {
         let list = self.stack.get(part).map_or(&[][..], Vec::as_slice);
         let z = |(j, s): &(u16, [f32; 4])| {
             palette.get(*j as usize).map_or(0.0, |m| m[8] * s[0] + m[9] * s[1] + m[10] * s[2] + m[11] * s[3])
         };
-        list.iter().map(z).sum()
+        let swells = self.swells.get(part).map_or(&[][..], Vec::as_slice);
+        let swell = |(s, j, d): &(u16, u16, [f32; 3])| {
+            let w = shapes.get(*s as usize).copied().unwrap_or(0.0);
+            palette.get(*j as usize).map_or(0.0, |m| w * (m[8] * d[0] + m[9] * d[1] + m[10] * d[2]))
+        };
+        list.iter().map(z).sum::<f32>() + swells.iter().map(swell).sum::<f32>()
     }
 }

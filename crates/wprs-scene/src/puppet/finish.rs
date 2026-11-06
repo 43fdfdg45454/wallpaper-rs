@@ -41,7 +41,7 @@ impl Puppet {
         let mut deep = [0.0f32; crate::rigged::MAX_RIG_PIECES];
         for d in next.draws.iter().filter(|_| m.sort) {
             deep[d.piece as usize % deep.len()] =
-                rig.part_depth(&next.palette, d.clip.unwrap_or(d.part).into());
+                rig.part_depth(&next.palette, d.clip.unwrap_or(d.part).into(), shape);
         }
         let key = |d: &Drawn| (deep[d.piece as usize % deep.len()], sorted[d.part as usize].unwrap_or(0.0));
         next.draws.sort_unstable_by(|a, b| {
