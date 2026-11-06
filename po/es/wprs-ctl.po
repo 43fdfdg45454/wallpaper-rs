@@ -3829,6 +3829,10 @@ msgid "Copy a file into a web, picture or video package folder"
 msgstr "Copiar un archivo a la carpeta de un paquete web, de imagen o de vídeo"
 
 #: apps/wprs-ctl/src/paging.rs
+msgid "File to copy into the package"
+msgstr "Archivo a copiar al paquete"
+
+#: apps/wprs-ctl/src/paging.rs
 msgid "Folder of the package to copy it into"
 msgstr "Carpeta del paquete a la que copiarlo"
 

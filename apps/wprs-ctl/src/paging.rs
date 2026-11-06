@@ -67,6 +67,7 @@ pub enum Page {
     },
     #[command(about = "Copy a file into a web, picture or video package folder")]
     AddFile {
+        #[arg(help = "File to copy into the package")]
         file: PathBuf,
         #[arg(long, value_name = "FOLDER", help = "Folder of the package to copy it into")]
         to: Option<String>,
