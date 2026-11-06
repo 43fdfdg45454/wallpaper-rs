@@ -83,8 +83,8 @@ else
   previewed() { "$BIN/probe" "$pv" 3 >/dev/null 2>&1; [ "$(ctl rgb strip -o preview:page-lights --json 2>/dev/null | from "r['colors']")" = "['#00ff00', '#00ff00']" ]; }
   wait_for 20 previewed || fail "a page preview showed no strip with the lights off and no grant"
   seen "$pv" "0, 255, 0"
+  if grep -q "page-lights" "$XDG_CONFIG_HOME/wallpaper-rs/config.toml"; then fail "a live preview reached the saved settings"; fi
   ctl release preview:page-lights
-  if grep -q "page-lights" "$XDG_CONFIG_HOME/wallpaper-rs/config.toml"; then fail "a released preview stayed in the settings"; fi
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"

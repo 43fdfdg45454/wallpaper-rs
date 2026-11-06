@@ -370,7 +370,8 @@ tools that exit right after the call.
 
 Removes one claim of the caller on `output`, or the held claim if the caller has none. When the
 last claim of a `preview:*` output goes, the settings applied to it (such as a wallpaper shown there
-with `Library1.Apply`) are forgotten too.
+with `Library1.Apply`) are forgotten too. Settings of `preview:*` outputs live only in memory while
+they are claimed: they never reach the saved configuration file.
 
 ### `SetOutputCovered(s output, b covered)`
 

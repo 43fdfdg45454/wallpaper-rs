@@ -29,7 +29,7 @@ impl Daemon {
                 tracing::warn!("kept a copy of the broken configuration");
                 tracing::debug!(backup = %backup.display(), "broken configuration copy");
             }
-            config.save(&st.config_path)?;
+            crate::drafts::save_config(&config, &st.config_path)?;
             (st.config, st.config_error) = (config, None);
             settings(&st.config)
         };
