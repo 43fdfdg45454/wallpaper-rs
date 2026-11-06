@@ -2011,7 +2011,9 @@ otra página no cierra un editor con cambios sin guardar.
   instante, la interpolación de cada uno y la línea de tiempo que la mueve; *Curva y base de la
   clave* arrastra en vivo las dos asas Bézier de la curva hasta la clave siguiente, un solo paso de
   deshacer por arrastre aunque se detenga a mitad, también en posiciones, colores y listas de
-  números, donde la altura del asa es la parte del camino entre las dos claves; y la lista de líneas de
+  números, donde la altura del asa es la parte del camino entre las dos claves (salvo entre dos claves
+  escritas como un solo número, como una escala `2`, que se curvan en unidades del valor, igual en la
+  vista previa que en el fondo); y la lista de líneas de
   tiempo para crearlas, renombrarlas, quitarlas y editarlas: *Editar la línea de tiempo y sus
   eventos…* abre su panel con la duración en segundos o en cuadros y cuadros por segundo, cómo se
   repite, el fundido del final con el principio, la velocidad (deslizador y campo), el retraso, si
