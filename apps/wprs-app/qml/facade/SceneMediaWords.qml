@@ -14,6 +14,20 @@ QtObject {
             "media:cover": App.tr("When a new cover arrives")
         })
 
+    function trigger(option) {
+        const text = String(option);
+        const at = text.indexOf(":");
+        const kind = text.slice(0, Math.max(0, at));
+        const name = at < 0 ? "" : text.slice(at + 1);
+        const said = {
+            "event": App.tr("At the event %1", name),
+            "click": App.tr("When %1 is clicked or tapped", name),
+            "enter": App.tr("When the pointer enters %1", name),
+            "leave": App.tr("When the pointer leaves %1", name)
+        };
+        return name !== "" && said[kind] !== undefined ? said[kind] : SceneWords.label(option);
+    }
+
     function clock(seconds) {
         const s = Math.max(0, Math.floor(seconds));
         const h = Math.floor(s / 3600);

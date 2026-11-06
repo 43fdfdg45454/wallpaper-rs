@@ -61,7 +61,9 @@ pub fn candidates(doc: &Value, reference: &str, pointer: &str) -> Option<Vec<Val
             let props = valued(true).map(|id| format!("prop:{id}"));
             let scene = pointer.starts_with("/scene/");
             let heard = wprs_scene::MEDIA_TRIGGERS.iter().filter(|_| scene).map(|t| format!("media:{t}"));
-            ["start".into(), "beat".into()].into_iter().chain(props).chain(heard).map(Value::String).collect()
+            let cued = if scene { crate::cued::offered(doc) } else { Vec::new() };
+            let first = ["start".into(), "beat".into()].into_iter().chain(props);
+            first.chain(cued).chain(heard).map(Value::String).collect()
         }
         "icon" => wprs_scene::ICONS.split_whitespace().map(Value::from).collect(),
         "option" => values(doc, &doc["manifest"]["properties"][own?]).into_iter().map(|(v, _)| v).collect(),
