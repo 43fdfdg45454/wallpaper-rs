@@ -448,8 +448,14 @@ a box with handles on two corners and a segment with handles on its ends, dashed
 particles inside, and a layer as its outline with its field of distances over it (computed from the
 picture of an image layer; other layers show only their outline). A force that keeps a distance
 draws a ring of that distance around its target, with a handle on the target and one on the ring;
-one that keeps particles between two points draws the line between them with a handle on each end,
-and an end or a target that names a control point moves that point. The inspector lists the
+one that keeps particles between two points draws the line between them with a handle on each end;
+an `attractor`, a `vortex`, an `orbit` and a `slow_near` (the `pulls` of the query: `index`, `kind`,
+`field`, `ref`, `at` and `rings` of `{key, value, px, at}`) draw a dashed ring for each reach they
+have (`radius`, `inner`, `outer` and the `ring` of a vortex) with a handle on its top, which sets
+it, and a handle on their center or target; and an end or a target that names a control point
+moves that point (the pointer has no handle). The steering section of the inspector adds any of
+these forces and lists them with the point they follow, their strength (the speed a `slow_near`
+keeps) and a slider for each reach. The inspector lists the
 colliders with a picker of the response (bounce, slide, stop, stick or kill) and the bounce and
 friction it uses, whether a circle or a box keeps particles inside, and a picker of the layers it may
 collide with; the kept distances with pickers of their targets among the control points and the
@@ -473,12 +479,6 @@ marks its neighbours. A picker of the quality level, Q0 to Q3, caps the quality 
 rest of its state; `wprs-ctl scene preview DIR --quality Q --restart` does the same, and `wprs-ctl scene particles DIR SYSTEM budget` prints the
 budget as JSON.
 
-### Lights
-
-The Add layer menu offers Light with its four types. Every light shows over the preview as a marker
-to drag, and the selected one draws its handles, in pixels of the canvas through its parents: a ring
-at its radius with a handle on it, a square above it whose distance sets the height `z` (half a pixel
-of the preview for each pixel of height), for spot lights a handle that turns it and the edges of the
 
 Each emitter of the inspector has its rate (a live slider through `settings` with the `emitter`; a
 rate that follows keyframes or a link shows it and offers *Fixed rate*, which replaces it) and an
@@ -492,6 +492,12 @@ A selected particles layer shows its `instance`: a slider for each number, a tin
 each to the value of the system, and *Draw everything as the system does* (`clear`); with a layer
 selected, the control points of the canvas are those of the layer (`particles` with `layer`
 answers them with `own`) and dragging one writes the `points` of its `instance`.
+### Lights
+
+The Add layer menu offers Light with its four types. Every light shows over the preview as a marker
+to drag, and the selected one draws its handles, in pixels of the canvas through its parents: a ring
+at its radius with a handle on it, a square above it whose distance sets the height `z` (half a pixel
+of the preview for each pixel of height), for spot lights a handle that turns it and the edges of the
 outer and inner cone with a handle on each, for tube lights a handle on each end that moves, turns and
 stretches it, and for directional lights an arrow with a handle that turns it. A check box draws the
 box a moving light redraws. These handles change the fields of the light with `set`, so a light whose

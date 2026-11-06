@@ -2166,7 +2166,10 @@ un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja
 direcciones que puede dar el ruido, las de algunas partículas que nacen ahora y una flecha con un asa
 que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
 de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
-un asa para la distancia. El inspector del sistema ofrece el tipo de cada
+un asa para la distancia. Atractores, vórtices, órbitas y frenadas cerca de un punto dibujan un
+anillo a trazos por cada alcance (radio, interior, exterior y el anillo del vórtice) con un asa que
+lo cambia, y un asa en su centro; la sección de distancias y bandadas los añade y muestra el punto
+que siguen, su fuerza y un deslizador por alcance. El inspector del sistema ofrece el tipo de cada
 emisor, a qué punto de control o al puntero siguen `around` y `between`, una lista de las capas desde
 las que puede emitir (nunca una que contenga el sistema) con el umbral, su color, su movimiento y
 cuándo se vuelve a leer, los puntos de control con su dial de ángulo, las reasignaciones de valores

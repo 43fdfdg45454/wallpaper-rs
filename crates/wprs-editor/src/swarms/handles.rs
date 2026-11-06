@@ -101,6 +101,7 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "steady_inputs": steady,
         "colliders": super::walls::colliders(dir, doc, s, &f, t),
         "keeps": super::steers::keeps(s, &f, &spots),
+        "pulls": super::pulls::pulls(s, &f, &spots),
         "boids": super::steers::boids(s, &f),
         "operators": super::steers::operators(s),
         "strands": super::steers::strands(doc, s, render),

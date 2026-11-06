@@ -121,6 +121,9 @@ QtObject {
             throw new Error("particles: the handles of the system do not show its shape, remap and points");
         tend();
         const steps = page.view.history.done.length;
+        Qt.createComponent("SceneSwarmPullCheck.qml").createObject(page, {
+            "page": page
+        }).exercise(check);
         Qt.createComponent("SceneEmitCheck.qml").createObject(page, {
             "page": page
         }).exercise(check);

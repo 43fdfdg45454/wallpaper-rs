@@ -123,6 +123,11 @@ Item {
         swarm: swarm
     }
 
+    SceneSwarmPulls {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
     SceneSwarmSwirl {
         anchors.fill: parent
         swarm: swarm
