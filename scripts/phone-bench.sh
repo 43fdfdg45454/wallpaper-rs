@@ -24,7 +24,16 @@ COOL=${WPRS_COOL:-36}
 TRIES=${WPRS_AWAKE_TRIES:-6}
 BIN=${CARGO_TARGET_DIR:-target}/aarch64-linux-android/release/examples/bench
 shell() { "$ADB" -s "$WPRS_ADB_SERIAL" shell "$@"; }
-send() { "$ADB" -s "$WPRS_ADB_SERIAL" exec-in "cat > '$2'" <"$1"; }
+send() {
+  local size n=0
+  size=$(wc -c <"$1")
+  "$ADB" -s "$WPRS_ADB_SERIAL" exec-in "cat > '$2'" <"$1"
+  until [ "$(shell stat -c %s "$2" | tr -d '\r')" = "$size" ]; do
+    n=$((n + 1))
+    [ "$n" -le 60 ] || { echo "$2 did not arrive whole" >&2; exit 1; }
+    sleep 1
+  done
+}
 tenths() { shell dumpsys battery | sed -n 's/^ *temperature: *\([0-9]*\).*/\1/p' | head -1; }
 degrees() { local t; t=$(tenths); printf '%d.%d' "$((t / 10))" "$((t % 10))"; }
 thermal() { shell dumpsys thermalservice | sed -n 's/^ *Thermal Status: *\([0-9]*\).*/\1/p' | head -1; }
