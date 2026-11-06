@@ -35,7 +35,30 @@ fn a_page_takes_the_quality_its_output_chose_and_shares_a_helper_only_with_the_s
     let general = page(true, json!({}));
     assert_eq!(level(power, &own), wprs_scene::Quality::Q0, "the quality of the output was ignored");
     assert_eq!(level(power, &general), power.steady());
-    assert_ne!(own.key(), general.key(), "outputs with their own quality shared one page");
-    assert_eq!(general.key(), page(false, json!({})).key());
+    let auto = wprs_core::QualityChoice::Auto;
+    assert_ne!(own.key(auto), general.key(auto), "outputs with their own quality shared one page");
+    let fixed = wprs_core::QualityChoice::Fixed(0);
+    assert_eq!(own.key(fixed), general.key(fixed), "the same level ran in two helpers");
+    assert_eq!(general.key(auto), page(false, json!({})).key(auto));
     assert!(own != general, "a change of quality did not reach the page");
+}
+
+#[test]
+fn a_page_whose_level_changes_keeps_its_helper_unless_it_splits() {
+    let spec = page(true, json!({}));
+    let (auto, fixed) = (wprs_core::QualityChoice::Auto, wprs_core::QualityChoice::Fixed(0));
+    let mut pages = std::collections::HashMap::new();
+    let mut first = PageSlot::new(spec.clone(), Instant::now());
+    first.next = 7;
+    pages.insert(spec.key(auto), first);
+    let mut wanted = keys::Wanted::new();
+    wanted.insert(spec.key(fixed), (spec.clone(), Vec::new()));
+    keys::rekey(&mut pages, &wanted);
+    assert_eq!(pages.get(&spec.key(fixed)).map(|s| s.next), Some(7), "a new level restarted the page");
+    wanted.insert(spec.key(auto), (spec.clone(), Vec::new()));
+    keys::rekey(&mut pages, &wanted);
+    assert_eq!(pages.len(), 1, "a split moved or dropped the running helper");
+    assert_eq!(pages.get(&spec.key(fixed)).map(|s| s.next), Some(7));
+    keys::rekey(&mut pages, &keys::Wanted::new());
+    assert!(pages.is_empty(), "a page nothing shows kept its helper");
 }

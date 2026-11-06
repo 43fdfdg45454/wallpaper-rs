@@ -55,11 +55,11 @@ pub struct PageSpec {
     pub quality: Option<wprs_core::QualityChoice>,
 }
 
-pub type PageKey = (PathBuf, Option<wprs_core::QualityChoice>);
+pub type PageKey = (PathBuf, wprs_core::QualityChoice);
 
 impl PageSpec {
-    pub fn key(&self) -> PageKey {
-        (self.pack.path.clone(), self.quality)
+    pub fn key(&self, general: wprs_core::QualityChoice) -> PageKey {
+        (self.pack.path.clone(), self.quality.unwrap_or(general))
     }
 }
 

@@ -1,7 +1,6 @@
 use super::state::State;
-use crate::pages::{PageKey, PageSpec};
+use crate::pages::PageSpec;
 use serde_json::{Map, Value as Json, json};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use wprs_web::{Folder, Settings, Start, ToWeb, token};
@@ -10,6 +9,7 @@ mod ending;
 mod feed;
 mod frames;
 mod heard;
+mod keys;
 #[cfg(test)]
 mod lit;
 mod slot;
@@ -18,18 +18,13 @@ pub(super) mod tests;
 mod view;
 
 pub(super) use ending::settle;
+use keys::Views;
+pub(super) use keys::level;
 pub(super) use slot::PageSlot;
 use view::ViewSlot;
 
 const SCAN: Duration = Duration::from_secs(5);
 const GRACE: Duration = Duration::from_secs(2);
-
-type Views = Vec<(String, (u32, u32), (bool, bool), u32, PageSpec)>;
-type Wanted = BTreeMap<PageKey, (PageSpec, Views)>;
-
-pub(super) fn level(power: super::power::Power, spec: &PageSpec) -> wprs_scene::Quality {
-    super::power::Power { choice: spec.quality.unwrap_or(power.choice), ..power }.steady()
-}
 
 pub(super) fn values(
     spec: &PageSpec,
@@ -75,18 +70,6 @@ pub(super) fn language(spec: &PageSpec) -> (String, &Json) {
 }
 
 impl State {
-    fn wanted(&self) -> Wanted {
-        let mut wanted = Wanted::new();
-        for (name, o) in &self.outputs {
-            let (visible, fps) = o.page_view(name, self.exporter.is_streaming(name), self.power);
-            for spec in o.layers().filter_map(|l| l.content.page()) {
-                let entry = wanted.entry(spec.key()).or_insert_with(|| (spec.clone(), Vec::new()));
-                entry.1.push((name.clone(), o.size, visible, fps, spec.clone()));
-            }
-        }
-        wanted
-    }
-
     fn start(&self, slot: &PageSlot) -> Start {
         let (spec, privacy) = (&slot.spec, slot.spec.privacy);
         let (properties, files) = values(spec, &slot.salt, level(self.power, spec));
@@ -136,7 +119,7 @@ impl State {
 
     pub(super) fn sync_pages(&mut self) {
         let (now, wanted) = (Instant::now(), self.wanted());
-        self.pages.retain(|key, _| wanted.contains_key(key));
+        keys::rekey(&mut self.pages, &wanted);
         for (path, (spec, views)) in wanted {
             let renew = self.pages.get(&path).is_none_or(|s| {
                 let old = (s.spec.privacy, &s.spec.pack.key, &s.spec.storage);

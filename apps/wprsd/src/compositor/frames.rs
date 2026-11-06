@@ -45,10 +45,10 @@ pub(super) fn painted(output: &Output, page: Option<Option<&super::pages::PageSl
 
 impl State {
     pub(super) fn start_fades(&mut self) {
-        let now = Instant::now();
+        let (now, general) = (Instant::now(), self.power.choice);
         for output in self.outputs.values_mut() {
             let slot = output.shown.content.video().and_then(|p| self.players.get(p));
-            let page = output.shown.content.page().map(|p| self.pages.get(&p.key()));
+            let page = output.shown.content.page().map(|p| self.pages.get(&p.key(general)));
             let ready =
                 slot.is_none_or(|s| s.texture.is_some() || s.error.is_some()) && painted(output, page);
             if let Some((_, start @ None)) = &mut output.fade

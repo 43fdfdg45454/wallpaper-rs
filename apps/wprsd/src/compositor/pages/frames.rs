@@ -75,8 +75,9 @@ impl State {
                 take(slot, renderer, message, fds, now);
             }
         }
+        let general = self.power.choice;
         for (name, output) in &mut self.outputs {
-            let Some(path) = output.shown.content.page().map(crate::pages::PageSpec::key) else { continue };
+            let Some(path) = output.shown.content.page().map(|p| p.key(general)) else { continue };
             let view = self.pages.get_mut(&path).and_then(|s| s.views.get_mut(name));
             let drawn = view.as_ref().map_or(0, |v| v.drawn);
             lock(&self.status).get_mut(name).into_iter().for_each(|s| s.page_frames = drawn);
