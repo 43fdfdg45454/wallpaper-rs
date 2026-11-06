@@ -133,8 +133,9 @@ impl Runtime {
         let canvas = self.scene.canvas.size.map(|v| v as f32);
         let (mut left, mut last): (usize, Option<(String, Option<String>)>) = (8, None);
         for t in self.pointing.touches.iter_mut().skip(from) {
-            let found =
-                self.scene.layer(&t.layer).and_then(crate::puppet::mesh).filter(|m| !m.rig.hit.is_empty());
+            let found = crate::copies::found(&self.scene, &self.spawned, &t.layer)
+                .and_then(crate::puppet::mesh)
+                .filter(|m| !m.rig.hit.is_empty());
             let Some((m, p)) = found.zip(self.puppets.iter().find(|p| p.layer == t.layer)) else { continue };
             t.bone = match (left, &last) {
                 (0, Some((layer, bone))) if *layer == t.layer => bone.clone(),

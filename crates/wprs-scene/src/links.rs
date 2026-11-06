@@ -7,7 +7,7 @@ impl Check<'_> {
     pub(crate) fn fed(&mut self, path: &str, def: &ParamDef, b: &Binding<Param>) {
         self.uses(true, "layer_textures");
         let id = b.layer.as_deref().unwrap_or_default();
-        let drawn = self.scene.layer(id).is_some_and(Layer::drawn);
+        let drawn = self.find(id).is_some_and(Layer::drawn);
         self.known(&format!("{path}/layer"), "layer", id, drawn);
         if !matches!(def.kind, ParamKind::Texture | ParamKind::Mask) {
             self.issues.push(Issue::Type(path.into()));

@@ -1981,10 +1981,16 @@ like the other layers (`script_layers`); a template id may not be the id of a la
 at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra,
 meshes and groups of them. Each copy of a `mesh` gets a puppet of its own, with the bones, clips,
 physics, IK and attachments of a mesh layer of the scene (scripts drive it by the id of the copy), at
-most 64 puppets in a scene, and the puppet goes with the copy. An `attach`, a `parent` or an IK target
-`layer:<id>` inside a template may name a layer of the same template, which each copy turns into its
-own `<copy>.<child>` (so a badge pinned to a bone follows the bone of its own copy), or a layer of
-the scene; the editor's *Make a template* copies
+most 64 puppets in a scene, and the puppet goes with the copy. An `attach`, a `parent`, an IK target
+`layer:<id>`, the `mask.layer` of a layer or of an effect, or an effect parameter fed by `{ "layer" }`
+inside a template may name a layer of the same template, which each copy turns into its own
+`<copy>.<child>` (so a badge pinned to a bone follows the bone of its own copy and a mask cuts its
+own copy), or a layer of the scene; pointer hits on the bones of a copied mesh name the bone of that
+copy; particle systems are scene-wide, so a particle source names a layer of the scene, never one
+inside a template; the editor's *Make a template* (`wprs-ctl scene duplicate-layer DIR ID --template`)
+copies the layer under a free name, `<id>_template` or the next `<id>_template_<n>`, and the layers bar
+of the editor shows one template alone on the canvas, as a copy of it draws, while its fields are
+edited in the inspector; it copies
 the selected layer into `templates`. `scene.spawn(template, options)` adds a
 copy on top of the layers (or at `options.at`, 0 being the bottom) with the id `options.id` (letters,
 digits, `_` and `-`, at most 64) or `<template>_<n>`, sets the fields `options` names and returns its

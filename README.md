@@ -2361,10 +2361,14 @@ interfaz completa; lo esencial:
   las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores. Una plantilla
   puede ser también una capa `mesh` (o un grupo con ellas): cada copia recibe su propio títere, con
   huesos, clips, física, IK y adjuntos como las mallas de la escena (64 títeres como mucho en total);
-  un `attach`, un `parent` o un objetivo `layer:<id>` de dentro de la plantilla que nombra otra capa
-  de ella apunta en cada copia a la capa de esa misma copia, y el botón
-  *Hacer plantilla* del editor copia la capa elegida a `templates` (`wprs-ctl scene set DIR
-  /scene/templates/<id> '<capa>'` hace lo mismo).
+  un `attach`, un `parent`, un objetivo `layer:<id>`, una máscara de capa (de la capa o de un
+  efecto) o un parámetro de efecto que toma una capa, de dentro de la plantilla y que nombra otra capa
+  de ella, apunta en cada copia a la capa de esa misma copia, los toques en los huesos de una malla
+  copiada nombran el hueso de esa copia, y el botón
+  *Hacer plantilla* del editor copia la capa elegida a `templates` con un nombre libre
+  (`<id>_template`, luego `<id>_template_2`…; `wprs-ctl scene duplicate-layer DIR ID --template`
+  hace lo mismo) y la barra de capas muestra una plantilla sola en el lienzo, como se dibuja una copia,
+  mientras el inspector la edita.
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del

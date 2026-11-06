@@ -19,6 +19,15 @@ fn renamed(layer: &mut Layer, id: &str, to: &HashMap<String, String>) {
     };
     layer.attach.iter_mut().for_each(|a| swap(&mut a.layer));
     layer.parent.iter_mut().for_each(swap);
+    layer.mask.iter_mut().filter_map(|m| m.layer.as_mut()).for_each(swap);
+    for e in &mut layer.effects {
+        e.mask.iter_mut().filter_map(|m| m.layer.as_mut()).for_each(swap);
+        let fed = e.params.values_mut().filter_map(|v| match v {
+            crate::Value::Bound(b) => b.layer.as_mut(),
+            crate::Value::Fixed(_) => None,
+        });
+        fed.for_each(swap);
+    }
     match &mut layer.kind {
         Kind::Group { layers, .. } => layers.iter_mut().for_each(|child| {
             let inner = format!("{id}.{}", child.id);
