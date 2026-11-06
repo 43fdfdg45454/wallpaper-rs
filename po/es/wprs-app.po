@@ -678,7 +678,7 @@ msgstr ""
 "un indicador de micrófono."
 
 #: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneBind.qml
-#: apps/wprs-app/qml/SceneControls.qml
+#: apps/wprs-app/qml/SceneControls.qml apps/wprs-app/qml/SceneSwarmEmission.qml
 msgid "Follow the pointer"
 msgstr "Seguir el puntero"
 
@@ -1002,8 +1002,8 @@ msgid "Grow near edges (px)"
 msgstr "Ensanchar los bordes cercanos (px)"
 
 #: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/SceneImportSheet.qml
-#: apps/wprs-app/qml/SceneMeta.qml apps/wprs-app/qml/SceneOffer.qml
-#: apps/wprs-app/qml/facade/Labels.qml
+#: apps/wprs-app/qml/SceneLayerFiles.qml apps/wprs-app/qml/SceneMeta.qml
+#: apps/wprs-app/qml/SceneOffer.qml apps/wprs-app/qml/facade/Labels.qml
 msgid "Pictures"
 msgstr "Imágenes"
 
@@ -1077,8 +1077,8 @@ msgstr "Luz suave"
 msgid "Color"
 msgstr "Color"
 
-#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneSwarmLook.qml
-#: apps/wprs-app/qml/facade/SceneTerms.qml
+#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneSwarmInstance.qml
+#: apps/wprs-app/qml/SceneSwarmLook.qml apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Opacity"
 msgstr "Opacidad"
 
@@ -1174,6 +1174,7 @@ msgid "Temperature (K)"
 msgstr "Temperatura (K)"
 
 #: apps/wprs-app/qml/EditLight.qml apps/wprs-app/qml/SceneMaterial3d.qml
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Tint"
@@ -1355,7 +1356,8 @@ msgstr "Quitar"
 #: apps/wprs-app/qml/SceneEffectMaskTune.qml
 #: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneNormals.qml
 #: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
-#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/facade/SceneNames.qml
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/SceneSwarmPull.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Strength"
 msgstr "Fuerza"
 
@@ -3783,6 +3785,7 @@ msgid "Channel"
 msgstr "Canal"
 
 #: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Brightness"
 msgstr "Brillo"
@@ -3828,7 +3831,7 @@ msgstr "Usar el original"
 msgid "Images"
 msgstr "Imágenes"
 
-#: apps/wprs-app/qml/SceneEntry.qml
+#: apps/wprs-app/qml/SceneEntry.qml apps/wprs-app/qml/SceneLayerFiles.qml
 msgid "Videos"
 msgstr "Vídeos"
 
@@ -4036,6 +4039,35 @@ msgstr "La imagen ahora"
 msgid "%1 on the card"
 msgstr "%1 en la tarjeta"
 
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Sounds"
+msgstr "Sonidos"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Binary glTF meshes"
+msgstr "Mallas glTF binarias"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Layer from a file"
+msgstr "Capa desde un archivo"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Picture…"
+msgstr "Imagen…"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Video…"
+msgstr "Vídeo…"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Sound…"
+msgstr "Sonido…"
+
+#: apps/wprs-app/qml/SceneLayerFiles.qml
+msgid "Mesh from a .glb file…"
+msgstr "Malla desde un archivo .glb…"
+
 #: apps/wprs-app/qml/SceneLayerLook.qml
 msgid "Blend mode:"
 msgstr "Modo de fusión:"
@@ -4088,16 +4120,8 @@ msgid "3D model from a file…"
 msgstr "Modelo 3D desde un archivo…"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
-msgid "Mesh from a .glb file…"
-msgstr "Malla desde un archivo .glb…"
-
-#: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Mesh from a picture…"
 msgstr "Malla desde una imagen…"
-
-#: apps/wprs-app/qml/SceneLayerTools.qml
-msgid "Binary glTF meshes"
-msgstr "Mallas glTF binarias"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Duplicate"
@@ -5803,6 +5827,10 @@ msgid "Where the paths put the camera at this time"
 msgstr "Dónde ponen los recorridos la cámara en este momento"
 
 #: apps/wprs-app/qml/SceneSwarm.qml
+msgid "Drag to move this control point for this layer only"
+msgstr "Arrastra para mover este punto de control solo para esta capa"
+
+#: apps/wprs-app/qml/SceneSwarm.qml
 msgid "This control point follows a value; moving it replaces the value"
 msgstr "Este punto de control sigue un valor; moverlo sustituye el valor"
 
@@ -5992,6 +6020,75 @@ msgstr "Distancia focal"
 msgid "Depth speed"
 msgstr "Velocidad en profundidad"
 
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "Rate follows keyframes or a link"
+msgstr "El ritmo sigue claves o un enlace"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "%1 a second"
+msgstr "%1 por segundo"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "Fixed rate"
+msgstr "Ritmo fijo"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "Bursts of"
+msgstr "Ráfagas de"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "on time"
+msgstr "con el tiempo"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "on the beat"
+msgstr "con el ritmo"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "on a click"
+msgstr "con un clic"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+#: apps/wprs-app/qml/facade/SceneWords.qml
+msgid "Only while sound plays"
+msgstr "Solo mientras suena algo"
+
+#: apps/wprs-app/qml/SceneSwarmEmission.qml
+msgid "Speed taken from the emitter %1"
+msgstr "Velocidad tomada del emisor %1"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Start after %1 s"
+msgstr "Empezar a los %1 s"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Stop after %1 s"
+msgstr "Parar a los %1 s"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Bursts of emission last about %1 s"
+msgstr "Los tramos de emisión duran unos %1 s"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Pauses last about %1 s"
+msgstr "Las pausas duran unos %1 s"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "A burst every %1 s"
+msgstr "Una ráfaga cada %1 s"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Stop after a while"
+msgstr "Parar al cabo de un rato"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "Emit in bursts and pauses"
+msgstr "Emitir en tramos y pausas"
+
+#: apps/wprs-app/qml/SceneSwarmEmitLane.qml
+msgid "%1 s shown"
+msgstr "Se muestran %1 s"
+
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml
 msgid "Emitter %1"
 msgstr "Emisor %1"
@@ -6021,6 +6118,7 @@ msgid "From a layer"
 msgstr "Desde una capa"
 
 #: apps/wprs-app/qml/SceneSwarmEmitter.qml apps/wprs-app/qml/SceneSwarmKeep.qml
+#: apps/wprs-app/qml/SceneSwarmPull.qml
 msgid "a point"
 msgstr "un punto"
 
@@ -6126,6 +6224,55 @@ msgstr "Valor"
 msgid "Pick the hue among steps"
 msgstr "Elegir el tono entre pasos"
 
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "This layer from its system"
+msgstr "Esta capa sobre su sistema"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Size, times"
+msgstr "Tamaño, veces"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Share of the particles"
+msgstr "Parte de las partículas"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Speed, times"
+msgstr "Velocidad, veces"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Life, times"
+msgstr "Vida, veces"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Pace of time, times"
+msgstr "Ritmo del tiempo, veces"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "%1 (locked by the system)"
+msgstr "%1 (bloqueado por el sistema)"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "As the system draws it"
+msgstr "Como lo dibuja el sistema"
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid ""
+"The control points on the canvas belong to this layer; drag them to move "
+"them here only."
+msgstr ""
+"Los puntos de control del lienzo son de esta capa; arrástralos para moverlos "
+"solo aquí."
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Drag a control point on the canvas to give this layer its own."
+msgstr ""
+"Arrastra un punto de control en el lienzo para darle a esta capa los suyos."
+
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+msgid "Draw everything as the system does"
+msgstr "Dibujar todo como el sistema"
+
 #: apps/wprs-app/qml/SceneSwarmKeep.qml
 msgid "Keep a distance from"
 msgstr "Mantener una distancia con"
@@ -6138,7 +6285,7 @@ msgstr "Mantener entre"
 msgid "Distance %1 px"
 msgstr "Distancia %1 px"
 
-#: apps/wprs-app/qml/SceneSwarmKeep.qml
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/SceneSwarmPull.qml
 msgid "Remove this force"
 msgstr "Quitar esta fuerza"
 
@@ -6264,6 +6411,22 @@ msgstr "Añadir un punto de control"
 msgid "Follows the pointer"
 msgstr "Sigue al puntero"
 
+#: apps/wprs-app/qml/SceneSwarmPull.qml
+msgid "Speed kept %1"
+msgstr "Velocidad conservada %1"
+
+#: apps/wprs-app/qml/SceneSwarmPull.qml
+msgid "%1: %2 px"
+msgstr "%1: %2 px"
+
+#: apps/wprs-app/qml/SceneSwarmPulls.qml
+msgid "Drag to move the center of the force"
+msgstr "Arrastra para mover el centro de la fuerza"
+
+#: apps/wprs-app/qml/SceneSwarmPulls.qml
+msgid "Drag to change how far the force reaches"
+msgstr "Arrastra para cambiar hasta dónde llega la fuerza"
+
 #: apps/wprs-app/qml/SceneSwarmRemap.qml
 msgid "Clamp the input"
 msgstr "Limitar la entrada"
@@ -6353,6 +6516,51 @@ msgstr "Extremo bajo fijado aquí"
 msgid "High end set here"
 msgstr "Extremo alto fijado aquí"
 
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "Drawing order and what layers may change"
+msgstr "Orden de dibujo y lo que pueden cambiar las capas"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "On top"
+msgstr "Encima"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "In no set order"
+msgstr "Sin orden fijo"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "The newest"
+msgstr "Las más nuevas"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "The oldest"
+msgstr "Las más viejas"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "The largest"
+msgstr "Las más grandes"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "The smallest"
+msgstr "Las más pequeñas"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "The lowest"
+msgstr "Las más bajas"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid "Times the frames repeat in a life, with frames over the life; 0 once"
+msgstr ""
+"Veces que se repiten los fotogramas en una vida, con fotogramas a lo largo "
+"de la vida; 0 una vez"
+
+#: apps/wprs-app/qml/SceneSwarmStack.qml
+msgid ""
+"Particle layers may change these values of the system; untick one to lock it:"
+msgstr ""
+"Las capas de partículas pueden cambiar estos valores del sistema; desmarca "
+"uno para bloquearlo:"
+
 #: apps/wprs-app/qml/SceneSwarmStart.qml
 msgid "Life in seconds"
 msgstr "Vida en segundos"
@@ -6368,8 +6576,8 @@ msgid "Starting ranges"
 msgstr "Rangos iniciales"
 
 #: apps/wprs-app/qml/SceneSwarmSteer.qml
-msgid "Distances and flocks"
-msgstr "Distancias y bandadas"
+msgid "Pulls, distances and flocks"
+msgstr "Atracciones, distancias y bandadas"
 
 #: apps/wprs-app/qml/SceneSwarmSteer.qml
 msgid "Keep a distance"
@@ -6378,6 +6586,22 @@ msgstr "Mantener una distancia"
 #: apps/wprs-app/qml/SceneSwarmSteer.qml
 msgid "Keep between two points"
 msgstr "Mantener entre dos puntos"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Pull towards a point"
+msgstr "Atraer hacia un punto"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Swirl around a point"
+msgstr "Arremolinar alrededor de un punto"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Circle around a point"
+msgstr "Girar alrededor de un punto"
+
+#: apps/wprs-app/qml/SceneSwarmSteer.qml
+msgid "Slow down near a point"
+msgstr "Frenar cerca de un punto"
 
 #: apps/wprs-app/qml/SceneSwarmSteer.qml
 msgid "Add a force"
@@ -6488,6 +6712,10 @@ msgstr "Arrastra para abrir o cerrar cuánto las gira el ruido"
 #: apps/wprs-app/qml/SceneSwarmSwirl.qml
 msgid "Drag to change how far births move"
 msgstr "Arrastra para cambiar cuánto se mueven los nacimientos"
+
+#: apps/wprs-app/qml/SceneSwarmSystems.qml
+msgid "These scripts name %1 and are not rewritten: %2"
+msgstr "Estos scripts nombran %1 y no se reescriben: %2"
 
 #: apps/wprs-app/qml/SceneSwarmSystems.qml
 msgid "Particle systems of the scene"
@@ -9262,10 +9490,6 @@ msgid "Sound"
 msgstr "Sonido"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Sounds"
-msgstr "Sonidos"
-
-#: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Light source"
 msgstr "Fuente de luz"
 
@@ -10328,10 +10552,6 @@ msgstr "Atractor"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Sound band"
 msgstr "Banda de sonido"
-
-#: apps/wprs-app/qml/facade/SceneWords.qml
-msgid "Only while sound plays"
-msgstr "Solo mientras suena algo"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Play at start"

@@ -2227,7 +2227,7 @@ y velocidad radial), `force gravity|drag|turbulence|oscillate|attractor|remove`,
 add|set|remove`, `size-over-life`, `color-over-life` y `render` (estiramiento, cuadros del atlas al
 azar, por tiempo o por vida, ritmo del atlas y brillo por encima del blanco).
 
-El menú *Añadir capa* ofrece *Luz* con sus cuatro tipos, cada uno con valores de partida
+El menú *Añadir capa* ofrece *Capa desde un archivo* (imagen, vídeo, sonido o malla `.glb`: elige el archivo, lo importa como recurso y añade la capa en un solo paso, como `wprs-ctl scene add-layer CARPETA TIPO --file ARCHIVO`), *Luz* con sus cuatro tipos, cada uno con valores de partida
 razonables. Las luces se ven sobre la vista previa como marcadores que se arrastran y la elegida
 muestra sus asas: el anillo del radio, la altura, el giro, los bordes del cono de un foco, los dos
 extremos de un tubo y la flecha de una luz direccional, y a petición la caja que redibuja al

@@ -95,6 +95,9 @@ QtObject {
         for (let k = 0; k < 6; k++)
             page.run("undo");
         dragged();
+        Qt.createComponent("SceneFilesCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
         Qt.createComponent("SceneMaskCheck.qml").createObject(page, {
             "page": page
         }).exercise();

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick.Controls as QQC2
 import io.github.wallpaper_rs.app
 
@@ -61,10 +60,8 @@ Flow {
                 onTriggered: importer.open()
             }
 
-            QQC2.MenuItem {
-                text: App.tr("Mesh from a .glb file…")
-                icon.name: "draw-polyline"
-                onTriggered: glb.open()
+            SceneLayerFiles {
+                owner: tools.owner
             }
 
             QQC2.MenuItem {
@@ -73,18 +70,6 @@ Flow {
                 enabled: (tools.owner.page.view.assets ?? []).some(asset => asset.kind === "image")
                 onTriggered: cutter.open()
             }
-        }
-
-        FileDialog {
-            id: glb
-
-            fileMode: FileDialog.OpenFile
-            nameFilters: [App.tr("Binary glTF meshes") + " (*.glb)"]
-            onAccepted: tools.owner.page.run("add_layer", {
-                "kind": "mesh",
-                "file": App.path(selectedFile),
-                "into": tools.owner.current?.type === "group" ? tools.owner.current.id : undefined
-            })
         }
 
         SceneMeshCut {
