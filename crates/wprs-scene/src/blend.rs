@@ -90,6 +90,10 @@ impl Blend {
         matches!(self, Blend::Normal | Blend::Add)
     }
 
+    pub fn lights(self) -> bool {
+        matches!(self, Blend::Add | Blend::DiffuseLight)
+    }
+
     pub fn faded(self) -> bool {
         !matches!(self, Blend::DarkerColor | Blend::LighterColor)
     }

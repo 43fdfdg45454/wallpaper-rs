@@ -420,7 +420,8 @@ B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2, 
 and `diffuse_light` B + B × S, the layer as a light falling on the backdrop. `hue`, `saturation`,
 `color` and `luminosity` swap the hue, saturation or lightness of B in HSL. Results are not clipped
 at 1 while mixing, so `add` and `diffuse_light` keep light above white for later layers and for
-`canvas.hdr`; only the final picture is clipped. `darker_color` and `lighter_color` ignore the
+`canvas.hdr` (a scene blending in linear space draws in 16 bits only when one of its layers uses
+them or `canvas.hdr` is on, and in 8-bit sRGB otherwise); only the final picture is clipped. `darker_color` and `lighter_color` ignore the
 layer `opacity`.
 
 | Layer field | Meaning | Feature |

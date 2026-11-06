@@ -92,7 +92,8 @@ impl Renderer {
         let flags = wgpu::TextureFormatFeatureFlags::FILTERABLE | wgpu::TextureFormatFeatureFlags::BLENDABLE;
         let usable = half.allowed_usages.contains(Usage::RENDER_ATTACHMENT) && half.flags.contains(flags);
         let usable = usable && !self.eight.load(std::sync::atomic::Ordering::Relaxed);
-        let deep = scene.canvas.hdr && usable;
+        let lights = !srgb && scene.layers().any(|l| l.blend.lights());
+        let deep = (scene.canvas.hdr || lights) && usable;
         let format = match (srgb, usable) {
             (true, _) if deep => Format::Rgba16Float,
             (true, _) => Format::Rgba8Unorm,
