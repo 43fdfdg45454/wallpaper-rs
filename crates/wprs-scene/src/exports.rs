@@ -29,9 +29,9 @@ pub use crate::drafted::{DEBUG_VIEWS, Drafted};
 pub use crate::drawn::TRIANGLE_UNIT;
 pub use crate::easing::Ease;
 pub use crate::effects::{
-    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, GENERIC_PICTURES, MaskMode, NOISE_WGSL, Output,
-    PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
-    State, Texel, Tune, Use, Variant, builtin, descriptor, register,
+    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, FX_SLOTS, Fuse, GENERIC_PICTURES, MASK_SLOTS, MaskMode,
+    NOISE_WGSL, Output, PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget,
+    SLOTS, Solve, Stage, State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
 pub use crate::eval::lamps::{Lamp, Picture, SHADOW_BIAS};
 pub use crate::eval::{

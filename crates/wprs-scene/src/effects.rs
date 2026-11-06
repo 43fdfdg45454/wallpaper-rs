@@ -26,6 +26,8 @@ pub const PRELUDE: &str = concat!(
     include_str!("blend.wgsl")
 );
 pub const SLOTS: usize = 16;
+pub const FX_SLOTS: usize = 48;
+pub const MASK_SLOTS: usize = 2;
 pub const GENERIC_PICTURES: [&str; 4] = ["white", "black", "normal_flat", "noise"];
 const FILES: &[(&str, &str, &str)] = &include!(concat!(env!("OUT_DIR"), "/effects.rs"));
 

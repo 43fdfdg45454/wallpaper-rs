@@ -5,6 +5,7 @@ use wprs_scene::*;
 
 mod checks;
 mod costs;
+mod fusion;
 mod inputs;
 mod locality;
 

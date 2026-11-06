@@ -4,7 +4,7 @@ use super::item::{Fx, Rect};
 use super::paint::Painter;
 use super::pipes::Shader;
 use super::region::Region;
-use wprs_scene::{Affine, CHAIN_ENTRY, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
+use wprs_scene::{Affine, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
 
 pub(crate) const EMPTY: [Src; 7] =
     [Src::Clear, Src::White, Src::Clear, Src::Clear, Src::Clear, Src::Clear, Src::Void];
@@ -52,21 +52,6 @@ impl Painter<'_, '_, '_> {
             (current, k) = (next, k + n);
         }
         current
-    }
-
-    pub(crate) fn chain(&mut self, list: &[EffectDraw<'_>], input: Src, rect: Rect, layer_uv: Affine) -> Src {
-        let key =
-            self.r.pipes().chain(&self.r.device, list.iter().map(|e| e.descriptor), Some(&mut *self.lease));
-        let (mut fx, _) = self.base(&list[0], layer_uv);
-        let mut base = 0;
-        for e in list {
-            let n = e.descriptor.params.len();
-            fx.slots[base..base + n].copy_from_slice(&e.slots[..n]);
-            base += n;
-        }
-        let mut tex = EMPTY;
-        tex[0] = input;
-        self.pass(Shader::Fx(key, CHAIN_ENTRY), rect, None, 1.0, tex, fx)
     }
 
     pub(crate) fn effect(

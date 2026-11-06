@@ -6,7 +6,7 @@ use wgpu::{BindGroupLayout, BlendComponent as C, BlendFactor as F, BlendOperatio
 use wgpu::{ShaderModule, TextureViewDimension as Dim};
 use wprs_scene::{BLEND_WGSL, FRAME_WGSL};
 
-pub(crate) const STRIDE: u64 = 512;
+pub(crate) const STRIDE: u64 = 1024;
 
 thread_local! {
     static COMPILED: Cell<u32> = const { Cell::new(0) };

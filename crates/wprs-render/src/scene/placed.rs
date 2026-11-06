@@ -75,8 +75,10 @@ impl Painter<'_, '_, '_> {
         let mask = mask.map_or(Src::White, |image| self.ext(image));
         let (mut mask_m0, mask_m1) = rows(layer_uv);
         mask_m0[3] = 1.0 - e.mask_strength;
+        let mut slots = [[0.0; 4]; wprs_scene::FX_SLOTS];
+        slots[..e.slots.len()].copy_from_slice(&e.slots);
         let fx = Fx {
-            slots: e.slots,
+            slots,
             texel: [0.0; 4],
             channel: e.mask.map_or([0.0, 0.0, 0.0, 1.0], |m| channel(m.channel, m.texture.is_some())),
             mask_m0,

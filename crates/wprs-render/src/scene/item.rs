@@ -42,7 +42,7 @@ pub(crate) struct Item {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 pub(crate) struct Fx {
-    pub(crate) slots: [[f32; 4]; 24],
+    pub(crate) slots: [[f32; 4]; wprs_scene::FX_SLOTS],
     pub(crate) texel: [f32; 4],
     pub(crate) channel: [f32; 4],
     pub(crate) mask_m0: [f32; 4],

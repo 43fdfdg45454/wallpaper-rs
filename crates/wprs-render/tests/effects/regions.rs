@@ -71,3 +71,38 @@ fn masked_effects_that_sample_far_from_their_pixel_keep_the_whole_picture_to_rea
         assert!(most <= 2, "{effect} differs by {most}: {:?} against {:?}", narrow.at(10, 8), whole.at(10, 8));
     }
 }
+
+
+#[test]
+fn masked_effects_that_read_only_their_own_pixel_still_run_in_place() {
+    let shafts = json!({ "effect": "light_shafts", "params": { "intensity": 2 } });
+    let (Some(narrow), Some(whole)) = (after_waves(shafts.clone(), 1.0), after_waves(shafts, 0.9999)) else {
+        return;
+    };
+    assert!(narrow.diff(&whole) < 0.5, "{}", narrow.diff(&whole));
+}
+
+#[test]
+fn waves_on_two_masks_share_one_pass_and_keep_each_mask() {
+    let feathered = |mask: &str| {
+        let mut w = waves(mask, 1.0);
+        w["mask"]["feather"] = json!(1);
+        w
+    };
+    let run = |list: Value| {
+        let fx = Fx::chain(list).input(ramp()).image("left", corner(4, 20), true);
+        let mut run = fx.image("right", corner(40, 60), true).run()?;
+        Some((run.shot(), run.stats().passes))
+    };
+    let fused = json!([waves("left", 1.0), waves("right", 1.0), waves("left", 1.0), waves("right", 1.0)]);
+    let apart = json!([feathered("left"), feathered("right"), feathered("left"), feathered("right")]);
+    let (Some((a, one)), Some((b, more)), Some((_, single))) =
+        (run(fused), run(apart), run(json!([waves("left", 1.0)])))
+    else {
+        return;
+    };
+    assert!(one == single && one < more && a.diff(&b) < 1.0, "{one} {single} {more} {}", a.diff(&b));
+    let Some(plain) = Fx::chain(json!([])).input(ramp()).shot() else { return };
+    let moved = |x: u32, y: u32| a.at(x, y) != plain.at(x, y);
+    assert!(moved(10, 8) && moved(50, 8) && !moved(30, 8) && !moved(10, 24));
+}
