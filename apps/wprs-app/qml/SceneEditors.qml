@@ -28,7 +28,7 @@ Item {
 
             readonly property bool named: input.field.options.includes(input.value)
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 visible: Array.isArray(input.field.range) && !amount.named
                 from: (input.field.range ?? [0, 1])[0]

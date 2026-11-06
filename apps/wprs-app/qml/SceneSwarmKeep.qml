@@ -41,7 +41,7 @@ GridLayout {
         text: App.tr("Distance %1 px", Math.round(row.keep.distance ?? 0))
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: row.ring
         from: 0
@@ -54,7 +54,7 @@ GridLayout {
         text: App.tr("Strength")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         from: -50
         to: 50

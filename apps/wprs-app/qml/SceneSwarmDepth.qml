@@ -30,7 +30,7 @@ GridLayout {
         text: App.tr("Focal length")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: !!deep.focal
         from: 50

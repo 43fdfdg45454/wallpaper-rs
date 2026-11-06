@@ -44,7 +44,7 @@ ColumnLayout {
             text: App.tr("Soft edge")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: Math.max(200, feather.value)
@@ -75,7 +75,7 @@ ColumnLayout {
             text: App.tr("Strength")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 1

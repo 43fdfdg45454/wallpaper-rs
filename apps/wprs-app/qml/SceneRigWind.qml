@@ -76,7 +76,7 @@ ColumnLayout {
             text: App.tr("Angle")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: angle
 
             Layout.fillWidth: true
@@ -96,7 +96,7 @@ ColumnLayout {
             text: App.tr("Strength")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: strength
 
             Layout.fillWidth: true
@@ -116,7 +116,7 @@ ColumnLayout {
             text: App.tr("Gusts")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: gusts
 
             Layout.fillWidth: true

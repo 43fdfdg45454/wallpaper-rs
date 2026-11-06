@@ -32,13 +32,12 @@ ColumnLayout {
             text: emission.driven ? App.tr("Rate follows keyframes or a link") : App.tr("%1 a second", Math.round((emission.emitter.rate ?? 0) * 10) / 10)
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             enabled: !emission.driven
             from: 0
             to: Math.max(500, typeof emission.emitter.rate === "number" ? emission.emitter.rate : 0)
             value: typeof emission.emitter.rate === "number" ? emission.emitter.rate : 0
-            onPressedChanged: emission.tools.page.editor.hold(pressed)
             onMoved: emission.rate(Math.round(value * 10) / 10, false, true)
         }
 
@@ -118,12 +117,11 @@ ColumnLayout {
             text: App.tr("Speed taken from the emitter %1", Math.round((emission.emitter.inherit ?? 0) * 100) / 100)
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 1
             value: emission.emitter.inherit ?? 0
-            onPressedChanged: emission.tools.page.editor.hold(pressed)
             onMoved: emission.put({
                     "inherit": Math.round(value * 100) / 100
                 }, true)

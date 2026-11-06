@@ -73,7 +73,7 @@ ColumnLayout {
             text: App.tr("Strength")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: strength
 
             Layout.fillWidth: true
@@ -85,7 +85,7 @@ ColumnLayout {
             text: App.tr("Brush size")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: size
 
             Layout.fillWidth: true
@@ -99,7 +99,7 @@ ColumnLayout {
             text: App.tr("Soft edge")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: soft
 
             Layout.fillWidth: true

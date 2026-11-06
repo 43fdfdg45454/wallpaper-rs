@@ -63,7 +63,7 @@ ColumnLayout {
             text: App.tr("Depth")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 10

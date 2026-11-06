@@ -54,7 +54,7 @@ ColumnLayout {
                 elide: Text.ElideRight
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: -1
                 to: 1

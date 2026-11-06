@@ -54,4 +54,15 @@ fn a_held_gesture_stays_one_step_however_long_it_pauses() {
     std::thread::sleep(Duration::from_millis(MERGE_MS + 100));
     drag(&mut project, background("#505050"));
     assert_eq!(project.history.done.len(), steps + 4, "a typed change did not close the held gesture");
+    project.hold(false);
+    let steps = project.history.done.len();
+    project.hold(true);
+    drag(&mut project, background("#606060"));
+    project.hold(false);
+    project.hold(true);
+    project.hold(true);
+    drag(&mut project, background("#707070"));
+    drag(&mut project, background("#808080"));
+    project.hold(false);
+    assert_eq!(project.history.done.len(), steps + 2, "two presses of the same handle made one step");
 }

@@ -1994,7 +1994,7 @@ otra página no cierra un editor con cambios sin guardar.
   origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace. Encima de los campos,
   una capa ofrece su modo de fusión, el lienzo interruptores y deslizadores para el brillo y el
   paralaje (cambian la escena en vivo al arrastrarlos y cada arrastre es un solo paso de
-  deshacer), y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
+  deshacer, aunque se detenga a mitad; así con todos los deslizadores del editor), y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
   hoja de sprites o un mapa de datos…* del panel de recursos corta una imagen en filas y columnas
   o la lee como datos. En la terminal hacen lo mismo `wprs-ctl scene effects CARPETA CAPA
   add|set|remove|move|mask`, `scene layer CARPETA CAPA transform|blend|instance`, `scene manifest

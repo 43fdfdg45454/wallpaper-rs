@@ -54,7 +54,7 @@ GridLayout {
         text: App.tr("Opacity")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: look.cut !== null
         from: 0

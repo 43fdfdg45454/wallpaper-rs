@@ -28,7 +28,7 @@ GridLayout {
     Repeater {
         model: sliders.rows
 
-        delegate: QQC2.Slider {
+        delegate: SceneSlider {
             required property var modelData
             required property int index
 

@@ -45,7 +45,7 @@ GridLayout {
         text: App.tr("Brush size")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         id: size
 
         Layout.fillWidth: true
@@ -61,7 +61,7 @@ GridLayout {
         text: App.tr("Hardness")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         id: hard
 
         Layout.fillWidth: true
@@ -75,7 +75,7 @@ GridLayout {
         text: App.tr("Gray")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         id: gray
 
         Layout.fillWidth: true

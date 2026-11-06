@@ -114,7 +114,8 @@ Kirigami.Dialog {
         RowLayout {
             Kirigami.FormData.label: App.tr("Speed:")
 
-            QQC2.Slider {
+            SceneSlider {
+                editor: panel.page.editor
                 from: -4
                 to: 4
                 stepSize: 0.05

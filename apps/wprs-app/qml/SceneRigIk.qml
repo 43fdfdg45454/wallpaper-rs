@@ -95,7 +95,7 @@ ColumnLayout {
                     text: App.tr("Weight")
                 }
 
-                QQC2.Slider {
+                SceneSlider {
                     Layout.fillWidth: true
                     value: chain.modelData.weight ?? 1
                     onMoved: reach.run(chain.index, {

@@ -110,7 +110,7 @@ ColumnLayout {
                         text: SceneWords.label(modelData[0], "")
                     }
 
-                    QQC2.Slider {
+                    SceneSlider {
                         Layout.fillWidth: true
                         from: modelData[1]
                         to: modelData[2]

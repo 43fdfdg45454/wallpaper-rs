@@ -59,7 +59,7 @@ ColumnLayout {
             text: App.tr("Before and after")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 1

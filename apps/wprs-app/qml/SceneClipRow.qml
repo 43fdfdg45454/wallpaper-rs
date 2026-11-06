@@ -30,7 +30,7 @@ RowLayout {
         font.bold: row.modelData.kind === "bone" && row.modelData.name === row.line.mesh.bone
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 5
         visible: row.modelData.kind === "shape"
         from: -1

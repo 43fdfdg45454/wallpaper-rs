@@ -31,7 +31,7 @@ GridLayout {
         text: row.pull.kind === "slow_near" ? App.tr("Speed kept %1", Math.round((row.pull.factor ?? 0) * 100) / 100) : App.tr("Strength")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         readonly property bool kept: row.pull.kind === "slow_near"
 
@@ -58,7 +58,7 @@ GridLayout {
                 text: App.tr("%1: %2 px", SceneWords.label(modelData.key), Math.round(modelData.value))
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: 0
                 to: Math.max(1000, modelData.value)

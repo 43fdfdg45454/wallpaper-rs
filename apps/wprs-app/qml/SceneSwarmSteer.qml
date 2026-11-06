@@ -122,7 +122,7 @@ ColumnLayout {
                 text: modelData[1]
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: modelData[2]
                 to: modelData[3]

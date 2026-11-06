@@ -103,7 +103,7 @@ ColumnLayout {
             }
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0.1
             to: 8

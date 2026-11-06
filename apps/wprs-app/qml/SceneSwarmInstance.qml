@@ -44,13 +44,12 @@ ColumnLayout {
                 opacity: parent.own ? 1 : 0.6
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 enabled: !parent.fixed
                 from: 0
                 to: Math.max(modelData[2], instance.values[modelData[0]] ?? 0)
                 value: instance.values[modelData[0]] ?? modelData[3]
-                onPressedChanged: instance.page.editor.hold(pressed)
                 onMoved: instance.put({
                         [modelData[0]]: Math.round(value * 100) / 100
                     }, false, true)
