@@ -57,7 +57,13 @@ cool() {
 }
 case $1 in
   build)
-    cargo ndk -t arm64-v8a -P 31 build -p wprs-android --release --locked --example bench
+    home=$HOME src=$PWD
+    cargo_home=${CARGO_HOME:-$home/.cargo} rustup_home=${RUSTUP_HOME:-$home/.rustup}
+    flags=$(printf -- '--remap-path-prefix=%s=/cargo\x1f--remap-path-prefix=%s=/rustup\x1f--remap-path-prefix=%s=/build\x1f--remap-path-prefix=%s=/src' \
+      "$cargo_home" "$rustup_home" "$home" "$src")
+    CARGO_ENCODED_RUSTFLAGS=$flags \
+      CFLAGS="-ffile-prefix-map=$cargo_home=/cargo -ffile-prefix-map=$rustup_home=/rustup -ffile-prefix-map=$home=/build -ffile-prefix-map=$src=/src" \
+      cargo ndk -t arm64-v8a -P 31 build -p wprs-android --release --locked --example bench
     ;;
   copy)
     shift
