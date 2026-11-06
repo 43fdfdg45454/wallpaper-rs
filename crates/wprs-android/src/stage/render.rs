@@ -1,11 +1,11 @@
-use super::report::{self, Cost, wall};
+use super::report::{self, wall};
 use super::{RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
 use std::sync::atomic::Ordering::Relaxed;
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
-use wprs_scene::{Budget, Content, FlashGuard, PHONE_SHARE, Quality, Tier, Wake, Why};
+use wprs_scene::{Budget, Content, FlashGuard, Quality, Tier, Wake};
 
 const LISTEN_MS: i64 = 250;
 const QUIET_MS: i64 = 2_000;
@@ -27,7 +27,7 @@ impl Stage {
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
         self.runtime.set_magnify(self.runtime.scene.magnify(size));
-        self.heavy = budget.still(&self.runtime);
+        self.heavy = budget.choice.is_auto() && (budget.crowded(&self.runtime) || self.pilot.stalled());
         let turned = std::mem::replace(&mut self.posed, self.heavy) != self.heavy;
         if turned && self.heavy {
             self.runtime.seek(f64::from(self.runtime.scene.clock.poster_time));
@@ -81,22 +81,7 @@ impl Stage {
         let calmed = stilled && self.runtime.set_reduced_motion(asked);
         let tipped = self.runtime.set_tilt(crate::tilt::goal(self.offset, std::time::Instant::now()));
         self.runtime.set_wall(wall());
-        let cooled = |(q, why): (Quality, Why)| {
-            if power.ceiling() < q { (power.ceiling(), Why::Heat) } else { (q, why) }
-        };
-        let auto = cooled(budget.auto(&self.runtime));
-        let ceiling = budget.choose(cooled(budget.reach()));
-        self.governor.hold(budget.floor());
-        self.governor.begin(ceiling.0, budget.choose(auto).0);
-        let (quality, why) = self.governor.level(ceiling);
-        if let Some(slot) = self.reports {
-            let (costs, heavy) = (
-                [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q)),
-                budget.heavy(&self.runtime),
-            );
-            let level = 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32;
-            report::keep(slot, Cost { budget, auto: auto.0, quality, costs, heavy }, level);
-        }
+        let ((quality, why), ceiling) = self.steer(budget, power, tier);
         let fps = if still { 0 } else { budget.timed_fps(&self.runtime, 0) };
         let retried = RETRIES.load(Relaxed);
         if std::mem::replace(&mut self.retried, retried) != retried {
@@ -169,11 +154,10 @@ impl Stage {
         self.spare = frame.spare();
         let (samples, gpu_ms) = view.gpu_time();
         if std::mem::replace(&mut self.samples, samples) != samples && !still {
-            let runtime = &self.runtime;
-            let budget_ms =
-                |q| (1000.0 / budget.timed_fps(runtime, 0).max(1) as f32 * PHONE_SHARE, runtime.cost(q));
-            let raises = !power.saver && power.ceiling() == Quality::Q3;
-            self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
+            let (raises, period) =
+                (!power.saver && power.ceiling() == Quality::Q3, 1000.0 / fps.max(1) as f32);
+            let at = std::time::Instant::now();
+            self.pilot.feed(at, gpu_ms as f32, period, (ceiling, raises, budget.choice.is_auto()));
         }
         if let Some(slot) = self.reports {
             report::mark(slot, 0, view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }));

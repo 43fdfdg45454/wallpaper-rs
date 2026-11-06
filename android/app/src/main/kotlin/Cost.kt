@@ -16,6 +16,25 @@ fun costWords(auto: String, over: Boolean): Int? = when {
     else -> null
 }
 
+fun stepWords(step: String): Int? = when (step) {
+    "model" -> R.string.step_model
+    "steady" -> R.string.step_steady
+    "climbed" -> R.string.step_climbed
+    "dropped" -> R.string.step_dropped
+    "top" -> R.string.step_top
+    "held" -> R.string.step_held
+    "still" -> R.string.step_still
+    else -> null
+}
+
+@Composable
+fun frameNote(report: JSONObject): String? {
+    val step = stringResource(stepWords(report.optString("step")) ?: return null)
+    if (report.isNull("frame_ms")) return stringResource(R.string.frame_unmeasured, step)
+    val ms = { key: String -> "%.1f".format(report.optDouble(key)) }
+    return stringResource(R.string.frame_measured, ms("frame_ms"), ms("period_ms"), step)
+}
+
 @Composable
 fun costNote(report: JSONObject): String? {
     val left = report.optJSONArray("left_out")?.length() ?: 0

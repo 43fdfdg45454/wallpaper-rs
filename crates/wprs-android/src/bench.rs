@@ -3,7 +3,7 @@ use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::Arc;
 use wprs_render::{Bench, Ceiling, Level, Renderer, Stamping};
-use wprs_scene::{Leveling, PHONE_SHARE, Quality, Runtime};
+use wprs_scene::{Leveling, Quality, Runtime};
 
 pub(crate) fn run(path: &Path, args: &[String]) -> Result<Value, String> {
     let bench = parse(args)?;
@@ -82,7 +82,7 @@ fn parse(args: &[String]) -> Result<Bench, String> {
             "--size" => bench.size = size(value()?)?,
             "--level" => {
                 bench.level = match value()?.as_str() {
-                    "auto" => Level::Timed(PHONE_SHARE),
+                    "auto" => Level::Auto,
                     "fitted" => Level::Fitted,
                     q => {
                         Level::Fixed(serde_json::from_value::<Quality>(json!(q)).map_err(|e| e.to_string())?)

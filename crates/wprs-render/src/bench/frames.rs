@@ -2,7 +2,7 @@ use super::{Bench, Level, WARMUP, save_frame, spread};
 use crate::{RenderError, Renderer, SceneAssets, SceneView};
 use serde_json::{Value, json};
 use std::time::{Duration, Instant};
-use wprs_scene::{Budget, Governor, Quality, Runtime, Spare, Tier, Wake, Why};
+use wprs_scene::{Budget, Pilot, Quality, Runtime, Spare, Tier, Wake, Why};
 
 pub(super) struct Run<'a> {
     pub(super) r: &'a Renderer,
@@ -18,7 +18,7 @@ pub(super) struct Run<'a> {
     others: Vec<SceneView>,
     spare: Spare,
     wake: Wake,
-    governor: Option<(Governor, Quality)>,
+    pub(super) pilot: Option<(Pilot, Quality)>,
     samples: u64,
 }
 
@@ -36,13 +36,13 @@ impl<'a> Run<'a> {
         bench: &'a Bench,
         (tier, quality): (Tier, Quality),
     ) -> Result<Run<'a>, RenderError> {
-        let governor = matches!(bench.level, Level::Timed(_)).then(|| {
-            let budget = Budget::new(tier, true, bench.fps.max(1));
-            let (ceiling, mut governor) = (budget.reach().0, Governor::timed());
-            governor.begin(ceiling, budget.auto(&runtime).0);
-            (governor, ceiling)
+        let pilot = (bench.level == Level::Auto).then(|| {
+            let (budget, mut pilot) = (Budget::new(tier, true, bench.fps.max(1)), Pilot::default());
+            pilot.start(Quality::Q0, budget.auto(&runtime).0);
+            (pilot, budget.reach().0)
         });
-        let quality = governor.as_ref().map_or(quality, |(g, ceiling)| g.level((*ceiling, Why::Full)).0);
+        let quality =
+            pilot.as_ref().map_or(quality, |(p, ceiling)| p.level((*ceiling, Why::Full), Why::Cost).0);
         runtime.set_quality(quality);
         let start = Instant::now();
         let mut others = Vec::new();
@@ -52,7 +52,7 @@ impl<'a> Run<'a> {
         let view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
         let inner = view.inner(r, bench.size, quality);
         let load_ms = start.elapsed().as_secs_f64() * 1e3;
-        let assets = governor.is_some().then_some(assets);
+        let assets = pilot.is_some().then_some(assets);
         let (spare, wake, samples, levels) = (Spare::default(), Wake::Frame, 0, vec![(0.0, quality)]);
         Ok(Run {
             r,
@@ -68,14 +68,14 @@ impl<'a> Run<'a> {
             others,
             spare,
             wake,
-            governor,
+            pilot,
             samples,
         })
     }
 
     fn steer(&mut self, at: Instant) -> Result<(), RenderError> {
-        let Some((governor, ceiling)) = &self.governor else { return Ok(()) };
-        let level = governor.level((*ceiling, Why::Full)).0;
+        let Some((pilot, ceiling)) = &self.pilot else { return Ok(()) };
+        let level = pilot.level((*ceiling, Why::Full), Why::Cost).0;
         if level == self.quality {
             return Ok(());
         }
@@ -111,13 +111,9 @@ impl<'a> Run<'a> {
         self.spare = frame.spare();
         let (samples, gpu_ms) = self.view.gpu_time();
         let fresh = std::mem::replace(&mut self.samples, samples) != samples;
-        if let Some((governor, ceiling)) = self.governor.as_mut().filter(|_| fresh) {
-            let (runtime, fps) = (&self.runtime, self.bench.fps.max(1) as f32);
-            let share = match self.bench.level {
-                Level::Timed(share) => share,
-                _ => 1.0,
-            };
-            governor.feed(at, gpu_ms as f32, |q| (1000.0 / fps * share, runtime.cost(q)), *ceiling, true);
+        if let Some((pilot, ceiling)) = self.pilot.as_mut().filter(|_| fresh) {
+            let period = 1000.0 / self.bench.fps.max(1) as f32;
+            pilot.feed(at, gpu_ms as f32, period, (*ceiling, true, true));
         }
         let span_ms = fresh.then(|| self.view.gpu_span());
         Ok(Drawn { eval_us, gpu_ms: fresh.then_some(gpu_ms), span_ms })

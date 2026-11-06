@@ -647,11 +647,18 @@ el nivel de arriba; cada vez que tiene que volver a bajar en menos de 30 s, las 
 (hasta cuatro veces) y se acortan otra vez cuando una subida se mantiene. Nunca sube con batería ni
 por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
 mide uno de cada quince fotogramas esperando a la GPU. En el teléfono el nivel se guía solo por el
-tiempo medido: empieza en el nivel que el modelo de costes cree que cabe, puede llegar a Q3 (menos con
-ahorro de energía o calor), usa tres cuartas partes del intervalo entre fotogramas, sube también con
-batería en cuanto el tiempo medido por lo que encarece el nivel de arriba (medido al bajar, o estimado)
-y un 15 % de margen cabe durante 15 s, y la frecuencia no depende del nivel: 60 fotogramas por segundo
-con batería salvo que elijas otra. Presenta con tres imágenes para que la GPU dibuje un fotograma
+tiempo medido: el modelo de costes solo da el nivel de los primeros fotogramas, y desde el
+duodécimo cuenta la media de los últimos 32 (sin los que pasan del doble o no llegan a la mitad de
+su mediana, para que un pico suelto no cuente) frente al intervalo del ritmo con que se dibuja (el
+tope que elijas o el de la pantalla). Si durante 2 s pasa del 85 % del intervalo, baja un nivel; si
+durante 6 s no llega a la mitad (o, cuando ya midió el nivel de arriba, si la media por lo que ese
+nivel encarecía cabe en tres cuartas partes), sube uno, hasta Q3 (menos con ahorro de energía o
+calor) y también con batería. Entre dos cambios pasan al menos 5 s, y una subida que vuelve a bajar
+en menos de 30 s duplica la espera de la siguiente (hasta cuatro veces), así que no salta entre dos
+niveles. Con `auto`, una escena que en el nivel más bajo tarda más del doble del intervalo durante
+2 s queda quieta en su póster hasta que cambies la elección o se vuelva a cargar. *Ajustes* muestra
+el tiempo medido, el objetivo y la última decisión, y la frecuencia no depende del nivel: 60
+fotogramas por segundo con batería salvo que elijas otra. Presenta con tres imágenes para que la GPU dibuje un fotograma
 mientras se prepara el siguiente. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
 clase medida, el nivel y por qué bajó.
@@ -661,8 +668,9 @@ fijo de `q0` a `q3`, o `min-q1` y `min-q2`, que dejan la elección automática p
 ese nivel (puede subir más). Lo que elijas se respeta siempre, también con batería, con el ahorro
 de energía, con calor y aunque la escena pese más de lo que aguanta la GPU: entonces la escena se
 ve con todos sus detalles y con menos fotogramas por segundo. Solo la elección automática detiene
-una escena: la que pesa más que el presupuesto del equipo aun en el nivel más bajo (o dibuja más
-triángulos de modelos de los que admite su clase) se queda quieta en su póster con `auto`, se
+una escena: la que pesa más que el presupuesto del equipo aun en el nivel más bajo (en el teléfono,
+la que se midió demasiado lenta en ese nivel) o dibuja más triángulos de modelos de los que admite
+su clase se queda quieta en su póster con `auto`, se
 reproduce en el nivel fijo elegido y, con `min-q1` o `min-q2`, en ese mínimo (o más arriba si
 cabe). La app (junto a la elección de calidad en *Ajustes* y en cada pantalla con escena), la
 bandeja, el teléfono (bajo su ajuste de calidad, del fondo de inicio o de bloqueo que dibujó

@@ -268,16 +268,25 @@ with power saving or while the GPU or CPU is warm (on phones, only while chargin
 budget of a level is half of its frame interval on mains power and a quarter on battery, with power
 saving and on phones. A lower level draws fewer pixels and effects but keeps the frame rate, which
 only the tier, the power source, the temperature and the user set, and comparing the cost measured
-at the level above keeps a scene from bouncing between two levels. The phone steers by time alone:
-its ceiling is `q3` (one step under the tier level with power saving, lower while warm or hot), it
-starts at the level the cost model fits and its budget is three quarters of the frame interval. It
-rises, also on battery, when the measured average times the ratio of the level above (measured at
-the last step down, else from the cost model) and a 15 % margin fits that budget for 15 seconds.
-When that product does not fit but the average with the 15 % margin alone does, the phone tries the
-level above anyway after 15 seconds: if it is over the budget it comes back down and the ratio
-measured there replaces the model for the next decision, and every try that comes back within 30
-seconds doubles the wait for the next one, up to four times (four minutes); a try that holds for 30
-seconds resets that wait. Its frame rate never depends on the level (60 on battery unless the user sets another cap). It
+at the level above keeps a scene from bouncing between two levels. The phone steers by measured
+time alone (`Pilot` in `crates/wprs-scene/src/pilot.rs`): its ceiling is `q3` (one step under the
+tier level with power saving, lower while warm or hot), and the level the cost model fits is only
+where it starts, before any frame is measured. It keeps the GPU times of the last 32 frames and,
+from the 12th on, averages those between half and twice their median, so a few spikes do not
+count, against the frame interval of the rate it plays at (the user's cap or the display rate).
+When the average stays over 85 % of the interval for 2 seconds the level goes one step down; when
+it stays under half of the interval for 6 seconds (once the level above was measured: when the
+average times the ratio measured there fits three quarters of the interval), one step up, also on
+battery, unless power saving or heat hold it. Two changes are at least 5 seconds apart, the window
+starts again after each, and a step up that comes back down within 30 seconds doubles the wait for
+the next one, up to four times; one that holds for 30 seconds halves it again, so a level measured
+too dear is not tried again while the scene costs the same. Under `auto` a scene whose frames take
+more than twice the interval at the lowest level for 2 seconds stays at `poster_time` until the
+choice changes or the scene is loaded again: on the phone the cost model never stops a scene, only
+the model triangle limit and that measurement do. The phone settings show the measured average
+against the interval and the last decision (`model`, `steady`, `climbed`, `dropped`, `top`, `held`
+or `still`), and `--quality auto` of `wprs-ctl scene bench` and `--level auto` of the phone bench
+report the same under `auto` (`frame_ms`, `period_ms`, `step`, `still` and every level change). Its frame rate never depends on the level (60 on battery unless the user sets another cap). It
 presents through three swapchain images (latency 2), so the GPU draws a frame while the next one is
 recorded.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
@@ -297,7 +306,8 @@ quality choice in the settings and on each screen that shows the scene), the tra
 its quality setting) and `wprs-ctl quality` and `wprs-ctl state` warn: the cost against the budget,
 that frames may drop and battery use rise, and whether the automatic choice would lower the level
 or keep the scene still. Only the automatic choice stops a scene: a scene over budget even at the
-lowest level, or with more model triangles than the tier draws, stays at `poster_time` under `auto`
+lowest level (on the phone, one measured far too slow there), or with more model triangles than the
+tier draws, stays at `poster_time` under `auto`
 and plays at the chosen level under `q0` to `q3`, and at the floor (or higher, when it fits) under
 `min-q1` and `min-q2`; clients say so too, and for a scene heavy only in model triangles, whose
 cost fits, they warn that it draws more model triangles than the device holds and that the

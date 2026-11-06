@@ -1,6 +1,6 @@
 use super::Stage;
 use std::path::PathBuf;
-use wprs_scene::{Course, ScriptOutputs};
+use wprs_scene::{Course, Pilot, ScriptOutputs};
 
 impl Stage {
     pub(crate) fn shown(&mut self, shown: Vec<(String, PathBuf)>, frames: Vec<ScriptOutputs>) -> Vec<Course> {
@@ -18,5 +18,9 @@ impl Stage {
         let mut courses = Vec::new();
         self.runtime.fill_videos(&mut courses);
         courses
+    }
+
+    pub(crate) fn pilot(&mut self) -> &mut Pilot {
+        &mut self.pilot
     }
 }

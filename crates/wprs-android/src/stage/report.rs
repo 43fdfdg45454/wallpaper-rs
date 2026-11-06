@@ -1,10 +1,11 @@
-use super::RETRIES;
+use super::{RETRIES, Stage};
+use crate::power::Power;
 use serde_json::json;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wprs_core::QualityChoice;
-use wprs_scene::{Budget, Quality, Why};
+use wprs_scene::{Budget, Quality, Step, Tier, Why};
 
 pub(crate) fn retry() {
     wprs_render::retry_effects();
@@ -43,7 +44,10 @@ pub(crate) fn wallpaper() -> serde_json::Value {
     let (auto, over) = shown.cost.map_or(("", None), |kept| judged(kept, crate::power::choice()));
     let [tier, quality, reason] = level(shown.level).unwrap_or_default();
     let left: Vec<_> = shown.left.1.iter().map(|(id, why)| json!({ "id": id, "reason": why })).collect();
-    json!({ "tier": tier, "quality": quality, "reason": reason, "left_out": left, "over": over, "auto": auto })
+    let (frame, period, step) =
+        shown.cost.map_or((None, None, ""), |c| (c.frame, Some(c.period), c.step.name()));
+    json!({ "tier": tier, "quality": quality, "reason": reason, "left_out": left, "over": over, "auto": auto,
+        "frame_ms": frame, "period_ms": period, "step": step })
 }
 
 fn level(level: u32) -> Option<[String; 3]> {
@@ -58,7 +62,11 @@ pub(crate) struct Cost {
     pub(crate) auto: Quality,
     pub(crate) quality: Quality,
     pub(crate) costs: [f32; 4],
-    pub(crate) heavy: bool,
+    pub(crate) crowded: bool,
+    pub(crate) stalled: bool,
+    pub(crate) frame: Option<f32>,
+    pub(crate) period: f32,
+    pub(crate) step: Step,
 }
 
 pub(crate) const HOME: usize = 0;
@@ -110,12 +118,33 @@ fn judged(kept: Cost, choice: QualityChoice) -> (&'static str, Option<[f32; 2]>)
     let (cost, most) = (kept.costs[quality as usize], budget.tier.budget());
     let over = (!budget.choice.is_auto() && cost > most).then_some([cost, most]);
     let automatic = match () {
-        _ if kept.heavy && budget.choice.is_auto() => "still",
-        _ if kept.heavy => "stop",
+        _ if (kept.crowded || kept.stalled) && budget.choice.is_auto() => "still",
+        _ if kept.crowded => "stop",
         _ if over.is_some() => "lower",
         _ => "",
     };
     (automatic, over)
+}
+
+impl Stage {
+    pub(super) fn steer(&mut self, budget: Budget, power: Power, tier: Tier) -> ((Quality, Why), Quality) {
+        let cooled = |(q, why): (Quality, Why)| {
+            if power.ceiling() < q { (power.ceiling(), Why::Heat) } else { (q, why) }
+        };
+        let auto = cooled(budget.auto(&self.runtime));
+        let ceiling = budget.choose(cooled(budget.reach()));
+        self.pilot.start(budget.floor(), budget.choose(auto).0);
+        let (quality, why) = self.pilot.level(ceiling, auto.1);
+        if let Some(slot) = self.reports {
+            let costs = [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q));
+            let (crowded, stalled) = (budget.crowded(&self.runtime), self.pilot.stalled());
+            let period = 1000.0 / budget.timed_fps(&self.runtime, 0).max(1) as f32;
+            let (frame, step) = (self.pilot.frame_ms(), self.pilot.step());
+            let cost = Cost { budget, auto: auto.0, quality, costs, crowded, stalled, frame, period, step };
+            keep(slot, cost, 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32);
+        }
+        ((quality, why), ceiling.0)
+    }
 }
 
 pub(crate) fn wall() -> f64 {

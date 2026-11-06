@@ -12,4 +12,11 @@ class CostTest {
         assertEquals(R.string.auto_would_lower, costWords("lower", over = true))
         assertEquals(null, costWords("", over = false))
     }
+
+    @Test
+    fun everyDecisionOfTheAutomaticLevelHasItsWords() {
+        val steps = listOf("model", "steady", "climbed", "dropped", "top", "held", "still")
+        assertEquals(steps.size, steps.mapNotNull { stepWords(it) }.toSet().size)
+        assertEquals(null, stepWords(""))
+    }
 }

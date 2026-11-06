@@ -60,6 +60,15 @@
     <string name="level_stopped">This scene is too heavy for this phone, so automatic quality keeps it still at its poster. A fixed level plays it anyway, with fewer frames per second and more battery use.</string>
     <string name="level_triangles">This scene draws more model triangles than this phone holds: frames may drop and battery use rise. Automatic quality would keep it still at its poster.</string>
     <string name="level_kept">Effects left out to protect the GPU stay out at every level: %1$d</string>
+    <string name="frame_measured">Measured GPU time: %1$s ms a frame, for a target of %2$s ms. %3$s</string>
+    <string name="frame_unmeasured">GPU time not measured yet. %1$s</string>
+    <string name="step_model">The level comes from the estimate until frames are measured.</string>
+    <string name="step_steady">The level holds: frames fit, without enough room for the next level.</string>
+    <string name="step_climbed">The level went up: frames had time to spare.</string>
+    <string name="step_dropped">The level went down: frames took longer than the target.</string>
+    <string name="step_top">This is the highest level allowed now.</string>
+    <string name="step_held">The next level was measured and does not fit.</string>
+    <string name="step_still">Even the lowest level is far too slow, so the scene stays still at its poster.</string>
     <string name="hdr_output">HDR on screens that support it</string>
     <string name="hdr_auto">Automatic: on HDR screens, while charging, for scenes with bright colors at the highest quality</string>
     <string name="hdr_on">Always when the screen supports it, also on battery</string>

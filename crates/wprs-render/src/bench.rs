@@ -17,7 +17,7 @@ pub const WARMUP: usize = 10;
 pub enum Level {
     Fixed(Quality),
     Fitted,
-    Timed(f32),
+    Auto,
 }
 
 #[derive(Debug, Clone)]
@@ -66,7 +66,7 @@ pub fn scene_bench(
     let fitted = Quality::fitting(|q| runtime.scene.cost_at(q, magnify), tier, tier.quality(false));
     let quality = match bench.level {
         Level::Fixed(q) => q,
-        Level::Fitted | Level::Timed(_) => fitted,
+        Level::Fitted | Level::Auto => fitted,
     };
     let mut run = frames::Run::new(r, runtime, assets, bench, (tier, quality))?;
     run.view.profile_particles(bench.paced.is_none() && !bench.overlap);
@@ -96,9 +96,12 @@ pub fn scene_bench(
     let particles = json!({ "engine": engine, "slots": stats.particles, "alive": alive });
     more.as_object().into_iter().flatten().for_each(|(k, v)| report[k] = v.clone());
     particles.as_object().into_iter().flatten().for_each(|(k, v)| report["particles"][k] = v.clone());
-    if let Level::Timed(share) = bench.level {
+    if let Some((pilot, _)) = &run.pilot {
         let levels: Vec<Value> = run.levels.iter().map(|(t, q)| json!([t, q])).collect();
-        report["auto"] = json!({ "share": share, "start": quality, "levels": levels });
+        let (frame_ms, period_ms) = (pilot.frame_ms(), 1000.0 / bench.fps.max(1) as f32);
+        let (step, still) = (pilot.step(), pilot.stalled());
+        report["auto"] = json!({ "start": quality, "levels": levels, "frame_ms": frame_ms,
+            "period_ms": period_ms, "step": step, "still": still });
     }
     if bench.passes {
         let (frames, mut passes) = crate::profiled_passes(None);

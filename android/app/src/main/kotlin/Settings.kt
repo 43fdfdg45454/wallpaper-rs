@@ -129,6 +129,7 @@ fun Settings(main: Main) {
                 stringResource(R.string.tier_timed).takeIf { report.optBoolean("timed") && report.optString("tier").isNotEmpty() },
                 levelReason(report.optString("reason"))?.let { stringResource(R.string.level_reason, stringResource(it)) },
                 stringResource(R.string.level_chosen).takeIf { report.optString("reason") == "user" },
+                frameNote(report),
                 costNote(report),
                 hdrState(report.optJSONObject("hdr")),
                 stringResource(R.string.particles_cpu).takeIf { report.optString("particles") == "cpu" },

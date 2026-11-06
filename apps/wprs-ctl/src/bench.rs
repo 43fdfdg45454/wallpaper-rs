@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use wprs_render::{Bench, Level, Renderer, WARMUP};
-use wprs_scene::{PHONE_SHARE, Runtime};
+use wprs_scene::Runtime;
 
 use crate::benching::{load, ms_of, passes};
 
@@ -62,7 +62,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
         } => {
             let level = match quality.as_deref() {
                 None => Level::Fitted,
-                Some("auto") => Level::Timed(PHONE_SHARE),
+                Some("auto") => Level::Auto,
                 Some(q) => Level::Fixed(serde_json::from_value(json!(q))?),
             };
             let paced = paced.map(|s| Duration::from_secs_f64(s.clamp(0.1, 3600.0)));
@@ -143,6 +143,11 @@ fn text(report: &Value) -> String {
         let steps: Vec<String> =
             levels.iter().map(|l| format!("{} at {:.1} s", l[1], l[0].as_f64().unwrap_or(0.0))).collect();
         out += &format!("auto         {}\n", steps.join(", "));
+    }
+    if let Some(frame) = report["auto"]["frame_ms"].as_f64() {
+        let (auto, period) = (&report["auto"], report["auto"]["period_ms"].as_f64().unwrap_or(0.0));
+        let step = auto["step"].as_str().unwrap_or_default();
+        out += &format!("measured     {frame:.2} ms a frame of {period:.2} ms, last decision {step}\n");
     }
     let first =
         report["first_ms"].as_f64().map_or(String::new(), |ms| format!(", {ms:.1} ms for the first frame"));

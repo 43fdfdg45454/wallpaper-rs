@@ -60,6 +60,15 @@
     <string name="level_stopped">Esta escena es demasiado pesada para este teléfono, así que la calidad automática la deja quieta en su póster. Un nivel fijo la reproduce igual, con menos fotogramas por segundo y más gasto de batería.</string>
     <string name="level_triangles">Esta escena dibuja más triángulos de modelos de los que aguanta este teléfono: puede perder fotogramas y gastar más batería. La calidad automática la dejaría quieta en su póster.</string>
     <string name="level_kept">Los efectos que quedan fuera para proteger la GPU siguen fuera en todos los niveles: %1$d</string>
+    <string name="frame_measured">Tiempo de GPU medido: %1$s ms por fotograma, con un objetivo de %2$s ms. %3$s</string>
+    <string name="frame_unmeasured">Tiempo de GPU sin medir todavía. %1$s</string>
+    <string name="step_model">El nivel sale de la estimación hasta que se miden fotogramas.</string>
+    <string name="step_steady">El nivel se mantiene: los fotogramas caben, sin margen para el nivel siguiente.</string>
+    <string name="step_climbed">El nivel subió: a los fotogramas les sobraba tiempo.</string>
+    <string name="step_dropped">El nivel bajó: los fotogramas tardaban más que el objetivo.</string>
+    <string name="step_top">Es el nivel más alto permitido ahora.</string>
+    <string name="step_held">El nivel siguiente se midió y no cabe.</string>
+    <string name="step_still">Ni el nivel más bajo alcanza, así que la escena queda quieta en su póster.</string>
     <string name="hdr_output">HDR en las pantallas que lo admiten</string>
     <string name="hdr_auto">Automático: en pantallas HDR, mientras se carga, para escenas con colores brillantes en la calidad más alta</string>
     <string name="hdr_on">Siempre que la pantalla lo admita, también con batería</string>

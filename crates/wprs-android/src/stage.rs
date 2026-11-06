@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use wprs_render::{GpuImage, Meter, SceneAssets, SceneView};
-use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
+use wprs_scene::{FlashGuard, Pilot, Press, Quality, Runtime, Spare};
 
 mod heard;
 mod input;
@@ -48,7 +48,7 @@ pub(crate) struct Stage {
     guard: Option<Box<Guarded>>,
     retried: u64,
     spare: Spare,
-    governor: Governor,
+    pilot: Pilot,
     samples: u64,
     offset: f32,
     extras: Extras,
@@ -124,7 +124,7 @@ impl Stage {
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),
-            governor: Governor::timed(),
+            pilot: Pilot::default(),
             samples: 0,
             offset: 0.5,
             extras,

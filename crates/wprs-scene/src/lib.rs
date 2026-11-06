@@ -75,6 +75,7 @@ mod outside;
 mod package;
 mod particles;
 mod patch;
+mod pilot;
 mod pin;
 mod played;
 mod pointing;

@@ -39,8 +39,11 @@ impl Budget {
     }
 
     pub fn heavy(&self, runtime: &Runtime) -> bool {
-        let most = crate::model_caps(self.tier, false).triangles;
-        runtime.cost(Quality::Q0) > self.tier.budget() || runtime.scene.model_triangles(Quality::Q0) > most
+        runtime.cost(Quality::Q0) > self.tier.budget() || self.crowded(runtime)
+    }
+
+    pub fn crowded(&self, runtime: &Runtime) -> bool {
+        runtime.scene.model_triangles(Quality::Q0) > crate::model_caps(self.tier, false).triangles
     }
 
     pub fn still(&self, runtime: &Runtime) -> bool {
