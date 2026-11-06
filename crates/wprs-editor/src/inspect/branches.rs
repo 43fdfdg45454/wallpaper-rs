@@ -67,9 +67,15 @@ impl Walk<'_> {
 fn clocked(doc: &Value, pointer: &str, key: &str) -> bool {
     let layer = pointer.strip_suffix("/playback").and_then(|p| doc.pointer(p)).filter(|_| key == "own_clock");
     let pooled = |id: &str| doc["scene"]["pools"].get(id).is_some();
+    let film = |a: &Value| {
+        let path = a.as_str().and_then(|a| doc["scene"]["assets"][a]["path"].as_str()).unwrap_or_default();
+        let ext = path.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+        wprs_scene::VIDEOS.contains(&ext.as_str())
+    };
     let file = |p: &Value| {
-        doc.pointer(&format!("/manifest/properties/{}/type", escape(p.as_str().unwrap_or_default())))
-            == Some(&json!("file"))
+        let prop = doc.pointer(&format!("/manifest/properties/{}", escape(p.as_str().unwrap_or_default())));
+        let accepts = |p: &Value| p["accept"].as_array().is_some_and(|a| a.contains(&json!("video")));
+        prop.is_some_and(|p| p["type"] == "file" && (accepts(p) || film(&p["default_asset"])))
     };
     let named = |l: &Value| match &l["video"] {
         Value::String(v) => !pooled(v),

@@ -135,9 +135,11 @@ impl Issue {
                 "%1 names a system that starts particles from a layer, which a child born from its parent cannot do",
                 &[p],
             ),
-            Issue::Clock(p) => {
-                said("scene.clock", "%1 applies to video layers that name one video file only", &[p])
-            }
+            Issue::Clock(p) => said(
+                "scene.clock",
+                "%1 applies to video layers that name a video file, pick videos through a map or take a file property that may hold a video",
+                &[p],
+            ),
         }
     }
 }

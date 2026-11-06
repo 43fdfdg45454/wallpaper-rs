@@ -22,9 +22,19 @@ impl Check<'_> {
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
                 if playback.as_ref().is_some_and(|b| b.own_clock) {
+                    let film = |a: &String| {
+                        let path = self.scene.assets.get(a).map(|a| a.extension());
+                        path.is_some_and(|e| crate::stage::VIDEOS.contains(&e.as_str()))
+                    };
+                    let video = |p: &crate::Property| match &p.control {
+                        crate::Control::File { default_asset, .. } => {
+                            p.accepts("video") || default_asset.as_ref().is_some_and(film)
+                        }
+                        _ => false,
+                    };
                     let file = |b: &crate::Binding<String>| {
-                        let control = b.prop.as_ref().and_then(|id| self.props.get(id)).map(|p| &p.control);
-                        b.map.is_some() || matches!(control, Some(crate::Control::File { .. }))
+                        b.map.is_some()
+                            || b.prop.as_ref().and_then(|id| self.props.get(id)).is_some_and(video)
                     };
                     let picked = !matches!(named, crate::Value::Bound(b) if !file(b));
                     match picked && !crate::footage::owned(self.scene, kind).is_empty() {

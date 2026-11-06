@@ -176,3 +176,24 @@ fn a_video_a_file_property_picks_keeps_a_clock_of_its_own() {
     let at = |rt: &Runtime, key: &str| rt.tapes().iter().find(|t| t.asset == key).map(|t| t.at);
     assert!(at(&rt, "pick@b").is_some_and(|t| (t - 1.0).abs() < 0.05), "{:?}", rt.tapes());
 }
+
+#[test]
+fn own_clocks_need_a_file_property_that_may_hold_a_video() {
+    let layer =
+        json!({ "id": "b", "type": "video", "video": { "prop": "pick" }, "playback": { "own_clock": true } });
+    let doc = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] },
+        "assets": { "clip": { "path": "clip.webm" }, "sky": { "path": "sky.png" } }, "layers": [layer] });
+    let said = |pick: serde_json::Value| {
+        let props: BTreeMap<String, Property> = serde_json::from_value(json!({ "pick": pick })).unwrap();
+        let scene = Scene::from_json(&doc.to_string()).unwrap();
+        scene
+            .validate(&props)
+            .iter()
+            .map(ToString::to_string)
+            .any(|i| i.contains("/layers/0/playback/own_clock"))
+    };
+    assert!(said(json!({ "type": "file" })), "an image property picks no video");
+    assert!(said(json!({ "type": "file", "accept": ["image"], "default_asset": "sky" })));
+    assert!(!said(json!({ "type": "file", "accept": ["image", "video"] })));
+    assert!(!said(json!({ "type": "file", "accept": ["image"], "default_asset": "clip" })));
+}
