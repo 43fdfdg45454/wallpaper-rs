@@ -5,7 +5,7 @@ use crate::scenes::ScenePack;
 use serde_json::json;
 use wprs_scene::{Scene, Tier};
 
-fn state(folder: Option<&std::path::Path>) -> SceneState {
+pub(super) fn state(folder: Option<&std::path::Path>) -> SceneState {
     let scene = json!({ "schema": "wallpaper-rs.scene/1", "canvas": { "size": [16, 9] },
         "scripts": [{ "path": "main.js", "uses": ["folders"] }],
         "layers": [{ "id": "photo", "type": "solid", "color": "#ffffff" }] });
@@ -30,7 +30,7 @@ fn state(folder: Option<&std::path::Path>) -> SceneState {
     SceneState::new(spec, Power::new(Tier::T3, false, 0))
 }
 
-fn listed(state: &mut SceneState, at: Instant) -> bool {
+pub(super) fn listed(state: &mut SceneState, at: Instant) -> bool {
     (0..200).any(|_| state.listing(at) || (std::thread::sleep(Duration::from_millis(5)), false).1)
 }
 

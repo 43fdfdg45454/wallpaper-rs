@@ -1972,10 +1972,12 @@ ids of its pictures, and also of its videos with `options.videos: true` when the
 `video` (an id changes when its file is
 written again), `name(id)` the name of the file, `kind(id)` `"image"` or `"video"`, and
 `on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
-pairs, only of the files that `folder` lists) when the folder changes: the desktop watches the chosen
-folder and its listed subfolders for changes and looks again only when one arrives (every 2 s while
-the scene is shown where the system gives no change notices), and the phone looks again while it
-draws. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
+pairs, only of the files that `folder` lists) when the folder changes: while the scene is shown, the
+desktop watches the chosen folder and its listed subfolders for change notices and reads them again,
+away from the thread that draws, only when one arrives; a hidden scene drops the watch and looks once
+when shown again. Where the system gives no change notices (a network or user space file system, a
+folder that is missing, or one removed, moved or unmounted until it can be watched again) it looks
+every 2 s while the scene is shown. The phone looks again while it draws. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
 with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
 the `playback` of the layer and that `layer.video` (play, pause, seek, rate, `ended`) controls like the
 videos of the package, with its sound at the volume of the videos of the package, instead of its own

@@ -23,7 +23,7 @@ pub(in crate::compositor) struct Listed {
     asked: Vec<String>,
     pub(super) reels: Vec<(String, super::super::Reel)>,
     loading: Option<mpsc::Receiver<Loaded>>,
-    scanning: Option<mpsc::Receiver<(String, Files)>>,
+    scanning: Option<mpsc::Receiver<scan::Scanned>>,
     pub(super) unset: bool,
     watch: Option<watch::Watch>,
     wake: Option<watch::Wake>,
@@ -31,8 +31,6 @@ pub(in crate::compositor) struct Listed {
 
 mod scan;
 mod watch;
-
-use scan::scan;
 
 impl SceneState {
     pub(in crate::compositor) fn folders(&self) -> Vec<String> {
@@ -62,30 +60,40 @@ impl SceneState {
         }
     }
 
+    pub(in crate::compositor) fn unwatch(&mut self) {
+        (self.listed.watch, self.listed.scanning, self.listed.due) = (None, None, None);
+    }
+
+    fn watching(&self) -> bool {
+        self.listed.watch.as_ref().is_some_and(watch::Watch::trusted)
+    }
+
     pub(super) fn listing_wake(&self, now: Instant) -> Wake {
-        let told = self.listed.watch.as_ref().map(|w| w.changed.load(Ordering::Acquire));
+        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.load(Ordering::Acquire));
         match (self.lists(), self.listed.scanning.is_some(), told) {
             (false, ..) => Wake::Idle,
             _ if self.listed.unset => Wake::Idle,
             (_, true, _) if self.listed.wake.is_some() => Wake::Idle,
             (_, true, _) => Wake::At(SOON.as_secs_f64()),
-            (_, _, Some(true)) => Wake::At(0.0),
-            (_, _, Some(false)) => Wake::Idle,
-            (_, _, None) => {
-                Wake::At(self.listed.due.map_or(0.0, |at| at.saturating_duration_since(now).as_secs_f64()))
-            }
+            (_, _, true) => Wake::At(0.0),
+            _ if self.watching() && self.listed.due.is_some() => Wake::Idle,
+            _ => Wake::At(self.listed.due.map_or(0.0, |at| at.saturating_duration_since(now).as_secs_f64())),
         }
     }
 
     pub(super) fn listing(&mut self, now: Instant) -> bool {
         if !self.lists() {
+            self.listed.watch = None;
             return false;
         }
         let found = self.listed.scanning.as_ref().map(mpsc::Receiver::try_recv);
         let mut changed = false;
         match found {
-            Some(Ok((text, files))) => {
+            Some(Ok((text, files, watch))) => {
                 self.listed.scanning = None;
+                if let Some(watch) = watch {
+                    self.listed.watch = watch;
+                }
                 if text != self.listed.text {
                     (self.listed.text, self.listed.files, changed) = (text, files, true);
                 }
@@ -93,45 +101,35 @@ impl SceneState {
             Some(Err(mpsc::TryRecvError::Disconnected)) => self.listed.scanning = None,
             _ => {}
         }
+        if self.listed.scanning.is_some() {
+            return changed;
+        }
+        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.swap(false, Ordering::AcqRel));
+        let polled = !self.watching() && self.listed.due.is_none_or(|at| now >= at);
+        if !(told || polled || self.listed.due.is_none()) {
+            return changed;
+        }
         let chosen = |id: String| {
             let dir = self.spec.values.get(&id).and_then(|v| v.as_str()).filter(|v| v.starts_with('/'));
             let prop = self.spec.pack.props.properties.get(&id).cloned();
-            let dir = dir.map(PathBuf::from).zip(prop);
-            (id, dir)
+            (id, dir.map(PathBuf::from).zip(prop))
         };
         let wanted: Vec<_> = self.folders().into_iter().map(chosen).collect();
-        let deep = |p: &wprs_scene::Property| match p.control {
-            wprs_scene::Control::Folder { recursive, .. } => recursive,
-            _ => 0,
+        self.listed.due = Some(now + EVERY);
+        self.listed.unset = wanted.iter().all(|(_, dir)| dir.is_none());
+        let (tx, rx) = mpsc::channel();
+        let kept = self.listed.watch.as_ref().filter(|w| w.whole()).map(|w| w.dirs.clone());
+        let (wake, notify) = (self.listed.wake.clone(), self.listed.wake.clone());
+        let sent = move || {
+            drop(tx.send(scan::job(wanted, kept, notify)));
+            wake.iter().for_each(|w| w());
         };
-        let dirs: Vec<PathBuf> = wanted
-            .iter()
-            .filter_map(|(_, d)| d.as_ref())
-            .flat_map(|(d, p)| watch::dirs(d, deep(p)))
-            .collect();
-        if self.listed.watch.as_ref().map(|w| &w.dirs) != Some(&dirs) {
-            let wake = self.listed.wake.clone().filter(|_| !dirs.is_empty());
-            self.listed.watch = wake.and_then(|wake| watch::Watch::new(dirs, wake));
+        match self.listed.unset {
+            true => sent(),
+            false => drop(std::thread::spawn(sent)),
         }
-        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.swap(false, Ordering::AcqRel));
-        let polled = self.listed.watch.is_none() && self.listed.due.is_none_or(|at| now >= at);
-        if self.listed.scanning.is_none() && (told || polled || self.listed.due.is_none()) {
-            self.listed.due = Some(now + EVERY);
-            let (tx, rx) = mpsc::channel();
-            self.listed.unset = wanted.iter().all(|(_, dir)| dir.is_none());
-            let wake = self.listed.wake.clone();
-            let sent = move || {
-                drop(tx.send(scan(wanted)));
-                wake.iter().for_each(|w| w());
-            };
-            match self.listed.unset {
-                true => sent(),
-                false => drop(std::thread::spawn(sent)),
-            }
-            self.listed.scanning = Some(rx);
-            return self.listing(now) || changed;
-        }
-        changed
+        self.listed.scanning = Some(rx);
+        self.listing(now) || changed
     }
 
     pub(super) fn show(&mut self, outputs: &ScriptOutputs) {
@@ -183,3 +181,5 @@ impl SceneState {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod watched;

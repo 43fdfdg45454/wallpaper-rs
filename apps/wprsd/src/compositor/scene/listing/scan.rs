@@ -1,4 +1,5 @@
 use super::Files;
+use super::watch::{self, Wake, Watch};
 use std::hash::{BuildHasher, Hasher};
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
@@ -7,6 +8,7 @@ use std::sync::LazyLock;
 static SALT: LazyLock<std::hash::RandomState> = LazyLock::new(std::hash::RandomState::new);
 
 pub(super) type Wanted = Vec<(String, Option<(PathBuf, wprs_scene::Property)>)>;
+pub(super) type Scanned = (String, Files, Option<Option<Watch>>);
 
 fn opaque(parts: &[&[u8]]) -> String {
     let mut h = SALT.build_hasher();
@@ -32,4 +34,17 @@ pub(super) fn scan(wanted: Wanted) -> (String, Files) {
         listing.insert(id, entries);
     }
     (serde_json::Value::Object(listing).to_string(), files)
+}
+
+pub(super) fn job(wanted: Wanted, kept: Option<Vec<PathBuf>>, wake: Option<Wake>) -> Scanned {
+    let deep = |p: &wprs_scene::Property| match p.control {
+        wprs_scene::Control::Folder { recursive, .. } => recursive,
+        _ => 0,
+    };
+    let chosen = wanted.iter().filter_map(|(_, d)| d.as_ref());
+    let dirs: Vec<PathBuf> = chosen.flat_map(|(d, p)| watch::dirs(d, deep(p))).collect();
+    let fresh = (kept.as_ref() != Some(&dirs))
+        .then(|| wake.filter(|_| !dirs.is_empty()).and_then(|w| Watch::new(dirs, w)));
+    let (text, files) = scan(wanted);
+    (text, files, fresh)
 }

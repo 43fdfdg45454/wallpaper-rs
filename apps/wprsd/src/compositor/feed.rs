@@ -48,7 +48,8 @@ impl State {
         let tx = &self.tx;
         for (name, o) in self.outputs.iter_mut() {
             o.dirty |= o.shown.scene.as_mut().is_some_and(|s| s.want_rgb(name));
-            if let Some(s) = o.shown.scene.as_mut() {
+            let shown = o.active && o.open(self.exporter.is_streaming(name));
+            if let Some(s) = o.shown.scene.as_mut().filter(|_| shown) {
                 s.waker(|| {
                     let tx = tx.clone();
                     std::sync::Arc::new(move || drop(tx.send(super::Command::Wake)))
