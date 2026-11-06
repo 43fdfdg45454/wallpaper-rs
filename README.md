@@ -727,8 +727,10 @@ mismo).; cambiar solo mayúsculas y minúsculas del
 nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede abrir, el daemon
 arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
 `gpu_warning`. Una tarjeta que solo se alcanza con OpenGL ES, cuyo controlador no dice de qué tipo
-es, toma el tipo que el sistema le da en `/sys/class/drm` (Intel integrada, NVIDIA dedicada, AMD
-integrada con 2 GiB de memoria propia o menos), así que `integrated` también la elige. Si hay dos
+es, toma el tipo que el sistema le da en `/sys/class/drm` (Intel integrada en el bus PCI 0 o, sin
+dirección PCI, según su modelo; NVIDIA dedicada; AMD integrada con 2 GiB de memoria propia o menos;
+con varias tarjetas de una marca y de tipos distintos, el de la que arranca la pantalla, o el de la
+otra si `DRI_PRIME` pide otra), así que `integrated` también la elige. Si hay dos
 tarjetas idénticas, la app las distingue por su bus PCI y `wprs-ctl gpu pci:0000:03:00.0` elige la
 de ese bus (la columna `BUS` de `wprs-ctl gpu`); la lista sigue los nodos de `/dev/dri`, así que una
 tarjeta que conectas o quitas aparece o se va al segundo, sin reiniciar ni consultar nada mientras

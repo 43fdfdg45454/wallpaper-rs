@@ -18,21 +18,39 @@ fn bus(device: &Path) -> Option<u8> {
     u8::from_str_radix(bus, 16).ok()
 }
 
-fn card(device: &Path) -> Option<(u32, DeviceType)> {
-    let vendor = u32::from_str_radix(read(&device.join("vendor"))?.trim_start_matches("0x"), 16).ok()?;
+fn hex(path: &Path) -> Option<u32> {
+    u32::from_str_radix(read(path)?.trim_start_matches("0x"), 16).ok()
+}
+
+fn dedicated_intel(id: u32) -> bool {
+    matches!(id >> 8, 0x49 | 0x56 | 0xe2)
+}
+
+fn card(device: &Path) -> Option<Card> {
+    let vendor = hex(&device.join("vendor"))?;
     let memory = read(&device.join("mem_info_vram_total")).and_then(|v| v.parse::<u64>().ok());
+    let id = hex(&device.join("device"));
     let kind = match vendor {
         INTEL if bus(device) == Some(0) => DeviceType::IntegratedGpu,
         INTEL if bus(device).is_some() => DeviceType::DiscreteGpu,
+        INTEL if id.is_some_and(dedicated_intel) => DeviceType::DiscreteGpu,
+        INTEL if id.is_some() => DeviceType::IntegratedGpu,
         NVIDIA => DeviceType::DiscreteGpu,
         AMD if memory.is_some_and(|m| m <= CARVED) => DeviceType::IntegratedGpu,
         AMD if memory.is_some() => DeviceType::DiscreteGpu,
         _ => DeviceType::Other,
     };
-    Some((vendor, kind))
+    Some(Card { vendor, kind, boot: read(&device.join("boot_vga")).as_deref() == Some("1") })
 }
 
-pub(crate) fn cards(root: &Path) -> Vec<(u32, DeviceType)> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Card {
+    pub(crate) vendor: u32,
+    pub(crate) kind: DeviceType,
+    pub(crate) boot: bool,
+}
+
+pub(crate) fn cards(root: &Path) -> Vec<Card> {
     let entries = std::fs::read_dir(root.join("class/drm")).into_iter().flatten().flatten();
     let named = |name: &str| {
         name.strip_prefix("card").is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
@@ -43,80 +61,31 @@ pub(crate) fn cards(root: &Path) -> Vec<(u32, DeviceType)> {
     names.iter().filter_map(|n| card(&root.join("class/drm").join(n).join("device"))).collect()
 }
 
-pub(crate) fn guess(vendor: u32, cards: &[(u32, DeviceType)]) -> DeviceType {
-    let same: Vec<DeviceType> = match cards {
-        [(_, only)] => vec![*only],
-        _ => cards.iter().filter(|(v, _)| *v == vendor).map(|(_, k)| *k).collect(),
+pub(crate) fn guess(vendor: u32, cards: &[Card], prime: bool) -> DeviceType {
+    let same: Vec<Card> = match cards {
+        [only] => vec![*only],
+        _ => cards.iter().filter(|c| c.vendor == vendor).copied().collect(),
     };
-    match same.first() {
-        Some(kind) if same.iter().all(|k| k == kind) => *kind,
-        _ => DeviceType::Other,
-    }
+    let one = |kinds: &[DeviceType]| match kinds.first() {
+        Some(kind) if kinds.iter().all(|k| k == kind) => Some(*kind),
+        _ => None,
+    };
+    let kinds = |boot: bool| same.iter().filter(|c| c.boot == boot).map(|c| c.kind).collect::<Vec<_>>();
+    let all: Vec<DeviceType> = same.iter().map(|c| c.kind).collect();
+    let used = if same.iter().any(|c| c.boot) { one(&kinds(!prime)) } else { None };
+    one(&all).or(used).unwrap_or(DeviceType::Other)
+}
+
+fn prime() -> bool {
+    std::env::var("DRI_PRIME").is_ok_and(|v| !v.is_empty() && v != "0")
 }
 
 pub(crate) fn kind_of(info: &wgpu::AdapterInfo) -> DeviceType {
     match (info.backend, info.device_type) {
-        (wgpu::Backend::Gl, DeviceType::Other) => guess(info.vendor, &cards(Path::new("/sys"))),
+        (wgpu::Backend::Gl, DeviceType::Other) => guess(info.vendor, &cards(Path::new("/sys")), prime()),
         (_, kind) => kind,
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn write(root: &Path, card: &str, vendor: &str, memory: Option<u64>) {
-        let device = root.join("class/drm").join(card).join("device");
-        std::fs::create_dir_all(&device).unwrap();
-        std::fs::write(device.join("vendor"), format!("{vendor}\n")).unwrap();
-        memory
-            .into_iter()
-            .for_each(|m| std::fs::write(device.join("mem_info_vram_total"), m.to_string()).unwrap());
-    }
-
-    #[test]
-    fn an_opengl_card_of_unknown_kind_takes_the_kind_the_system_tells() {
-        let root = tempfile::tempdir().unwrap();
-        write(root.path(), "card0", "0x1002", Some(512 << 20));
-        write(root.path(), "card1", "0x10de", None);
-        write(root.path(), "card1-DP-1", "0x10de", None);
-        write(root.path(), "renderD128", "0x1002", None);
-        let found = cards(root.path());
-        assert_eq!(found, [(AMD, DeviceType::IntegratedGpu), (NVIDIA, DeviceType::DiscreteGpu)]);
-        assert_eq!(guess(AMD, &found), DeviceType::IntegratedGpu, "an AMD card with carved memory");
-        assert_eq!(guess(NVIDIA, &found), DeviceType::DiscreteGpu);
-        assert_eq!(guess(0, &found), DeviceType::Other, "an unknown vendor among two cards was guessed");
-        assert_eq!(guess(0, &found[..1]), DeviceType::IntegratedGpu, "the only card of the computer");
-        let big = tempfile::tempdir().unwrap();
-        write(big.path(), "card0", "0x1002", Some(16 << 30));
-        write(big.path(), "card1", "0x1002", Some(512 << 20));
-        assert_eq!(guess(AMD, &cards(big.path())), DeviceType::Other, "two AMD cards of both kinds");
-        write(big.path(), "card1", "0x1002", Some(16 << 30));
-        assert_eq!(guess(AMD, &cards(big.path())), DeviceType::DiscreteGpu);
-        assert!(cards(Path::new("/nonexistent")).is_empty());
-        assert_eq!(guess(INTEL, &[]), DeviceType::Other);
-    }
-
-    fn linked(root: &Path, card: &str, address: &str) {
-        let device = root.join("devices").join(address);
-        std::fs::create_dir_all(&device).unwrap();
-        std::fs::write(device.join("vendor"), "0x8086\n").unwrap();
-        let class = root.join("class/drm").join(card);
-        std::fs::create_dir_all(&class).unwrap();
-        std::os::unix::fs::symlink(&device, class.join("device")).unwrap();
-    }
-
-    #[test]
-    fn an_intel_card_on_its_own_bus_is_dedicated_and_the_one_on_bus_zero_integrated() {
-        let root = tempfile::tempdir().unwrap();
-        linked(root.path(), "card0", "0000:00:02.0");
-        linked(root.path(), "card1", "0000:03:00.0");
-        let found = cards(root.path());
-        assert_eq!(found, [(INTEL, DeviceType::IntegratedGpu), (INTEL, DeviceType::DiscreteGpu)]);
-        assert_eq!(guess(INTEL, &found), DeviceType::Other, "two Intel cards of both kinds were guessed");
-        assert_eq!(guess(INTEL, &found[1..]), DeviceType::DiscreteGpu, "a dedicated Intel card");
-        let plain = tempfile::tempdir().unwrap();
-        write(plain.path(), "card0", "0x8086", None);
-        assert_eq!(cards(plain.path()), [(INTEL, DeviceType::Other)], "an Intel card of unknown place");
-    }
-}
+mod tests;

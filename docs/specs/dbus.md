@@ -223,9 +223,13 @@ identical cards apart (`GetState().adapters[x].bus`, empty when the driver gives
 it only for cards that share a name). The list of cards follows the graphics nodes of `/dev/dri`: a
 card plugged in or taken out shows up or goes away a second later, without polling; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`.
 An OpenGL ES adapter whose driver names no kind takes the kind the system gives its card in
-`/sys/class/drm` (Intel integrated, NVIDIA dedicated, AMD integrated when its own memory is at most
-2 GiB and dedicated above), matched by vendor or, with a single card, that card; with several cards
-of the vendor and different kinds it stays `other`. So `integrated` also picks an integrated card
+`/sys/class/drm` (Intel integrated on PCI bus 0 and dedicated on another bus, or, without a PCI
+address, dedicated for the device ids of its dedicated families and integrated for the others;
+NVIDIA dedicated; AMD integrated when its own memory is at most 2 GiB and dedicated above), matched
+by vendor or, with a single card, that card; with several cards of the vendor and different kinds
+it takes the kind of the card that starts the screen (`boot_vga`), which OpenGL uses by default, or
+of the other cards when `DRI_PRIME` asks for another one, and stays `other` when those still differ
+or no card starts the screen. So `integrated` also picks an integrated card
 that only OpenGL ES reaches.
 `WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
 driver is loaded. When no adapter matches, or the matching adapter cannot open a device, the daemon
