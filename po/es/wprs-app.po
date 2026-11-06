@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -3843,6 +3843,16 @@ msgstr ""
 "recortes muestran el primer cuadro."
 
 #: apps/wprs-app/qml/SceneKtx2.qml
+msgid ""
+"The six faces become one cube map, shown as a panorama; the crops show a "
+"corner of it."
+msgstr "Las seis caras forman un mapa cúbico, que se muestra como panorama; los recortes muestran una esquina."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
+msgid "The picture keeps its light above white as an HDR texture."
+msgstr "La imagen conserva su luz por encima del blanco como textura HDR."
+
+#: apps/wprs-app/qml/SceneKtx2.qml
 msgid "The picture now"
 msgstr "La imagen ahora"
 
@@ -3851,12 +3861,32 @@ msgid "%1 on the card"
 msgstr "%1 en la tarjeta"
 
 #: apps/wprs-app/qml/SceneKtx2.qml
+msgid "kept uncompressed: the card cannot hold this shape compressed"
+msgstr "sin comprimir: la tarjeta no puede guardar esta forma comprimida"
+
+#: apps/wprs-app/qml/SceneKtx2.qml
 msgid "drawn by this graphics card"
 msgstr "dibujado por esta tarjeta gráfica"
 
 #: apps/wprs-app/qml/SceneKtx2.qml
 msgid "decoded on the processor: this card does not read it"
 msgstr "decodificado en el procesador: esta tarjeta no lo lee"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A flat picture"
+msgstr "Una imagen plana"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A cube map made from this panorama"
+msgstr "Un mapa cúbico hecho con este panorama"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "A cube map made from six square pictures"
+msgstr "Un mapa cúbico hecho con seis imágenes cuadradas"
+
+#: apps/wprs-app/qml/SceneKtx2Shape.qml
+msgid "Face %1"
+msgstr "Cara %1"
 
 #: apps/wprs-app/qml/SceneLayerLook.qml
 msgid "Blend mode:"

@@ -8,7 +8,7 @@ use basisu_c_sys::extra::types::{Extent3d, TextureViewDimension};
 use basisu_c_sys::extra::{
     BasisuEncoder, BasisuEncoderParams, SourceImage, SourceImageFormat, basisu_encoder_init,
 };
-use image::RgbaImage;
+use image::{Rgba32FImage, RgbaImage};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Codec {
@@ -97,12 +97,26 @@ pub fn encode_frames(frames: &[RgbaImage], o: &Options, shape: Shape) -> Result<
 }
 
 pub fn encode_hdr((w, h): (u32, u32), rgba: &[f32], o: &Options) -> Result<Vec<u8>, Error> {
-    if rgba.len() != w as usize * h as usize * 4 || rgba.iter().any(|v| !v.is_finite()) {
+    lit((w, h, 1), rgba, o, Shape::Flat)
+}
+
+pub fn encode_light(layers: &[Rgba32FImage], o: &Options) -> Result<Vec<u8>, Error> {
+    let (w, h) = layers.first().map_or((0, 0), Rgba32FImage::dimensions);
+    let shape = if layers.len() == 6 { Shape::Cube } else { Shape::Flat };
+    if layers.iter().any(|l| l.dimensions() != (w, h)) || !matches!(layers.len(), 1 | 6) {
+        return Err(Error::TooLarge);
+    }
+    let data: Vec<f32> = layers.iter().flat_map(|l| l.as_raw().iter().copied()).collect();
+    lit((w, h, layers.len() as u32), &data, o, shape)
+}
+
+fn lit((w, h, n): (u32, u32, u32), rgba: &[f32], o: &Options, shape: Shape) -> Result<Vec<u8>, Error> {
+    if rgba.len() != w as usize * h as usize * 4 * n as usize || rgba.iter().any(|v| !v.is_finite()) {
         return Err(Error::Broken);
     }
     let data: Vec<u8> = rgba.iter().flat_map(|v| v.max(0.0).to_ne_bytes()).collect();
-    let size = Extent3d { width: w, height: h, depth_or_array_layers: 1 };
-    compress(SourceImage { data: &data, format: SourceImageFormat::Rgba32Float, size }, o, Shape::Flat, true)
+    let size = Extent3d { width: w, height: h, depth_or_array_layers: n };
+    compress(SourceImage { data: &data, format: SourceImageFormat::Rgba32Float, size }, o, shape, true)
 }
 
 fn rgba(pixels: Vec<u32>, (w, h): (u32, u32)) -> Option<RgbaImage> {

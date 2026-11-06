@@ -59,7 +59,7 @@ Kirigami.PromptDialog {
     FileDialog {
         id: picture
 
-        nameFilters: [App.tr("Pictures") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.ktx2)"]
+        nameFilters: [App.tr("Pictures") + " (*.png *.jpg *.jpeg *.webp *.gif *.bmp *.ktx2 *.hdr *.exr)"]
         onAccepted: {
             const args = {
                 "file": App.path(selectedFile),

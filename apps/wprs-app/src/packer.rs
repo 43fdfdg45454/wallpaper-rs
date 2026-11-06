@@ -39,9 +39,13 @@ pub struct PackerRust {
 
 fn weighed(folder: PathBuf, args: Value) -> anyhow::Result<Value> {
     let wanted: AssetEdit = serde_json::from_value(json!({
-        "asset": args["asset"], "ktx2": true, "codec": args["codec"], "quality": args["quality"]
+        "asset": args["asset"], "ktx2": true, "codec": args["codec"], "quality": args["quality"],
+        "cube": args["cube"].as_bool().unwrap_or(false),
+        "faces": args["faces"].as_array().cloned().unwrap_or_default()
     }))?;
-    let doc = json!({ "scene": { "assets": { wanted.asset.clone(): args["entry"] } } });
+    let mut assets = args["entries"].as_object().cloned().unwrap_or_default();
+    assets.insert(wanted.asset.clone(), args["entry"].clone());
+    let doc = json!({ "scene": { "assets": assets } });
     let cache = dirs::cache_dir().unwrap_or_else(std::env::temp_dir).join("wallpaper-rs").join("ktx2");
     let renderer = wprs_render::Renderer::shared().ok();
     let gpu = |bytes: &[u8], target| renderer.and_then(|r| r.look_ktx2(bytes, target));

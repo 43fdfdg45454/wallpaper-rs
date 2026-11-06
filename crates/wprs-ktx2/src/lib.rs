@@ -2,17 +2,23 @@ use basisu::{DecodeFlags, SourceFormat, Transcoder};
 use image::RgbaImage;
 
 #[cfg(feature = "encode")]
+mod cube;
+#[cfg(feature = "encode")]
 mod encode;
 pub mod kv;
 pub mod moving;
 mod shapes;
 mod target;
+mod weight;
 
 #[cfg(feature = "encode")]
-pub use encode::{Codec, Options, Shape, encode, encode_frames, encode_hdr, look};
-pub use kv::{durations, quality, timed};
+pub use cube::{faces, plain_faces};
+#[cfg(feature = "encode")]
+pub use encode::{Codec, Options, Shape, encode, encode_frames, encode_hdr, encode_light, look};
+pub use kv::{durations, paced, quality, timed};
 pub use shapes::grid;
 pub use target::{HDR_TARGETS, TARGETS, Target};
+pub use weight::{gpu_bytes, plain};
 
 pub const MAGIC: [u8; 12] = [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
 pub const MAX_SIDE: u32 = 16_384;
@@ -175,13 +181,4 @@ pub fn rgba(bytes: &[u8], max_edge: u32) -> Result<RgbaImage, Error> {
     let made = levels(bytes, if hdr { Target::Half } else { Target::Rgba }, max_edge, false)?;
     let data = if hdr { shapes::clamped(&made.data) } else { made.data };
     RgbaImage::from_raw(made.width, made.height, data).ok_or(Error::Broken)
-}
-
-pub fn gpu_bytes(info: &Info, target: Target, mips: bool) -> u64 {
-    let target = if info.hdr { target.lit() } else { target };
-    if info.shaped() {
-        return target.bytes(info.picture(0));
-    }
-    let count = if mips { info.levels } else { 1 };
-    (0..count).map(|l| target.bytes(sized(info, l))).sum()
 }

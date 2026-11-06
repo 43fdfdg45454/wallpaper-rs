@@ -22,15 +22,23 @@ pub fn pairs(bytes: &[u8]) -> Vec<(&[u8], &[u8])> {
 }
 
 pub fn durations(bytes: &[u8]) -> Result<Vec<f32>, Error> {
-    let frames = info(bytes)?.frames;
-    let anim = pairs(bytes).into_iter().find(|(k, _)| *k == ANIMATION).map(|(_, v)| v);
+    let frames = info(bytes)?.frames as usize;
+    let found = pairs(bytes);
+    let own = found.iter().find(|(k, _)| *k == PACE).map(|(_, v)| *v).filter(|v| v.len() == frames * 4);
+    if let Some(own) = own {
+        return Ok((0..frames)
+            .map(|i| (word(own, i * 4).unwrap_or(0) as f32 / 1000.0).clamp(0.02, 60.0))
+            .collect());
+    }
+    let anim = found.iter().find(|(k, _)| *k == ANIMATION).map(|(_, v)| *v);
     let seconds = anim.and_then(|v| Some(word(v, 0)? as f32 / word(v, 4).filter(|t| *t > 0)? as f32));
     let seconds = seconds.filter(|s| s.is_finite() && *s >= 0.02).map_or(1.0 / 24.0, |s| s.min(60.0));
-    Ok(vec![seconds; frames as usize])
+    Ok(vec![seconds; frames])
 }
 
 pub const QUALITY: &[u8] = b"wprsQuality";
 pub const ANIMATION: &[u8] = b"KTXanimData";
+pub const PACE: &[u8] = b"wprsFrameTimes";
 
 pub fn quality(bytes: &[u8]) -> Option<u8> {
     let found = pairs(bytes).into_iter().find(|(k, _)| *k == QUALITY)?.1;
@@ -92,10 +100,23 @@ fn placed(bytes: &[u8], key: &[u8], value: &[u8]) -> Option<Vec<u8>> {
     Some(out)
 }
 
+fn ms(seconds: f32) -> u32 {
+    (seconds.clamp(0.02, 60.0) * 1000.0).round() as u32
+}
+
 pub fn timed(bytes: &[u8], seconds: f32) -> Vec<u8> {
-    let ms = (seconds.clamp(0.02, 60.0) * 1000.0).round() as u32;
-    let value: Vec<u8> = [ms, 1000, 0].iter().flat_map(|v| v.to_le_bytes()).collect();
+    let value: Vec<u8> = [ms(seconds), 1000, 0].iter().flat_map(|v| v.to_le_bytes()).collect();
     with(bytes, ANIMATION, &value)
+}
+
+pub fn paced(bytes: &[u8], seconds: &[f32]) -> Vec<u8> {
+    let average = seconds.iter().sum::<f32>() / seconds.len().max(1) as f32;
+    let even = timed(bytes, average);
+    if seconds.windows(2).all(|w| ms(w[0]) == ms(w[1])) {
+        return even;
+    }
+    let value: Vec<u8> = seconds.iter().flat_map(|s| ms(*s).to_le_bytes()).collect();
+    with(&even, PACE, &value)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

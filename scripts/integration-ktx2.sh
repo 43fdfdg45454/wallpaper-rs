@@ -20,6 +20,18 @@ ctl scene set "$packed/scene" /scene/assets/blink/animated true
 ctl scene asset "$packed/scene" blink --json | grep -q '"frames":3' || fail "the KTX2 frames were not told"
 said=$(ctl scene asset "$packed/scene" blink)
 grep -q "3 frames in a grid" <<<"$said" || fail "the KTX2 frames were not said: $said"
+ctl scene import "$packed/scene" "$ROOT/tests/fixtures/green-64x32.png" --id pano >/dev/null
+ctl scene asset "$packed/scene" pano --ktx2 --cube --dry-run --json | grep -q '"cube":true' || fail "no cube map trial"
+ctl scene asset "$packed/scene" pano --ktx2 --cube --dry-run --json | grep -q '"plain":true' ||
+  fail "the classes that keep a cube map uncompressed were not told"
+ctl scene asset "$packed/scene" pano --ktx2 --cube >/dev/null || fail "the panorama did not become a cube map"
+ctl scene asset "$packed/scene" pano | grep -q "cube map shown as a panorama" || fail "the cube map was not said"
+ctl scene import "$packed/scene" "$ROOT/tests/fixtures/blue-8x8.png" --id face >/dev/null
+ctl scene asset "$packed/scene" face --ktx2 --faces face,face,face,face,face,face >/dev/null ||
+  fail "six faces did not become a cube map"
+ctl scene asset "$packed/scene" face --json | grep -q '"cube":true' || fail "the faces were not one cube map"
+ctl scene import "$packed/scene" "$ROOT/tests/fixtures/blue-8x8.png" --id few >/dev/null
+ctl scene asset "$packed/scene" few --ktx2 --faces few,few 2>/dev/null && fail "two faces became a cube map"
 ctl scene build "$packed/scene" -o "$packed/scene.wpak" >/dev/null || fail "the KTX2 scene was not built"
 ctl pack check "$packed/scene.wpak" --json | grep -q ktx2 || fail "the KTX2 feature was not listed"
 mkdir -p "$packed/picture"

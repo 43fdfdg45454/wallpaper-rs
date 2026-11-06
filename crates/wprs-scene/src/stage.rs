@@ -3,7 +3,7 @@ use crate::validate::{Check, Issue};
 mod assets;
 mod timing;
 
-pub const IMAGES: [&str; 8] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "ktx2"];
+pub const IMAGES: [&str; 10] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "ktx2", "hdr", "exr"];
 pub const VIDEOS: [&str; 3] = ["webm", "mp4", "mkv"];
 
 impl Check<'_> {

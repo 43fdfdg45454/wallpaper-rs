@@ -1,5 +1,4 @@
 use crate::action::AssetEdit;
-use crate::layers::asset_kind;
 use crate::ops::{Op, escape, set};
 use anyhow::{Result, anyhow, ensure};
 use image::RgbaImage;
@@ -8,76 +7,14 @@ use serde_json::{Value, json};
 use std::fs;
 use std::path::Path;
 use wprs_core::message::said;
-use wprs_ktx2::{Codec, Options, Shape, TARGETS, Target};
+use wprs_ktx2::{Codec, TARGETS, Target};
+
+mod source;
+
+use source::{Source, encoded, source};
 
 pub const QUALITY: u8 = 80;
 const LOOK: u32 = 256;
-
-struct Source {
-    path: String,
-    image: RgbaImage,
-    frames: Option<(Vec<RgbaImage>, f32)>,
-    bytes: u64,
-    options: Options,
-}
-
-fn source(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Source> {
-    let id = &wanted.asset;
-    let asset = doc.pointer(&format!("/scene/assets/{}", escape(id)));
-    let asset = asset.ok_or_else(|| anyhow!(said("editor.no_asset", "there is no asset %1", &[id])))?;
-    let path = asset["path"].as_str().unwrap_or_default().to_string();
-    let ext = path.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
-    ensure!(
-        asset_kind(&path) == "image" && ext != "ktx2",
-        said("editor.ktx2_picture", "%1 is not a still picture that can become KTX2", &[id])
-    );
-    let codec = wanted.codec.as_deref().unwrap_or("uastc");
-    let codec = Codec::parse(codec)
-        .ok_or_else(|| anyhow!(said("editor.ktx2_codec", "%1 is not uastc or etc1s", &[&codec])))?;
-    let quality = wanted.quality.unwrap_or(u32::from(QUALITY));
-    ensure!(
-        (1..=100).contains(&quality),
-        said("editor.ktx2_quality", "the quality goes from 1 to 100, not %1", &[&quality])
-    );
-    let file = dir.join(&path);
-    let bytes = fs::metadata(&file)
-        .map_err(|e| said("editor.cannot_read", "cannot read %1: %2", &[&file.display(), &e]))?
-        .len();
-    let unreadable =
-        |e: &dyn std::fmt::Display| said("editor.unreadable_picture", "the picture cannot be read: %1", &[e]);
-    let frames = match asset["animated"] == true {
-        true => Some(moving(&fs::read(&file).map_err(|e| unreadable(&e))?).map_err(|e| unreadable(&e))?),
-        false => None,
-    };
-    let image = match &frames {
-        Some((list, _)) => list[0].clone(),
-        None => crate::pictures::open(&file).map_err(|e| unreadable(&e))?.into_rgba8(),
-    };
-    let repeat = matches!(asset["wrap"].as_str(), Some("repeat" | "mirror"));
-    let srgb = asset["linear"] != true;
-    let options = Options { codec, quality: quality as u8, srgb, mips: asset["mipmaps"] != false, repeat };
-    Ok(Source { path, image, frames, bytes, options })
-}
-
-fn moving(bytes: &[u8]) -> Result<(Vec<RgbaImage>, f32), image::ImageError> {
-    let list = wprs_ktx2::moving::frames(bytes, image::Limits::default())?;
-    let seconds = list.iter().map(|(_, s)| s).sum::<f32>() / list.len().max(1) as f32;
-    let first = list.first().map(|(i, _)| i.dimensions());
-    let frames = list.into_iter().map(|(i, _)| i).filter(|i| Some(i.dimensions()) == first).collect();
-    Ok((frames, seconds))
-}
-
-fn encoded(source: &Source) -> Result<Vec<u8>> {
-    let failed = |e: wprs_ktx2::Error| {
-        anyhow!(said("editor.ktx2_failed", "the picture cannot become KTX2: %1", &[&e]))
-    };
-    match &source.frames {
-        Some((frames, seconds)) => wprs_ktx2::encode_frames(frames, &source.options, Shape::Frames)
-            .map(|b| wprs_ktx2::timed(&b, *seconds))
-            .map_err(failed),
-        None => wprs_ktx2::encode(&source.image, &source.options).map_err(failed),
-    }
-}
 
 fn crop(image: &RgbaImage) -> RgbaImage {
     let (w, h) = (image.width().min(LOOK), image.height().min(LOOK));
@@ -116,7 +53,11 @@ fn looks(
             (_, true) => "cpu",
             _ => "plain",
         };
-        let seen = drawn.map_or_else(|| wprs_ktx2::look(bytes, target), Ok)?;
+        let whole = info.hdr || wprs_ktx2::plain(&info, target);
+        let decoded = || {
+            if whole { wprs_ktx2::rgba(bytes, wprs_ktx2::MAX_SIDE) } else { wprs_ktx2::look(bytes, target) }
+        };
+        let seen = drawn.map_or_else(decoded, Ok)?;
         let first = image::imageops::crop_imm(&seen, 0, 0, info.width, info.height).to_image();
         crop(&first).save(name(target.name()))?;
         made.push((target, name(target.name()).to_string_lossy().into_owned(), by));
@@ -138,6 +79,7 @@ pub fn trial(
     let look = |t: Target| shown.iter().flatten().find(|(s, ..)| *s == t).map(|(_, p, by)| (p.clone(), *by));
     let classes = TARGETS.map(|t| {
         json!({ "target": t.name(), "class": t.class(), "gpu": wprs_ktx2::gpu_bytes(&info, t, source.options.mips),
+            "plain": wprs_ktx2::plain(&info, t),
             "look": look(t).map(|l| l.0), "drawn": look(t).map(|l| l.1) })
     });
     let (w, h) = source.image.dimensions();
@@ -145,6 +87,7 @@ pub fn trial(
         "asset": wanted.asset, "path": source.path, "before": source.bytes, "after": bytes.len(),
         "source": [w, h], "size": [info.width, info.height],
         "levels": info.levels, "codec": info.codec, "quality": source.options.quality, "frames": info.frames,
+        "hdr": info.hdr, "cube": info.cube,
         "original": original, "classes": classes,
     }))
 }

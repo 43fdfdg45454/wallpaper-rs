@@ -30,7 +30,18 @@ fn act(p: &mut Project, action: Value) -> anyhow::Result<()> {
 
 fn wanted(codec: Option<&str>, quality: Option<u32>) -> AssetEdit {
     let (codec, cover, placeholder) = (codec.map(String::from), None, None);
-    AssetEdit { asset: "sky".into(), ktx2: true, codec, quality, cover, placeholder, field: None }
+    let (cube, faces) = (false, Vec::new());
+    AssetEdit {
+        asset: "sky".into(),
+        ktx2: true,
+        codec,
+        quality,
+        cover,
+        placeholder,
+        field: None,
+        cube,
+        faces,
+    }
 }
 
 #[test]
@@ -111,9 +122,9 @@ fn an_animated_picture_becomes_a_ktx2_array_that_keeps_its_timing() {
     let file = p.dir.join("assets").join("blink.gif");
     std::fs::create_dir_all(file.parent().unwrap()).unwrap();
     let mut gif = GifEncoder::new(std::fs::File::create(&file).unwrap());
-    for c in [[255, 0, 0], [0, 255, 0], [0, 0, 255]] {
+    for (c, ms) in [([255, 0, 0], 50), ([0, 255, 0], 500), ([0, 0, 255], 2000)] {
         let frame = RgbaImage::from_pixel(16, 8, Rgba([c[0], c[1], c[2], 255]));
-        let delay = image::Delay::from_numer_denom_ms(200, 1);
+        let delay = image::Delay::from_numer_denom_ms(ms, 1);
         gif.encode_frame(image::Frame::from_parts(frame, 0, 0, delay)).unwrap();
     }
     drop(gif);
@@ -125,7 +136,11 @@ fn an_animated_picture_becomes_a_ktx2_array_that_keeps_its_timing() {
     let bytes = std::fs::read(p.dir.join(&path)).unwrap();
     let info = wprs_ktx2::info(&bytes).unwrap();
     assert_eq!((info.frames, info.picture(0), wprs_ktx2::quality(&bytes)), (3, (32, 16), Some(70)));
-    assert_eq!(wprs_ktx2::durations(&bytes).unwrap(), vec![0.2; 3]);
+    assert_eq!(
+        wprs_ktx2::durations(&bytes).unwrap(),
+        vec![0.05, 0.5, 2.0],
+        "the frames lost their own timing"
+    );
     let glance = wprs_editor::pictures::glance(&p.dir.join(&path)).unwrap();
     assert_eq!((glance.frames, glance.cube, glance.hdr), (3, false, false));
     assert_eq!(wprs_editor::pictures::glance(&file), None);
