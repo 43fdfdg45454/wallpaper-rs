@@ -47,13 +47,39 @@ impl Session {
         }
     }
 
+    pub(super) fn stop(&mut self) {
+        self.test = None;
+        lock(&self.status).testing = false;
+        self.forget(None);
+    }
+
     pub(super) fn restore(&mut self) {
         self.direct.clear();
         let saved = std::mem::take(&mut lock(&self.status).saved);
-        let Some(client) = self.client.as_mut().filter(|_| !saved.is_empty()) else { return };
+        let Some(client) = self.client.as_mut() else { return lock(&self.status).saved = saved };
         let devices = lock(&self.status).devices.clone();
-        let present = |s: &&Device| devices.iter().any(|d| d.index == s.index && d.name == s.name);
-        if let Err(e) = saved.iter().filter(present).try_for_each(|d| client.restore(d)) {
+        let same = |a: &Device, b: &Device| a.index == b.index && a.name == b.name;
+        let (mut left, mut failed) = (Vec::new(), None);
+        for device in saved {
+            if failed.is_some() || !devices.iter().any(|d| same(d, &device)) {
+                left.push(device);
+                continue;
+            }
+            match client.restore(&device) {
+                Ok(()) => {
+                    let mut status = lock(&self.status);
+                    if let Some(shown) = status.devices.iter_mut().find(|d| same(d, &device)) {
+                        (shown.mode, shown.colors) = (device.mode, device.colors);
+                    }
+                }
+                Err(e) => {
+                    left.push(device);
+                    failed = Some(e);
+                }
+            }
+        }
+        lock(&self.status).saved = left;
+        if let Some(e) = failed {
             (self.client, self.failed) = (None, Some(Instant::now()));
             self.publish(Some(e.to_string()), Vec::new());
         }

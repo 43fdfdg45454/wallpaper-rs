@@ -68,11 +68,11 @@ fn run(asks: Receiver<Ask>, mut s: Session) {
                 reply.send(ready).ok();
             }
             Ok(Ask::Stop(reply)) => {
-                s.forget(None);
+                s.stop();
                 reply.send(()).ok();
             }
             Err(RecvTimeoutError::Timeout) => s.tick(),
-            Err(RecvTimeoutError::Disconnected) => return s.forget(None),
+            Err(RecvTimeoutError::Disconnected) => return s.stop(),
         }
     }
 }
