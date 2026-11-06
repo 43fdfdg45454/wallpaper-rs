@@ -1506,7 +1506,9 @@ su último fotograma. El límite de FPS frena todos los fotogramas de la página
 `requestAnimationFrame`: el motor web no dibuja el siguiente hasta que pasa el periodo, también para
 animaciones CSS, vídeos y lienzos; `wprs-ctl state` cuenta los que dibujó cada pantalla
 (`page_frames`). En el teléfono la página se dibuja directamente en la superficie del fondo, sin
-fundido, y el límite solo frena `requestAnimationFrame`.
+fundido; con Android 14 o posterior su pantalla virtual pide el límite con que se abre la página y
+frena todos sus fotogramas, y en versiones anteriores, o si el límite cambia con la página abierta,
+solo frena `requestAnimationFrame`.
 
 La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
 (`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,
@@ -2093,8 +2095,12 @@ otra página no cierra un editor con cambios sin guardar.
   informa con `--dry-run [--looks CARPETA]`. Al cargar, la escena pasa cada textura KTX2 al formato
   comprimido que lee la tarjeta y la deja así en memoria, con los niveles del archivo como mipmaps;
   la imagen conserva su tamaño exacto aunque un lado no sea múltiplo de 4 píxeles, porque la textura
-  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales. Una imagen animada
-  (GIF o WebP) se convierte en un arreglo de cuadros que conserva su ritmo. También se leen KTX2
+  se rellena hasta el bloque siguiente y solo se dibujan sus píxeles reales, también cuando la imagen
+  es una máscara, un mapa de luz, un reflejo o una proyección. Una imagen animada
+  (GIF o WebP) se convierte en un arreglo de cuadros que conserva el tiempo de cada cuadro; una imagen
+  HDR (`.hdr` o `.exr`) en una textura HDR que conserva su luz por encima del blanco; y un panorama, o
+  seis imágenes cuadradas elegidas una por cara, en un mapa cúbico (`--cube` o `--faces` en
+  `wprs-ctl scene asset`). Cada clase de tarjeta que guarda una forma sin comprimir lo indica. También se leen KTX2
   HDR (BC6H en escritorio, ASTC HDR donde la tarjeta lo lee y medios flotantes en las demás), que
   ganan rango en lienzos `hdr`; arreglos de cuadros, que se ven como hojas de sprites y se animan
   con `animated`; y mapas cúbicos, que se ven como panoramas equirectangulares. El panel de

@@ -193,7 +193,10 @@ these are the differences:
   runs low on battery, nor is very hot; otherwise the WebView is paused (`visibilityState` is
   `"hidden"` and `onPause(true)` fires). After 5 minutes hidden it is closed and loads again when
   shown. A renderer that crashes loads the page again, up to three times. Touches reach the page
-  only after its first paint.
+  only after its first paint. On Android 14 and later the virtual display of the page asks for the
+  frame cap the page opens with, so CSS animations, videos and canvases draw no faster than it;
+  before Android 14, and when the cap changes while the page is open, only `requestAnimationFrame`
+  is held to it. The page is drawn straight into the surface of the wallpaper, without a fade.
 - **Media.** `onMedia` gets the same as on the desktop from the media sessions of the phone, once
   the user allows `media` (and `media_network` for a page with network origins) and gives the app
   notification access; the cover arrives as a PNG the page turns into a `blob:` address.

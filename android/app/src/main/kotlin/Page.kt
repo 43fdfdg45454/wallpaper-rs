@@ -5,7 +5,6 @@ import android.app.Presentation
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.view.MotionEvent
 import android.view.Surface
@@ -30,8 +29,7 @@ class Page(private val context: Context, private val handle: Long, spec: JSONObj
     private val host = spec.getString("url").removePrefix("https://").trimEnd('/')
     private val storage = spec.getBoolean("storage")
     private val dpi = context.resources.displayMetrics.densityDpi
-    private val display: VirtualDisplay =
-        context.getSystemService(DisplayManager::class.java).createVirtualDisplay(NAME, size.first, size.second, dpi, surface, 0)!!
+    private val display: VirtualDisplay = Displays.make(context, NAME, size, dpi, surface, spec.optInt("fps", 0))
     private val presentation = Presentation(context, display.display)
     val web = WebView(presentation.context)
     private val touches = Touches(web)
