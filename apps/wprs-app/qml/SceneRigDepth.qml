@@ -80,6 +80,7 @@ ColumnLayout {
     }
 
     QQC2.CheckBox {
+        objectName: "sorted"
         visible: sculpt.depth !== null
         text: App.tr("Draw the parts from back to front, so soft edges show what lies behind them")
         checked: sculpt.depth?.sort !== false

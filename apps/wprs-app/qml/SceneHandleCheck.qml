@@ -102,22 +102,12 @@ QtObject {
         host.destroy();
     }
 
-    function knobs() {
+    function knobs(events) {
         const shown = page.mesh.ask("puppet", {
             "handles": true
         });
-        const knob = made("SceneIkKnobs.qml", {
-            "host": {
-                "shown": shown,
-                "page": page,
-                "layerId": "puppet"
-            },
-            "width": 400,
-            "height": 200
-        });
         const before = shown.ik[0].bend ?? "clockwise";
-        knob.flip(0);
-        knob.destroy();
+        events.bend(shown);
         const after = page.mesh.ask("puppet", {
             "handles": true
         }).ik[0].bend;
@@ -125,16 +115,8 @@ QtObject {
             throw new Error("the bend knob did not flip the chain: " + before);
     }
 
-    function depth() {
-        const panel = made("SceneRigDepth.qml", {
-            "page": page,
-            "layerId": "puppet",
-            "editable": true
-        });
-        panel.change({
-            "sort": false
-        });
-        panel.destroy();
+    function depth(events) {
+        events.depth();
         if (value(page.mesh.pointer("puppet") + "/depth")?.sort !== false)
             throw new Error("the depth panel did not keep the file order");
     }
@@ -183,9 +165,14 @@ QtObject {
     }
 
     function exercise() {
-        knobs();
-        depth();
+        const events = made("SceneDragCheck.qml", {
+            "page": page
+        });
+        knobs(events);
+        depth(events);
         fluid();
+        events.emitters(page.mesh.pointer("smoke"));
+        events.finish();
         mapped();
         made("SceneTemplateCheck.qml", {
             "page": page
