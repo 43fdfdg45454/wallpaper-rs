@@ -2636,6 +2636,15 @@ motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor. En el tel�
 comprueba sus valores, el color que dibuja, la pausa, el límite de fotogramas, lo que oculta cada
 ajuste de privacidad, el borrado de sus datos, los archivos elegidos, los clics solo con permiso y
 que no llega a la red, a otros paquetes ni a archivos del teléfono.
+`ShelfTest` prueba el repositorio estático del teléfono a través de un proveedor de documentos de
+prueba (`Folder` y `Seeder`, solo en el APK de pruebas y en Java, porque ese APK corre sus
+proveedores en su propio proceso sin la biblioteca de Kotlin) que da un permiso de árbol como el
+selector del sistema:
+la copia de la carpeta, la escritura de vuelta de lo que cambió, que los paquetes ya escritos se
+leen en el paso siguiente y que la carpeta elegida se recuerda mientras dura su permiso. `Seeder`
+y `StallTest` arman el repositorio de prueba desde `tests/fixtures/stall` y copian la raíz firmada
+`tests/fixtures/stall-anchor.json` a `root/1.json` al prepararlo, para que ninguna ruta guardada en el
+repositorio parezca una carpeta del sistema (`root/`).
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
