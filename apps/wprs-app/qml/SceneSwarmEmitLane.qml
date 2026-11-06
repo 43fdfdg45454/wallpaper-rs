@@ -14,7 +14,9 @@ ColumnLayout {
     readonly property var on: e.periodic?.on ?? null
     readonly property var off: e.periodic?.off ?? null
     readonly property real every: e.burst?.every ?? 0
-    readonly property real span: Math.max(10, Math.ceil((delay + (length || 0) + (on ? 2 * (on[1] + off[1]) : 0) + every * 2) * 1.2))
+    readonly property real fitted: Math.max(10, Math.ceil((delay + (length || 0) + (on ? 2 * (on[1] + off[1]) : 0) + every * 2) * 1.2))
+    property real held: 0
+    readonly property real span: held > 0 ? held : fitted
 
     function place(t) {
         return t / span * strip.width;
@@ -30,6 +32,7 @@ ColumnLayout {
     }
 
     onEChanged: art.requestPaint()
+    onSpanChanged: art.requestPaint()
 
     Rectangle {
         id: strip
@@ -50,9 +53,10 @@ ColumnLayout {
                 ctx.fillStyle = Kirigami.Theme.highlightColor;
                 ctx.globalAlpha = 0.35;
                 if (lane.on) {
-                    const cycle = (lane.on[0] + lane.on[1]) / 2 + (lane.off[0] + lane.off[1]) / 2;
-                    for (let s = lane.delay; s < end && cycle > 0; s += cycle)
-                        ctx.fillRect(lane.place(s), 4, lane.place(Math.min(end, s + (lane.on[0] + lane.on[1]) / 2)) - lane.place(s), h - 8);
+                    const rows = [[lane.on[0], lane.off[0], 4], [lane.on[1], lane.off[1], h / 2 + 1]];
+                    for (const [on, off, top] of rows)
+                        for (let s = lane.delay, n = 0; s < end && on + off > 0 && n < 2000; s += on + off, n++)
+                            ctx.fillRect(lane.place(s), top, lane.place(Math.min(end, s + on)) - lane.place(s), h / 2 - 5);
                 } else {
                     ctx.fillRect(lane.place(lane.delay), 4, lane.place(end) - lane.place(lane.delay), h - 8);
                 }
@@ -70,7 +74,7 @@ ColumnLayout {
         }
 
         Repeater {
-            model: [["delay", lane.delay, App.tr("Start after %1 s", lane.delay)], ["duration", lane.length > 0 ? lane.delay + lane.length : -1, App.tr("Stop after %1 s", lane.length)], ["on", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 : -1, App.tr("Bursts of emission last about %1 s", lane.on ? (lane.on[0] + lane.on[1]) / 2 : 0)], ["off", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 + (lane.off[0] + lane.off[1]) / 2 : -1, App.tr("Pauses last about %1 s", lane.off ? (lane.off[0] + lane.off[1]) / 2 : 0)], ["every", lane.every > 0 && !lane.e.burst?.on ? lane.delay + lane.every : -1, App.tr("A burst every %1 s", lane.every)]]
+            model: [["delay", lane.delay, App.tr("Start after %1 s", lane.delay)], ["duration", lane.length > 0 ? lane.delay + lane.length : -1, App.tr("Stop after %1 s", lane.length)], ["on", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 : -1, App.tr("Bursts of emission last %1 to %2 s; the top row shows the shortest, the bottom row the longest", lane.on?.[0] ?? 0, lane.on?.[1] ?? 0)], ["off", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 + (lane.off[0] + lane.off[1]) / 2 : -1, App.tr("Pauses last %1 to %2 s", lane.off?.[0] ?? 0, lane.off?.[1] ?? 0)], ["every", lane.every > 0 && !lane.e.burst?.on ? lane.delay + lane.every : -1, App.tr("A burst every %1 s", lane.every)]]
 
             delegate: Rectangle {
                 id: knob
@@ -99,6 +103,7 @@ ColumnLayout {
                     target: null
                     onActiveChanged: {
                         lane.emission.tools.page.editor.hold(active);
+                        lane.held = active ? lane.fitted : 0;
                         if (!active)
                             knob.moved = -1;
                     }

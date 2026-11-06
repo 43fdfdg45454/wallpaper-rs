@@ -6074,12 +6074,16 @@ msgid "Stop after %1 s"
 msgstr "Parar a los %1 s"
 
 #: apps/wprs-app/qml/SceneSwarmEmitLane.qml
-msgid "Bursts of emission last about %1 s"
-msgstr "Los tramos de emisión duran unos %1 s"
+msgid ""
+"Bursts of emission last %1 to %2 s; the top row shows the shortest, the "
+"bottom row the longest"
+msgstr ""
+"Los tramos de emisión duran de %1 a %2 s; la fila de arriba muestra los más "
+"cortos y la de abajo los más largos"
 
 #: apps/wprs-app/qml/SceneSwarmEmitLane.qml
-msgid "Pauses last about %1 s"
-msgstr "Las pausas duran unos %1 s"
+msgid "Pauses last %1 to %2 s"
+msgstr "Las pausas duran de %1 a %2 s"
 
 #: apps/wprs-app/qml/SceneSwarmEmitLane.qml
 msgid "A burst every %1 s"

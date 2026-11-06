@@ -487,9 +487,10 @@ budget as JSON.
 Each emitter of the inspector has its rate (a live slider through `settings` with the `emitter`; a
 rate that follows keyframes or a link shows it and offers *Fixed rate*, which replaces it) and an
 emission lane, from 0 to at least 10 s: the delay, the end of the `duration`, the on and off spans
-of `periodic` (their means) and the bursts every `every` seconds, with handles that drag the delay,
-the duration, the length of the on and off spans (keeping the width of their ranges) and the spacing
-of bursts, each drag one gesture; below it the burst size and whether it fires on time, the beat or a
+of `periodic` (the shortest on and off spans in a top row and the longest in a bottom row) and the
+bursts every `every` seconds, with handles that drag the delay, the duration, the length of the on
+and off spans (keeping the width of their ranges) and the spacing of bursts, each drag one gesture,
+the scale of the lane held while a handle is dragged; below it the burst size and whether it fires on time, the beat or a
 click, following the pointer, `audio_gate` and `inherit`, all through `emit`. *Drawing order and what layers may change* picks
 the render `order` and `cycles` and ticks the values particle layers may change (the rest is `lock`).
 A selected particles layer shows its `instance`: a slider for each number, a tint and a reset for

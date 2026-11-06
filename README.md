@@ -2210,8 +2210,9 @@ barra de degradado donde un clic añade una parada y arrastrarla la mueve. Cada 
 solo en parte de la vida de la partícula, con una forma de cuatro asas que dice dónde aparece, actúa
 y se desvanece. Cada emisor tiene su ritmo (un deslizador en vivo, con *Ritmo fijo* si sigue claves o
 un enlace) y una franja de tiempo que muestra cuándo emite: el retraso, el final de la duración, los
-tramos de emisión y de pausa y las ráfagas, con asas que arrastran el retraso, la duración, el largo
-de los tramos y la separación entre ráfagas, y debajo el tamaño de la ráfaga y si sale con el tiempo,
+tramos de emisión y de pausa (los más cortos en una fila arriba y los más largos en otra abajo) y las
+ráfagas, con asas que arrastran el retraso, la duración, el largo de los tramos y la separación entre
+ráfagas (la escala de la franja queda quieta mientras se arrastra), y debajo el tamaño de la ráfaga y si sale con el tiempo,
 el ritmo o un clic, seguir el puntero, emitir solo con sonido y la velocidad que toma del emisor. La
 sección *Orden de dibujo y lo que pueden cambiar las capas* elige qué partículas quedan encima y cuántas veces se repiten los fotogramas
 en una vida, y qué valores pueden cambiar las capas de partículas (lo demás queda bloqueado). Al
