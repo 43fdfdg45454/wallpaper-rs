@@ -744,6 +744,10 @@ msgstr "%1 aún no tiene valor; da uno"
 msgid "there is no timeline \"%1\"; add it with the timeline action first"
 msgstr "no hay una línea de tiempo «%1»; añádela antes con la acción timeline"
 
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 cannot take the keyframe value %2"
+msgstr "%1 no admite el valor de clave %2"
+
 #: crates/wprs-editor/src/lamps/air.rs
 msgid "only point and spot lights light the air"
 msgstr "solo las luces puntuales y los focos iluminan el aire"

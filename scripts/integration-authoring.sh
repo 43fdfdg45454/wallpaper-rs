@@ -52,6 +52,8 @@ if ctl scene layer "$craft" card transform --tilt 95,0 2>/dev/null; then fail "a
 ctl scene keyframe "$craft" /scene/layers/0/transform/scale 0 '[1,1]' >/dev/null || fail "the scale took no keyframe"
 if ctl scene keyframe "$craft" /scene/layers/0/transform/scale 1 1,1 2>"$WORK/unfit.err"; then fail "a scale keyframe of text was kept"; fi
 grep -q 'give a list of 2 numbers such as \[1, 1\]' "$WORK/unfit.err" || fail "the scale keyframe was refused without its shape: $(cat "$WORK/unfit.err")"
+if ctl scene keyframe "$craft" /scene/layers/0/transform/skew 1 1,1 2>"$WORK/unset.err"; then fail "a skew keyframe of text was kept"; fi
+grep -q 'give a list of 2 numbers such as \[1, 1\]' "$WORK/unset.err" || fail "the unset skew was refused without its shape: $(cat "$WORK/unset.err")"
 if ctl scene layer "$craft" card transform --scale 3,3 2>/dev/null; then fail "a plain scale dropped the keyframes"; fi
 ctl scene layer "$craft" card transform --scale 3,3 --replace || fail "the keyframes were not replaced"
 ctl scene set "$craft" /scene/particles/dust/emitters/0/rate '{"keys": [[0, 10], [1, 30]]}' >/dev/null
