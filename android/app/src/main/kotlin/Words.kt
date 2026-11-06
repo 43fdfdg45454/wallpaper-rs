@@ -20,6 +20,10 @@ fun resourceName(id: String): String? =
 @SuppressLint("DiscouragedApi")
 fun Context.told(error: Throwable): String {
     val refused = error as? Refused ?: return error.message.orEmpty()
-    val found = resourceName(refused.id)?.let { resources.getIdentifier(it, "string", packageName) } ?: 0
+    val found = resourceName(refused.id)?.let { name ->
+        listOf(packageName, "io.github.wallpaper_rs").firstNotNullOfOrNull { owner ->
+            resources.getIdentifier(name, "string", owner).takeIf { it != 0 }
+        }
+    } ?: 0
     return if (found == 0) refused.message.orEmpty() else getString(found, *refused.args.toTypedArray())
 }

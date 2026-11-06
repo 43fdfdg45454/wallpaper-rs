@@ -2506,6 +2506,7 @@ APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
 rustup target add aarch64-linux-android x86_64-linux-android
 ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
 adb install -r -d android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+android/gradlew -p android assembleRelease -PtestSuffix=perf  # se instala junto a la app normal como «wallpaper-rs perf»
 android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64  # pruebas en un emulador x86_64
 scripts/android-power.sh -o consumo.csv  # consumo, fps y memoria por escenario en el teléfono
 ANDROID_NDK_HOME=/ruta/al/ndk scripts/apk-check.sh android/app/build/outputs/apk/release/app-universal-release.apk
