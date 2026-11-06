@@ -36,7 +36,7 @@ impl Painter<'_, '_, '_> {
                 {
                     *free = src;
                 }
-                let name = m.layer.as_deref().or(e.mask_texture.as_deref());
+                let name = (m.layer.is_some(), m.layer.as_deref().or(e.mask_texture.as_deref()));
                 let slot = if *first.get_or_insert(name) == name { 1 } else { 5 };
                 tex[slot] = src;
                 fx.slots[base + n] = channel(m.channel, m.texture.is_some());

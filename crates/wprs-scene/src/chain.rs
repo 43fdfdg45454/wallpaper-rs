@@ -1,4 +1,4 @@
-use crate::effects::{Descriptor, FX_SLOTS, Fuse, MASK_SLOTS, PRELUDE, descriptor};
+use crate::effects::{Descriptor, FX_SLOTS, Fuse, MASK_SLOTS, MaskMode, PRELUDE, descriptor};
 use crate::{Class, EffectUse, Value};
 use std::fmt::Write;
 use std::ops::Range;
@@ -45,7 +45,15 @@ pub fn effect_source(chain: &[&Descriptor]) -> String {
     }
     s.push_str("    var c = select(tap(q0), vec4<f32>(0.0), q0.x <= OUTSIDE_UV.x);\n");
     for (k, d) in chain.iter().enumerate().filter(|(_, d)| d.fuse == Some(Fuse::Color)) {
-        let _ = writeln!(s, "{}\n    c = color_{}(c, q{});", at(k), d.id, k + 1);
+        let (id, q) = (&d.id, k + 1);
+        let _ = match masks > 0 && d.mask_mode == MaskMode::Mix {
+            true => writeln!(
+                s,
+                "{}\n    let c{k} = c;\n    c = mix(c{k}, color_{id}(c, q{q}), mask_at(q{q}));",
+                at(k)
+            ),
+            false => writeln!(s, "{}\n    c = color_{id}(c, q{q});", at(k)),
+        };
     }
     s.push_str("    return c;\n}\n");
     s
@@ -68,8 +76,9 @@ fn mask_of(e: &EffectUse) -> Option<Source<'_>> {
 fn fusable(e: &EffectUse) -> Option<(&'static Descriptor, Source<'_>)> {
     let pictured = |d: &Descriptor| d.params.iter().any(|p| p.kind.asset() && e.params.contains_key(&p.id));
     let mask = mask_of(e).filter(|_| e.enabled == Value::Fixed(true))?;
-    let d =
-        descriptor(&e.effect).filter(|d| !pictured(d) && d.fuse.is_some() && d.class() == Class::Light)?;
+    let mixed = |d: &Descriptor| mask.is_some() && d.mask_mode == MaskMode::Mix && d.fuse == Some(Fuse::Uv);
+    let d = descriptor(&e.effect)
+        .filter(|d| !pictured(d) && !mixed(d) && d.fuse.is_some() && d.class() == Class::Light)?;
     Some((d, mask))
 }
 
