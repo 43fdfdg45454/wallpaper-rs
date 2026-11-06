@@ -101,11 +101,11 @@ fun Context.keptStall(): String? {
     return tree.takeIf { granted }
 }
 
-fun Context.keepStall(tree: Uri) {
-    val kept = getSharedPreferences(KEPT, Context.MODE_PRIVATE)
-    kept.getString(TREE, null)?.takeIf { it != tree.toString() }?.let { old ->
-        runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), GRANTED) }
-    }
+fun Context.stallTree(): String? = getSharedPreferences(KEPT, Context.MODE_PRIVATE).getString(TREE, null)
+
+fun Context.keepStall(tree: Uri, mirrored: (String) -> Boolean = ::mirrored) {
+    val old = stallTree()?.takeIf { it != tree.toString() }
     runCatching { contentResolver.takePersistableUriPermission(tree, GRANTED) }
-    kept.edit().putString(TREE, tree.toString()).apply()
+    getSharedPreferences(KEPT, Context.MODE_PRIVATE).edit().putString(TREE, tree.toString()).apply()
+    old?.let { release(it, GRANTED, mirrored) }
 }

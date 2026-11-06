@@ -70,4 +70,19 @@ class ShelfTest {
         assertFalse("the grant of the folder picked before stayed", app.contentResolver.persistedUriPermissions.any { it.uri == tree })
         assertNull(app.keptStall())
     }
+
+    @Test
+    fun aRepositoryFolderAlsoMirroredForAWallpaperKeepsItsReadGrant() {
+        seed()
+        val read = { uri: android.net.Uri -> app.contentResolver.persistedUriPermissions.filter { it.uri == uri } }
+        val mirrored = { it: String -> it == tree.toString() }
+        app.keepStall(tree, mirrored)
+        app.keepStall(DocumentsContract.buildTreeDocumentUri(authority, "other"), mirrored)
+        assertTrue("the read grant a mirror uses went with the repository", read(tree).any { it.isReadPermission && !it.isWritePermission })
+        app.keepStall(tree, mirrored)
+        app.release(tree.toString(), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) { false }
+        assertEquals("unchoosing the folder of a wallpaper dropped the repository", tree.toString(), app.keptStall())
+        app.keepStall(DocumentsContract.buildTreeDocumentUri(authority, "other")) { false }
+        assertTrue(read(tree).isEmpty())
+    }
 }

@@ -156,7 +156,11 @@ its files except `packages/` and `previews/` into its cache, runs the same `wprs
 functions there (`Native.stall`, ops `open`, `add`, `list`, `feature` and `publish`, each answering
 with the files it changed), writes those files back into the folder and clears the copy; the
 picked `.wpak` files and the online key are read only for that step. Its steps run one at a time, and
-the buttons that change the catalog stay disabled while one runs.
+the buttons that change the catalog stay disabled until every step that runs has ended. The picked
+folder is kept with a persistable read and write grant: its tree URI stays in the app's private
+preferences, it is forgotten once that grant is gone, and picking another folder releases the grant
+of the previous one, except the read grant while a folder setting of a wallpaper mirrors the same
+folder; dropping such a folder setting likewise keeps the grant the repository folder needs.
 
 `featured/<sha256>.json` (optional): `format` (`wpak-repo-featured/1.0`), `repo_id` and `items`: at
 most 64 `{id, note?}`, ids of packages of the repository, each once, with a note of at most 200

@@ -53,7 +53,7 @@ suspend fun Main.chooseFolder(uid: String, key: String, tree: Uri) = withContext
 
 suspend fun Main.unchoose(uid: String, key: String) = withContext(Dispatchers.IO) {
     (ask("unchoose", "uid" to uid, "key" to key) as? String)?.let { tree ->
-        runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(tree), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        release(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         Mirrors.watch(this@unchoose)
     }
 }

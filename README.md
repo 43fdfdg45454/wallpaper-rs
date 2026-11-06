@@ -1776,7 +1776,9 @@ sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelv
 deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre
 una copia temporal sin los paquetes ni las vistas previas y escribe en la carpeta solo los archivos
 que cambiaron. Recuerda la carpeta elegida, también tras cerrar la app, mientras Android mantenga el
-permiso de lectura y escritura que le da el selector; al elegir otra suelta el permiso de la anterior.
+permiso de lectura y escritura que le da el selector; al elegir otra suelta el permiso de la anterior,
+salvo el de lectura si un ajuste de carpeta de un fondo copia esa misma carpeta (y quitar ese ajuste
+tampoco le quita el permiso a la carpeta del repositorio).
 Cada paso deja los botones desactivados hasta que terminan todos los que estén en marcha.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
