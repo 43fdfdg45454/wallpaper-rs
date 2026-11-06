@@ -12,7 +12,7 @@ impl<T: Animate> Value<T> {
         };
         let id = b.prop.as_ref().filter(|_| b.keys.is_none())?;
         let value = shaped(b, prop(b, id, props?));
-        Some(b.base.as_ref().map_or_else(|| value.clone(), |base| added(base, &value)))
+        Some(b.base.as_ref().map_or_else(|| value.clone(), |base| base.plus(&value)))
     }
 
     pub(crate) fn get(&self, cx: &Context) -> T {
@@ -54,7 +54,7 @@ impl<T: Animate> Binding<T> {
             cx.signal(b).and_then(T::from_signal).unwrap_or_default()
         };
         let value = match b.base.as_ref().filter(|_| !b.tracked()) {
-            Some(base) => added(base, &shaped(b, raw)),
+            Some(base) => base.plus(&shaped(b, raw)),
             None => shaped(b, raw),
         };
         let times = b.smooth.map(crate::Smooth::times).filter(|t| t.iter().any(|v| *v > 0.0));
@@ -86,12 +86,6 @@ fn shaped<T: Animate>(b: &Binding<T>, raw: T) -> T {
     let (mut comps, n) = raw.comps();
     comps[..n].iter_mut().for_each(|c| *c = b.modify(*c));
     if n == 0 { raw } else { raw.with_comps(comps) }
-}
-
-fn added<T: Animate>(base: &T, value: &T) -> T {
-    let ((mut parts, n), (more, _)) = (base.parts(), value.parts());
-    parts[..n].iter_mut().zip(more).for_each(|(p, m)| *p += m);
-    base.with_parts(parts)
 }
 
 pub(crate) fn key(value: &Json) -> String {

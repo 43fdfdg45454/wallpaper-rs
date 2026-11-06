@@ -33,6 +33,10 @@ fn colors_blend_in_oklab_along_the_shorter_hue() {
     let mut rt = runtime(solid(json!([[0, "#ff0040"], [2, "#ff4000"]])));
     let [r, g, b, _] = color(&at(&mut rt, 1.0));
     assert!(r > 0.95 && g < 0.2 && b < 0.2, "the hue went the long way: {r} {g} {b}");
+    let mut rt = runtime(
+        json!([{ "id": "s", "type": "solid", "color": { "keys": [[0, "#000000"]], "base": "#ff000080" } }]),
+    );
+    assert_eq!(color(&at(&mut rt, 0.0)), [1.0, 0.0, 0.0, 1.0], "a relative color went past an alpha of 1");
     let mut rt = runtime(solid(json!([[0, "#000000"], [2, "#ffffff"]])));
     let [r, g, b, _] = color(&at(&mut rt, 1.0));
     assert!((r - g).abs() < 1e-3 && (g - b).abs() < 1e-3 && r > 0.35 && r < 0.65, "{r} {g} {b}");
