@@ -1451,8 +1451,9 @@ el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
 de movimiento, el VHS, los fluidos (con tantos emisores de punto y de línea como haga falta, hasta 64,
 que el editor coloca con asas sobre el lienzo y gira y refuerza desde la punta de su flecha, que
-se animan con fotogramas clave en la línea de tiempo, siguen una propiedad o cambian desde un
-script; quietos mientras su fuerza es 0), el destello de lente y el chisporroteo eléctrico, y los parámetros
+se animan con fotogramas clave en la línea de tiempo, siguen una propiedad (el lienzo muestra los
+del valor actual o los que el inspector elige para cada valor, y cada emisor acepta sus extremos
+escritos) o cambian desde un script; quietos mientras su fuerza es 0), el destello de lente y el chisporroteo eléctrico, y los parámetros
 nuevos de los efectos que ya existían: rayos de luz direccionales o en estrella, aberración cromática
 en cuatro modos, grano en blanco y negro o con otro modo de fusión, desenfoque mezclado con la imagen,
 fondo visible en el iris y la lente, reflejo inclinado, desplazamiento sin repetición, sacudida con
