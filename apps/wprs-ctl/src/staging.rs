@@ -36,6 +36,13 @@ pub enum Stage {
         z: Option<f64>,
         #[arg(allow_hyphen_values = true, long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
         size: Option<[f64; 2]>,
+        #[arg(
+            long,
+            value_name = "S",
+            conflicts_with = "replace",
+            help = "Second of the scene at which a value with keyframes, or a part keyed on its own, takes a keyframe instead of being refused"
+        )]
+        at: Option<f64>,
         #[arg(long, help = crate::sowing::REPLACE)]
         replace: bool,
     },
@@ -86,8 +93,8 @@ pub enum Stage {
 
 pub(crate) fn edit(layer: String, what: Stage) -> L {
     match what {
-        Stage::Transform { position, rotation, scale, skew, origin, tilt, z, size, replace } => {
-            L::Transform { layer, position, rotation, scale, skew, origin, tilt, z, size, replace }
+        Stage::Transform { position, rotation, scale, skew, origin, tilt, z, size, at, replace } => {
+            L::Transform { layer, position, rotation, scale, skew, origin, tilt, z, size, at, replace }
         }
         Stage::Blend { blend } => L::Blend { layer, blend },
         Stage::Instance {

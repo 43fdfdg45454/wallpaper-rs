@@ -5474,6 +5474,14 @@ msgstr "Píxeles de una capa de imagen, vídeo, sólida, de ajuste o de espectro
 
 #: apps/wprs-ctl/src/staging.rs
 msgid ""
+"Second of the scene at which a value with keyframes, or a part keyed on its "
+"own, takes a keyframe instead of being refused"
+msgstr ""
+"Segundo de la escena en que un valor con claves, o una parte animada por "
+"separado, recibe una clave en vez de rechazarse"
+
+#: apps/wprs-ctl/src/staging.rs
+msgid ""
 "Blend the layer over what is below it with a mode such as normal, add, "
 "multiply or screen"
 msgstr ""

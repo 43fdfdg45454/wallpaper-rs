@@ -35,17 +35,14 @@ Item {
 
     function commit(field, value) {
         const rounded = Array.isArray(value) ? value.map(v => Math.round(v * 100) / 100) : Math.round(value * 100) / 100;
-        const keyed = (page.view.tracks ?? []).some(track => track.pointer === base + "/" + field);
-        if (keyed && !page.overwrite)
-            page.change(base + "/" + field, rounded, true);
-        else
-            page.run("layer", {
-                    "transform": {
-                        "layer": modelData.id,
-                        [field]: rounded,
-                        "replace": page.overwrite
-                    }
-                }, true);
+        page.run("layer", {
+                "transform": {
+                    "layer": modelData.id,
+                    [field]: rounded,
+                    "at": page.editor.time,
+                    "replace": page.overwrite
+                }
+            }, true);
     }
 
     x: center[0] * ratio - width / 2

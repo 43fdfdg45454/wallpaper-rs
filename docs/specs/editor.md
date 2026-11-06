@@ -674,9 +674,11 @@ size (at most 64). `wprs-ctl scene preview DIR --layout dual|triple|vertical|min
 at second `S` of the scene clock when `--time` is 0 or more (as the editor shows the moment its
 preview is at), each screen's part at its physical place and the frames between them. Dragging a layer that is not locked
 selects it and moves it, as one gesture. The handles write with the `layer` action, as
-`wprs-ctl scene layer DIR LAYER transform` does; a value with keyframes takes a keyframe at the
-playhead instead, and *Write over keyframes* in the canvas toolbar makes them write a fixed value
-over keyframes and links (`replace`). A drag that starts outside the layers, or any drag with
+`wprs-ctl scene layer DIR LAYER transform --at S` does: a value with keyframes takes a keyframe at
+the playhead instead, and so does each part of a position or scale keyed on its own (`tracks`),
+while its plain parts take the new value; a part that follows a link refuses the drag and says so.
+*Write over keyframes* in the canvas toolbar makes them write a fixed value over keyframes and
+links (`replace`). A drag that starts outside the layers, or any drag with
 Shift, draws a rectangle that selects the layers it touches and picks them as Ctrl does in the
 layer list, ready for *Group*. Ctrl and the wheel zoom, the wheel or a drag with the middle or
 right button pans.

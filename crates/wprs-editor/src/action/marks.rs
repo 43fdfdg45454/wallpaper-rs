@@ -25,6 +25,8 @@ pub enum LayerEdit {
         #[serde(default)]
         size: Option<[f64; 2]>,
         #[serde(default)]
+        at: Option<f64>,
+        #[serde(default)]
         replace: bool,
     },
     Blend {

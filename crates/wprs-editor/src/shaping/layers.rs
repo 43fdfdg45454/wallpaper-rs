@@ -14,18 +14,19 @@ const TUNABLE: [&str; 9] =
 
 type Fields<'a> = [(&'a str, Option<Value>); 7];
 
-fn transform(doc: &Value, path: &str, found: &Value, fields: Fields, replace: bool) -> Result<Vec<Op>> {
-    let at = format!("{path}/transform");
-    let mut next = found["transform"].as_object().cloned().unwrap_or_default();
+fn transform(doc: &Value, path: &str, fields: Fields, at: Option<f64>, replace: bool) -> Result<Vec<Op>> {
     let given: Vec<(&str, Value)> = fields.into_iter().filter_map(|(k, v)| Some((k, v?))).collect();
     if given.is_empty() {
         return Ok(Vec::new());
     }
+    let ok = at.is_none_or(|t| t.is_finite() && t >= 0.0);
+    ensure!(ok, said("editor.time_must_more", "the time must be 0 or more seconds", &[]));
+    let base = format!("{path}/transform");
+    let mut work = doc.clone();
     for (k, v) in given {
-        super::plain(doc, &format!("{at}/{k}"), replace)?;
-        next.insert(k.into(), v);
+        super::keyed::write(&mut work, &format!("{base}/{k}"), v, at, replace)?;
     }
-    Ok(set(doc, &at, Value::Object(next)))
+    Ok(set(doc, &base, work.pointer(&base).cloned().unwrap_or_default()))
 }
 
 fn instance(
@@ -87,7 +88,7 @@ fn points(old: Option<&Value>, each: &Map<String, Value>) -> Result<Vec<Value>> 
 
 pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
     let ops = match e {
-        L::Transform { layer: id, position, rotation, scale, skew, origin, tilt, z, size, replace } => {
+        L::Transform { layer: id, position, rotation, scale, skew, origin, tilt, z, size, at, replace } => {
             let (path, found) = layer(doc, id)?;
             let turn = rotation.is_none_or(|r| (-360.0..=360.0).contains(&r));
             ensure!(turn, said("editor.rotation_range", "the rotation goes from -360 to 360 degrees", &[]));
@@ -107,7 +108,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {
                 ("tilt", pair(tilt)),
                 ("z", z.map(|z| json!(z))),
             ];
-            let mut ops = transform(doc, &path, found, fields, *replace)?;
+            let mut ops = transform(doc, &path, fields, *at, *replace)?;
             if let Some(s) = size {
                 let kind = found["type"].as_str().unwrap_or_default();
                 ensure!(

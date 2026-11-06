@@ -474,7 +474,8 @@ msgid "the file has no animation \"%1\""
 msgstr "el archivo no tiene ninguna animación «%1»"
 
 #: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/clips/keyed.rs
-#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/stage3d/paths.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/shaping/layers.rs
+#: crates/wprs-editor/src/stage3d/paths.rs
 msgid "the time must be 0 or more seconds"
 msgstr "el tiempo debe ser de 0 segundos o más"
 
@@ -1233,6 +1234,10 @@ msgstr "la capa %1 no tiene el efecto %2"
 #: crates/wprs-editor/src/shaping/effects.rs
 msgid "a sound or light layer takes no effects"
 msgstr "una capa de sonido o de luz no lleva efectos"
+
+#: crates/wprs-editor/src/shaping/keyed.rs
+msgid "a part of %1 follows another source; write over it with replace"
+msgstr "una parte de %1 sigue a otra fuente; escríbela encima con replace"
 
 #: crates/wprs-editor/src/shaping/layers.rs
 msgid "only a particles layer has an instance"

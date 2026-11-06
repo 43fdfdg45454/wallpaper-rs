@@ -1988,7 +1988,9 @@ otra página no cierra un editor con cambios sin guardar.
   `transform.z`) con sus asas, y una capa inclinada o alejada muestra en línea discontinua el
   contorno con la misma perspectiva con que la dibuja la escena; las asas escriben con la acción
   `layer` como `wprs-ctl scene layer`; en
-  un valor animado ponen una clave en el cabezal, y con *Escribir sobre las claves* de la barra
+  un valor animado ponen una clave en el cabezal (`--at S`), también en cada parte de una posición
+  o escala animada por separado, y una parte que sigue un enlace rechaza el arrastre; con
+  *Escribir sobre las claves* de la barra
   dejan un valor fijo encima de las claves o enlaces (`--replace`); un arrastre que
   empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas
   que toca, como Ctrl en la lista, listas para agruparlas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
