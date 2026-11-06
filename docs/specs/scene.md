@@ -226,7 +226,14 @@ with power saving or while the GPU or CPU is warm (on phones, only while chargin
 budget of a level is half of its frame interval on mains power and a quarter on battery, with power
 saving and on phones. A lower level draws fewer pixels and effects but keeps the frame rate, which
 only the tier, the power source, the temperature and the user set, and comparing the cost measured
-at the level above keeps a scene from bouncing between two levels.
+at the level above keeps a scene from bouncing between two levels. The phone steers by time alone:
+its ceiling is `q3` (one step under the tier level with power saving, lower while warm or hot), it
+starts at the level the cost model fits and its budget is three quarters of the frame interval. It
+rises, also on battery, when the measured average times the ratio of the level above (measured at
+the last step down, else from the cost model) and a 15 % margin fits that budget for 15 seconds, and
+its frame rate never depends on the level (60 on battery unless the user sets another cap). It
+presents through three swapchain images (latency 2), so the GPU draws a frame while the next one is
+recorded.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
 which all do, with timestamps or by waiting (see below). `GetState().outputs[x].quality` and
 `quality_reason` tell the level and why it is below the highest; the app, the tray and the phone

@@ -11,6 +11,7 @@ const MARGIN: f32 = 1.5;
 const PROBE: Duration = Duration::from_secs(60);
 const BOUNCE: Duration = Duration::from_secs(30);
 const TRIES: u8 = 4;
+const AHEAD: f32 = 1.15;
 
 impl Budget {
     pub fn auto(&self, runtime: &Runtime) -> (Quality, Why) {
@@ -29,6 +30,18 @@ impl Budget {
             Heat::Hot => Quality::Q0,
         };
         (heated, steps(fitted, heated, Why::Heat, why))
+    }
+
+    pub fn reach(&self) -> (Quality, Why) {
+        let (start, why) = match self.saver {
+            true => (self.tier.quality(true).lower(), Why::Saver),
+            false => (Quality::Q3, Why::Full),
+        };
+        match self.heat {
+            Heat::Cool => (start, why),
+            Heat::Warm => (start.lower(), Why::Heat),
+            Heat::Hot => (Quality::Q0, Why::Heat),
+        }
     }
 
     pub fn steady(&self) -> Quality {
@@ -65,12 +78,27 @@ pub struct Governor {
     gains: [f32; 4],
     gauge: Option<f32>,
     floor: Option<Quality>,
+    timed: bool,
 }
 
 impl Governor {
+    pub fn timed() -> Governor {
+        Governor { timed: true, ..Governor::default() }
+    }
+
     pub fn hold(&mut self, floor: Quality) {
         if self.floor.unwrap_or(Quality::Q0) != floor {
-            *self = Governor { floor: Some(floor), ..Governor::default() };
+            *self = Governor { floor: Some(floor), timed: self.timed, ..Governor::default() };
+        }
+    }
+
+    pub fn begin(&mut self, ceiling: Quality, fitted: Quality) {
+        if self.last.is_none() && self.changed.is_none() {
+            let mut q = ceiling;
+            self.steps = 0;
+            while q > fitted.min(ceiling) {
+                (q, self.steps) = (q.lower(), self.steps + 1);
+            }
         }
     }
 
@@ -109,10 +137,12 @@ impl Governor {
         let above = (1..steps).fold(ceiling, |q, _| q.lower());
         let ((limit, cost), (high, dearer)) = (budget(here), budget(above));
         let expected = (dearer / cost.max(f32::EPSILON) * MARGIN).clamp(1.0, MOST);
-        let gain = self.gains.get(index).map_or(1.0, |g| g.clamp(1.0, expected));
+        let measured = self.gains.get(index).filter(|g| **g > 0.0).map(|g| g.clamp(1.0, expected));
         let slow = self.ewma > limit && here > self.floor.unwrap_or(Quality::Q0);
-        let fits = steps > 0 && raises && self.ewma < high / 2.0;
-        let fast = fits && self.ewma * gain < high / 2.0;
+        let ratio = measured.unwrap_or((expected / MARGIN).max(1.0)) * AHEAD;
+        let fits =
+            steps > 0 && raises && if self.timed { self.ewma * ratio < high } else { self.ewma < high / 2.0 };
+        let fast = fits && (self.timed || self.ewma * measured.unwrap_or(1.0) < high / 2.0);
         let since = |mark: &mut Option<Instant>, on: bool| {
             *mark = if on { Some(mark.unwrap_or(at)) } else { None };
             mark.map(|m| at.saturating_duration_since(m))

@@ -633,7 +633,13 @@ justo antes de bajar no deje la escena abajo, y si solo eso la retiene, a los 60
 el nivel de arriba; cada vez que tiene que volver a bajar en menos de 30 s, las esperas se duplican
 (hasta cuatro veces) y se acortan otra vez cuando una subida se mantiene. Nunca sube con batería ni
 por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
-mide uno de cada quince fotogramas esperando a la GPU. `wprs-ctl state` (`tier`,
+mide uno de cada quince fotogramas esperando a la GPU. En el teléfono el nivel se guía solo por el
+tiempo medido: empieza en el nivel que el modelo de costes cree que cabe, puede llegar a Q3 (menos con
+ahorro de energía o calor), usa tres cuartas partes del intervalo entre fotogramas, sube también con
+batería en cuanto el tiempo medido por lo que encarece el nivel de arriba (medido al bajar, o estimado)
+y un 15 % de margen cabe durante 15 s, y la frecuencia no depende del nivel: 60 fotogramas por segundo
+con batería salvo que elijas otra. Presenta con tres imágenes para que la GPU dibuje un fotograma
+mientras se prepara el siguiente. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
 clase medida, el nivel y por qué bajó.
 

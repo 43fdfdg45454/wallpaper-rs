@@ -124,7 +124,7 @@ impl Stage {
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),
-            governor: Governor::default(),
+            governor: Governor::timed(),
             samples: 0,
             offset: 0.5,
             extras,

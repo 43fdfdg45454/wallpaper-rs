@@ -75,12 +75,19 @@ impl Budget {
     }
 
     pub fn fps(&self, runtime: &Runtime, quality: Quality, refresh: u32) -> u32 {
+        self.paced(runtime, refresh, runtime.cost(quality))
+    }
+
+    pub fn timed_fps(&self, runtime: &Runtime, refresh: u32) -> u32 {
+        self.paced(runtime, refresh, 0.0)
+    }
+
+    fn paced(&self, runtime: &Runtime, refresh: u32, cost: f32) -> u32 {
         let clock = match runtime.scene.clock.max_fps {
             DISPLAY => display(refresh),
             fps => fps,
         };
-        let rate = self.rate(refresh, Some(runtime.cost(quality)));
-        rate.min(clock).min(runtime.pace()).max(1)
+        self.rate(refresh, Some(cost)).min(clock).min(runtime.pace()).max(1)
     }
 }
 
