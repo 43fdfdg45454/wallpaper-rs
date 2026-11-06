@@ -1,6 +1,8 @@
 use crate::compositor::lock;
 use crate::daemon::Daemon;
+use rustix::event::{PollFd, PollFlags, poll};
 use rustix::fs::inotify::{self, CreateFlags, WatchFlags};
+use rustix::io::Errno;
 use std::mem::MaybeUninit;
 use std::os::fd::OwnedFd;
 use std::sync::{Arc, Mutex, Weak};
@@ -47,7 +49,7 @@ impl Gpus {
 }
 
 pub(crate) fn watch(daemon: &Arc<Daemon>) {
-    let Ok(fd) = inotify::init(CreateFlags::CLOEXEC) else { return };
+    let Ok(fd) = inotify::init(CreateFlags::CLOEXEC | CreateFlags::NONBLOCK) else { return };
     if inotify::add_watch(&fd, NODES, WatchFlags::CREATE | WatchFlags::DELETE).is_err() {
         return;
     }
@@ -61,16 +63,34 @@ pub(crate) fn card(name: &[u8]) -> bool {
     name.strip_prefix(b"card").is_some_and(digits) || name.strip_prefix(b"renderD").is_some_and(digits)
 }
 
+fn drained(reader: &mut inotify::Reader<'_, &OwnedFd>) -> Option<bool> {
+    let mut seen = false;
+    loop {
+        match reader.next() {
+            Ok(event) => seen |= event.file_name().is_some_and(|n| card(n.to_bytes())),
+            Err(Errno::INTR) => {}
+            Err(Errno::AGAIN) => return Some(seen),
+            Err(_) => return None,
+        }
+    }
+}
+
 fn follow(fd: &OwnedFd, daemon: &Weak<Daemon>) {
     let mut buffer = [MaybeUninit::uninit(); 1024];
     let mut reader = inotify::Reader::new(fd, &mut buffer);
     loop {
-        match reader.next() {
-            Ok(event) if event.file_name().is_some_and(|n| card(n.to_bytes())) => {}
-            Ok(_) | Err(rustix::io::Errno::INTR) => continue,
+        match poll(&mut [PollFd::new(fd, PollFlags::IN)], None) {
+            Ok(_) | Err(Errno::INTR) => {}
             Err(_) => return,
         }
+        let Some(seen) = drained(&mut reader) else { return };
+        if !seen {
+            continue;
+        }
         std::thread::sleep(SETTLE);
+        if drained(&mut reader).is_none() {
+            return;
+        }
         let Some(daemon) = daemon.upgrade() else { return };
         if daemon.gpus.refresh() {
             tracing::info!("the graphics cards changed");
@@ -85,5 +105,23 @@ mod tests {
     fn only_card_and_render_nodes_count_as_graphics_cards() {
         let named = [&b"card0"[..], b"card12", b"renderD128", b"card", b"by-path", b"card0-DP-1", b"renderD"];
         assert_eq!(named.map(super::card), [true, true, true, false, false, false, false]);
+    }
+
+    #[test]
+    fn a_card_and_its_render_node_appearing_together_count_once() {
+        use rustix::fs::inotify::{self, CreateFlags, WatchFlags};
+        let dir = tempfile::tempdir().unwrap();
+        let fd = inotify::init(CreateFlags::CLOEXEC | CreateFlags::NONBLOCK).unwrap();
+        inotify::add_watch(&fd, dir.path(), WatchFlags::CREATE | WatchFlags::DELETE).unwrap();
+        let mut buffer = [std::mem::MaybeUninit::uninit(); 1024];
+        let mut reader = inotify::Reader::new(&fd, &mut buffer);
+        assert_eq!(super::drained(&mut reader), Some(false), "nothing happened yet");
+        for name in ["card1", "renderD129", "by-path"] {
+            std::fs::write(dir.path().join(name), b"").unwrap();
+        }
+        assert_eq!(super::drained(&mut reader), Some(true));
+        assert_eq!(super::drained(&mut reader), Some(false), "one burst was counted twice");
+        std::fs::write(dir.path().join("by-id"), b"").unwrap();
+        assert_eq!(super::drained(&mut reader), Some(false), "a name that is no card counted");
     }
 }
