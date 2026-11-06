@@ -1,6 +1,15 @@
 use super::limb::{angle, gap, length, wrap};
 use std::f32::consts::{PI, TAU};
 
+#[derive(Debug, Clone, PartialEq, Default)]
+pub(crate) struct Kept {
+    pub(super) from: Vec<[f32; 2]>,
+    pub(super) states: [(f32, f32); crate::MAX_CHAIN],
+    pub(super) target: [f32; 2],
+    pub(super) side: f32,
+    pub(super) turns: Vec<f32>,
+}
+
 fn end(lengths: &[f32], turn: f32) -> [f32; 2] {
     let mut at = [0.0f32; 2];
     for (i, l) in lengths.iter().enumerate() {

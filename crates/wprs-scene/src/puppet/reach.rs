@@ -1,4 +1,5 @@
 use super::Fig;
+use super::arc::Kept;
 use super::limb::{angle, around, end, gap, length, mirrored, offset, pivot, range, tip, turn, wrap};
 use super::{Puppet, Seat};
 use crate::resolve::Context;
@@ -26,15 +27,6 @@ pub(crate) struct Chain {
     pub turns: Vec<f32>,
     pub kept: Option<Box<Kept>>,
     pub ran: usize,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Kept {
-    from: Vec<[f32; 2]>,
-    states: [(f32, f32); crate::MAX_CHAIN],
-    target: [f32; 2],
-    side: f32,
-    turns: Vec<f32>,
 }
 
 pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
@@ -127,7 +119,8 @@ impl Puppet {
             c.ran = 0;
             return;
         }
-        let from = c.points.clone();
+        let mut kept = c.kept.take().unwrap_or_default();
+        kept.from.clone_from(&c.points);
         let sided: [bool; crate::MAX_CHAIN] = std::array::from_fn(|i| {
             (1..n).contains(&i) && {
                 let t =
@@ -194,7 +187,8 @@ impl Puppet {
             curl(c);
             rounds(c);
         }
-        let turns = c.turns.clone();
-        c.kept = Some(Box::new(Kept { from, states, target, side, turns }));
+        kept.turns.clone_from(&c.turns);
+        (kept.states, kept.target, kept.side) = (states, target, side);
+        c.kept = Some(kept);
     }
 }
