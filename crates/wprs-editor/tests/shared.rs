@@ -30,7 +30,9 @@ fn source(root: &Path) -> Project {
     )
     .unwrap();
     picture(&root.join("sky.png"), [40, 90, 160]);
-    project.act(&Action::Import { file: root.join("sky.png"), id: Some("sky".into()) }).unwrap();
+    let sky =
+        Action::Import { file: root.join("sky.png"), id: Some("sky".into()), linear: false, atlas: None };
+    project.act(&sky).unwrap();
     let layer = |kind: &str, id: &str| Action::AddLayer {
         kind: kind.into(),
         id: Some(id.into()),
@@ -38,6 +40,7 @@ fn source(root: &Path) -> Project {
         source: None,
         into: None,
         at: None,
+        file: None,
     };
     project.act(&layer("image", "glow")).unwrap();
     project.act(&layer("particles", "snow")).unwrap();
@@ -93,6 +96,7 @@ fn asset_packages_are_made_from_chosen_parts_and_imported_with_credits() {
             source: None,
             into: None,
             at: None,
+            file: None,
         })
         .unwrap();
     let wanted = ImportAssets { package: wpak.clone(), parts: vec!["layer:glow".into()] };

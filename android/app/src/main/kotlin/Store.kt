@@ -89,6 +89,8 @@ suspend fun ask(op: String, vararg args: Pair<String, Any?>): Any? =
 
 fun depth(op: String, vararg args: Pair<String, Any?>): Any? = answer(Native::depth, op, args)
 
+fun stall(op: String, vararg args: Pair<String, Any?>): JSONObject = answer(Native::stall, op, args) as JSONObject
+
 fun examples(context: Context) {
     val root = File(context.cacheDir, "examples").apply { deleteRecursively() }
     unpack(context.assets, "scenes", root)

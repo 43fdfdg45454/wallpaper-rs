@@ -15,6 +15,7 @@ mod events;
 mod fetch;
 mod grid;
 mod items;
+mod landing;
 mod library;
 mod packer;
 mod picture;
@@ -25,6 +26,7 @@ mod scenelive;
 mod scenework;
 mod secret;
 mod shelf;
+mod stall;
 mod strips;
 #[cfg(test)]
 mod tests;

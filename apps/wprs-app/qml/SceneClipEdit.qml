@@ -35,18 +35,35 @@ RowLayout {
         }
     }
 
+    function add(play) {
+        const id = fresh();
+        bar.line.page.run("clip", {
+            "layer": bar.mesh.layer,
+            "id": id,
+            "add": true,
+            "play": play
+        });
+        bar.mesh.clip = id;
+    }
+
     QQC2.ToolButton {
         icon.name: "list-add"
         text: App.tr("Add a clip")
         display: QQC2.AbstractButton.IconOnly
-        onClicked: {
-            const id = edit.fresh();
-            edit.bar.line.page.run("clip", {
-                "layer": edit.bar.mesh.layer,
-                "id": id,
-                "add": true
-            });
-            edit.bar.mesh.clip = id;
+        onClicked: adding.popup()
+
+        QQC2.Menu {
+            id: adding
+
+            QQC2.MenuItem {
+                text: App.tr("Add a clip")
+                onTriggered: edit.add(false)
+            }
+
+            QQC2.MenuItem {
+                text: App.tr("Add a clip and play it in a new animation layer")
+                onTriggered: edit.add(true)
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 pub const EDITOR: &str = "/scene/ext/editor";
 
-pub const ACTIONS: [&str; 55] = [
+pub const ACTIONS: [&str; 61] = [
     "set",
     "add",
     "remove",
@@ -54,6 +54,12 @@ pub const ACTIONS: [&str; 55] = [
     "ambient",
     "scene3d",
     "animate",
+    "effects",
+    "layer",
+    "manifest",
+    "property",
+    "canvas",
+    "timeline",
     "undo",
     "redo",
 ];
@@ -104,6 +110,29 @@ pub struct RgbEdit {
     pub whole: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct UpgradeEdit {
+    #[serde(default)]
+    pub rating: Option<wprs_format::Rating>,
+    #[serde(default)]
+    pub reasons: Vec<wprs_format::Descriptor>,
+    #[serde(default)]
+    pub photosensitive: Option<bool>,
+    #[serde(default)]
+    pub derived_from: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConditionEdit {
+    pub id: String,
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub text: String,
+}
+
 impl super::Action {
     pub fn name(&self) -> String {
         serde_json::to_value(self)
@@ -123,16 +152,6 @@ pub(super) fn whole() -> f32 {
 
 pub(super) fn tenth() -> f32 {
     0.1
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct ConditionEdit {
-    pub id: String,
-    #[serde(default)]
-    pub enabled: bool,
-    #[serde(default)]
-    pub text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]

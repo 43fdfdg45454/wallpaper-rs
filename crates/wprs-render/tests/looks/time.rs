@@ -48,6 +48,13 @@ fn scenes_without_a_preview_are_drawn_at_their_poster_time() {
     let p = night.get_pixel(25, 12);
     assert!(p[0] < 4 && p[1] > 250 && p[2] < 4 && p[3] == 255, "{p:?}");
     assert!(night.get_pixel(2, 6)[0] < 4, "{:?}", night.get_pixel(2, 6));
+    let early =
+        r.still(&scene, &SceneAssets::default(), &Default::default(), (0.0, "en"), (50, 0.0)).unwrap();
+    assert!(
+        early.get_pixel(25, 12)[1] < 4,
+        "a still at 0 s shows the first key: {:?}",
+        early.get_pixel(25, 12)
+    );
     let noon = poster(86_400.0 * 1000.5).unwrap().get_pixel(2, 6)[0];
     assert!((150..225).contains(&noon), "thumbnails show the local time they were drawn at: {noon}");
     let read = SceneAssets::read(&scene, |_| Err("nothing to read".into())).unwrap();

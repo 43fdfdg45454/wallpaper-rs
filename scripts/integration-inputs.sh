@@ -114,6 +114,9 @@ source "$(dirname "$0")"/integration-particles.sh
 source "$(dirname "$0")"/integration-lights.sh
 source "$(dirname "$0")"/integration-models.sh
 source "$(dirname "$0")"/integration-shared.sh
+source "$(dirname "$0")"/integration-authoring.sh
+source "$(dirname "$0")"/integration-seeding.sh
+source "$(dirname "$0")"/integration-timing.sh
 ctl scene bone "$draft" puppet tip --parent arm --at 0.9,0.5 || fail "the mesh took no tip"
 ctl scene ik "$draft" puppet add arm tip --limit tip -30 30 || fail "no chain to the tip was added"
 ctl scene physics "$draft" puppet add tip || fail "the tip does not swing"
@@ -186,15 +189,4 @@ if ctl scene show "$draft" /manifest/properties | grep flash >/dev/null; then fa
 ctl scene preview "$draft" -o preview:1 --stop
 ctl release preview:1 && expect "list(s['outputs'])" "[]"
 echo "scene editor preview checks passed"
-sea=org.example.sea
-inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
-[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs start on"
-if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was granted to a scene that is not shown"; fi
-grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
-ctl input pointer 10 10 && ctl input pointer -10 -10
-ctl input status | grep -x "audio capture: off" >/dev/null || fail "status: $(ctl input status)"
-refused "is not audio, pointer, clicks, network, rgb, media or media_network" Inputs1 Grant ss "$sea" camera
-refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
-refused "Signature mismatch" Inputs1 SetPointer dd 1 1
-denied "only the KWin script of wprsd and wprs-ctl report the pointer" Inputs1.SetPointer int32:1 int32:1
-echo "input permission checks passed"
+source "$(dirname "$0")"/integration-grants.sh

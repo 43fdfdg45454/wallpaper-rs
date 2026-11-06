@@ -64,6 +64,12 @@ ColumnLayout {
         }
 
         QQC2.ToolButton {
+            text: App.tr("Import a sprite sheet or a data map…")
+            icon.name: "view-grid"
+            onClicked: sheet.open()
+        }
+
+        QQC2.ToolButton {
             text: App.tr("Import an effect…")
             icon.name: "special-effects-symbolic"
             onClicked: shaders.open()
@@ -132,6 +138,12 @@ ColumnLayout {
 
     SceneKtx2 {
         id: packing
+
+        page: panel.page
+    }
+
+    SceneImportSheet {
+        id: sheet
 
         page: panel.page
     }

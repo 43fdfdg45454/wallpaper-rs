@@ -6,6 +6,7 @@ mod grid;
 mod pages;
 mod picture;
 mod replies;
+mod stall;
 mod tables;
 mod words;
 

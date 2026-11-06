@@ -59,6 +59,9 @@ fn container<'a>(doc: &'a mut Value, parent: &str) -> Result<&'a mut Value> {
 
 fn add(doc: &mut Value, path: &str, value: Value) -> Result<Op> {
     let (parent, key) = split(path)?;
+    if !parent.is_empty() && doc.pointer(parent).is_none() && (key == "-" || key == "0") {
+        return add(doc, parent, Value::Array(vec![value]));
+    }
     match container(doc, parent)? {
         Value::Array(items) => {
             let i = if key == "-" { items.len() } else { index(&key, items.len())? };

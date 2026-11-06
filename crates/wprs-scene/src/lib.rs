@@ -133,6 +133,7 @@ pub const MAX_SYSTEMS: usize = 8;
 pub const MAX_SYSTEMS2: usize = 32;
 pub const MAX_PARTICLES: u32 = 200_000;
 pub const MAX_TIMELINES: usize = 64;
+pub const MAX_POSTER_TIME: f32 = 86_400.0;
 pub const MAX_KEYS: usize = 256;
 pub const MAX_SCRIPTS: usize = 16;
 pub const MAX_ASSETS: usize = 256;

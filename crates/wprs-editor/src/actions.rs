@@ -1,5 +1,5 @@
 use crate::arrange;
-use crate::keys::{Key, keyframe};
+use crate::keys::keyframe;
 use crate::layers::{children, clean, find, parent, system, taken, template, unique, walk};
 use crate::ops::{Op, apply, set};
 use anyhow::{Result, anyhow, ensure};
@@ -10,15 +10,17 @@ use wprs_format::features;
 
 pub use crate::action::{
     ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, RuleEdit, ScriptFile,
+    UpgradeEdit,
 };
 pub use crate::action::{
     AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthSet, DepthStroke,
     ExpressionEdit, IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut,
-    NormalsMake, ParticleEdit, PartsEdit, PointEdit, Response, Spot, Strand, SwarmLight, TendEdit,
+    NormalsMake, ParticleEdit, PartsEdit, PointEdit, Response, SowEdit, Spot, Strand, SwarmLight, TendEdit,
     WeightStroke, WindEdit,
 };
-pub use crate::action::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
+pub use crate::action::{AnimEdit, EffectsEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use crate::action::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
+pub use crate::action::{CanvasEdit, KeyframeEdit, LayerEdit, ManifestEdit, PropertyEdit, TimelineEdit};
 
 pub fn layer<'a>(doc: &'a Value, id: &str) -> Result<(String, &'a Value)> {
     let path = find(doc, id)?;
@@ -88,7 +90,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         Action::Add { pointer, value } => vec![Op::Add { path: pointer.clone(), value: value.clone() }],
         Action::Remove { pointer } => vec![Op::Remove { path: pointer.clone() }],
         Action::Move { from, to } => vec![Op::Move { from: from.clone(), path: to.clone() }],
-        Action::AddLayer { kind, id, name, source, into, at } => {
+        Action::AddLayer { kind, id, name, source, into, at, .. } => {
             if let Some(id) = id {
                 ensure!(!taken(doc, id), said("editor.id_use", "the id %1 is in use", &[&id]));
             }
@@ -148,22 +150,12 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
             Some(_) => vec![Op::Remove { path: format!("{EDITOR}/solo") }],
             None => Vec::new(),
         },
-        Action::Keyframe { pointer, time, value, ease, timeline, remove, from } => {
-            let key = Key {
-                time: *time,
-                value: value.clone(),
-                ease: ease.clone(),
-                timeline: timeline.as_deref(),
-                remove: *remove,
-                from: *from,
-            };
-            keyframe(doc, pointer, key)?
-        }
+        Action::Keyframe(k) => keyframe(doc, k)?,
         Action::Translate { pointer, language, text, add } => {
             crate::texts::translate(doc, pointer, language, text.as_deref(), *add)?
         }
-        Action::Upgrade { rating, reasons, photosensitive, derived_from } => {
-            crate::meta::upgrade(doc, *rating, reasons, *photosensitive, derived_from)?
+        Action::Upgrade(u) => {
+            crate::meta::upgrade(doc, u.rating, &u.reasons, u.photosensitive, &u.derived_from)?
         }
         Action::AddProperty { kind, id, group, label } => {
             crate::props::add_property(doc, kind, id.as_deref(), group.as_deref(), label.as_deref())?

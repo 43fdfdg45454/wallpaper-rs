@@ -1,10 +1,13 @@
 mod budget;
+mod emits;
+mod ends;
 mod fields;
 mod handles;
 mod looks;
 mod salt;
 mod samples;
 mod shapes;
+mod sow;
 mod spots;
 mod steers;
 mod tend;
@@ -141,6 +144,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &ParticleEdit) -> Result<Vec<Op>>
             fields::pace(doc, &system(doc, s)?, *emitter, *max_per_step)?
         }
         ParticleEdit::Tend(t) => tend::edit(doc, t)?,
+        ParticleEdit::Sow(s) => sow::edit(doc, s)?,
         ParticleEdit::Light(l) => return crate::lamps::glow(dir, doc, l),
         ParticleEdit::Shader { system: s, layer, shader } => {
             render(doc, &system(doc, s)?, layer.as_deref(), |d, at| {

@@ -42,7 +42,7 @@ impl Scene {
         c.range("/canvas/size/1", h, 1.0, MAX_SIZE as f32);
         c.color("/canvas/background", self.canvas.background);
         c.range("/clock/max_fps", self.clock.max_fps as f32, 0.0, 240.0);
-        c.range("/clock/poster_time", self.clock.poster_time, 0.0, 86_400.0);
+        c.range("/clock/poster_time", self.clock.poster_time, 0.0, crate::MAX_POSTER_TIME);
         c.uses(self.clock.seed.is_none(), "fresh_seed");
         c.count("/assets", self.assets.len(), MAX_ASSETS);
         for (id, asset) in &self.assets {

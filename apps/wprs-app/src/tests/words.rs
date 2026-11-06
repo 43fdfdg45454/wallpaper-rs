@@ -48,8 +48,15 @@ fn document(name: &str) -> Value {
             .into_iter()
             .find(|(k, _)| *k == kind);
         let source = source.map(|(_, s)| s.to_owned());
-        let layer =
-            Action::AddLayer { kind: kind.into(), id: None, name: None, source, into: None, at: None };
+        let layer = Action::AddLayer {
+            kind: kind.into(),
+            id: None,
+            name: None,
+            source,
+            into: None,
+            at: None,
+            file: None,
+        };
         let ops = plan(&doc, &layer);
         apply(&mut doc, &ops.unwrap()).unwrap();
     }

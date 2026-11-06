@@ -92,7 +92,7 @@ impl Manifest {
         self.check_display()
     }
 
-    fn check_display(&self) -> Result<()> {
+    pub(crate) fn check_display(&self) -> Result<()> {
         let shown = self.display.clone().unwrap_or_default();
         let pictured = matches!(self.kind, Kind::Video | Kind::Image);
         let framed = pictured || (shown.fit, shown.background.as_ref(), shown.flip) == (None, None, None);

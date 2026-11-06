@@ -6,9 +6,19 @@ use serde_json::Value;
 use std::path::Path;
 
 pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec<Op>>> {
+    if let Some(ops) = crate::placing::act(dir, doc, action) {
+        return Some(ops);
+    }
     Some(match action {
-        Action::Import { file, id } => crate::assets::import(dir, doc, file, id.as_deref())
-            .and_then(|(id, path)| crate::assets::adopt(doc, &id, &path)),
+        Action::Import { file, id, linear, atlas } => {
+            let cut = (*linear, *atlas);
+            crate::assets::cuttable(&file.to_string_lossy(), cut)
+                .and_then(|_| crate::assets::imported(dir, doc, file, id.as_deref()))
+                .and_then(|(id, path, fresh)| {
+                    let ops = crate::assets::sheet(dir, doc, &id, &path, cut);
+                    crate::assets::undone(dir, (&path, fresh), ops)
+                })
+        }
         Action::ImportEffect { descriptor, wgsl } => {
             crate::shaders::import(dir, doc, descriptor, wgsl.as_deref())
         }

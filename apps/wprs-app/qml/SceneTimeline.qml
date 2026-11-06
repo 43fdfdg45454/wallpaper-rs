@@ -20,22 +20,6 @@ ColumnLayout {
         page.editor.seek(time, playing);
     }
 
-    function add() {
-        const list = page.view.timelines ?? [];
-        let n = list.length + 1;
-        while (list.some(line => line.id === "timeline_" + n))
-            n++;
-        const value = {
-            "id": "timeline_" + n,
-            "duration": 5,
-            "loop": "repeat"
-        };
-        page.run(list.length ? "add" : "set", {
-                "pointer": "/scene/timelines" + (list.length ? "/-" : ""),
-                "value": list.length ? value : [value]
-            });
-    }
-
     function drive(track, index) {
         const field = track.pointer + "/timeline";
         if (index > 0)

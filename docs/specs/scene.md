@@ -1433,7 +1433,8 @@ The newer fields behave as follows.
   half along x and along y.
 - **Starting values.** A range `[min, max, exponent]` picks `min + (max − min) · u^exponent`.
   `alpha` replaces the alpha of the color. `hsv` picks the hue in degrees (with `steps`, one of that
-  many hues from one end of the range to the other), the saturation and the value from 0 to 1;
+  many hues from one end of the range to the other), the saturation and the value from 0 to 1
+  (`[1, 1]` when left out, as the editor shows them);
   `palette` picks one of its colors and moves its hue by up to `noise[0]` half turns and its
   saturation and value by up to `noise[1]` and `noise[2]`. `radial` adds a speed away from the center
   of the shape (the center of the canvas for `edge` and `mask`, the direction of `angle` for a

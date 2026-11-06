@@ -39,6 +39,15 @@ pub(crate) fn act(dir: &Path, doc: &Value, action: &Action) -> Option<Result<Vec
         Action::Ambient(e) => lit::ambient(doc, e),
         Action::Scene3d(e) => crate::stage3d::act(dir, doc, e),
         Action::Animate(e) => crate::motion::act(dir, doc, e),
+        Action::Effects(e) => crate::shaping::effects(dir, doc, e),
+        Action::Layer(e) => crate::shaping::layers::edit(dir, doc, e),
+        Action::Manifest(e) => crate::shaping::marks::manifest(dir, doc, e),
+        Action::Property(e) => crate::shaping::marks::property(dir, doc, e),
+        Action::Canvas(e) => crate::shaping::canvas::canvas(dir, doc, e),
+        Action::Timeline(e) => crate::timelines::edit(dir, doc, e),
+        Action::Keyframe(e) => {
+            crate::keys::keyframe(doc, e).and_then(|ops| crate::shaping::refused(dir, doc, ops))
+        }
         _ => return None,
     })
 }

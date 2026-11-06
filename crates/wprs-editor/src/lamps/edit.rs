@@ -134,6 +134,7 @@ pub(crate) fn edit(dir: &Path, doc: &Value, e: &LightEdit) -> Result<Vec<Op>> {
                 source: Some(name),
                 into: into.clone(),
                 at: None,
+                file: None,
             };
             let mut ops = crate::actions::plan(doc, &add)?;
             if let (Some(at), Some(Op::Add { value, .. })) = (at, ops.last_mut()) {

@@ -1778,10 +1778,21 @@ búsqueda no lo muestran, y quien tenga su enlace o su id lo ve y lo instala. Oc
 sigue en los archivos firmados del repositorio, que cualquiera puede descargar y leer, con su título y
 su descripción; lo privado va en la sincronización o en un repositorio propio. *Cuenta* lista tus
 subidas y te deja cambiar la visibilidad de cada versión. En un repositorio estático, `wprs-ctl repo
-add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`.
+add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo publish`, y la pestaña
+*Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
+ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
+confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
+la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Cada cambio del catálogo
+trabaja fuera de la ventana, uno detrás de otro, y mientras dura los demás cambios y *Abrir* esperan
+desactivados. En el teléfono, *Repositorio estático* de
+*Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que
+sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelve a mostrar, destaca o
+deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre
+una copia temporal sin los paquetes ni las vistas previas y escribe en la carpeta solo los archivos
+que cambiaron.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
-del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o desde
+del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde
 `/admin/featured` del servidor), y, con un servidor enlazado, cada paquete del repositorio de ese servidor muestra sus votos a favor y
 en contra, con tu voto marcado, y botones para votar (`wprs-ctl remote vote ID up|down|none`, `remote votes ID…`,
 también como `REPO/ID`); los paquetes de otros repositorios no muestran votos y sus ids nunca se
@@ -2000,15 +2011,24 @@ otra página no cierra un editor con cambios sin guardar.
   no tiene traducción al español. Las capas y opciones nuevas que crea la app llevan nombres y
   textos en ese idioma. El rombo de cada valor animable pone o quita un fotograma clave en el
   instante actual o lo enlaza a una propiedad de usuario, al sonido o al puntero, y *Editar el
-  origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace.
+  origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace. Encima de los campos,
+  una capa ofrece su modo de fusión, el lienzo interruptores y deslizadores para el brillo y el
+  paralaje (cambian la escena en vivo al arrastrarlos y cada arrastre es un solo paso de
+  deshacer), y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
+  hoja de sprites o un mapa de datos…* del panel de recursos corta una imagen en filas y columnas
+  o la lee como datos. En la terminal hacen lo mismo `wprs-ctl scene effects CARPETA CAPA
+  add|set|remove|move|mask`, `scene layer CARPETA CAPA transform|blend|instance`, `scene manifest
+  CARPETA origin|license|tags|authors|display`, `scene property CARPETA ID`, `scene canvas CARPETA
+  bloom|parallax` y `scene import --linear --atlas FILAS,COLUMNAS`, con las mismas comprobaciones.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
   instante), una pista por valor animado con sus fotogramas clave, que se arrastran a otro
   instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
 - **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
   partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
   versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar
-  los que ya hay, y los textos `@clave` se escriben en `strings`), versión, id, autores, licencia,
-  clasificación (para todos o para adultos, con sus motivos), si destella, origen y obras de las que
+  los que ya hay, y los textos `@clave` se escriben en `strings`), versión, id, autores (hasta
+  64), licencia (una expresión SPDX de hasta 256 caracteres), clasificación (para todos o para
+  adultos, con sus motivos), si destella, origen y obras de las que
   procede, créditos por archivo, miniatura y vista previa animada (*Elegir…* copia la imagen a
   `assets/` y reduce la miniatura si pasa de 1024 píxeles o de 1 MiB), enlaces, etiquetas, idioma
   por defecto y las entradas que puede pedir. Las entradas que usa la escena se marcan solas y no se
@@ -2178,6 +2198,22 @@ puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles 
 `shape`, `control-point`, `remap add|set|remove`, `cutout`, `orient`, `perspective`,
 `emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
 
+El inspector de un sistema empieza con la lista de los sistemas de la escena, donde cada uno se
+renombra (las capas y los sistemas que lo usan lo siguen), se abre o se quita, y se añade uno sin
+capa. Los rangos iniciales (vida, velocidad, dirección, tamaño, giro, rotación y alfa) tienen un
+deslizador de dos puntas, una curva que reparte los valores hacia un extremo con su dibujo y un
+selector por extremo que lo enlaza a un ajuste del paquete. Los colores iniciales salen de dos
+colores, de tonos con su saturación y su brillo (con pasos), de una paleta con su ruido o de una
+barra de degradado donde un clic añade una parada y arrastrarla la mueve. Cada fuerza puede actuar
+solo en parte de la vida de la partícula, con una forma de cuatro asas que dice dónde aparece, actúa
+y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
+`--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
+`--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
+`render --cycles --order`, `settings --lock`, `force turbulence --time-scale --mask` y las fuerzas
+`noise`, `cap`, `torque`, `spin-drag`, `vortex` y `orbit`. Los rangos de `start` aceptan
+`MÍN,MÁX,CURVA`, con `prop:ID` en un extremo para enlazarlo a un ajuste y `_` para dejarlo como está;
+sin curva se conserva la que había y `1` la quita (por ejemplo `start --life 1,prop:vida,2`).
+
 La vista previa dibuja también los colisionadores del sistema con el color de su respuesta (rojo
 donde mueren las partículas, verde donde se pegan) y asas para cada tipo: el borde del lienzo, el
 plano con su punto y el lado en el que se quedan, el círculo con su centro y su radio, la caja con
@@ -2200,7 +2236,13 @@ empezar solo sus partículas, sin rehacer la escena. En la terminal, `wprs-ctl s
 response`, `keep distance|between|remove`, `boids`, `operator remap add|set|remove`, `rope`,
 `trail`, `texture`, `turbulent`, `offset`, `pace` y `budget` (`rope` avisa también de los emisores
 que amontonan la cuerda), y `wprs-ctl scene preview --quality Q --restart` hace lo mismo con la
-vista previa.
+vista previa. El resto del sistema también tiene subcomandos: `create` (un sistema sin capa, copia
+de otro con `--from` o hijo de otro con `--parent` y `--on`, como *Nuevo sistema hijo* del panel de
+hijos), `delete`, `settings` (capacidad, semilla, precalentado, espacio y ritmo de los emisores),
+`start` (rangos iniciales de vida, velocidad, ángulo, tamaño, giro, color, alfa, velocidad en X e Y
+y velocidad radial), `force gravity|drag|turbulence|oscillate|attractor|remove`, `child
+add|set|remove`, `size-over-life`, `color-over-life` y `render` (estiramiento, cuadros del atlas al
+azar, por tiempo o por vida, ritmo del atlas y brillo por encima del blanco).
 
 El menú *Añadir capa* ofrece *Luz* con sus cuatro tipos, cada uno con valores de partida
 razonables. Las luces se ven sobre la vista previa como marcadores que se arrastran y la elegida
@@ -2324,11 +2366,18 @@ historial de deshacer, donde cada orden es un paso (todas en
 wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, particles, parallax o clock
 wprs-ctl scene open copia --from escena.wpak            # una copia sin firma, derivada, con el id <id>.copy
 wprs-ctl scene import mar ola.ogg                       # copiar un recurso a assets/
+wprs-ctl scene import mar espuma.png --atlas 4,4         # hoja de sprites; --linear para mapas de datos
 wprs-ctl scene add-layer mar sound --source ola         # y remove-layer, duplicate-layer, move-layer
 wprs-ctl scene add-layer mar text --name Título         # id «titulo», con ese texto
+wprs-ctl scene add-layer mar mesh --file zorro.glb      # importa el .glb y lo muestra en una capa mesh
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
+wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat   # y --rename, --remove, --frames con --fps
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 -0.5 --timeline olas --base 0.5   # relativo a 0,5
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier hasta la clave vecina (aquí la de 3 s); también --in-handle
+wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --straighten   # recta hasta la clave siguiente, sin tocar las curvas vecinas
+wprs-ctl scene clip titere zorro saludo --add --play     # un clip nuevo que ya suena en una capa de animación
 wprs-ctl scene translate mar /manifest/title es Mar     # otro idioma; --add no pisa nada, --remove lo quita
 wprs-ctl scene set mar /manifest/content '{"rating": "mature", "descriptors": ["violence"]}'
 wprs-ctl scene thumbnail mar captura.png                # miniatura en assets/, reducida si hace falta
@@ -2340,11 +2389,17 @@ wprs-ctl scene add-property mar slider --id velocidad --label Speed
 wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
 wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
 wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
+wprs-ctl scene effects mar far add vignette --param intensity=0.5   # y set, remove, move, mask
+wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2   # y blend, instance
+wprs-ctl scene property mar velocidad --min 0 --max 10 --step 0.5 --default 2
+wprs-ctl scene manifest mar tags mar noche && wprs-ctl scene manifest mar license CC-BY-4.0   # y origin, authors, display
+wprs-ctl scene canvas mar bloom --strength 1.5 && wprs-ctl scene canvas mar parallax --amount 2
 wprs-ctl scene group mar near far --id colinas && wprs-ctl scene hide mar sky
 wprs-ctl scene undo mar && wprs-ctl scene history mar
 wprs-ctl scene validate mar                             # problemas, cada uno con su JSON Pointer
 wprs-ctl scene preview mar -o DP-1 --time 2             # verla en el escritorio 60 s sin aplicarla
 wprs-ctl scene preview mar --layout dual --out dual.png # extendida sobre dos pantallas, sin escritorio
+wprs-ctl scene preview mar --layout dual --out dual.png --time 4   # el segundo 4 en vez del póster
 wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
 wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
 wprs-ctl scene apply mar --span                         # mostrarla extendida sobre todas las pantallas

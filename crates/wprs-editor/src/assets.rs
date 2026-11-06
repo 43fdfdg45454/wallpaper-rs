@@ -113,6 +113,10 @@ fn copy(file: &Path, target: &Path) -> Result<()> {
 }
 
 pub fn import(dir: &Path, doc: &Value, file: &Path, id: Option<&str>) -> Result<(String, String)> {
+    imported(dir, doc, file, id).map(|(id, path, _)| (id, path))
+}
+
+pub fn imported(dir: &Path, doc: &Value, file: &Path, id: Option<&str>) -> Result<(String, String, bool)> {
     check(dir, doc, file)?;
     let name = file
         .file_name()
@@ -122,10 +126,22 @@ pub fn import(dir: &Path, doc: &Value, file: &Path, id: Option<&str>) -> Result<
     let id =
         id.map_or_else(|| unique(doc, name.rsplit_once('.').map_or(name.as_str(), |(s, _)| s)), String::from);
     slot(doc, &id)?;
-    Ok((id, place(dir, &name, file)?))
+    let (path, fresh) = placed(dir, &name, file)?;
+    Ok((id, path, fresh))
+}
+
+pub fn undone<T>(dir: &Path, (path, fresh): (&str, bool), result: Result<T>) -> Result<T> {
+    if result.is_err() && fresh {
+        fs::remove_file(dir.join(path)).ok();
+    }
+    result
 }
 
 pub fn place(dir: &Path, name: &str, file: &Path) -> Result<String> {
+    placed(dir, name, file).map(|(path, _)| path)
+}
+
+fn placed(dir: &Path, name: &str, file: &Path) -> Result<(String, bool)> {
     let (stem, ext) = name.rsplit_once('.').unwrap_or((name, ""));
     let (size, mut digest) = (fs::metadata(file)?.len(), None);
     fs::create_dir_all(dir.join("assets"))?;
@@ -140,11 +156,11 @@ pub fn place(dir: &Path, name: &str, file: &Path) -> Result<String> {
                     None => digest.insert(sha256_file(file)?),
                 };
                 if sha256_file(&target)? == *source {
-                    return Ok(path);
+                    return Ok((path, false));
                 }
             }
             Ok(_) => {}
-            Err(_) => return copy(file, &target).map(|_| path),
+            Err(_) => return copy(file, &target).map(|_| (path, true)),
         }
     }
     Err(anyhow!(said("editor.assets_too_many", "assets/ has too many files named %1", &[&name])))
@@ -158,4 +174,24 @@ fn slot(doc: &Value, id: &str) -> Result<String> {
 
 pub fn adopt(doc: &Value, id: &str, path: &str) -> Result<Vec<Op>> {
     Ok(set(doc, &slot(doc, id)?, json!({"path": path})))
+}
+
+pub fn sheet(
+    dir: &Path,
+    doc: &Value,
+    id: &str,
+    path: &str,
+    cut: (bool, Option<[u32; 2]>),
+) -> Result<Vec<Op>> {
+    cuttable(path, cut)?;
+    crate::shaping::sheet(dir, doc, adopt(doc, id, path)?, cut.0, cut.1)
+}
+
+pub fn cuttable(path: &str, (linear, atlas): (bool, Option<[u32; 2]>)) -> Result<()> {
+    let picture = !(linear || atlas.is_some()) || asset_kind(path) == "image";
+    ensure!(
+        picture,
+        said("editor.sheet_picture", "only a picture is read as data or split into a sprite sheet", &[])
+    );
+    Ok(())
 }

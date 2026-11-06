@@ -13,7 +13,7 @@ source "$(dirname "$0")"/integration-ktx2.sh
 source "$(dirname "$0")"/integration-rgb.sh
 source "$(dirname "$0")"/integration-content.sh
 source "$(dirname "$0")"/integration-inputs.sh
-source "$(dirname "$0")"/integration-authoring.sh
+source "$(dirname "$0")"/integration-templates.sh
 source "$(dirname "$0")"/integration-audio.sh
 source "$(dirname "$0")"/integration-media.sh
 source "$(dirname "$0")"/integration-media-cues.sh

@@ -1,27 +1,36 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
-use wprs_format::{Descriptor, Rating};
 
 mod glows;
 mod lamps;
 mod limbs;
+mod marks;
 mod motion;
 mod names;
 mod rigging;
+mod shaping;
 mod solid;
+mod sow;
 mod swarm;
 mod tend;
+mod timing;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, DepthSet, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
+pub use marks::{CanvasEdit, LayerEdit, ManifestEdit, PropertyEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile};
+pub use names::{
+    ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile, UpgradeEdit,
+};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
 };
+pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
+pub use sow::SowEdit;
 pub use swarm::{ParticleEdit, Response, Strand, SwarmLight, TendEdit};
+pub use timing::{KeyframeEdit, TimelineEdit};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -53,6 +62,8 @@ pub enum Action {
         into: Option<String>,
         #[serde(default)]
         at: Option<usize>,
+        #[serde(default)]
+        file: Option<PathBuf>,
     },
     RemoveLayer {
         id: String,
@@ -88,24 +99,15 @@ pub enum Action {
         #[serde(default)]
         id: Option<String>,
     },
-    Keyframe {
-        pointer: String,
-        time: f64,
-        #[serde(default)]
-        value: Option<Value>,
-        #[serde(default)]
-        ease: Option<Value>,
-        #[serde(default)]
-        timeline: Option<String>,
-        #[serde(default)]
-        remove: bool,
-        #[serde(default)]
-        from: Option<f64>,
-    },
+    Keyframe(KeyframeEdit),
     Import {
         file: PathBuf,
         #[serde(default)]
         id: Option<String>,
+        #[serde(default)]
+        linear: bool,
+        #[serde(default)]
+        atlas: Option<[u32; 2]>,
     },
     ImportEffect {
         descriptor: PathBuf,
@@ -129,16 +131,7 @@ pub enum Action {
         #[serde(default)]
         animated: bool,
     },
-    Upgrade {
-        #[serde(default)]
-        rating: Option<Rating>,
-        #[serde(default)]
-        reasons: Vec<Descriptor>,
-        #[serde(default)]
-        photosensitive: Option<bool>,
-        #[serde(default)]
-        derived_from: Vec<String>,
-    },
+    Upgrade(UpgradeEdit),
     AddProperty {
         kind: String,
         #[serde(default)]
@@ -192,6 +185,12 @@ pub enum Action {
     Ambient(AmbientEdit),
     Scene3d(Edit3d),
     Animate(AnimEdit),
+    Effects(EffectsEdit),
+    Layer(LayerEdit),
+    Manifest(ManifestEdit),
+    Property(PropertyEdit),
+    Canvas(CanvasEdit),
+    Timeline(TimelineEdit),
     Undo {},
     Redo {},
 }

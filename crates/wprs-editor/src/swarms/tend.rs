@@ -37,6 +37,15 @@ pub(super) fn listed<T: DeserializeOwned>(
     }
 }
 
+fn windowed(doc: &Value, at: &str, index: Option<usize>, force: &Value) -> Value {
+    let old = index.and_then(|i| doc.pointer(&format!("{at}/{i}/window")));
+    let mut force = force.clone();
+    if let (Some(window), Some(f)) = (old, force.as_object_mut()) {
+        f.entry("window").or_insert_with(|| window.clone());
+    }
+    force
+}
+
 fn merged(base: Value, change: Option<&Value>) -> Value {
     let mut out = base;
     for (k, v) in change.and_then(Value::as_object).into_iter().flatten() {
@@ -125,6 +134,7 @@ pub(crate) fn edit(doc: &Value, e: &TendEdit) -> Result<Vec<Op>> {
         }
         TendEdit::Force { system: s, index, force, remove } => {
             let at = format!("{}/forces", system(doc, s)?);
+            let force = force.as_ref().map(|f| windowed(doc, &at, *index, f));
             listed::<Operator>(doc, &at, (*index, force.as_ref(), *remove), ("force", no_force))
         }
         TendEdit::Boids { system: s, boids, off } => flock(doc, &system(doc, s)?, boids.as_ref(), *off),

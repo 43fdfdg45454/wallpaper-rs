@@ -43,6 +43,7 @@ mod settings;
 mod shape;
 mod sign;
 mod source;
+pub mod stall;
 mod store;
 mod update;
 mod upgrade;
@@ -95,6 +96,7 @@ pub use repo::{Author, Key, Policy, ROOT_FORMAT, Role, Roles, Root, Time, commen
 pub use settings::{Settings, settings};
 pub use sign::{fingerprint, manifest_comment, public_key, threshold, verify_blocks, verify_package};
 pub use source::{Folder, fill, inspect, locale_names, with_strings};
+pub use stall::{Shelved, Stocked, stock};
 pub use upgrade::{Renames, rename_json, upgrade, upgrade_json};
 pub use validate::{FileEntry, Limits, MANIFEST, SIGNATURE, check_path, validate};
 pub use video::{Playback, VIDEO_PROPERTIES};

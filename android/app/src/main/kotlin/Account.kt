@@ -82,6 +82,7 @@ fun Account(main: Main) {
                 item { Repos(main, status, run) }
             }
         }
+        item { Stall(main) }
         task?.takeIf { status.isNull("link") && status.isNull("pairing") }?.let { waiting ->
             item { Waiting(main, waiting) }
         }

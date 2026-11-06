@@ -58,8 +58,11 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
                 ));
             }
             out.extend(manifest.missing().into_iter().map(manifest_problem));
-            let first = manifest.check().err().map(manifest_problem);
-            out.extend(first.filter(|p| !out.contains(p)));
+            for fault in manifest.faults().into_iter().map(manifest_problem) {
+                if !out.contains(&fault) {
+                    out.push(fault);
+                }
+            }
             manifest.properties
         }
         Err(e) => {

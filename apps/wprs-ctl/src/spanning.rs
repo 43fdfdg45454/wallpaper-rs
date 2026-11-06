@@ -33,7 +33,7 @@ fn inside(path: &str) -> bool {
     Path::new(path).components().all(|c| matches!(c, Component::Normal(_)))
 }
 
-fn poster(dir: &Path, edge: u32) -> Result<RgbaImage> {
+fn poster(dir: &Path, edge: u32, time: Option<f64>) -> Result<RgbaImage> {
     let project = Project::open(dir)?;
     let scene = wprs_scene::Scene::from_json(&visible(&project.doc).to_string())?;
     let read = |path: &str| match inside(path) {
@@ -45,7 +45,8 @@ fn poster(dir: &Path, edge: u32) -> Result<RgbaImage> {
         serde_json::from_value(project.doc["manifest"]["properties"].clone()).unwrap_or_default();
     let props = wprs_scene::effective(&properties, &[]);
     let renderer = Renderer::new()?;
-    Ok(renderer.poster(&scene, &assets, &props, (0.0, "en"), edge)?)
+    let time = time.unwrap_or(f64::from(scene.clock.poster_time));
+    Ok(renderer.still(&scene, &assets, &props, (0.0, "en"), (edge, time))?)
 }
 
 pub fn compose(canvas: &RgbaImage, monitors: &[Monitor], edge: u32) -> RgbaImage {
@@ -64,12 +65,20 @@ pub fn compose(canvas: &RgbaImage, monitors: &[Monitor], edge: u32) -> RgbaImage
     out
 }
 
-pub fn preview(dir: &Path, layout: &str, out: &Path) -> Result<()> {
+pub fn preview(dir: &Path, layout: &str, out: &Path, time: Option<f64>) -> Result<()> {
     let bezel = wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p));
     let monitors = monitors(layout, bezel.map_or(0.0, |c| c.layout.bezel_mm))?;
-    let canvas = poster(dir, EDGE * 2)?;
+    let canvas = poster(dir, EDGE * 2, time)?;
     let image = compose(&canvas, &monitors, EDGE);
     wprs_render::save(&image, out, 95).with_context(|| format!("cannot write {}", out.display()))?;
     println!("{}", out.display());
     Ok(())
+}
+
+pub(crate) fn second(text: &str) -> Result<f64, String> {
+    let most = f64::from(wprs_scene::MAX_POSTER_TIME);
+    let time: f64 = text.parse().map_err(|_| format!("{text} is not a number of seconds"))?;
+    let fits = time.is_finite() && time <= most;
+    fits.then_some(time)
+        .ok_or_else(|| format!("the time is a finite number of seconds up to {most}, not {text}"))
 }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stall">Static repository</string>
+    <string name="stall_hint">A folder made with wprs-ctl repo init</string>
+    <string name="stall_open">Open a static repository…</string>
+    <string name="stall_add">Add packages…</string>
+    <string name="stall_publish">Publish…</string>
+    <string name="stall_unlisted">Add unlisted</string>
+    <string name="stall_unlisted_note">Out of browsing and search; installing by id still works</string>
+    <string name="stall_busy">Changing the repository…</string>
+    <string name="stall_added">Added %1$s. Publish the repository next.</string>
+    <string name="stall_changed">Changed. Publish the repository next.</string>
+    <string name="stall_published">Published index %1$d with %2$d packages; it expires %3$s</string>
+    <string name="stall_by">by %1$s</string>
+    <string name="stall_unlist">Unlist</string>
+    <string name="stall_list_again">List again</string>
+    <string name="stall_feature">Feature</string>
+    <string name="stall_unfeature">Unfeature</string>
+    <string name="stall_unlist_version">Unlist this version</string>
+    <string name="stall_list_version">List this version again</string>
+    <string name="stall_revoked">revoked</string>
+    <string name="stall_unlisted_mark">unlisted</string>
+    <string name="stall_ask_unlist">Unlist %1$s: out of browsing and search, still installable by id.</string>
+    <string name="stall_ask_list">List %1$s again in browsing and search.</string>
+    <string name="stall_ask_unlist_version">Unlist %1$s %2$s: out of browsing and search, still installable by id.</string>
+    <string name="stall_ask_list_version">List %1$s %2$s again in browsing and search.</string>
+    <string name="stall_ask_feature">Feature %1$s, signed into the repository.</string>
+    <string name="stall_ask_unfeature">Stop featuring %1$s.</string>
+    <string name="stall_change">Change the repository</string>
+    <string name="stall_confirm">Change</string>
+    <string name="stall_note">Note, optional</string>
+    <string name="stall_publish_title">Publish the repository</string>
+    <string name="stall_key">Choose the online key…</string>
+    <string name="stall_key_hint">A secret key file listed among the online keys</string>
+    <string name="stall_key_chosen">The key is chosen; it is only read for this publication.</string>
+    <string name="stall_password">Password of the key</string>
+    <string name="stall_password_hint">Empty for a key without one</string>
+    <string name="stall_days">Days until the index expires</string>
+    <string name="stall_publish_now">Publish</string>
+</resources>

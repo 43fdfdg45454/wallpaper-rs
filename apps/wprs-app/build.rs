@@ -39,6 +39,7 @@ fn main() {
         "src/scene.rs",
         "src/shelf.rs",
         "src/strips.rs",
+        "src/stall.rs",
     ])
     .build();
 }
