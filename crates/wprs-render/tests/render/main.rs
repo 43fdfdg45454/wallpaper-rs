@@ -6,6 +6,7 @@ mod cost;
 mod deep;
 mod layers;
 mod looks;
+mod peak;
 mod readback;
 
 fn renderer() -> Option<&'static Renderer> {

@@ -17,10 +17,14 @@ pub struct DeepPlanes<'a> {
     pub headroom: f32,
 }
 
-type Key = ((u32, u32), bool, bool, u32);
+type Key = ((u32, u32), bool, bool, bool);
+
+const LIGHT_AT: u64 = 7 * 16;
 
 pub struct Deep {
     key: Key,
+    light: f32,
+    uniform: wgpu::Buffer,
     planes: [wgpu::Texture; 3],
     group: wgpu::BindGroup,
     image: GpuImage,
@@ -83,10 +87,9 @@ impl Renderer {
         })
     }
 
-    fn deep_slot(&self, key: Key) -> Deep {
-        let ((w, h), hlg, full, light) = key;
-        let headroom = f32::from_bits(light);
-        let target = if headroom > 1.0 { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
+    fn deep_slot(&self, key: Key, headroom: f32) -> Deep {
+        let ((w, h), hlg, full, lit) = key;
+        let target = if lit { Format::Rgba16Float } else { Format::Rgba8UnormSrgb };
         let half = (w.div_ceil(2), h.div_ceil(2));
         let sampled = Usage::TEXTURE_BINDING | Usage::COPY_DST;
         let plane =
@@ -115,7 +118,7 @@ impl Renderer {
             layout,
             entries: &entries,
         });
-        Deep { key, planes, group, image }
+        Deep { key, light: headroom, uniform, planes, group, image }
     }
 
     pub fn convert_deep<'a>(
@@ -129,12 +132,15 @@ impl Renderer {
         if !self.limits.fits(w, h) || !deep.planes.iter().zip(sizes).all(|(p, s)| fits(*p, s)) {
             return Err(RenderError::InvalidSize(w, h));
         }
-        let light = crate::coded::lighting(crate::Coding::Pq, deep.headroom).to_bits();
-        let key = (deep.size, deep.hlg, deep.full, light);
+        let light = crate::coded::lighting(crate::Coding::Pq, deep.headroom);
+        let key = (deep.size, deep.hlg, deep.full, light > 1.0);
         if slot.as_ref().is_none_or(|d| d.key != key) {
-            *slot = Some(self.scoped(|| self.deep_slot(key))?);
+            *slot = Some(self.scoped(|| self.deep_slot(key, light))?);
         }
         let made = slot.as_mut().expect("created above");
+        if made.light != light {
+            made.light = crate::coded::relight(&self.queue, &made.uniform, LIGHT_AT, light);
+        }
         self.scoped(|| {
             for (texture, (data, stride)) in made.planes.iter().zip(deep.planes) {
                 let layout = wgpu::TexelCopyBufferLayout {
@@ -144,7 +150,7 @@ impl Renderer {
                 };
                 self.queue.write_texture(texture.as_image_copy(), data, layout, texture.size());
             }
-            let lit = f32::from_bits(made.key.3) > 1.0;
+            let lit = made.key.3;
             let mapper = self.mapper();
             self.draw_with(if lit { &mapper.lit } else { &mapper.pipeline }, &made.group, &made.image);
         })?;

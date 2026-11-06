@@ -16,6 +16,12 @@ pub(crate) fn lighting(coding: Coding, headroom: f32) -> f32 {
     if fine { headroom.clamp(1.0, crate::hdr::MAX_HEADROOM) } else { 1.0 }
 }
 
+pub(crate) fn relight(queue: &wgpu::Queue, buffer: &wgpu::Buffer, at: u64, light: f32) -> f32 {
+    let row: Vec<u8> = [light, 0.0, 0.0, 0.0].iter().flat_map(|v| v.to_le_bytes()).collect();
+    queue.write_buffer(buffer, at, &row);
+    light
+}
+
 pub(crate) fn uniform(renderer: &Renderer, full: bool, coding: Coding, headroom: f32) -> wgpu::Buffer {
     let tone = [if coding == Coding::Hlg { 2.0 } else { 1.0 }, REFERENCE_NITS, PEAK_NITS, KNEE];
     let light = [headroom, 0.0, 0.0, 0.0];
