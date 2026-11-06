@@ -100,22 +100,11 @@ impl Renderer {
                     src.swarms.iter().for_each(|s| s.read(&mut encoder, &texture, *map, *size));
                     k += 1;
                 }
-                Op::Particles { target, .. } => {
-                    let (view, writes, first) = (src.get(pool, *target).1, clock.writes(k), k);
-                    let alone = writes.is_some();
-                    let mut pass = pass(&mut encoder, &view, wgpu::LoadOp::Load, writes);
-                    src.clip(&mut pass, *target);
-                    while let Some(Op::Particles { target: t, system, slot, mode, bend, .. }) = ops.get(k) {
-                        if k > first && (alone || t != target || clock.writes(k).is_some()) {
-                            break;
-                        }
-                        src.swarms.iter().for_each(|s| s.draw(&mut pass, *system, *slot, (*mode, *bend)));
-                        (stats.draws, k) = (stats.draws + 1, k + 1);
-                    }
-                    stats.passes += 1;
-                }
-                Op::Clear(target, _) | Op::Draw { target, .. } | Op::Lit { target, .. } => {
-                    let target = *target;
+                Op::Clear(target, _)
+                | Op::Draw { target, .. }
+                | Op::Lit { target, .. }
+                | Op::Particles { target, .. } => {
+                    let (target, first) = (*target, k);
                     let load = match &ops[k] {
                         Op::Clear(_, [r, g, b, a]) => {
                             k += 1;
@@ -123,19 +112,29 @@ impl Renderer {
                         }
                         _ => wgpu::LoadOp::Load,
                     };
+                    let writes = if k == first { clock.writes(k) } else { None };
+                    let alone = writes.is_some();
                     let (_, view, texture) = src.get(pool, target);
-                    let mut pass = pass(&mut encoder, &view, load, None);
+                    let mut pass = pass(&mut encoder, &view, load, writes);
                     src.clip(&mut pass, target);
-                    while let Some(
-                        op @ (Op::Draw { target: t, entry, mode, slot, tex }
-                        | Op::Lit { target: t, entry, mode, slot, tex, .. }),
-                    ) = ops.get(k)
-                    {
-                        if *t != target {
+                    while let Some(op) = ops.get(k).filter(|op| super::profile::target(op) == Some(target)) {
+                        if k > first && (alone || clock.writes(k).is_some()) {
                             break;
                         }
-                        let shader =
-                            if let Op::Lit { .. } = op { Shader::Lit(entry) } else { Shader::Scene(entry) };
+                        let (shader, slot, mode, tex) = match op {
+                            Op::Particles { system, slot, mode, bend, .. } => {
+                                src.swarms
+                                    .iter()
+                                    .for_each(|s| s.draw(&mut pass, *system, *slot, (*mode, *bend)));
+                                (stats.draws, k) = (stats.draws + 1, k + 1);
+                                continue;
+                            }
+                            Op::Draw { entry, mode, slot, tex, .. } => {
+                                (Shader::Scene(entry), slot, mode, tex)
+                            }
+                            Op::Lit { entry, mode, slot, tex, .. } => (Shader::Lit(entry), slot, mode, tex),
+                            _ => break,
+                        };
                         let Some(pipeline) = pipes.get(&self.device, shader, *mode, texture.format()) else {
                             k += 1;
                             continue;
