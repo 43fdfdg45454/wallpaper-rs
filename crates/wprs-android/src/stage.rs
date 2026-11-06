@@ -4,7 +4,7 @@ use crate::pack::Pack;
 use crate::{props, saved};
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
+use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use wprs_render::{GpuImage, Meter, SceneAssets, SceneView};
 use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 
@@ -15,8 +15,6 @@ mod probe;
 
 pub(crate) use heard::allowed as media_allowed;
 
-static CALMING: AtomicU32 = AtomicU32::new(0);
-static ENGINE: AtomicU32 = AtomicU32::new(0);
 static RETRIES: AtomicU64 = AtomicU64::new(0);
 
 type Guarded = (FlashGuard, Vec<f32>, i64, Option<Meter>);

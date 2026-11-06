@@ -38,8 +38,19 @@ pub(super) fn drawn() {
             let at = ((64, 32), n * 1_000_000_000 / 30, 60);
             assert!(stage.render(r, at, (power, wprs_scene::Tier::T3), &[], true).unwrap().fps > 0);
         }
-        let path = if r.compute() && !r.software() { "gpu" } else { "cpu" };
-        assert_eq!(crate::stage::report::particles(), path);
+        let engine = if r.compute() && !r.software() { "gpu" } else { "cpu" };
+        assert_eq!(crate::stage::report::particles(), engine);
+        let mut lock = Stage::new(uid.clone(), pack::load(&path).unwrap());
+        lock.reports = Some(1);
+        assert!(lock.render(r, ((64, 32), 0, 60), (power, wprs_scene::Tier::T3), &[], true).unwrap().fps > 0);
+        crate::stage::report::forget(1);
+        assert_eq!(
+            crate::stage::report::particles(),
+            engine,
+            "the lock screen took the home scene's particles"
+        );
+        crate::stage::report::forget(crate::stage::report::HOME);
+        assert_eq!(crate::stage::report::particles(), "", "a slot without a scene kept its particles");
     }
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

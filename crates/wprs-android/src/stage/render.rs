@@ -1,5 +1,5 @@
 use super::report::{self, Cost, wall};
-use super::{CALMING, ENGINE, RETRIES, Shot, Stage};
+use super::{RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
 use crate::power::{Power, delay_ms};
@@ -39,8 +39,8 @@ impl Stage {
         if crate::power::guarded() != self.guard.is_some() {
             self.guard =
                 crate::power::guarded().then(|| Box::new((FlashGuard::default(), Vec::new(), nanos, None)));
-            if self.reports.is_some() {
-                CALMING.store(0, Relaxed);
+            if let Some(slot) = self.reports {
+                report::mark(slot, 1, 0);
             }
         }
         let speed = self.guard.as_ref().map_or(1.0, |g| g.0.speed());
@@ -176,7 +176,7 @@ impl Stage {
             self.governor.feed(std::time::Instant::now(), gpu_ms as f32, budget_ms, ceiling.0, raises);
         }
         if let Some(slot) = self.reports {
-            ENGINE.store(view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }), Relaxed);
+            report::mark(slot, 0, view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }));
             report::leave(slot, view.left_key(), || view.left());
         }
         rendered?;
@@ -190,8 +190,8 @@ impl Stage {
                     wprs_scene::Calming::Slowed(_) => 1,
                     wprs_scene::Calming::Paused => 2,
                 };
-                if self.reports.is_some() {
-                    CALMING.store(calming, Relaxed);
+                if let Some(slot) = self.reports {
+                    report::mark(slot, 1, calming);
                 }
             }
         }

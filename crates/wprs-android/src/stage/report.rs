@@ -1,4 +1,4 @@
-use super::{CALMING, ENGINE, RETRIES};
+use super::RETRIES;
 use serde_json::json;
 use std::sync::atomic::Ordering::Relaxed;
 use std::sync::{Mutex, PoisonError};
@@ -27,11 +27,15 @@ pub(crate) fn finish() {
 }
 
 pub(crate) fn flashes() -> &'static str {
-    ["", "slowed", "paused"][CALMING.load(Relaxed).min(2) as usize]
+    ["", "slowed", "paused"][usize::from(shown().map_or(0, |s| s.marks[1]).min(2))]
 }
 
 pub(crate) fn particles() -> &'static str {
-    ["", "gpu", "cpu"][ENGINE.load(Relaxed).min(2) as usize]
+    ["", "gpu", "cpu"][usize::from(shown().map_or(0, |s| s.marks[0]).min(2))]
+}
+
+pub(crate) fn mark(slot: usize, which: usize, value: u8) {
+    slots(|(_, shown)| shown[slot].marks[which] = value);
 }
 
 pub(crate) fn wallpaper() -> serde_json::Value {
@@ -64,9 +68,10 @@ struct Shown {
     cost: Option<Cost>,
     level: u32,
     left: (u64, Vec<(String, String)>),
+    marks: [u8; 2],
 }
 
-const NOTHING: Shown = Shown { cost: None, level: 0, left: (0, Vec::new()) };
+const NOTHING: Shown = Shown { cost: None, level: 0, left: (0, Vec::new()), marks: [0; 2] };
 
 static SHOWN: Mutex<(usize, [Shown; 2])> = Mutex::new((0, [NOTHING, NOTHING]));
 

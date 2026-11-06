@@ -121,6 +121,7 @@ impl Engine {
 
     pub(crate) fn screen(&mut self, lock: bool) {
         if self.lock != lock {
+            (!self.preview).then(|| crate::stage::report::forget(usize::from(self.lock)));
             if !self.preview && !self.hidden {
                 crate::perf::spans::show(self.lock, false);
                 crate::perf::spans::show(lock, true);
