@@ -64,8 +64,9 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
 impl Puppet {
     pub(crate) fn swing(&mut self, cx: &Context, m: &Fig, sim: &Sim) {
         let sim = &Sim { wind: sim.wind.map(|w| w * m.unit), unit: m.unit, ..*sim };
-        let steps = ((self.lag / sim.h) as u32).min(MAX_STEPS);
-        self.lag = if steps == MAX_STEPS || sim.frozen { 0.0 } else { self.lag - steps as f32 * sim.h };
+        let steps = ((self.lag / sim.h + 1e-3) as u32).min(MAX_STEPS);
+        self.lag =
+            if steps == MAX_STEPS || sim.frozen { 0.0 } else { (self.lag - steps as f32 * sim.h).max(0.0) };
         let ran = sim.h * steps as f32;
         let span = if steps == MAX_STEPS { ran } else { self.since.max(ran) }.max(1e-6);
         let at = |s: u32| (s as f32 * sim.h / span).min(1.0);

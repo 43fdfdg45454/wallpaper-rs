@@ -609,8 +609,9 @@ max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cu
 pointer only while the scene may read it (the pointer input, told to the user like any other use of
 the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
 
-Bodies of `physics` swing at a fixed step of 1/60 s (1/30 s on battery), at most 15 steps a frame,
-so that they do not depend on the frame rate: each step follows the pose of the parent along the
+Bodies of `physics` swing in substeps of 1/120 s, also on battery, so each frame interval runs as
+many substeps as it covers (one at 120 fps, two at 60, four at 30) and the motion is the same at any
+of those rates; at most 30 substeps (a quarter second) run a frame: each step follows the pose of the parent along the
 time it covers, also on frames that take no step, and a frame between steps shows the bodies where
 their last step carries them; longer gaps are dropped. A `spring` pulls the end of
 its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings like a pendulum held
