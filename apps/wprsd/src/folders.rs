@@ -31,7 +31,7 @@ pub struct Folders {
     rx: Mutex<Option<mpsc::UnboundedReceiver<String>>>,
 }
 
-fn flags() -> WatchFlags {
+pub(crate) fn flags() -> WatchFlags {
     WatchFlags::CREATE
         | WatchFlags::CLOSE_WRITE
         | WatchFlags::DELETE

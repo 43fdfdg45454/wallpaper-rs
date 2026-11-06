@@ -1,8 +1,7 @@
 use super::SceneState;
-use std::hash::{BuildHasher, Hasher};
-use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock, mpsc};
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 use wprs_render::Pixels;
 use wprs_scene::{Control, Mode, ScriptOutputs, Wake};
@@ -14,7 +13,6 @@ const VIDEOS: usize = SHOWN;
 
 type Loaded = Vec<(String, Arc<Pixels>)>;
 type Files = Vec<(String, PathBuf)>;
-type Wanted = Vec<(String, Option<(PathBuf, wprs_scene::Property)>)>;
 
 #[derive(Default)]
 pub(in crate::compositor) struct Listed {
@@ -27,33 +25,14 @@ pub(in crate::compositor) struct Listed {
     loading: Option<mpsc::Receiver<Loaded>>,
     scanning: Option<mpsc::Receiver<(String, Files)>>,
     pub(super) unset: bool,
+    watch: Option<watch::Watch>,
+    wake: Option<watch::Wake>,
 }
 
-fn opaque(parts: &[&[u8]]) -> String {
-    let mut h = SALT.build_hasher();
-    parts.iter().for_each(|p| h.write(p));
-    format!("{:016x}", h.finish())
-}
+mod scan;
+mod watch;
 
-fn scan(wanted: Wanted) -> (String, Files) {
-    let (mut listing, mut files) = (serde_json::Map::new(), Vec::new());
-    for (id, chosen) in wanted {
-        let found = chosen.map(|(dir, prop)| crate::picks::files(&dir, &prop)).unwrap_or_default();
-        let entries = found.into_iter().map(|path| {
-            let stamp = std::fs::metadata(&path).map_or([0; 2], |m| [m.size() as i64, m.mtime()]);
-            let raw = path.as_os_str().as_encoded_bytes();
-            let token = opaque(&[id.as_bytes(), raw, &stamp[0].to_le_bytes(), &stamp[1].to_le_bytes()]);
-            let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            let kind = if wprs_video::is_video(&path) { "video" } else { "image" };
-            let entry = serde_json::json!([token, opaque(&[id.as_bytes(), raw]), name, kind]);
-            files.push((format!("wpak-user://{id}/{token}"), path));
-            entry
-        });
-        let entries = serde_json::Value::Array(entries.collect());
-        listing.insert(id, entries);
-    }
-    (serde_json::Value::Object(listing).to_string(), files)
-}
+use scan::scan;
 
 impl SceneState {
     pub(in crate::compositor) fn folders(&self) -> Vec<String> {
@@ -72,12 +51,29 @@ impl SceneState {
         !self.still && self.runtime.scene.scripts.iter().any(|s| s.wants(wprs_scene::ScriptApi::Folders))
     }
 
+    pub(in crate::compositor) fn waker(&mut self, wake: impl FnOnce() -> watch::Wake) {
+        self.listed.wake.get_or_insert_with(wake);
+    }
+
+    pub(in crate::compositor) fn heard_folder(&mut self, now: Instant) {
+        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.load(Ordering::Acquire));
+        if self.lists() && told && self.due.is_none_or(|at| at > now) {
+            self.due = Some(now);
+        }
+    }
+
     pub(super) fn listing_wake(&self, now: Instant) -> Wake {
-        match (self.lists(), self.listed.scanning.is_some(), self.listed.due) {
+        let told = self.listed.watch.as_ref().map(|w| w.changed.load(Ordering::Acquire));
+        match (self.lists(), self.listed.scanning.is_some(), told) {
             (false, ..) => Wake::Idle,
             _ if self.listed.unset => Wake::Idle,
+            (_, true, _) if self.listed.wake.is_some() => Wake::Idle,
             (_, true, _) => Wake::At(SOON.as_secs_f64()),
-            (_, _, due) => Wake::At(due.map_or(0.0, |at| at.saturating_duration_since(now).as_secs_f64())),
+            (_, _, Some(true)) => Wake::At(0.0),
+            (_, _, Some(false)) => Wake::Idle,
+            (_, _, None) => {
+                Wake::At(self.listed.due.map_or(0.0, |at| at.saturating_duration_since(now).as_secs_f64()))
+            }
         }
     }
 
@@ -97,20 +93,40 @@ impl SceneState {
             Some(Err(mpsc::TryRecvError::Disconnected)) => self.listed.scanning = None,
             _ => {}
         }
-        if self.listed.scanning.is_none() && self.listed.due.is_none_or(|at| now >= at) {
+        let chosen = |id: String| {
+            let dir = self.spec.values.get(&id).and_then(|v| v.as_str()).filter(|v| v.starts_with('/'));
+            let prop = self.spec.pack.props.properties.get(&id).cloned();
+            let dir = dir.map(PathBuf::from).zip(prop);
+            (id, dir)
+        };
+        let wanted: Vec<_> = self.folders().into_iter().map(chosen).collect();
+        let deep = |p: &wprs_scene::Property| match p.control {
+            wprs_scene::Control::Folder { recursive, .. } => recursive,
+            _ => 0,
+        };
+        let dirs: Vec<PathBuf> = wanted
+            .iter()
+            .filter_map(|(_, d)| d.as_ref())
+            .flat_map(|(d, p)| watch::dirs(d, deep(p)))
+            .collect();
+        if self.listed.watch.as_ref().map(|w| &w.dirs) != Some(&dirs) {
+            let wake = self.listed.wake.clone().filter(|_| !dirs.is_empty());
+            self.listed.watch = wake.and_then(|wake| watch::Watch::new(dirs, wake));
+        }
+        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.swap(false, Ordering::AcqRel));
+        let polled = self.listed.watch.is_none() && self.listed.due.is_none_or(|at| now >= at);
+        if self.listed.scanning.is_none() && (told || polled || self.listed.due.is_none()) {
             self.listed.due = Some(now + EVERY);
-            let chosen = |id: String| {
-                let dir = self.spec.values.get(&id).and_then(|v| v.as_str()).filter(|v| v.starts_with('/'));
-                let prop = self.spec.pack.props.properties.get(&id).cloned();
-                let dir = dir.map(PathBuf::from).zip(prop);
-                (id, dir)
-            };
-            let wanted: Vec<_> = self.folders().into_iter().map(chosen).collect();
             let (tx, rx) = mpsc::channel();
             self.listed.unset = wanted.iter().all(|(_, dir)| dir.is_none());
+            let wake = self.listed.wake.clone();
+            let sent = move || {
+                drop(tx.send(scan(wanted)));
+                wake.iter().for_each(|w| w());
+            };
             match self.listed.unset {
-                true => drop(tx.send(scan(wanted))),
-                false => drop(std::thread::spawn(move || drop(tx.send(scan(wanted))))),
+                true => sent(),
+                false => drop(std::thread::spawn(sent)),
             }
             self.listed.scanning = Some(rx);
             return self.listing(now) || changed;

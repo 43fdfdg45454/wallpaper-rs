@@ -1970,10 +1970,14 @@ ids of its pictures, and also of its videos with `options.videos: true` when the
 `video` (an id changes when its file is
 written again), `name(id)` the name of the file, `kind(id)` `"image"` or `"video"`, and
 `on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
-pairs, only of the files that `folder` lists) when the folder changes, looked at every 2 s while the
-scene is shown. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that
-video (looping and without sound, with a decoder of its own that only runs while the scene is shown; the script controls of `layer.video` do not reach it), instead of its own
-(`null` gives it back), at most eight files at once and four of them videos; a video on another
+pairs, only of the files that `folder` lists) when the folder changes: the desktop watches the chosen
+folder and its listed subfolders for changes and looks again only when one arrives (every 2 s while
+the scene is shown where the system gives no change notices), and the phone looks again while it
+draws. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
+with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
+the `playback` of the layer and that `layer.video` (play, pause, seek, rate, `ended`) controls like the
+videos of the package, with its sound at the volume of the videos of the package, instead of its own
+(`null` gives it back), at most eight files at once, any of them videos; a video on another
 kind of layer throws. Scripts never see paths, and the phone lists the folder the user chose in the same way.
 
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
