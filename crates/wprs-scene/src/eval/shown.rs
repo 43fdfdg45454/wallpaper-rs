@@ -24,9 +24,11 @@ pub(crate) fn content<'a>(
             Content::Image { asset, size: boxed(*size), frame }
         }
         Kind::Video { video, size, .. } => {
-            let own = || crate::footage::lane(cx.scene, layer).map(Cow::Owned);
-            let asset =
-                set.file.as_deref().map(Cow::Borrowed).or_else(own).unwrap_or_else(|| named(cx, video));
+            let picked = || {
+                let asset = named(cx, video);
+                crate::footage::lane(cx.scene, layer, &asset).map_or(asset, Cow::Owned)
+            };
+            let asset = set.file.as_deref().map_or_else(picked, Cow::Borrowed);
             Content::Video { asset, size: boxed(*size) }
         }
         Kind::Text(t) => {

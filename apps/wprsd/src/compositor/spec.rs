@@ -157,7 +157,8 @@ impl SceneSpec {
             |id: &String| self.clips.iter().any(|(k, _)| k == id) || self.extra.iter().any(|(k, _)| k == id);
         let own =
             self.pack.videos.iter().filter(move |(id, _)| !replaced(id)).map(|(id, r)| (id.as_str(), r, 100));
-        own.chain(self.clips.iter().map(|(id, reel)| (id.as_str(), reel, 0)))
+        let loud = |id: &str| if id.starts_with(wprs_scene::USER_FILES) { 100 } else { 0 };
+        own.chain(self.clips.iter().map(move |(id, reel)| (id.as_str(), reel, loud(id))))
     }
 }
 

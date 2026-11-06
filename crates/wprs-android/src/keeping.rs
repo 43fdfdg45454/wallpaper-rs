@@ -10,7 +10,7 @@ use wprs_core::stash::Keeper;
 use wprs_scene::{Control, Mode, Property, Scene, ScriptApi, ScriptOutputs, Values};
 
 const EVERY: f64 = 2.0;
-const SHOWN: usize = 8;
+pub(crate) const SHOWN: usize = 8;
 static SALT: OnceLock<RandomState> = OnceLock::new();
 
 #[derive(Default)]

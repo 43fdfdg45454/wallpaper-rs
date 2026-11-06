@@ -73,7 +73,8 @@ fn own_clocks_are_refused_where_no_named_video_file_plays() {
     let refused = [
         json!({ "id": "a", "type": "image", "image": "sky", "playback": clock }),
         json!({ "id": "a", "type": "video", "video": "bars", "playback": clock }),
-        json!({ "id": "a", "type": "video", "video": { "prop": "film", "map": { "x": "clip" } }, "playback": clock }),
+        json!({ "id": "a", "type": "video", "video": { "prop": "film" }, "playback": clock }),
+        json!({ "id": "a", "type": "video", "video": { "prop": "film", "map": { "x": "bars" } }, "playback": clock }),
     ];
     for layer in refused {
         let issues = Scene::from_json(&doc(layer.clone())).unwrap().validate(&Default::default());
@@ -82,4 +83,50 @@ fn own_clocks_are_refused_where_no_named_video_file_plays() {
     }
     let shared = json!({ "id": "a", "type": "video", "video": "bars", "playback": { "own_clock": false } });
     assert!(!Scene::load(&doc(shared), &Default::default()).unwrap().features().contains("video_clocks"));
+}
+
+#[test]
+fn a_video_picked_by_a_property_keeps_a_clock_of_its_own_for_each_video_it_may_show() {
+    let pick = json!({ "prop": "style", "map": { "night": "clip", "dawn": "dusk" } });
+    let doc = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] },
+        "assets": { "clip": { "path": "clip.webm" }, "dusk": { "path": "dusk.webm" } },
+        "layers": [video("shared", json!({})),
+            { "id": "own", "type": "video", "video": pick, "size": [20, 20], "playback": { "own_clock": true, "rate": 2 } }] });
+    let mut rt = runtime(&doc.to_string());
+    assert_eq!(rt.scene.lanes(), [("clip@own".into(), "clip".into()), ("dusk@own".into(), "dusk".into())]);
+    assert!(rt.scene.validate(&props()).is_empty(), "{:?}", rt.scene.validate(&props()));
+    let keys: Vec<String> = rt.tapes().iter().map(|t| t.asset.clone()).collect();
+    assert_eq!(keys, ["clip", "dusk", "clip@own", "dusk@own"]);
+    assert_eq!(shown(&rt), ["clip", "clip@own"]);
+    rt.frame(VIEW, Quality::Q3);
+    rt.advance(0.5);
+    let at = |rt: &Runtime, key: &str| rt.tapes().iter().find(|t| t.asset == key).unwrap().at;
+    assert!((at(&rt, "clip@own") - 1.0).abs() < 0.05 && at(&rt, "dusk@own") == 0.0);
+    let seek = VideoControl { commands: vec![VideoCommand::Seek(3.0)] };
+    rt.set_script(ScriptOutputs { videos: [("own".to_string(), seek)].into(), ..ScriptOutputs::default() });
+    assert!((at(&rt, "clip@own") - 3.0).abs() < 0.01 && (at(&rt, "dusk@own") - 3.0).abs() < 0.01);
+    let mut courses = Vec::new();
+    rt.fill_videos(&mut courses);
+    assert_eq!(courses.iter().filter(|c| c.id == "own").count(), 1);
+}
+
+#[test]
+fn a_folder_video_a_script_shows_runs_on_a_clock_scripts_steer() {
+    let mut rt = filmed(json!([video("a", json!({ "rate": 2 }))]));
+    let file = "wpak-user://album/abc".to_string();
+    let set = LayerOverride { file: Some(file.clone()), ..Default::default() };
+    let shows = |videos| ScriptOutputs {
+        layers: [("a".to_string(), set.clone())].into(),
+        videos,
+        ..Default::default()
+    };
+    rt.set_script(shows(Default::default()));
+    let tape = rt.tapes().iter().find(|t| t.asset == file).cloned().expect("a clock for the shown file");
+    assert_eq!((tape.layer.as_deref(), tape.repeat), (Some("a"), true));
+    let seek = VideoControl { commands: vec![VideoCommand::Seek(3.0), VideoCommand::Pause] };
+    rt.set_script(shows([("a".to_string(), seek)].into()));
+    let tape = rt.tapes().iter().find(|t| t.asset == file).unwrap();
+    assert!((tape.at - 3.0).abs() < 0.01, "{tape:?}");
+    rt.set_script(ScriptOutputs::default());
+    assert!(!rt.tapes().iter().any(|t| t.asset == file), "the clock goes with the file");
 }

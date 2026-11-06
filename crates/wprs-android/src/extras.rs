@@ -45,7 +45,7 @@ impl Extras {
         let (mut images, mut videos, mut next) = (Vec::new(), Vec::new(), None);
         for (key, file) in shown {
             if kind(file) == Some("video") {
-                videos.extend((videos.len() < 4).then(|| (key.clone(), file.clone())));
+                videos.extend((videos.len() < crate::keeping::SHOWN).then(|| (key.clone(), file.clone())));
                 continue;
             }
             let kept = old.images.iter().find(|(k, f, _)| k == key && f == file).map(|(.., p)| Arc::clone(p));

@@ -1466,8 +1466,13 @@ enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el mot
 `"seed": null` da a una escena una semilla nueva cada vez que empieza. Varias capas que muestran el mismo
 vídeo comparten su reloj, guiado por la primera; con `playback.own_clock` una capa `video` lo
 reproduce con un reloj propio (su velocidad, tramo, pausa y saltos de los scripts, a costa de un
-decodificador más; en una capa de imagen, en un vídeo elegido por una propiedad o en una capa que
-muestra geometría de scripts se rechaza), que el inspector del editor ofrece como *Reloj propio* y `wprs-ctl scene set DIR
+decodificador más; un vídeo elegido por una propiedad con `map` lleva un reloj propio para cada
+vídeo de la lista y los saltos de los scripts los mueven a todos; en una capa de imagen, en un vídeo
+que una propiedad de archivo elige al vuelo o en una capa que muestra geometría de scripts se
+rechaza), que el inspector del editor ofrece como *Reloj propio*; la línea de tiempo del editor
+muestra cada reloj propio con el tramo del vídeo como una barra cuyos extremos se arrastran, su
+velocidad, bucle y reproducción y dónde está en el instante elegido (`wprs-ctl scene clocks DIR
+--time T` lo imprime), y `wprs-ctl scene set DIR
 /scene/layers/N/playback/own_clock true` también. Un paquete con un vídeo HDR
 (PQ o HLG) recibe la faceta `hdr` y `wprs-ctl pack check` lo dice: en el ordenador se decodifica con
 10 bits y la gráfica adapta sus tonos a colores normales (BT.2020 a sRGB, el blanco de la pantalla
@@ -2414,9 +2419,12 @@ interfaz completa; lo esencial:
   `folder("fotos").files` da identificadores opacos de sus imágenes, `name(id)` el nombre del
   archivo, `on("added" | "removed" | "changed", …)` avisa de los cambios y `show("marco", id)` elige
   qué foto muestra una capa. Con `folder("fotos", {videos: true})` también lista sus vídeos si la
-  propiedad acepta `video` (`kind(id)` dice `image` o `video`) y `show("pantalla", id)` reproduce uno en bucle y sin sonido en una capa `video`, como
-  mucho cuatro a la vez, en el escritorio y en el teléfono. La carpeta se mira cada 2 s fuera del hilo
-  que dibuja, también con la escena quieta. Los scripts nunca ven rutas.
+  propiedad acepta `video` (`kind(id)` dice `image` o `video`) y `show("pantalla", id)` reproduce uno
+  en una capa `video` con su sonido, con un reloj propio que sigue el `playback` de la capa y que
+  `layer.video` controla (reproducir, pausar, saltar, velocidad, fin) como los vídeos del paquete,
+  hasta ocho archivos a la vez, vídeos o fotos, en el escritorio y en el teléfono. En el escritorio
+  la carpeta se vigila con avisos de cambios del sistema y solo se vuelve a leer cuando llega uno,
+  fuera del hilo que dibuja, sin despertar la escena mientras nada cambia. Los scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no

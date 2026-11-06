@@ -125,7 +125,7 @@ pub use crate::scan::{beyond_first, imported};
 pub use crate::schema::{easings, property_schema, schema};
 pub use crate::scripted::{
     EffectControl, Extent, LayerRead, MAX_CONSOLE, MAX_LINE, MAX_SCRIPT_BYTES, MAX_SCRIPT_TEXT, MAX_SPAWNED,
-    MAX_WATCHED, plain_line,
+    MAX_WATCHED, USER_FILES, plain_line,
 };
 pub use crate::scripting::{
     MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,

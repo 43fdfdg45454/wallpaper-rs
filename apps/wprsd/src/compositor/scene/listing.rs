@@ -10,8 +10,7 @@ use wprs_scene::{Control, Mode, ScriptOutputs, Wake};
 const EVERY: Duration = Duration::from_secs(2);
 const SOON: Duration = Duration::from_millis(50);
 const SHOWN: usize = 8;
-const VIDEOS: usize = 4;
-static SALT: LazyLock<std::hash::RandomState> = LazyLock::new(std::hash::RandomState::new);
+const VIDEOS: usize = SHOWN;
 
 type Loaded = Vec<(String, Arc<Pixels>)>;
 type Files = Vec<(String, PathBuf)>;

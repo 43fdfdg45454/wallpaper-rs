@@ -8,6 +8,7 @@ pub const MAX_SCRIPT_BYTES: usize = 1 << 20;
 pub const MAX_SCRIPT_TEXT: usize = 4096;
 pub const MAX_CONSOLE: usize = 20;
 pub const MAX_LINE: usize = 512;
+pub const USER_FILES: &str = "wpak-user://";
 const GENERIC_FONTS: [&str; 3] = ["sans-serif", "serif", "monospace"];
 const FONT_FILES: [&str; 5] = [".ttf", ".otf", ".ttc", ".otc", ".woff2"];
 
@@ -78,7 +79,7 @@ impl LayerOverride {
             font: self.font.filter(|f| f.len() <= 128 && font(f)),
             align: self.align,
             parent: self.parent.filter(|p| p.len() <= 192),
-            file: self.file.filter(|f| f.len() <= 256 && f.starts_with("wpak-user://")),
+            file: self.file.filter(|f| f.len() <= 256 && f.starts_with(USER_FILES)),
         }
     }
 }

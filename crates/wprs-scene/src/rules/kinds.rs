@@ -22,7 +22,7 @@ impl Check<'_> {
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
                 if playback.as_ref().is_some_and(|b| b.own_clock) {
-                    match field == "video" && !pooled && matches!(named, crate::Value::Fixed(_)) {
+                    match !crate::footage::owned(self.scene, kind).is_empty() {
                         true => self.uses(true, "video_clocks"),
                         false => self.issues.push(Issue::Clock(format!("{p}/playback/own_clock"))),
                     }

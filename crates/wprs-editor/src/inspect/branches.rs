@@ -66,7 +66,11 @@ impl Walk<'_> {
 fn clocked(doc: &Value, pointer: &str, key: &str) -> bool {
     let layer = pointer.strip_suffix("/playback").and_then(|p| doc.pointer(p)).filter(|_| key == "own_clock");
     let pooled = |id: &str| doc["scene"]["pools"].get(id).is_some();
-    layer.is_none_or(|l| l["type"] == "video" && l["video"].as_str().is_some_and(|v| !pooled(v)))
+    let named = |l: &Value| match &l["video"] {
+        Value::String(v) => !pooled(v),
+        v => v["map"].as_object().is_some_and(|m| m.values().filter_map(Value::as_str).any(|v| !pooled(v))),
+    };
+    layer.is_none_or(|l| l["type"] == "video" && named(l))
 }
 
 fn tag(root: &Value, branch: &Value) -> Option<Value> {
