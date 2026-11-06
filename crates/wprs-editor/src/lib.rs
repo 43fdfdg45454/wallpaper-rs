@@ -14,6 +14,7 @@ pub mod clocks;
 mod contents;
 pub mod covers;
 mod credit;
+mod cued;
 pub mod curves;
 mod cutouts;
 mod files;

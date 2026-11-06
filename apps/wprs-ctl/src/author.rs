@@ -123,12 +123,14 @@ pub enum Author {
         value: f32,
     },
     #[command(
-        about = "Set the text of a title, description, change notes, label or option in one language; an empty language sets the plain text"
+        about = "Set the text of a title, description, change notes, label, option or the text a media value shows while nothing plays in one language; an empty language sets the plain text"
     )]
     Translate {
         #[arg(help = DIR)]
         dir: PathBuf,
-        #[arg(help = "JSON Pointer to the text, such as /manifest/title")]
+        #[arg(
+            help = "JSON Pointer to the text, such as /manifest/title or /scene/layers/0/text/placeholder"
+        )]
         pointer: String,
         #[arg(help = "Language such as en or pt-BR")]
         language: String,

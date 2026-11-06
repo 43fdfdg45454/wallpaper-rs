@@ -899,7 +899,10 @@ the package declares `media` and the user allows it: the texts `title`, `artist`
 `album_artist`, `subtitle`, `genres` and `kind`; the numbers `position`, `duration` (seconds) and
 `progress` (0 to 1); `playing` as a flag or number; and the colors `primary`, `secondary` and
 `tertiary` of the cover, `text` (readable over the primary color) and `contrast` (black or white).
-Texts are empty and colors those of the placeholder while nothing plays. The numbers also fit
+Texts show their `placeholder` while nothing plays or the grant is missing, and are empty without
+one: a text, or a map from language to text picked like the texts of the manifest by the language
+of the screen, at most 512 characters each, only beside a `media` text value (`media_info`);
+colors are those of the placeholder of the cover. The numbers also fit
 texts, written `m:ss` (`h:mm:ss` from an hour) for `position` and `duration` and as a whole
 percentage for `progress`. The position runs on from the last reading of the player at its rate,
 and starts again from where the player says it jumped (`Seeked`), without asking the player while
@@ -909,7 +912,8 @@ the end of the track they wake nothing. An asset with `media: current` shows the
 cover of the track and one with `media: previous` the cover of the track before it (both still
 pictures, usable wherever a picture is: image layers, masks, effects, particles); `path` is the
 placeholder shown until a cover arrives, while nothing plays, without the grant and when the
-cover cannot be read. Covers are read once per track, also when a new track keeps the address of
+cover cannot be read. Covers are read once per track (the last eight fetched from the internet are
+kept in memory by address while `media.remote_covers` stays on, so they are not fetched again), also when a new track keeps the address of
 the one before (a cover with the same bytes stays the same cover), from `file://` addresses of at
 most 16 MiB or, only with `media.remote_covers` on (`dbus.md`), from `http` and `https` addresses
 of at most 4 MiB within 5 seconds, and pictures of more than 4096 pixels a side are refused; they
@@ -1392,7 +1396,7 @@ Newer sound layers may also use (`sound2`):
 | `mode` | with `sounds`: `sequence` (default, in order) or `random` (picked with the scene seed) |
 | `pause` | `[min, max]` seconds (0 to 600) of silence between clips, picked with the scene seed |
 | `stream` | `true` plays the files as they are read instead of from memory, for long sounds: at most 32 MiB and 10 minutes each and 64 MiB for all the streamed sounds of a scene, outside the 180 s of the others |
-| `play_on` | a trigger (`start`, `beat`, `prop:<id>` or `event:<name>`) that starts the sound, always under the user's volume and mute |
+| `play_on` | a trigger (`start`, `beat`, `prop:<id>`, `event:<name>`, `click:<layer>`, `enter:<layer>`, `leave:<layer>` or `media:<what>`, as for timelines) that starts the sound, always under the user's volume and mute |
 
 A layer has either `sound` or `sounds`. With `loop: false`, `sequence` plays the list once and
 `random` one clip each time it starts. `random` never plays the same clip twice in a row when the

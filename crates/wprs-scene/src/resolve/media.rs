@@ -3,7 +3,9 @@ use crate::animate::Animate;
 use crate::cover::FALLBACK;
 use crate::input::MediaState;
 use crate::media::{Media, Reading};
+use crate::props::Text;
 use crate::resolve::Context;
+use crate::value::Binding;
 
 pub(crate) const BAR_FPS: u32 = 30;
 
@@ -24,7 +26,28 @@ pub(crate) fn position_at(state: &MediaState, spent: f64) -> f32 {
     if state.duration > 0.0 { moved.clamp(0.0, state.duration) } else { moved.max(0.0) }
 }
 
-impl Context<'_> {
+pub(crate) fn worded<'x>(s: &'x MediaState, lang: &str, m: Media, placeholder: Option<&'x Text>) -> &'x str {
+    if !s.present() {
+        return placeholder.map_or("", |t| t.chosen(lang));
+    }
+    match m {
+        Media::Title => &s.title,
+        Media::Artist => &s.artist,
+        Media::Album => &s.album,
+        Media::AlbumArtist => &s.album_artist,
+        Media::Subtitle => &s.subtitle,
+        Media::Genres => &s.genres,
+        _ => &s.kind,
+    }
+}
+
+impl<'a> Context<'a> {
+    pub(crate) fn said(&self, b: &'a Binding<String>) -> Option<&'a str> {
+        let m = b.media.filter(|m| m.reading() == Reading::Words && b.base.is_none())?;
+        let media: &'a (MediaState, f64) = self.media;
+        Some(worded(&media.0, self.lang, m, b.placeholder.as_ref()))
+    }
+
     fn position(&self) -> f32 {
         position_at(self.media_state(), self.now - self.media.1)
     }
@@ -66,25 +89,13 @@ impl Context<'_> {
         &self.media.0
     }
 
-    fn words(&self, m: Media) -> String {
-        let s = self.media_state();
-        if !s.present() {
-            return String::new();
-        }
-        match m {
-            Media::Title => s.title.clone(),
-            Media::Artist => s.artist.clone(),
-            Media::Album => s.album.clone(),
-            Media::AlbumArtist => s.album_artist.clone(),
-            Media::Subtitle => s.subtitle.clone(),
-            Media::Genres => s.genres.clone(),
-            _ => s.kind.clone(),
-        }
+    fn words(&self, m: Media, placeholder: Option<&Text>) -> String {
+        worded(self.media_state(), self.lang, m, placeholder).to_owned()
     }
 
-    pub(crate) fn media<T: Animate>(&self, m: Media) -> T {
+    pub(crate) fn media<T: Animate>(&self, m: Media, placeholder: Option<&Text>) -> T {
         match m.reading() {
-            Reading::Words => T::from_text(self.words(m)).unwrap_or_default(),
+            Reading::Words => T::from_text(self.words(m, placeholder)).unwrap_or_default(),
             Reading::Flag => {
                 let s = self.media_state();
                 T::from_signal(f32::from(u8::from(s.present() && s.playing))).unwrap_or_default()

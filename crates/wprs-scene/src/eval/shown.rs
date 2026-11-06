@@ -36,7 +36,10 @@ pub(crate) fn content<'a>(
             let text = match (&set.text, &t.text) {
                 (Some(t), _) => Cow::Owned(t.clone()),
                 (None, crate::Value::Fixed(t)) => Cow::Borrowed(t.as_str()),
-                (None, bound) => Cow::Owned(bound.get(cx)),
+                (None, bound) => match bound.binding().and_then(|b| cx.said(b)) {
+                    Some(said) => Cow::Borrowed(said),
+                    None => Cow::Owned(bound.get(cx)),
+                },
             };
             Content::Text {
                 text,

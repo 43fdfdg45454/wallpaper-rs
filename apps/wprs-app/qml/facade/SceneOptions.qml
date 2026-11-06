@@ -14,6 +14,6 @@ QtObject {
             return ManifestWords.language(option);
         if (["variant", "ref:effect"].includes(field.widget) || (field.widget === "enum" && !(field.names ?? []).length))
             return SceneWords.value(option);
-        return (field.names ?? [])[at(field.options, option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
+        return (field.names ?? [])[at(field.options, option)] || (field.widget === "ref:trigger" ? SceneMediaWords.trigger(option) : String(option));
     }
 }

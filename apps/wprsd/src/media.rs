@@ -1,9 +1,13 @@
 pub(crate) mod covers;
+#[cfg(test)]
+mod fetched;
 mod listen;
 #[cfg(test)]
 mod pictured;
 mod pictures;
 mod players;
+#[cfg(test)]
+mod restart;
 mod simulated;
 #[cfg(test)]
 mod tests;
@@ -13,7 +17,7 @@ use crate::compositor::lock;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use wprs_core::model::MediaStatus;
@@ -25,8 +29,9 @@ pub(crate) use track::Track;
 
 type Wake = Arc<dyn Fn() + Send + Sync>;
 
-static LISTENER: OnceLock<Listener> = OnceLock::new();
+static LISTENER: OnceLock<Arc<Listener>> = OnceLock::new();
 static SERIAL: AtomicU64 = AtomicU64::new(1);
+const RETRY: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone)]
 pub(crate) struct Frame {
@@ -37,8 +42,9 @@ pub(crate) struct Frame {
     pub(crate) previous: Option<Arc<Cover>>,
 }
 
-struct Listener {
+pub(crate) struct Listener {
     bus: zbus::Connection,
+    retry: Duration,
     runtime: tokio::runtime::Handle,
     wake: Wake,
     changed: Wake,
@@ -67,50 +73,67 @@ impl Frame {
 }
 
 pub(crate) fn start(bus: zbus::Connection, wake: Wake, changed: Wake) {
-    let runtime = tokio::runtime::Handle::current();
-    let (task, latest, simulated, status) = Default::default();
-    let remote = watch::Sender::new(false);
-    let made = Listener { bus, runtime, wake, changed, task, latest, simulated, status, remote };
-    let _ = LISTENER.set(made);
+    let _ = LISTENER.set(Listener::new(bus, wake, changed, RETRY));
 }
 
 pub(crate) fn follow(on: bool) {
-    let Some(l) = LISTENER.get() else { return };
-    let mut task = lock(&l.task);
-    if task.is_some() == on {
-        return;
+    if let Some(l) = LISTENER.get() {
+        l.follow(on);
     }
-    match task.take() {
-        Some((_, running)) => {
-            running.abort();
-            *lock(&l.latest) = None;
-            let remote = remote_on();
-            *lock(&l.status) = MediaStatus { remote_covers: remote, ..MediaStatus::default() };
-        }
-        None => {
-            let id = SERIAL.fetch_add(1, Ordering::Relaxed);
-            *task = Some((id, l.runtime.spawn(listen::listen(id, l.bus.clone(), l.remote.subscribe()))));
-        }
-    }
-    tracing::info!(on, "media player listener");
-    drop(task);
-    (l.wake)();
-    (l.changed)();
 }
 
-fn ended(id: u64) {
-    let Some(l) = LISTENER.get() else { return };
-    let mut task = lock(&l.task);
-    if task.as_ref().is_none_or(|(running, _)| *running != id) {
-        return;
+impl Listener {
+    pub(crate) fn new(bus: zbus::Connection, wake: Wake, changed: Wake, retry: Duration) -> Arc<Listener> {
+        let runtime = tokio::runtime::Handle::current();
+        let (task, latest, simulated, status) = Default::default();
+        let remote = watch::Sender::new(false);
+        Arc::new(Listener { bus, retry, runtime, wake, changed, task, latest, simulated, status, remote })
     }
-    *task = None;
-    drop(task);
-    (l.changed)();
-}
 
-pub(crate) fn remote_on() -> bool {
-    LISTENER.get().is_some_and(|l| *l.remote.borrow())
+    pub(crate) fn follow(self: &Arc<Self>, on: bool) {
+        let mut task = lock(&self.task);
+        if task.is_some() == on {
+            return;
+        }
+        match task.take() {
+            Some((_, running)) => {
+                running.abort();
+                *lock(&self.latest) = None;
+                let remote = *self.remote.borrow();
+                *lock(&self.status) = MediaStatus { remote_covers: remote, ..MediaStatus::default() };
+            }
+            None => {
+                let id = SERIAL.fetch_add(1, Ordering::Relaxed);
+                let listening = listen::listen(self.clone(), id, self.bus.clone(), self.remote.subscribe());
+                *task = Some((id, self.runtime.spawn(listening)));
+            }
+        }
+        tracing::info!(on, "media player listener");
+        drop(task);
+        (self.wake)();
+        (self.changed)();
+    }
+
+    fn ended(&self, id: u64) {
+        let mut task = lock(&self.task);
+        if task.as_ref().is_none_or(|(running, _)| *running != id) {
+            return;
+        }
+        *task = None;
+        drop(task);
+        (self.changed)();
+    }
+
+    fn publish(&self, frame: Option<Frame>, status: MediaStatus) {
+        let remote = *self.remote.borrow();
+        let status = MediaStatus { remote_covers: remote, using: lock(&self.status).using.clone(), ..status };
+        let changed = std::mem::replace(&mut *lock(&self.status), status.clone()) != status;
+        *lock(&self.latest) = frame.map(Arc::new);
+        (self.wake)();
+        if changed {
+            (self.changed)();
+        }
+    }
 }
 
 pub(crate) fn remote_covers(on: bool) {
@@ -156,18 +179,6 @@ pub(crate) fn simulated(output: &str) -> bool {
 
 pub(crate) fn status() -> MediaStatus {
     LISTENER.get().map(|l| lock(&l.status).clone()).unwrap_or_default()
-}
-
-fn publish(frame: Option<Frame>, status: MediaStatus) {
-    let Some(l) = LISTENER.get() else { return };
-    let remote = *l.remote.borrow();
-    let status = MediaStatus { remote_covers: remote, using: lock(&l.status).using.clone(), ..status };
-    let changed = std::mem::replace(&mut *lock(&l.status), status.clone()) != status;
-    *lock(&l.latest) = frame.map(Arc::new);
-    (l.wake)();
-    if changed {
-        (l.changed)();
-    }
 }
 
 pub(crate) fn using(outputs: std::collections::BTreeSet<String>) {

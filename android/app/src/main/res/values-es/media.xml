@@ -8,6 +8,12 @@
     <string name="media_access_why">Android solo deja que una app vea lo que suenan otros reproductores mediante el acceso a las notificaciones. Esta app lo usa únicamente para leer el título, el artista, el álbum, la carátula y el avance de la pista mientras un fondo al que se lo permitiste los muestra; nunca lee tus notificaciones y no guarda, registra ni envía nada. Activa wallpaper-rs en la lista que se abre.</string>
     <string name="show_media_network">Mostrar lo que suena aunque pueda salir a internet</string>
     <string name="media_network_note">Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir del teléfono.</string>
+    <string name="media_network_why">Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir del teléfono. Permítelo solo si le confías esos datos; puedes quitarlo aquí cuando quieras.</string>
+    <string name="media_network_allow">Permitir</string>
+    <string name="media_status_off">Ningún fondo lee ahora lo que suena; empieza mientras se muestra uno permitido.</string>
+    <string name="media_status">Se lee ahora. Reproductores encontrados: %1$d. Pista: %2$s, sonando: %3$s, carátula: %4$s.</string>
+    <string name="media_yes">sí</string>
+    <string name="media_no">no</string>
     <string name="video_speed">Velocidad</string>
     <string name="video_start">Inicio</string>
     <string name="video_end">Parar en</string>

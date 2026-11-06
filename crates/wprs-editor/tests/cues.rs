@@ -55,3 +55,32 @@ fn property_triggers_of_the_manifest_offer_no_media_cues() {
     let options = wprs_editor::settings::candidates(&doc, "trigger", "/manifest/properties/x").unwrap();
     assert!(options.iter().all(|o| !o.as_str().unwrap_or_default().starts_with("media:")), "{options:?}");
 }
+
+#[test]
+fn the_trigger_picker_offers_named_events_and_the_touches_of_solid_layers() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let events =
+        json!([{ "t": 0.5, "name": "flash" }, { "t": 0.8, "name": "flash" }, { "t": 0.9, "name": "end" }]);
+    act(&mut p, json!({ "set": { "pointer": "/scene/timelines/0/events", "value": events } })).unwrap();
+    act(&mut p, json!({ "add_layer": { "kind": "solid", "id": "button" } })).unwrap();
+    act(&mut p, json!({ "add_layer": { "kind": "solid", "id": "plain" } })).unwrap();
+    let button = wprs_editor::layers::walk(&p.doc).into_iter().find(|(_, l)| l["id"] == "button").unwrap().0;
+    act(&mut p, json!({ "set": { "pointer": format!("{button}/solid"), "value": { "alpha": 0.5 } } }))
+        .unwrap();
+    let offered: Vec<String> =
+        trigger(&p).options.iter().filter_map(|o| o.as_str()).map(String::from).collect();
+    let wanted = ["event:end", "event:flash", "click:button", "enter:button", "leave:button"];
+    assert!(wanted.iter().all(|w| offered.iter().any(|o| o == w)), "{offered:?}");
+    assert_eq!(offered.iter().filter(|o| *o == "event:flash").count(), 1, "each event once");
+    assert!(!offered.iter().any(|o| o.ends_with(":plain")), "a layer that takes no pointer is no trigger");
+    let sound = wprs_editor::settings::candidates(&p.doc, "trigger", "/scene/layers/0/play_on").unwrap();
+    assert!(sound.contains(&json!("click:button")) && sound.contains(&json!("event:end")));
+    act(&mut p, json!({ "set": { "pointer": "/scene/timelines/0/trigger", "value": "click:button" } }))
+        .unwrap();
+    let problems = wprs_editor::package::problems(&p.dir, &p.doc);
+    assert!(problems.iter().all(|c| c.warning || !c.pointer.contains("trigger")), "{problems:?}");
+    let doc = json!({ "manifest": { "properties": {} }, "scene": { "timelines": [{ "events": [{ "name": "x" }] }] } });
+    let options = wprs_editor::settings::candidates(&doc, "trigger", "/manifest/properties/x").unwrap();
+    assert!(!options.contains(&json!("event:x")), "a button of the manifest is not started by events");
+}

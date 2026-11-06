@@ -131,9 +131,7 @@ impl Check<'_> {
                 self.issues.push(Issue::DuplicateId(format!("{p}/effects/{i}/name")));
             }
         }
-        if let Kind::Adjustment { rgb: true, .. } = layer.kind {
-            self.uses(true, "rgb");
-        }
+        self.uses(matches!(layer.kind, Kind::Adjustment { rgb: true, .. }), "rgb");
     }
 
     pub(crate) fn called<T: Probe>(&mut self, path: &str, b: &Binding<T>) {
@@ -149,6 +147,7 @@ impl Check<'_> {
                 self.issues.push(Issue::Type(format!("{path}/media")));
             }
         }
+        self.placeholder(path, b);
         if b.call.is_none() && b.params.is_none() {
             return;
         }
