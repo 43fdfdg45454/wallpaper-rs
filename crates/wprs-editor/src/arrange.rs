@@ -105,3 +105,19 @@ pub fn ungroup(doc: &Value, id: &str) -> Result<Vec<Op>> {
         inner.map(|(k, l)| Op::Add { path: format!("{list}/{}", i + k), value: l.clone() }).collect();
     Ok(std::iter::once(Op::Remove { path }).chain(added).collect())
 }
+
+pub fn template(doc: &Value, id: &str) -> Result<Vec<Op>> {
+    let (_, value) = layer(doc, id)?;
+    ensure!(
+        ["group", "image", "text", "shape", "solid", "spectrum", "mesh"]
+            .contains(&value["type"].as_str().unwrap_or("")),
+        said("editor.not_templated", "scripts cannot copy a layer of type %1", &[&value["type"]])
+    );
+    let taken = |name: &str| doc.pointer(&format!("/scene/templates/{}", escape(name))).is_some();
+    let names = std::iter::once(format!("{id}_template")).chain((2..).map(|n| format!("{id}_template_{n}")));
+    let name = names.take(1000).find(|n| !taken(n)).unwrap_or_else(|| format!("{id}_template"));
+    Ok(match doc.pointer("/scene/templates").is_some_and(Value::is_object) {
+        true => vec![Op::Add { path: format!("/scene/templates/{}", escape(&name)), value: value.clone() }],
+        false => vec![Op::Add { path: "/scene/templates".into(), value: json!({ name: value }) }],
+    })
+}

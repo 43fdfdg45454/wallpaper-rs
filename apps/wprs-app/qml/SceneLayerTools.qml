@@ -105,10 +105,14 @@ Flow {
         QQC2.ToolTip.text: App.tr("Copy the layer to the templates that scripts spawn")
         QQC2.ToolTip.visible: hovered
         enabled: tools.owner.current !== null && ["group", "image", "text", "shape", "solid", "spectrum", "mesh"].includes(tools.owner.current.type)
-        onClicked: tools.owner.page.run("set", {
-                "pointer": "/scene/templates/" + tools.owner.current.id + "_template",
-                "value": JSON.parse(tools.owner.page.editor.value(tools.owner.current.pointer) || "null")
+        onClicked: tools.owner.page.run("duplicate_layer", {
+                "id": tools.owner.current.id,
+                "template": true
             })
+    }
+
+    SceneTemplates {
+        page: tools.owner.page
     }
 
     QQC2.ToolButton {

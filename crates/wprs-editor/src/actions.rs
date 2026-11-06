@@ -117,7 +117,8 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
             }
             ops
         }
-        Action::DuplicateLayer { id } => arrange::duplicate(doc, id)?,
+        Action::DuplicateLayer { id, template: false } => arrange::duplicate(doc, id)?,
+        Action::DuplicateLayer { id, template: true } => arrange::template(doc, id)?,
         Action::MoveLayer { id, to, into } => {
             let from = find(doc, id)?;
             let list = children(doc, into.as_deref())?;

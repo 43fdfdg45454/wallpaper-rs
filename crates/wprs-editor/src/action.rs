@@ -59,6 +59,8 @@ pub enum Action {
     },
     DuplicateLayer {
         id: String,
+        #[serde(default)]
+        template: bool,
     },
     MoveLayer {
         id: String,

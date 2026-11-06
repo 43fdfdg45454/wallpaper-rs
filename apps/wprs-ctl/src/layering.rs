@@ -34,12 +34,16 @@ pub enum Layering {
         #[arg(help = ID)]
         id: String,
     },
-    #[command(about = "Copy a layer, with new ids, just above it")]
+    #[command(
+        about = "Copy a layer, with new ids, just above it, or with --template to a new template scripts spawn"
+    )]
     DuplicateLayer {
         #[arg(help = DIR)]
         dir: PathBuf,
         #[arg(help = ID)]
         id: String,
+        #[arg(long, help = "Copy it to the templates under a free name, <id>_template or the next one")]
+        template: bool,
     },
     #[command(about = "Move a layer to a position, 0 at the bottom, among the top layers or in a group")]
     MoveLayer {
@@ -145,7 +149,7 @@ pub(crate) fn action(command: Layering) -> (PathBuf, Action) {
             (dir, Action::AddLayer { kind, id, name, source, into, at })
         }
         Layering::RemoveLayer { dir, id } => (dir, Action::RemoveLayer { id }),
-        Layering::DuplicateLayer { dir, id } => (dir, Action::DuplicateLayer { id }),
+        Layering::DuplicateLayer { dir, id, template } => (dir, Action::DuplicateLayer { id, template }),
         Layering::MoveLayer { dir, id, to, into } => (dir, Action::MoveLayer { id, to, into }),
         Layering::Group { dir, ids, id } => (dir, Action::Group { ids, id }),
         Layering::Ungroup { dir, id } => (dir, Action::Ungroup { id }),
