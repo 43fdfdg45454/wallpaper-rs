@@ -14,6 +14,9 @@ ColumnLayout {
     property bool failed: false
     property var pending: null
     readonly property bool busy: backend.busy
+    readonly property alias backend: backend
+    readonly property alias admin: admin
+    readonly property alias publishing: publishing
 
     function take(answer) {
         const reply = JSON.parse(answer);

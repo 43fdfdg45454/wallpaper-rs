@@ -12,6 +12,9 @@ Kirigami.Dialog {
     property string folder: ""
     property var current: null
     property var removed: []
+    property alias named: name.text
+    property alias roots: roots
+    property alias onlines: onlines
 
     signal made(string folder, string charter)
 

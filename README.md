@@ -2538,6 +2538,11 @@ target/debug/wprs-app --check            # carga todo el QML de la app y falla a
 
 `wprs-app --check` recorre cada página con datos de prueba, abre los detalles de un elemento, el
 editor de imágenes y el de escenas, y falla ante cualquier aviso del QML o si no termina en 240 s.
+En el editor de escenas abre y usa el diálogo de la curva, el menú de líneas de tiempo con su panel,
+las herramientas de máscaras, partículas y fuerzas; en una carpeta temporal crea un repositorio
+estático con claves de prueba desde la pestaña *Repositorio estático* (diálogos *Repositorio
+nuevo…*, *Raíz…*, *Revocar* y *Publicar…*), añade un paquete, revoca y retira la revocación de una
+versión, publica y comprueba que la página se dibuja.
 Los archivos QML siguen el formato de `qmlformat` de Qt 6.12.
 
 APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):

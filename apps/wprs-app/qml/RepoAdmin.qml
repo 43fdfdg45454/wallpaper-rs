@@ -8,6 +8,9 @@ RowLayout {
 
     required property var stall
     required property var backend
+    readonly property alias charter: charter
+    readonly property alias rooting: rooting
+    readonly property alias revoking: revoking
 
     function revokePackage(id, version) {
         revoking.target = ["package", id, version];

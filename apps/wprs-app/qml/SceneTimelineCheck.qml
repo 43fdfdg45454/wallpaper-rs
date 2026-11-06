@@ -55,6 +55,20 @@ QtObject {
             throw new Error("timeline panel: the lane did not rename or move the event: " + JSON.stringify(read(pointer + "/events")));
         lane.destroy();
         panel.destroy();
+        const menu = Qt.createComponent("SceneTimelineMenu.qml").createObject(page, {
+                "timeline": {
+                    "page": page
+                }
+            });
+        menu.popup();
+        const lines = (page.view.timelines ?? []).length;
+        if (menu.count !== lines + 1 || menu.menuAt(0) === null)
+            throw new Error("timeline menu: it shows " + menu.count + " entries for " + lines + " timelines");
+        menu.itemAt(menu.count - 1).triggered();
+        if ((page.view.timelines ?? []).length !== lines + 1)
+            throw new Error("timeline menu: Add a timeline added none");
+        menu.close();
+        menu.destroy();
         while (page.view.history.done.length > steps)
             page.run("undo");
     }

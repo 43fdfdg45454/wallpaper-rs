@@ -25,7 +25,9 @@ Timer {
             host.showPage(at);
             keeps(host.names[at]);
         } else if (at === host.pages.length) {
-            return;
+            return Qt.createComponent("RepoCheck.qml").createObject(host, {
+                "host": host
+            }).start();
         } else if (at === host.pages.length + 1) {
             return App.query("GetItem", [""], "Library1", reply => {
                 if (!host)
@@ -41,9 +43,13 @@ Timer {
             throw new Error("the image editor did not open");
         } else if (!edited) {
             edited = true;
+        } else if (host.waiting > 0 && at < host.pages.length + 151) {
+            return;
         } else {
             stop();
             Qt.quit();
+            if (host.waiting > 0)
+                throw new Error("a check of a page did not finish");
             if (opened.editor.dirty !== true)
                 throw new Error("the editor has no unsaved edits to keep");
             return keeps("settings");

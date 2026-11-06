@@ -10,6 +10,7 @@ Kirigami.Dialog {
 
     property var root: null
     property string key: ""
+    property alias secret: password.text
 
     signal sign(string key, string password)
     signal rotate
