@@ -1196,7 +1196,9 @@ línea de la simulación); un efecto de paquete solo queda fuera por lento cuand
 paquete de un fotograma pasan del límite por sí solos, nunca por lo que cuestan las capas o los
 efectos integrados, de eso se encarga el nivel de calidad. Los destinos de los efectos de paquete se
 limpian en su primera pasada y las capas de ajuste leen lo que tienen debajo sin copiarlo: una pila
-de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos.
+de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos. El paralaje de profundidad
+(`depth_parallax`) no dibuja nada mientras no movería la imagen (sin órbita ni `overscan` y con el
+puntero fuera, en el centro o sin seguirlo), que en el teléfono es casi siempre.
 Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
 aunque el descriptor diga menos, y
 `wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en

@@ -881,7 +881,10 @@ each point by `(depth - focus) × strength` pixels towards the pointer (`follow`
 orbit (`orbit`, which also takes over while the pointer is away), searching its `depth` image (a
 `linear` asset, bright is near) in 8 to 16 `steps`, fewer at lower quality levels, so that near
 parts slide over far ones without tearing; `overscan` enlarges the layer to keep its edges out of
-sight. Still images with a depth map move with the same search. `glitch` stays still until
+sight. While it would move nothing (no orbit, no `overscan` and the pointer away, centred or not
+followed, or a `strength` of zero) the frame leaves it out, so it costs no pass; the phone, whose
+pointer only follows touches, shows it this way most of the time. Still images with a depth map
+move with the same search. `glitch` stays still until
 `bursts` or `beat` is set (a beat keeps it on for `length` seconds), and `film_grain` only changes
 over time with an `fps` above zero. `blur_motion` streaks along `angle` for `length` pixels, or,
 with `follow`, along the way the layer moved: its speed in canvas pixels per second times

@@ -108,7 +108,8 @@ impl Scene {
         let whole = self.canvas.camera.is_some();
         let area = |l: &Layer| areas.get(&std::ptr::from_ref(l)).copied().filter(|_| !whole).unwrap_or(1.0);
         let layers = self.layers().filter(|l| l.flat()).map(|l| self.units(l, quality, magnify) * area(l));
-        let glow = crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality, magnify));
+        let glow =
+            crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality, magnify));
         let particles = self.layers().filter_map(|l| match &l.kind {
             Kind::Particles { system, .. } => self.particles.get(system),
             _ => None,
