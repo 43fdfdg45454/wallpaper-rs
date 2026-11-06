@@ -200,8 +200,14 @@ these are the differences:
 - **Sandbox.** Layers 1 to 4 are the same, enforced by intercepting every request. Network loads
   are blocked in the WebView unless the package declares origins and the user allowed `network`,
   and only those origins pass; cookies, service workers, safe browsing and the WebView's metrics
-  are off, and peer connections (WebRTC) are removed from the page and from every frame of it (see
-  the guard below). The renderer runs in the WebView's isolated process.
+  are off, and peer connections (WebRTC) never work, with or without the network: every response
+  carries `webrtc 'block'` in its content security policy, which every frame inherits, including
+  `about:blank` and `srcdoc` ones, on engines that honour it (WebView 113 does not: it reports the
+  directive as unknown and ignores it), and the guard below removes them from the page, its frames,
+  the frames inside shadow trees, `window.open` windows and re-opened documents, on every WebView
+  the app can run on (Android 12 and later, whose WebView has `addDocumentStartJavaScript`; the
+  guard also runs from the page's interface script where it does not). Nothing in the privacy
+  notice depends on the engine's version. The renderer runs in the WebView's isolated process.
 - **Privacy.** `hide_zone` and `hide_language` are applied by a guard script that runs before the
   page's: `Date`, `Temporal`, `Intl`, the `toLocale…` methods, `localeCompare` and
   `navigator.language` see UTC and `en-US`, also through `constructor`, when an option or the list
@@ -212,7 +218,9 @@ these are the differences:
   also applies itself to the frames the page creates, reads through `contentWindow` or reaches
   through `window[n]`, to its workers (each starts from `/:wprs/worker.js`, which runs the guard
   and then the page's script) and to its worklets. `hide_gpu` uses the same mask as the desktop,
-  where the phone's WebView would report the model of the graphics chip. Kept storage is the
+  where the phone's WebView would report the model of the graphics chip. The disguise is by script
+  only: what the engine draws itself (date and time pickers, the fonts it picks for a language) and
+  the `Accept-Language` of requests keep following the phone. Kept storage is the
   WebView's storage of the page's origin; *Clear data* and removing the last item of the package
   move the page to a new origin and delete the old one, and a page that keeps nothing gets a new
   origin each time it loads, deleted when it closes. The notice is shown on the page of the

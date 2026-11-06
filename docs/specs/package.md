@@ -464,6 +464,10 @@ can do through WebGL, and keeps its storage, until the user restricts each of th
 shows a notice saying so (`web.md`, "Privacy"). `onMedia` gets `{enabled: false}` on engines that do
 not read the media player. Web pages with storage get the `storage` facet.
 
+On the phone, without the `network` input allowed a page reaches no address at all, and peer
+connections (WebRTC) are closed for every page, allowed or not, in all of its frames (`web.md`,
+"On the phone").
+
 ## Presets
 
 A `preset` package carries values for another package, its base, and the pictures or videos those

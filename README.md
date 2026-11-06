@@ -1604,8 +1604,10 @@ En el teléfono los mismos paquetes se muestran con el WebView del sistema, el m
 mantiene al día para todas las apps, dibujado directamente sobre el fondo sin copias. La página ve
 la misma interfaz y tiene las mismas restricciones: solo lee sus archivos y los que eliges (la app
 sirve cada petición), no llega a la red salvo que la declare y la permitas, no tiene cookies,
-ventanas, diálogos, descargas ni permisos, y se le quitan las conexiones entre pares (WebRTC) antes
-de que corran sus scripts. Su página en la app avisa, encima de *Usar como fondo*, de lo que
+ventanas, diálogos, descargas ni permisos, y no puede abrir conexiones entre pares (WebRTC) ni en
+sus marcos: un script que corre antes que los suyos se las quita a la página, a sus marcos (también
+`about:blank`, `srcdoc` y los de árboles shadow), ventanas y documentos reabiertos, y la política de
+seguridad del contenido lleva `webrtc 'block'` para los motores que la respetan (el WebView 113 no). Su página en la app avisa, encima de *Usar como fondo*, de lo que
 usa (zona horaria, idioma, modelo del chip gráfico y datos que guarda en el teléfono), y su sección
 *Privacidad* tiene un interruptor para cada cosa, otro para la red si la declara y *Borrar datos*;
 el mismo aviso sale al importarla. El límite de lo que guarda es el del escritorio: el teléfono lo
@@ -1615,7 +1617,9 @@ guardar de más (con `setItem` o como propiedad, en la página y en sus marcos);
 IndexedDB o Cache Storage, y al dejar de verse, mide el origen de nuevo, y si pasa del límite la
 página arranca otra vez sin guardar nada. Si al arrancar ya pasa del límite, la página corre sin guardar nada y su
 sección *Privacidad* lo avisa hasta *Borrar datos*. Ocultar la zona horaria y el idioma lo hace un script que corre
-antes que los de la página (en ella y sus marcos, no en sus workers). *Reaccionar al tacto* le da
+antes que los de la página (en ella, sus marcos y sus workers); no cubre lo que dibuja el propio
+motor (selectores de fecha y hora, tipografías según el idioma) ni el `Accept-Language` de las
+peticiones, que siguen al teléfono. *Reaccionar al tacto* le da
 el puntero y *Reaccionar a los toques* los clics, solo desde toques reales y solo en la pantalla de
 inicio; su sonido sigue el ajuste de sonido de los vídeos. Se pausa al dejar de verse, con el ahorro
 de energía, con poca batería o con el teléfono muy caliente, se cierra tras 5 minutos oculta y
