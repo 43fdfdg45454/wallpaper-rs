@@ -26,7 +26,7 @@ fn path(fps: f32) -> Vec<[f32; 2]> {
 #[test]
 fn gusts_change_with_every_step_alike_at_every_frame_rate() {
     let reference = path(60.0);
-    for fps in [30.0] {
+    for fps in [30.0, 20.0] {
         let other = path(fps);
         assert_eq!(other.len(), reference.len());
         for (k, (a, b)) in reference.iter().zip(&other).enumerate() {
