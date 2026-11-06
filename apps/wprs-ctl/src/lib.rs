@@ -103,7 +103,19 @@ pub fn usage(message: impl Into<String>) -> anyhow::Error {
     Usage(message.into()).into()
 }
 
+fn quiet_on_closed_pipe() {
+    let shown = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let text = info.payload_as_str().unwrap_or_default();
+        if text.starts_with("failed printing to stdout") && text.contains("Broken pipe") {
+            std::process::exit(0);
+        }
+        shown(info);
+    }));
+}
+
 pub fn main() -> ExitCode {
+    quiet_on_closed_pipe();
     wprs_scene::serve_check();
     wprs_scene::check_out_of_process(true);
     wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));

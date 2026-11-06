@@ -563,6 +563,9 @@ lo aplica la próxima vez que se apaga y enciende la pantalla.
 
 ## Uso desde la terminal
 
+Si lo que lee la salida de `wprs-ctl` deja de leer antes de tiempo (por ejemplo `| head` o
+`| grep -q`), `wprs-ctl` termina sin error ni aviso.
+
 ```sh
 wprs-ctl set ~/Imágenes/fondo.jpg               # todas las pantallas
 wprs-ctl set ~/Vídeos/mar.mp4 -o DP-1 -f fit    # una pantalla, modo de ajuste
