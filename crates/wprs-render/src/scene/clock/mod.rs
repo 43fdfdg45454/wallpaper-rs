@@ -16,6 +16,14 @@ use stamps::Stamps;
 
 const WATCH: u64 = 15;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Stamping {
+    #[default]
+    All,
+    Frame,
+    Off,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Timing {
     Off,
@@ -26,6 +34,7 @@ pub(crate) enum Timing {
 pub(crate) struct Clock {
     stamps: Option<Stamps>,
     queries: bool,
+    pub(crate) stamping: Stamping,
     frame: u64,
     judge: judge::Judge,
     plan: plan::Plan,
@@ -43,13 +52,30 @@ impl Clock {
         let judge = judge::Judge::new(r.tier());
         let (plan, timed) = (plan::Plan::new(), Vec::new());
         let (gpu_ms, sim_ms, fresh, samples, sim) = (0.0, 0.0, false, 0, (false, 0.0));
-        Clock { stamps: None, queries, frame: 0, judge, plan, timed, sim, gpu_ms, sim_ms, fresh, samples }
+        let stamping = Stamping::All;
+        Clock {
+            stamps: None,
+            queries,
+            stamping,
+            frame: 0,
+            judge,
+            plan,
+            timed,
+            sim,
+            gpu_ms,
+            sim_ms,
+            fresh,
+            samples,
+        }
     }
 
     pub(crate) fn start(&mut self, r: &Renderer, ops: &[super::Op], trial: bool, drawn: bool) -> Timing {
         self.plan.marks.clear();
         self.frame += 1;
         let (watched, sim) = (trial || self.judge.suspect(), std::mem::take(&mut self.sim));
+        if self.stamping == Stamping::Off {
+            return Timing::Off;
+        }
         if !self.queries {
             let watch = drawn && watched || self.frame.is_multiple_of(WATCH);
             self.sim = sim;
@@ -57,7 +83,12 @@ impl Clock {
         }
         let stamps = self.stamps.get_or_insert_with(|| Stamps::new(r));
         let Some(free) = stamps.free() else { return Timing::Off };
-        self.plan.plan(ops, self.frame);
+        if self.stamping == Stamping::All {
+            self.plan.plan(ops, self.frame);
+        } else {
+            self.plan.runs.clear();
+            self.plan.wide = false;
+        }
         stamps.take(free, &mut self.plan.runs, (self.plan.wide, sim.0));
         Timing::Stamps(free)
     }

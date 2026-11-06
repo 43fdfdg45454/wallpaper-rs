@@ -107,9 +107,11 @@ pub mod host {
     }
 
     pub fn bench(path: &str, args: &[String]) -> String {
-        crate::bench::run(std::path::Path::new(path), args)
-            .unwrap_or_else(|e| json!({ "error": e }))
-            .to_string()
+        let report = match path {
+            "ceiling" => crate::bench::ceiling(args),
+            _ => crate::bench::run(std::path::Path::new(path), args),
+        };
+        report.unwrap_or_else(|e| json!({ "error": e })).to_string()
     }
 }
 

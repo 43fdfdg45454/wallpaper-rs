@@ -126,6 +126,10 @@ impl SceneView {
         self.timed = on;
     }
 
+    pub fn stamping(&mut self, stamping: super::clock::Stamping) {
+        self.clock.stamping = stamping;
+    }
+
     pub fn stats(&self) -> SceneStats {
         self.stats
     }

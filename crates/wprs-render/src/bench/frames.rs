@@ -127,7 +127,9 @@ impl<'a> Run<'a> {
         let (mut eval, mut render, mut gpu, mut sim, mut sim_gpu) = (vec![], vec![], vec![], vec![], vec![]);
         let (mut needed, mut created, mut steps, mut compiled) = (0, 0, 0, 0);
         let (mut since, mut at) = (Duration::ZERO, self.start);
+        let (mut flight, mut timed) = (super::flight::Flight::default(), Instant::now());
         for i in 0..frames {
+            timed = if i == WARMUP.min(frames - 1) { Instant::now() } else { timed };
             if i > 0 {
                 self.runtime.advance(step.as_secs_f64());
                 (since, at) = (since + step, at + step);
@@ -140,8 +142,15 @@ impl<'a> Run<'a> {
             needed += usize::from(due);
             since = if due { Duration::ZERO } else { since };
             let started = Instant::now();
+            if self.bench.overlap {
+                flight.wait(self.r)?;
+            }
             let drawn = self.frame(at, i + 1 == frames)?;
-            self.r.finish()?;
+            if self.bench.overlap {
+                flight.submitted(self.r);
+            } else {
+                self.r.finish()?;
+            }
             render.push(started.elapsed().as_secs_f64() * 1e3);
             eval.push(drawn.eval_us);
             if i >= WARMUP {
@@ -152,11 +161,15 @@ impl<'a> Run<'a> {
                 sim_gpu.push(f64::from(s.sim_gpu_us) / 1e3);
             }
         }
+        self.r.finish()?;
+        let (seconds, counted) = (timed.elapsed().as_secs_f64(), frames - WARMUP.min(frames - 1));
         let first_ms = render.first().copied().unwrap_or(0.0);
+        let throughput = json!({ "overlap": self.bench.overlap, "frames": counted, "seconds": seconds,
+            "fps": counted as f64 / seconds, "ms_per_frame": seconds * 1e3 / counted as f64 });
         Ok(json!({
             "frames": frames, "needed": needed, "eval_us": spread(eval), "render_ms": spread(render),
             "gpu_ms": spread(gpu), "first_ms": first_ms, "created_after_warmup": created,
-            "compiled_after_warmup": compiled,
+            "compiled_after_warmup": compiled, "throughput": throughput,
             "particles": { "steps": steps, "sim_ms": spread(sim), "sim_gpu_ms": spread(sim_gpu) },
         }))
     }

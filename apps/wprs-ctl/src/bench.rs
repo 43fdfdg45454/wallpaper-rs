@@ -66,7 +66,18 @@ pub fn run(command: SceneCommand) -> Result<()> {
             };
             let paced = paced.map(|s| Duration::from_secs_f64(s.clamp(0.1, 3600.0)));
             let (size, screens) = (dimensions(&size)?, screens.clamp(1, 16));
-            let bench = Bench { frames, size, fps, level, tier: None, screens, passes, shot, paced };
+            let bench = Bench {
+                frames,
+                size,
+                fps,
+                level,
+                tier: None,
+                screens,
+                passes,
+                shot,
+                paced,
+                ..Bench::default()
+            };
             (path, bench, json, tier)
         }
         SceneCommand::Author(command) => return crate::authoring::run(*command),

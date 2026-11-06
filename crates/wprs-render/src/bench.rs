@@ -1,11 +1,15 @@
-use crate::{GpuImage, Layer, RenderError, Renderer, SceneAssets};
+use crate::{GpuImage, Layer, RenderError, Renderer, SceneAssets, Stamping};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use wprs_scene::{Quality, Runtime, Tier};
 
+mod ceiling;
+mod flight;
 mod frames;
 mod paced;
+
+pub use ceiling::{Ceiling, ceiling};
 
 pub const WARMUP: usize = 10;
 
@@ -27,6 +31,8 @@ pub struct Bench {
     pub passes: bool,
     pub shot: Option<PathBuf>,
     pub paced: Option<Duration>,
+    pub stamps: Stamping,
+    pub overlap: bool,
 }
 
 impl Default for Bench {
@@ -41,6 +47,8 @@ impl Default for Bench {
             passes: false,
             shot: None,
             paced: None,
+            stamps: Stamping::All,
+            overlap: false,
         }
     }
 }
@@ -61,8 +69,9 @@ pub fn scene_bench(
         Level::Fitted | Level::Timed(_) => fitted,
     };
     let mut run = frames::Run::new(r, runtime, assets, bench, (tier, quality))?;
-    run.view.profile_particles(bench.paced.is_none());
+    run.view.profile_particles(bench.paced.is_none() && !bench.overlap);
     run.view.time_passes(bench.passes);
+    run.view.stamping(bench.stamps);
     crate::reset_profiled_passes();
     let mut report = match bench.paced {
         Some(length) => paced::paced(&mut run, length)?,

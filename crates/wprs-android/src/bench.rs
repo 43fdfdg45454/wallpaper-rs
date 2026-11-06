@@ -2,7 +2,7 @@ use crate::{pack, power, props, store};
 use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::Arc;
-use wprs_render::{Bench, Level, Renderer};
+use wprs_render::{Bench, Ceiling, Level, Renderer, Stamping};
 use wprs_scene::{Leveling, PHONE_SHARE, Quality, Runtime};
 
 pub(crate) fn run(path: &Path, args: &[String]) -> Result<Value, String> {
@@ -25,6 +25,39 @@ pub(crate) fn run(path: &Path, args: &[String]) -> Result<Value, String> {
     Ok(report)
 }
 
+pub(crate) fn ceiling(args: &[String]) -> Result<Value, String> {
+    let mut c = Ceiling::default();
+    let mut it = args.iter();
+    while let Some(flag) = it.next() {
+        let mut value = || it.next().ok_or_else(|| format!("{flag} needs a value"));
+        match flag.as_str() {
+            "--passes" => c.passes = number(value()?)?,
+            "--frames" => c.frames = number(value()?)?,
+            "--rounds" => c.rounds = number(value()?)?,
+            "--only" => c.only = Some(value()?.clone()),
+            "--repeat" => c.repeat = number(value()?)?,
+            "--warm" => {
+                c.warm = std::time::Duration::from_secs_f64(number::<f64>(value()?)?.clamp(0.0, 60.0))
+            }
+            "--size" => c.size = size(value()?)?,
+            "--backend" => {
+                c.gl = match value()?.as_str() {
+                    "vulkan" => false,
+                    "gl" => true,
+                    other => return Err(format!("--backend takes vulkan or gl, not {other}")),
+                }
+            }
+            other => return Err(format!("unknown option {other}")),
+        }
+    }
+    wprs_render::ceiling(&c).map_err(|e| e.to_string())
+}
+
+fn size(text: &str) -> Result<(u32, u32), String> {
+    let (w, h) = text.split_once('x').ok_or("--size takes WxH")?;
+    Ok((number(w)?, number(h)?))
+}
+
 fn parse(args: &[String]) -> Result<Bench, String> {
     let mut bench = Bench { size: (1440, 3040), frames: 240, ..Bench::default() };
     let mut it = args.iter();
@@ -37,10 +70,16 @@ fn parse(args: &[String]) -> Result<Bench, String> {
             "--paced" => bench.paced = Some(std::time::Duration::from_secs_f64(number(value()?)?)),
             "--shot" => bench.shot = Some(value()?.into()),
             "--passes" => bench.passes = true,
-            "--size" => {
-                let (w, h) = value()?.split_once('x').ok_or("--size takes WxH")?;
-                bench.size = (number(w)?, number(h)?);
+            "--overlap" => bench.overlap = true,
+            "--stamps" => {
+                bench.stamps = match value()?.as_str() {
+                    "all" => Stamping::All,
+                    "frame" => Stamping::Frame,
+                    "off" => Stamping::Off,
+                    other => return Err(format!("--stamps takes all, frame or off, not {other}")),
+                }
             }
+            "--size" => bench.size = size(value()?)?,
             "--level" => {
                 bench.level = match value()?.as_str() {
                     "auto" => Level::Timed(PHONE_SHARE),

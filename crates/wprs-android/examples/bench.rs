@@ -4,7 +4,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let [files, wpak, rest @ ..] = &args[..] else {
         eprintln!(
-            "usage: bench <files dir> <file.wpak> [--level q0|q1|q2|q3|auto|fitted] [--frames N] [--paced SECONDS] [--fps N] [--size WxH] [--passes] [--shot FILE.png]"
+            "usage: bench <files dir> <file.wpak> [--level q0|q1|q2|q3|auto|fitted] [--frames N] [--paced SECONDS] [--fps N] [--size WxH] [--passes] [--stamps all|frame|off] [--overlap] [--shot FILE.png]\n       bench <files dir> ceiling [--backend vulkan|gl] [--size WxH] [--passes N] [--frames N] [--rounds N] [--only NAME,...] [--repeat N] [--warm SECONDS]"
         );
         std::process::exit(2);
     };

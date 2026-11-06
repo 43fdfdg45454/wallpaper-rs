@@ -64,6 +64,9 @@ pub(crate) enum Sim {
 
 impl Clock {
     pub(crate) fn sim(&mut self, r: &Renderer) -> Sim {
+        if self.stamping == super::Stamping::Off {
+            return Sim::Off;
+        }
         if !self.queries {
             let watch = (self.frame + 1).is_multiple_of(WATCH) && r.drained();
             return if watch { Sim::Watch(Instant::now()) } else { Sim::Off };
