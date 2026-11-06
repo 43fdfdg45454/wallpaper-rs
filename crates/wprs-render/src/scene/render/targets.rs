@@ -11,19 +11,28 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
     let pool = &mut view.pool;
     view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
     if let Some((canvas, output)) = view.target.take() {
-        let GpuImage { texture, view, id } = output;
+        let GpuImage { texture, view, id, .. } = output;
         if id != canvas.id {
             pool.give(Tex { texture, view, id });
         }
         pool.give(canvas);
     }
-    let canvas = pool.take(&r.device, size, view.format);
-    let output = match view.srgb || view.tone > 0 {
-        true => {
+    let shared = view.tone == 0 && [wanted, wanted.remove_srgb_suffix()].contains(&view.format);
+    let canvas = match shared && wanted != view.format {
+        true => Tex::viewed(&r.device, size, (view.format, &[wanted])),
+        false => pool.take(&r.device, size, view.format),
+    };
+    let output = match shared {
+        false => {
             let Tex { texture, view, id } = pool.take(&r.device, size, wanted);
-            GpuImage { texture, view, id }
+            GpuImage { texture, view, id, format: wanted }
         }
-        false => GpuImage { texture: canvas.texture.clone(), view: canvas.view.clone(), id: canvas.id },
+        true => {
+            let format = Some(wanted);
+            let view =
+                canvas.texture.create_view(&wgpu::TextureViewDescriptor { format, ..Default::default() });
+            GpuImage { texture: canvas.texture.clone(), view, id: canvas.id, format: wanted }
+        }
     };
     view.target = Some((canvas, output));
     view.marks.clear();

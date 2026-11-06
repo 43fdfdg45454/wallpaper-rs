@@ -1,4 +1,4 @@
-use crate::texture::{create_texture, next_id};
+use crate::texture::{create_viewed, next_id};
 use wgpu::{TextureFormat, TextureUsages as U};
 
 #[derive(Clone)]
@@ -9,9 +9,18 @@ pub(crate) struct Tex {
 }
 
 impl Tex {
-    pub(crate) fn new(device: &wgpu::Device, (w, h): (u32, u32), format: TextureFormat) -> Tex {
+    pub(crate) fn new(device: &wgpu::Device, size: (u32, u32), format: TextureFormat) -> Tex {
+        Tex::viewed(device, size, (format, &[]))
+    }
+
+    pub(crate) fn viewed(
+        device: &wgpu::Device,
+        (w, h): (u32, u32),
+        (format, also): (TextureFormat, &[TextureFormat]),
+    ) -> Tex {
         let usage = U::RENDER_ATTACHMENT | U::TEXTURE_BINDING | U::COPY_SRC | U::COPY_DST;
-        let texture = create_texture(device, "wprs-scene texture", (w.max(1), h.max(1)), format, usage);
+        let texture =
+            create_viewed(device, "wprs-scene texture", (w.max(1), h.max(1)), (format, also), usage);
         Tex { view: texture.create_view(&Default::default()), texture, id: next_id() }
     }
 

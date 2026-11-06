@@ -9,6 +9,7 @@ pub struct GpuImage {
     pub(crate) texture: wgpu::Texture,
     pub(crate) view: wgpu::TextureView,
     pub(crate) id: u64,
+    pub(crate) format: wgpu::TextureFormat,
 }
 
 impl GpuImage {
@@ -83,8 +84,18 @@ impl Renderer {
 pub(crate) fn create_texture(
     device: &wgpu::Device,
     label: &str,
-    (width, height): (u32, u32),
+    size: (u32, u32),
     format: wgpu::TextureFormat,
+    usage: wgpu::TextureUsages,
+) -> wgpu::Texture {
+    create_viewed(device, label, size, (format, &[]), usage)
+}
+
+pub(crate) fn create_viewed(
+    device: &wgpu::Device,
+    label: &str,
+    (width, height): (u32, u32),
+    (format, view_formats): (wgpu::TextureFormat, &[wgpu::TextureFormat]),
     usage: wgpu::TextureUsages,
 ) -> wgpu::Texture {
     device.create_texture(&wgpu::TextureDescriptor {
@@ -95,7 +106,7 @@ pub(crate) fn create_texture(
         dimension: wgpu::TextureDimension::D2,
         format,
         usage,
-        view_formats: &[],
+        view_formats,
     })
 }
 
@@ -118,7 +129,8 @@ pub(crate) fn next_id() -> u64 {
 }
 
 pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
-    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id() }
+    let format = texture.format();
+    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id(), format }
 }
 
 pub(crate) fn create_image(

@@ -30,7 +30,7 @@ impl Renderer {
         self.figures(view, (runtime, frame), videos, view.screen(size).0)?;
         let created = (view.pool.created, pipes::compiled(0));
         let format = targets::output_format(view);
-        if view.target.as_ref().is_none_or(|(t, out)| t.size() != size || out.texture.format() != format) {
+        if view.target.as_ref().is_none_or(|(t, out)| t.size() != size || out.format != format) {
             retarget(self, view, size);
         }
         let screen = view.screen(size);
@@ -152,7 +152,8 @@ impl Renderer {
         let quiet = self.quiet(timing);
         let (pool, kept) = (&mut v.pool, &scratch.kept);
         v.caches.extract_if(|id, _| !kept.contains(id)).for_each(|(_, c)| pool.give(c.tex));
-        let resolve = (srgb || v.tone > 0).then(|| resolve(pool, srgb, (v.tone, v.split, v.headroom)));
+        let apart = v.target.as_ref().is_some_and(|(canvas, out)| canvas.id != out.id);
+        let resolve = apart.then(|| resolve(pool, srgb, (v.tone, v.split, v.headroom)));
         pool.upload(&self.device, &self.queue, self.pipes(), &v.uniform);
         v.swarms.iter_mut().for_each(|s| s.upload(self, &v.uniform));
         let (canvas, output) = v.target.as_ref().expect("created above");
