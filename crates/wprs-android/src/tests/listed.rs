@@ -76,6 +76,28 @@ pub(super) fn script_folders_are_listed_again_only_when_their_copy_changes() {
     assert!(keeping.text.contains("hill.png"), "another chosen folder is listed at once");
 }
 
+pub(super) fn another_folder_picked_for_the_same_property_is_listed_at_once() {
+    let pack = album();
+    let mut keeping = Keeping::new(&pack, false, true);
+    let mut pick = |tree: &str, name: &str| {
+        let plan = crate::chosen::folder(&pack, "album", tree).unwrap();
+        let dir = std::path::PathBuf::from(plan["dir"].as_str().unwrap());
+        image::RgbaImage::new(2, 2).save(dir.join(name)).unwrap();
+        crate::chosen::folded(&pack, "album").unwrap();
+        keeping.list((&pack.properties, &pack.scene), &crate::props::values(&pack));
+        keeping.text.clone()
+    };
+    assert!(pick("content://a", "sea.png").contains("sea.png"));
+    let second = pick("content://b", "hill.png");
+    assert!(
+        second.contains("hill.png") && !second.contains("sea.png"),
+        "the first folder is still listed: {second}"
+    );
+    crate::chosen::clear(&pack, "album").unwrap();
+    keeping.list((&pack.properties, &pack.scene), &crate::props::values(&pack));
+    assert!(!keeping.text.contains("hill.png"), "a cleared folder is still listed: {}", keeping.text);
+}
+
 pub(super) fn folder_videos_get_their_length_and_a_clock_scripts_steer() {
     let (uid, pack) = album_of();
     let dir = tempfile::tempdir().unwrap();

@@ -42,12 +42,18 @@ fn property<'a>(pack: &'a Pack, key: &str, folder: bool) -> Result<&'a Property,
     found.ok_or_else(|| said("android.property_set_here", "no property %1 to set here", &[&key]))
 }
 
-fn place(pack: &Pack, key: &str) -> Result<PathBuf, Error> {
+fn root(pack: &Pack, key: &str) -> Result<PathBuf, Error> {
     let safe = |text: &str| {
         text.chars().map(|c| if c.is_alphanumeric() || c == '.' { c } else { '_' }).collect::<String>()
     };
-    let dir = store::dir()?.join(CHOSEN).join(safe(&pack.id)).join(safe(key));
-    drop(fs::remove_dir_all(&dir));
+    Ok(store::dir()?.join(CHOSEN).join(safe(&pack.id)).join(safe(key)))
+}
+
+fn place(pack: &Pack, key: &str) -> Result<PathBuf, Error> {
+    let root = root(pack, key)?;
+    drop(fs::remove_dir_all(&root));
+    let pick = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos());
+    let dir = root.join(format!("{pick:x}"));
     fs::create_dir_all(&dir)?;
     Ok(dir)
 }
@@ -104,7 +110,7 @@ pub(crate) fn folded(pack: &Pack, key: &str) -> Result<Value, Error> {
     let dir =
         dir.ok_or_else(|| said("android.folder_nothing", "the folder has no picture or video to use", &[]))?;
     set(pack, key, Some(&dir))?;
-    store::changed();
+    changed();
     Ok(json!(dir))
 }
 
@@ -112,8 +118,9 @@ pub(crate) fn clear(pack: &Pack, key: &str) -> Result<Value, Error> {
     let mut all = trees();
     let tree = all.remove(&name(pack, key)).map(|plan| plan.tree);
     keep(&all)?;
-    drop(fs::remove_dir_all(place(pack, key)?));
+    drop(fs::remove_dir_all(root(pack, key)?));
     set(pack, key, None)?;
+    changed();
     Ok(json!(tree))
 }
 

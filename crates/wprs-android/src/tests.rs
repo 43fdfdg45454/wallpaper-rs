@@ -150,6 +150,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     kept::home_and_lock_keep_their_own_storage();
     listed::script_folders_list_videos_and_play_the_shown_ones();
     listed::script_folders_are_listed_again_only_when_their_copy_changes();
+    listed::another_folder_picked_for_the_same_property_is_listed_at_once();
     listed::folder_videos_get_their_length_and_a_clock_scripts_steer();
     listed::a_video_a_file_property_picks_plays_on_each_own_clock();
     screens::home_and_lock();
