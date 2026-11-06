@@ -26,7 +26,7 @@ pub(crate) use fig::{Fig, figure, mesh};
 pub(crate) use mount::Seat;
 pub use reach::IK_ROUNDS;
 pub(crate) use swing::Sim;
-pub use swing::{MAX_STEPS, QUIET, QUIET_STEPS};
+pub use swing::{MAX_STEPS, QUIET, QUIET_STEPS, STEP};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Drawn {

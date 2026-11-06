@@ -1295,7 +1295,9 @@ cualquier otro uso del puntero), exactas para dos huesos y, en cadenas más larg
 la pose de sus clips (que conservan su curva) que nunca doblan una articulación al otro lado, o desde
 un arco parejo si la pose está recta, se dobla al otro lado o no alcanza el objetivo, con límites por hueso, peso y el
 sentido en que se doblan todas las articulaciones (que el editor invierte con un toque sobre la cadena). La física de huesos simula muelles, péndulos y cuerdas a
-un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
+subpasos de 1/120 s que siguen el intervalo entre fotogramas (uno a 120 fps, dos a 60, cuatro a 30,
+también con batería, así que se mueve igual a esas frecuencias, y como mucho un cuarto de segundo por
+fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
 (`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se

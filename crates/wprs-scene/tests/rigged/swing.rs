@@ -53,7 +53,24 @@ fn the_fixed_step_does_not_depend_on_the_frame_rate() {
     let mut steps = hanging(json!({}));
     gap.advance(10.0);
     run(&mut steps, 0.25, 1.0 / 60.0);
-    assert!(close(at(&gap, "hand"), at(&steps, "hand"), 1e-3), "a long gap runs at most 15 steps");
+    assert!(close(at(&gap, "hand"), at(&steps, "hand"), 1e-3), "a long gap runs at most a quarter second");
+}
+
+#[test]
+fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_second() {
+    let rates = [30.0, 60.0, 120.0];
+    for more in [json!({}), json!({ "mode": "spring", "stiffness": 0.3, "gravity": 1 })] {
+        let hands = rates.map(|fps| {
+            let mut rt = hanging(more.clone());
+            run(&mut rt, 1.0, 1.0 / fps);
+            at(&rt, "hand")
+        });
+        assert!(hands.iter().all(|h| close(*h, hands[0], 1e-3)), "{hands:?}");
+        let mut battery = hanging(more);
+        battery.set_battery(true);
+        run(&mut battery, 1.0, 1.0 / 60.0);
+        assert!(close(at(&battery, "hand"), hands[0], 1e-3), "{:?} {:?}", at(&battery, "hand"), hands[0]);
+    }
 }
 
 #[test]
@@ -148,7 +165,7 @@ fn a_swinging_bone_follows_a_moving_parent_alike_at_every_frame_rate() {
             .iter()
             .map(|fps| {
                 let mut rt = waving(inertia);
-                run(&mut rt, 0.75, 1.0 / fps);
+                run(&mut rt, 1.0, 1.0 / fps);
                 let p = rt.puppet("fox").unwrap();
                 let f = p.bone_frames([64.0, 64.0])[p.rig.joint("hand").unwrap()];
                 f[1].atan2(f[0]).to_degrees()
