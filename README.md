@@ -2547,6 +2547,7 @@ Sway y `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
+scripts/private-audio.sh cargo test --workspace  # igual, con un PipeWire propio y una salida muda
 cargo build -p wprs-pipewire --example probe
 cargo build -p wprsd -p wprs-ctl && cargo build -p wprsd --example timedate
 cp target/debug/examples/probe target/debug/
@@ -2557,7 +2558,7 @@ cargo build -p wprs-server && cargo build -p wprs-android --example phone
 cp target/debug/examples/phone target/debug/
 scripts/sync-test.sh target/debug        # daemons, el cliente del teléfono y wprs-server: enlace, clave y sincronización
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
-scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML, del validador y del editor
+scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML, del validador, del editor y de la ayuda de wprs-ctl
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
 
@@ -2676,7 +2677,9 @@ una pantalla, en la bandeja y en la app, sigue difuminada con un paquete para ad
 pulsarla con el ratón o el teclado, y que la bandeja avisa si el fondo destella. También ejecuta
 `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y quita una
 pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con la pantalla
-apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana raíz y la
+apagada (Sway dibuja por software; con `WPRS_SWAY_RENDERER=gles2` dibuja con la tarjeta gráfica,
+lo que necesita un controlador que no presenta en superficies de memoria compartida), y
+`scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana raíz y la
 misma pausa.
 
 | Ruta | Contenido |
