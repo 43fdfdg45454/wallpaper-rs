@@ -516,7 +516,7 @@ jobs:
           docker run --rm -e WPRS_VERSION -v "$PWD:/src" -w /src \
             docker.io/library/fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357a9f4f1ff2f9c2798e5045d80 bash -c '
             set -e
-            dnf -y -q install rpm-build systemd-rpm-macros >/dev/null
+            dnf -y -q install rpm-build systemd-rpm-macros gstreamer1 gstreamer1-plugins-base >/dev/null
             scripts/rpm.sh dist/wallpaper-rs-*.tar.gz rpm
             test "$(rpm -qp --qf "%{BUILDHOST}\n" rpm/*.rpm | sort -u)" = localhost
             own=$(rpm -qp --provides rpm/*.rpm | cut -d" " -f1)
