@@ -149,6 +149,33 @@ if ctl provider add leak webdav url=https://me:pw@dav.example.org user=me --no-s
 fi
 grep -q "not in the URL" "$WORK/url.out" || fail "URL message: $(cat "$WORK/url.out")"
 grep -q hunter2 "$config" "$WORK"/*.log && fail "a secret reached the configuration or a log"
+ctl provider wallhaven add art --categories general,people --purity sfw --sorting random --top-range 3M --ratios 16x9,landscape \
+  --colors 660000,ffffff --resolutions 1920x1080,2560x1440 --pages 2 --max-items 48 --refresh 0s --no-secret >/dev/null
+art() { ctl provider ls --json | jq_ "[p['options']['$1'] for p in r['providers'] if p['id'] == 'art'][0]"; }
+[ "$(art categories)/$(art purity)/$(art ratios)/$(art colors)/$(art pages)" = "101/100/16x9,landscape/660000,ffffff/2" ] ||
+  fail "wallhaven options: $(ctl provider ls --json)"
+grep -q '^ratios = "16x9,landscape"' "$config" || fail "wallhaven config: $(cat "$config")"
+ctl provider wallhaven set art --similar 94x38z --query "" --sorting date_added --order asc
+[ "$(art similar)/$(art order)/$(art sorting)" = "94x38z/asc/date_added" ] || fail "wallhaven update: $(ctl provider ls --json)"
+if ctl provider wallhaven set art --collection alice/7 2>"$WORK/wh.out"; then fail "a collection was accepted with a similar search"; fi
+grep -q "takes no search terms" "$WORK/wh.out" || fail "collection message: $(cat "$WORK/wh.out")"
+[ "$(art collection)" = "" ] || fail "a refused update changed an option"
+ctl provider wallhaven set art --similar "" --collection alice/7
+[ "$(art collection)" = "alice/7" ] || fail "wallhaven collection: $(ctl provider ls --json)"
+for bad in "ratios wide" "colors 123456" "resolutions big" "sorting newest" "pages 11" "collection 12" "tag anime"; do
+  read -ra pair <<<"$bad"
+  if ctl provider set art "${pair[@]}" 2>/dev/null; then fail "wallhaven accepted $bad"; fi
+done
+if ctl provider wallhaven set art --sorting newest 2>/dev/null; then fail "the command line accepted a wrong sorting"; fi
+if ctl provider wallhaven reseed daily 2>"$WORK/wh.out"; then fail "a provider without a seed was reseeded"; fi
+grep -q "not a wallhaven provider" "$WORK/wh.out" || fail "reseed message: $(cat "$WORK/wh.out")"
+if ctl provider wallhaven collections art 2>"$WORK/wh.out"; then fail "collections were listed without a user or a key"; fi
+grep -q "need a user name or an API key" "$WORK/wh.out" || fail "collections message: $(cat "$WORK/wh.out")"
+ctl provider wallhaven set art --purity sketchy,sfw --collection "" --query sea
+if ctl provider sync art --wait 2>"$WORK/wh.out"; then fail "sketchy pictures were listed without an API key"; fi
+grep -q "need an API key" "$WORK/wh.out" || fail "purity message: $(cat "$WORK/wh.out")"
+ctl provider rm art
+echo "wallhaven option checks passed"
 ctl provider rm photos && ctl provider rm daily --purge
 [ "$(ctl provider ls --json | jq_ "len(r['providers'])")" = 0 ] || fail "providers were kept"
 [ ! -e "$XDG_CACHE_HOME/wallpaper-rs/providers/daily" ] || fail "the provider cache was kept"

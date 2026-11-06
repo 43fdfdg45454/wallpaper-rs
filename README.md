@@ -833,6 +833,7 @@ wprs-ctl playlist new Mar --query tag:mar       # lista inteligente
 wprs-ctl playlist start Mar && wprs-ctl next    # rotar una lista y avanzar
 wprs-ctl profile save Escritorio                # guardar lo que muestra cada pantalla
 wprs-ctl provider add diario bing               # una fuente en línea
+wprs-ctl provider wallhaven add arte --ratios 16x9,landscape --colors 660000 --sorting random --no-secret
 wprs-ctl remote add 'https://example.org/repo/?fingerprint=…'
 wprs-ctl pkg install org.example.dawn --wait    # instalar un paquete de un repositorio
 wprs-ctl jobs | watch | schema                  # trabajos, cambios en vivo, claves válidas
@@ -840,6 +841,25 @@ wprs-ctl input grant org.example.dawn audio     # dejar que la escena que se ve 
 wprs-ctl input status                           # permisos y si se captura el sonido o el puntero
 wprs-ctl input clicks on -o DP-1                # dejar que los clics de esa pantalla lleguen a su fondo
 ```
+
+El proveedor Wallhaven usa la API oficial v1 y admite todas las opciones de su búsqueda: palabras
+(`query`), categorías y pureza, orden (`date_added`, `relevance`, `random`, `views`, `favorites`,
+`toplist`, `hot`), sentido, rango del `toplist` (`1d` a `1y`), resolución mínima y resoluciones
+exactas, proporciones (`16x9`, `16x10`, `landscape`, `portrait`…), colores de su paleta, «parecidos
+a» un fondo (`similar`), una etiqueta (`tag`), un usuario (`uploader`) y colecciones (`collection =
+usuario/id`, públicas o, con tu clave de API, privadas), además de la página inicial, cuántas
+páginas se leen por sincronización (1 a 10) y el máximo de imágenes (hasta 240). Cada opción es una
+opción de `wprs-ctl provider wallhaven add|set` (`--help` las explica; `set` cambia varias a la vez y
+comprueba el conjunto), un campo de `Providers1` y un control del diálogo «Opciones de búsqueda» de
+la app: casillas para categorías y pureza, botones para proporciones y resoluciones, una paleta de
+colores y, para las colecciones, un selector que las lista con `wprs-ctl provider wallhaven
+collections` (con clave de API incluye las tuyas). Con orden `random` el daemon usa una semilla de la
+sesión para que las páginas no repitan imágenes; `wprs-ctl provider wallhaven reseed` (o «Nuevo orden
+aleatorio» en la app) elige otra y sincroniza. Una sincronización pide solo las páginas
+configuradas (una por defecto), nunca pasa de las 45 peticiones por minuto de la API y espera y
+reintenta cuando responde 429. `sketchy` y `nsfw` siguen apagados por defecto y piden la clave de
+API, que solo va en la cabecera `X-API-Key` y se guarda en el llavero. En el teléfono no hay ajustes
+de proveedores.
 
 Los repositorios aguantan los fallos. Las búsquedas leen todos los repositorios y los paquetes
 instalados de una vez, así que nunca mezclan un catálogo con otra lista de instalados; dos
