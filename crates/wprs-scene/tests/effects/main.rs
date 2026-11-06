@@ -8,6 +8,7 @@ mod costs;
 mod fusion;
 mod inputs;
 mod locality;
+mod spread;
 
 const VIEW: [f32; 4] = [0.0, 0.0, 64.0, 32.0];
 

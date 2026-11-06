@@ -1,6 +1,7 @@
 use super::inked::Inked;
-use super::item::{channel, invert, scale_of};
+use super::item::{Rect, channel, invert, scale_of};
 use super::paint::Painter;
+use super::placed::uniforms;
 use super::{Fill, Op, Src};
 use wprs_scene::{Affine, EffectDraw, MaskMode, Wrapping};
 
@@ -44,10 +45,26 @@ impl Painter<'_, '_, '_> {
         self.samplings.get(id).filter(|s| s.wrap == Wrapping::Clamp)?.inked
     }
 
-    pub(crate) fn region(&self, e: &EffectDraw<'_>, uv: Affine, (w, h): (u32, u32)) -> Region {
+    fn spread(&self, e: &EffectDraw<'_>, (rect, uv): (Rect, Affine), size: (u32, u32)) -> Option<f32> {
+        let d = e.descriptor;
+        if d.reach.is_some() || d.reads_its_pixel() {
+            return Some(e.reach * scale_of(self.screen) * self.density);
+        }
+        let units = e.effect.params.values().all(|v| v.binding().is_none_or(|b| b.layer.is_none()));
+        let fx = self.placed(rect, size, uniforms(e, uv));
+        let [x, y] = d.spread(bytemuck::cast_slice(std::slice::from_ref(&fx)), units)?;
+        Some((x * size.0 as f32).max(y * size.1 as f32))
+    }
+
+    pub(crate) fn region(
+        &self,
+        e: &EffectDraw<'_>,
+        (rect, uv): (Rect, Affine),
+        (w, h): (u32, u32),
+    ) -> Region {
         let d = e.descriptor;
         let single = d.passes.len() == 1 && d.state.is_none() && d.targets.is_empty() && !d.below();
-        if !single || e.chain > 1 || (d.reach.is_none() && !d.reads_its_pixel()) {
+        if !single || e.chain > 1 {
             return Region::Whole;
         }
         let found = match (self.masked(e), self.bounded(e)) {
@@ -65,7 +82,7 @@ impl Painter<'_, '_, '_> {
         let (lo, hi) = corners.iter().fold(([f32::MAX; 2], [f32::MIN; 2]), |(lo, hi), p| {
             ([lo[0].min(p[0]), lo[1].min(p[1])], [hi[0].max(p[0]), hi[1].max(p[1])])
         });
-        let grow = e.reach * scale_of(self.screen) * self.density + 2.0;
+        let Some(grow) = self.spread(e, (rect, uv), (w, h)).map(|g| g + 2.0) else { return Region::Whole };
         let side = |v: f32, n: u32| (v * n as f32).clamp(0.0, n as f32);
         let (a, b) = ((side(lo[0], w) - grow).max(0.0).floor(), (side(lo[1], h) - grow).max(0.0).floor());
         let (c, d) =

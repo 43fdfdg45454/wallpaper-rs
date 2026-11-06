@@ -33,8 +33,11 @@ impl Painter<'_, '_, '_> {
         while k < list.len() {
             let n = list[k].chain.clamp(1, list.len() - k);
             let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
-            let region =
-                if n == 1 { self.region(&list[k], layer_uv, self.size_of(current)) } else { Region::Whole };
+            let region = if n == 1 {
+                self.region(&list[k], (rect, layer_uv), self.size_of(current))
+            } else {
+                Region::Whole
+            };
             if self.cut(i, &list[k]) || region == Region::Empty {
                 k += 1;
                 continue;

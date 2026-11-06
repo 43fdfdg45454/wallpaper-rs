@@ -106,3 +106,31 @@ fn waves_on_two_masks_share_one_pass_and_keep_each_mask() {
     let moved = |x: u32, y: u32| a.at(x, y) != plain.at(x, y);
     assert!(moved(10, 8) && moved(50, 8) && !moved(30, 8) && !moved(10, 24));
 }
+
+const PUSH: &str = "@fragment
+fn fs_push(in: VertexOut) -> @location(0) vec4<f32> {
+    let lu = layer_uv(in.uv);
+    let moved = from_layer(lu + vec2<f32>(param(0u).x * sin(frame.time + 1.0), 0.0));
+    return mix(tap(in.uv), tap(moved), mask_at(moved));
+}";
+
+fn pushed(strength: f32) -> Option<Shot> {
+    let push = json!({ "id": "push", "mask_mode": "strength", "cost": {},
+        "params": [{ "id": "by", "type": "float", "default": 0.0 }], "passes": [{ "entry": "fs_push" }] });
+    let mut far = json!({ "effect": "push", "params": { "by": 0.2 } });
+    far["mask"] = json!({ "texture": "box", "channel": "r", "strength": strength });
+    let list = json!([{ "effect": "waves", "params": { "amplitude": 0.5 } }, far]);
+    Fx::chain(list).input(ramp()).image("box", corner(30, 40), true).own(push, PUSH).shot()
+}
+
+#[test]
+fn masked_package_effects_that_read_a_bounded_way_off_run_in_place_over_their_reach() {
+    let (Some(narrow), Some(whole)) = (pushed(1.0), pushed(0.9999)) else { return };
+    let most = narrow.0.pixels().zip(whole.0.pixels()).map(|(a, b)| (0..3).map(|c| a.0[c].abs_diff(b.0[c])).max());
+    assert!(most.flatten().max().unwrap_or(0) <= 2, "{:?} against {:?}", narrow.at(20, 8), whole.at(20, 8));
+    let Some(plain) = Fx::chain(json!([{ "effect": "waves", "params": { "amplitude": 0.5 } }])).input(ramp()).shot()
+    else {
+        return;
+    };
+    assert!((18..30).any(|x| narrow.at(x, 8) != plain.at(x, 8)), "the push reaches left of its mask");
+}

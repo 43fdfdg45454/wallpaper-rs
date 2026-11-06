@@ -51,3 +51,11 @@ fn effects_that_read_their_mask_only_under_their_pixel_are_told_apart() {
         assert!(descriptor(near).unwrap().reads_mask_at_its_pixel(), "{near}");
     }
 }
+
+#[test]
+fn package_shaders_are_judged_with_the_helpers_of_the_package_contract() {
+    let contract = "@fragment\nfn fs_p(in: VertexOut) -> @location(0) vec4<f32> {\n    \
+        return tap(in.uv) * mask_at(in.uv) * cos(PI * 0.25);\n}\n";
+    let d = single("probe_contract", contract);
+    assert!(d.reads_its_pixel() && d.reads_mask_at_its_pixel());
+}

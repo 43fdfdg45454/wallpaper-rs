@@ -104,6 +104,7 @@ mod spare;
 mod spawn;
 mod spend;
 mod spill;
+mod spread;
 mod sprites;
 mod stage;
 mod strikes;

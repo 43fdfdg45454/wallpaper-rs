@@ -37,13 +37,18 @@ impl Descriptor {
     }
 }
 
+pub(crate) fn module_of(d: &Descriptor) -> Option<Module> {
+    let parse = |s: String| naga::front::wgsl::parse_str(&s).ok();
+    parse(effect_source(&[d])).or_else(|| parse(crate::guard::source(d)))
+}
+
 fn judge(d: &Descriptor, rule: Rule) -> bool {
     let [pass] = d.passes.as_slice() else { return false };
     let own = |i: &String| matches!(i.as_str(), "previous" | "input");
     if pass.vertex.is_some() || pass.grid.is_some() || rule == ALL && pass.inputs.iter().skip(1).any(own) {
         return false;
     }
-    let Ok(module) = naga::front::wgsl::parse_str(&effect_source(&[d])) else { return false };
+    let Some(module) = module_of(d) else { return false };
     let Some(entry) = module.entry_points.iter().find(|e| e.name == pass.entry) else { return false };
     let f = &entry.function;
     let uv = f.arguments.first().and_then(|a| match &module.types[a.ty].inner {
