@@ -5,8 +5,12 @@ use std::sync::Arc;
 use wprs_scene::*;
 
 fn templated(template: serde_json::Value) -> Result<Runtime, SceneError> {
+    kept(json!({ "fox": template }))
+}
+
+fn kept(templates: serde_json::Value) -> Result<Runtime, SceneError> {
     let text = json!({ "schema": SCHEMA, "canvas": { "size": [64, 64] }, "assets": { "arm": { "path": "arm.glb" } },
-        "layers": [], "templates": { "fox": template } });
+        "layers": [], "templates": templates });
     let mut scene = Scene::from_json(&text.to_string())?;
     let glb = arm().bytes();
     scene.adopt(&BTreeMap::new(), move |_: &str, _: usize| Ok::<_, String>(glb.clone()))?;
@@ -99,4 +103,19 @@ fn attachments_inside_templates_name_layers_of_the_template_or_the_scene() {
     astray["layers"][0]["ik"][0]["target"] = json!("layer:nobody");
     let refused = templated(astray).err().map(|e| e.to_string()).unwrap_or_default();
     assert!(refused.contains("/templates/fox/layers/0/ik/0/target"), "{refused}");
+}
+
+#[test]
+fn a_copy_spawned_again_from_another_template_under_its_id_gets_a_puppet_of_that_template() {
+    let reaching = fox(json!({ "id": "body", "ik": [{ "chain": ["arm", "hand"], "target": [10, 10] }] }));
+    let mut rt = kept(json!({ "fox": reaching, "cat": fox(json!({ "id": "body" })) })).unwrap();
+    let swap = |rt: &mut Runtime, template: &str| {
+        let spawned = vec![("a".to_string(), template.to_string())];
+        rt.set_script(ScriptOutputs { spawned, ..ScriptOutputs::default() });
+        rt.advance(0.1);
+        meshes(rt)
+    };
+    assert_eq!(swap(&mut rt, "fox"), ["a"]);
+    assert_eq!(swap(&mut rt, "cat"), ["a"], "the copy draws with the puppet of its new template");
+    assert_eq!(swap(&mut rt, "fox"), ["a"]);
 }

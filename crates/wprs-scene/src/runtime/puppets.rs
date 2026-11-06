@@ -20,9 +20,13 @@ impl Runtime {
         self.puppets.iter().find(|p| p.layer == layer)
     }
 
-    pub(crate) fn recast(&mut self) {
+    pub(crate) fn recast(&mut self, rebuilt: &[String]) {
         let mut puppets = std::mem::take(&mut self.puppets);
-        puppets.retain(|p| self.layer(&p.layer).and_then(figure).is_some());
+        let inside = |layer: &str, id: &String| {
+            layer.strip_prefix(id.as_str()).is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+        };
+        let fresh = |p: &Puppet| rebuilt.iter().any(|id| inside(&p.layer, id));
+        puppets.retain(|p| !fresh(p) && self.layer(&p.layer).and_then(figure).is_some());
         let mut stack: Vec<&crate::Layer> = self.spawned().collect();
         while let Some(l) = stack.pop() {
             stack.extend(l.children());

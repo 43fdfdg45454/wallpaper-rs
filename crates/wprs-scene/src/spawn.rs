@@ -19,6 +19,7 @@ impl Runtime {
         let mut kept: HashMap<String, (String, Box<Layer>)> =
             std::mem::take(&mut self.spawned).into_iter().map(|(t, l)| (l.id.clone(), (t, l))).collect();
         let mut room = (MAX_LAYERS + MAX_SPAWNED).saturating_sub(self.scene.layers().count());
+        let mut rebuilt = Vec::new();
         for (id, template) in &outputs.spawned {
             let Some(size) =
                 self.scene.templates.get(template).map(crate::copies::flat).filter(|n| *n <= room)
@@ -29,15 +30,16 @@ impl Runtime {
             let old = kept.remove(id).filter(|(t, _)| t == template);
             let made = old.or_else(|| {
                 let layer = crate::copies::copied(self.scene.templates.get(template)?, id);
+                rebuilt.push(id.clone());
                 Some((template.clone(), Box::new(layer)))
             });
             self.spawned.extend(made);
         }
         outputs.spawned.retain(|(id, _)| self.spawned.iter().any(|(_, l)| l.id == *id));
-        if outputs.spawned != self.script.spawned {
+        if outputs.spawned != self.script.spawned || !rebuilt.is_empty() {
             self.costs.set((0, [None; 4]));
             self.homes = crate::kin::homes(self.scene.layers.iter().chain(self.spawned()));
-            self.recast();
+            self.recast(&rebuilt);
         }
         for (id, list) in outputs.effects.iter_mut() {
             let Some(layer) = self.layer(id) else {
