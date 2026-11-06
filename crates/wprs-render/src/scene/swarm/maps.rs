@@ -14,6 +14,7 @@ pub(crate) struct Map {
     pub(super) part: usize,
     pub(super) emitter: usize,
     pub(super) source: String,
+    pub(super) read: String,
     pub(super) refresh: Refresh,
     pub(super) key: Option<u64>,
     pub(super) at: f32,
@@ -56,6 +57,7 @@ impl Swarms {
                         part,
                         emitter,
                         source,
+                        read: String::new(),
                         refresh,
                         key: None,
                         at: f32::NEG_INFINITY,
@@ -74,9 +76,10 @@ impl Swarms {
         out
     }
 
-    pub(crate) fn due(&self, i: usize, key: u64, time: f32) -> bool {
+    pub(crate) fn due(&self, i: usize, (key, source): (u64, &str), time: f32) -> bool {
         let Some(m) = self.maps.get(i).filter(|m| m.asked.is_none()) else { return false };
         match (m.key, m.refresh) {
+            _ if m.read != source => true,
             (None, _) => true,
             (Some(k), Refresh::OnChange) => k != key && time - m.at >= 0.25,
             _ => false,

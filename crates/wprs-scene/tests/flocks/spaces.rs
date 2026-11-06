@@ -26,6 +26,26 @@ fn world_space_particles_stay_where_they_were_born() {
 }
 
 #[test]
+fn scripts_aim_the_layer_sources_and_walls_of_a_particles_layer() {
+    let system = still(json!({ "emitters": [{ "shape": { "point": [100, 50] }, "rate": 10 }] }));
+    let layers = json!([{ "id": "p", "type": "particles", "system": "a" }]);
+    let mut rt = runtime(json!({ "a": system }), layers);
+    let sources = [(0, "a.body".to_string()), (9, "far".to_string())].into();
+    let walls = [(1, "a.body".to_string()), (2, String::new())].into();
+    let control = ParticleControl { sources, walls, ..ParticleControl::default() };
+    rt.set_script(ScriptOutputs {
+        particles: [("p".to_string(), control)].into(),
+        ..ScriptOutputs::default()
+    });
+    let frame = rt.frame(VIEW, Quality::Q3);
+    let Content::Particles { script: Some(c), .. } = &frame.draws[0].content else {
+        panic!("no script control")
+    };
+    assert_eq!(c.sources, [(0, "a.body".to_string())].into());
+    assert_eq!(c.walls, [(1, "a.body".to_string())].into());
+}
+
+#[test]
 fn control_points_place_emitters_and_follow_instances() {
     let points = json!([{ "at": [0, 0] }, { "at": [40, 20], "angle": 90 }]);
     let shape = json!({ "box": { "from": [0, 0], "to": [10, 2], "at": "p1" } });

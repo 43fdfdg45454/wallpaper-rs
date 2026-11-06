@@ -33,6 +33,8 @@ pub struct ParticleControl {
     pub commands: Vec<ParticleCommand>,
     pub instance: Tuning,
     pub points: BTreeMap<u8, [f32; 2]>,
+    pub sources: BTreeMap<u8, String>,
+    pub walls: BTreeMap<u8, String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

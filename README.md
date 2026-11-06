@@ -1335,7 +1335,9 @@ de atractores, vórtices con anillo y turbulencia con desplazamiento y máscara)
 estáticos, al nacer, al morir o que siguen a cada partícula (dos generaciones como mucho), los ajustes
 por capa (alfa, tamaño, cantidad, velocidad, vida, ritmo, brillo, color y puntos, con bloqueo en el
 sistema), el brillo, los ciclos y el estiramiento acotado del dibujo, y el control desde scripts con
-`particles(capa)`: `play`, `pause`, `stop`, `playing`, `emit(n)`, `point(n, [x, y])` e `instance`.
+`particles(capa)`: `play`, `pause`, `stop`, `playing`, `emit(n)`, `point(n, [x, y])`, `instance` y
+`from(n, capa)` y `wall(n, capa)`, que hacen que el emisor o el colisionador `n` de tipo capa tome
+otra capa, también una copia de una plantilla (`null` vuelve a la del sistema).
 Una escena simula como mucho 64 sistemas contando hijos y capas con partículas propias, dentro de
 las 200 000 partículas, y el precalentamiento llega a 30 s en pasos de 1/15 s. Lo demás de la lista
 anterior sigue pidiendo una versión más nueva.
@@ -2443,7 +2445,9 @@ interfaz completa; lo esencial:
   un `attach`, un `parent`, un objetivo `layer:<id>`, una máscara de capa (de la capa o de un
   efecto) o un parámetro de efecto que toma una capa, de dentro de la plantilla y que nombra otra capa
   de ella, apunta en cada copia a la capa de esa misma copia, los toques en los huesos de una malla
-  copiada nombran el hueso de esa copia, y el botón
+  copiada nombran el hueso de esa copia; los sistemas de partículas son de toda la escena, pero
+  `particles(capa).from(n, "copia.capa")` y `.wall(n, …)` hacen que una capa de partículas nazca de
+  la capa de una copia o choque con ella, y el botón
   *Hacer plantilla* del editor copia la capa elegida a `templates` con un nombre libre
   (`<id>_template`, luego `<id>_template_2`…; `wprs-ctl scene duplicate-layer DIR ID --template`
   hace lo mismo) y la barra de capas muestra una plantilla sola en el lienzo, como se dibuja una copia;

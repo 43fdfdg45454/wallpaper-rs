@@ -47,6 +47,7 @@ pub enum Content<'a> {
         system: &'a str,
         flock: usize,
         size: f32,
+        script: Option<&'a crate::ParticleControl>,
     },
     Mesh {
         layer: &'a str,

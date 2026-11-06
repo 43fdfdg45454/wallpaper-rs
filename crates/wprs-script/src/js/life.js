@@ -111,7 +111,7 @@ const made = {
     stage: () => (Object.keys(stage).length ? stage : null),
     storage: () => now.saved,
     meshes: () => true,
-    particles: () => Object.assign(now.out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...now.out.particles[id], instance: p.instance, points: p.points }]))),
+    particles: () => Object.assign(now.out.particles, Object.fromEntries(Object.entries(particleState).map(([id, p]) => [id, { ...now.out.particles[id], instance: p.instance, points: p.points, sources: p.sources, walls: p.walls }]))),
     sounds: () => Object.assign(now.out.sounds, Object.fromEntries(Object.entries(soundState).map(([id, s]) => [id, { ...now.out.sounds[id], volume: s.volume }]))),
     videos: () => now.out.videos,
     rigs: () => rigsOut(now.out),

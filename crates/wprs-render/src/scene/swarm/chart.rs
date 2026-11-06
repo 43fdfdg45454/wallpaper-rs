@@ -1,7 +1,7 @@
 use super::maps::{Asked, SIDE};
 use crate::scene::Op;
 use crate::scene::paint::Painter;
-use wprs_scene::Affine;
+use wprs_scene::{Affine, Content};
 
 impl Painter<'_, '_, '_> {
     pub(crate) fn chart(&mut self, flock: usize) {
@@ -11,9 +11,20 @@ impl Painter<'_, '_, '_> {
             else {
                 continue;
             };
-            let Some(j) = frame.draws.iter().position(|d| d.layer.id == m.source) else { continue };
+            let aimed = frame.draws.iter().find_map(|d| match &d.content {
+                Content::Particles { flock, script: Some(c), .. } if *flock == m.herd => {
+                    if m.wall {
+                        c.walls.get(&(m.emitter as u8))
+                    } else {
+                        c.sources.get(&(m.emitter as u8))
+                    }
+                }
+                _ => None,
+            });
+            let source = aimed.unwrap_or(&m.source).clone();
+            let Some(j) = frame.draws.iter().position(|d| d.layer.id == source) else { continue };
             let key = self.upstream(j).0;
-            let wanted = self.swarms.as_deref().is_some_and(|s| s.due(i, key, frame.time));
+            let wanted = self.swarms.as_deref().is_some_and(|s| s.due(i, (key, &source), frame.time));
             let Some((_, rect)) = wanted.then(|| self.shared(j)).flatten() else { continue };
             let longest = rect.w.max(rect.h).max(1.0);
             let side = (if longest > 1024.0 { SIDE } else { SIDE / 2 }) as f32;
@@ -29,6 +40,7 @@ impl Painter<'_, '_, '_> {
             if let Some(m) = self.swarms.as_deref_mut().and_then(|s| s.maps.get_mut(i)) {
                 (m.asked, m.sent, m.key, m.at) =
                     (Some(Asked { size, place, format }), true, Some(key), frame.time);
+                m.read = source;
             }
         }
     }

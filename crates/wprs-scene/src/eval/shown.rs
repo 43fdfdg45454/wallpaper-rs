@@ -82,7 +82,7 @@ pub(crate) fn content<'a>(
                 .particles
                 .get(system)
                 .map_or(1.0, |s| crate::particles::tuned(cx, Some(layer), s).size);
-            Content::Particles { system, flock, size }
+            Content::Particles { system, flock, size, script: cx.script.particles.get(&layer.id) }
         }
         Kind::Mesh(m) => {
             let puppet = cx.puppets.iter().find(|p| p.layer == layer.id);

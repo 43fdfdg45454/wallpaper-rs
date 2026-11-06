@@ -56,6 +56,11 @@ impl Runtime {
             }
         }
         outputs.effects.retain(|_, list| !list.is_empty());
+        for c in outputs.particles.values_mut() {
+            let named = |k: &u8, id: &mut String| *k < 8 && !id.is_empty() && id.len() <= 256;
+            c.sources.retain(named);
+            c.walls.retain(named);
+        }
         let wanted = outputs.stage.is_some_and(|s| s.bloom.is_some());
         if crate::glow::lend(&mut self.glow, &self.scene.canvas, wanted) {
             self.costs.set((0, [None; 4]));
