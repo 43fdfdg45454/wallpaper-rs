@@ -50,9 +50,15 @@ expected="['After the revocation', 'From the revoked device', 'Phone mix', 'Quie
   fail "the desktop's title and tag did not reach the phone: $(ask 'library {"op": "items", "query": ""}')"
 [ "$(ask "setting transition.duration_ms")/$(ask "setting playback.max_fps")" = 900/30 ] ||
   fail "settings on the phone: $(ask "setting transition.duration_ms") $(ask "setting playback.max_fps")"
-phoned=$(find "$WORK/phone" -name '*.wprs.json' | head -n 1)
-[ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$phoned")" = "(0.5, 'center', True)" ] ||
-  fail "edits made apart before the first sync did not meet on the phone: $(cat "$phoned")"
+met() {
+  local edit
+  while IFS= read -r edit; do
+    [ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$edit" 2>/dev/null)" = "(0.5, 'center', True)" ] && return 0
+  done < <(find "$WORK/phone" -name '*.wprs.json' | sort)
+  return 1
+}
+wait_for 30 met ||
+  fail "edits made apart before the first sync did not meet on the phone: $(find "$WORK/phone" -name '*.wprs.json' -exec cat {} +)"
 ask "library {\"op\": \"favorite\", \"uids\": [\"$green\"], \"favorite\": true}" >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 a server sync --wait >/dev/null
