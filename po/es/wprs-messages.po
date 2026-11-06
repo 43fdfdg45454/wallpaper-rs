@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -132,9 +132,9 @@ msgstr "%1 es demasiado grande"
 
 #: crates/wprs-core/src/edit/file.rs crates/wprs-editor/src/assets.rs
 #: crates/wprs-editor/src/offer.rs crates/wprs-editor/src/package.rs
-#: crates/wprs-editor/src/packing.rs crates/wprs-editor/src/previews.rs
-#: crates/wprs-editor/src/project.rs crates/wprs-editor/src/scripts.rs
-#: crates/wprs-editor/src/shaders.rs
+#: crates/wprs-editor/src/packing.rs crates/wprs-editor/src/pages.rs
+#: crates/wprs-editor/src/previews.rs crates/wprs-editor/src/project.rs
+#: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
 msgid "cannot read %1: %2"
 msgstr "no se puede leer %1: %2"
 
@@ -407,7 +407,7 @@ msgstr "el tipo de un paquete de escena es scene"
 msgid "%1 %2"
 msgstr "%1 %2"
 
-#: crates/wprs-editor/src/check.rs
+#: crates/wprs-editor/src/check.rs crates/wprs-editor/src/pages.rs
 msgid "%1 is not in the folder"
 msgstr "%1 no está en la carpeta"
 
@@ -939,10 +939,6 @@ msgid "save the scene before building it"
 msgstr "guarda la escena antes de construirla"
 
 #: crates/wprs-editor/src/package.rs
-msgid "%1 is not a scene package"
-msgstr "%1 no es un paquete de escena"
-
-#: crates/wprs-editor/src/package.rs
 msgid "there is no data folder"
 msgstr "no hay carpeta de datos"
 
@@ -969,6 +965,10 @@ msgstr "la imagen no puede pasar a KTX2: %1"
 #: crates/wprs-editor/src/packing.rs
 msgid "say what to change in %1, such as ktx2"
 msgstr "di qué cambiar en %1, como ktx2"
+
+#: crates/wprs-editor/src/pages.rs
+msgid "%1 is a name the package keeps for itself"
+msgstr "%1 es un nombre que el paquete reserva para sí"
 
 #: crates/wprs-editor/src/paint.rs
 msgid "masks are painted on a parameter of an effect"
@@ -1240,6 +1240,26 @@ msgstr "una máscara necesita una imagen, una capa o una forma"
 #: crates/wprs-editor/src/shaping/mod.rs
 msgid "a sprite sheet has from 1 to 256 rows and from 1 to 256 columns"
 msgstr "una hoja de sprites tiene de 1 a 256 filas y de 1 a 256 columnas"
+
+#: crates/wprs-editor/src/shaping/page.rs
+msgid "%1 is not a %2 setting of a %3 package; it takes %4"
+msgstr "%1 no es un ajuste de %2 de un paquete %3; admite %4"
+
+#: crates/wprs-editor/src/shaping/page.rs
+msgid "only a web page may reach the network"
+msgstr "solo una página web puede usar la red"
+
+#: crates/wprs-editor/src/shaping/page.rs
+msgid "%1 is not an input; use one of %2"
+msgstr "%1 no es una entrada; usa una de %2"
+
+#: crates/wprs-editor/src/shaping/page.rs
+msgid "a page declares network exactly when it lists the origins it reaches"
+msgstr "una página declara network justo cuando lista los orígenes a los que llega"
+
+#: crates/wprs-editor/src/shaping/page.rs
+msgid "files are added this way only to web, picture and video packages"
+msgstr "así solo se añaden archivos a paquetes web, de imagen y de vídeo"
 
 #: crates/wprs-editor/src/shelf.rs
 msgid "name a part as layer:ID, particles:ID, script:PATH or effect:ID, not %1"

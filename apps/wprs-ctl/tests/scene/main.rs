@@ -134,7 +134,8 @@ fn every_scene_editor_action_has_a_scene_command_with_the_same_arguments() {
             ids.extend(sub.get_arguments().map(|a| a.get_id().as_str()));
         }
         for field in fields(json!({name: {"": null}})) {
-            assert!(ids.contains(&field.as_str()), "scene {name} lacks {field}");
+            let named = ids.contains(&field.as_str()) || ids.contains(&field.replace('_', "-").as_str());
+            assert!(named, "scene {name} lacks {field}");
         }
         assert!(ids.contains(&"dir"), "scene {name} takes the folder");
     }

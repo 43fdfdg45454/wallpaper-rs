@@ -38,6 +38,8 @@ mi-fondo/
 }
 ```
 
+`wprs-ctl scene new mi-fondo --from web` (o *Página web* en la página *Escenas* de la app) crea
+esta carpeta con una página de ejemplo que puedes editar en la app o con cualquier editor de texto.
 `wprs-ctl pack check mi-fondo` explica lo que falta, `wprs-ctl pack build mi-fondo -o reloj.wpak`
 calcula `requires.features` y arma el paquete, y `wprs-ctl lib import reloj.wpak` lo deja en la
 biblioteca. Las rutas son relativas: `<script src="app.js">`, `fetch("datos.json")`.

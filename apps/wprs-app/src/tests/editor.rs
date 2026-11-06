@@ -5,7 +5,8 @@ use std::collections::BTreeSet;
 use wprs_core::edit::{ACTIONS, Edit, Source};
 
 fn runs(scenes: bool) -> (String, Vec<String>) {
-    let files = qml_files().into_iter().filter(|(name, _)| name.starts_with("Scene") == scenes);
+    let scened = |name: &str| name.starts_with("Scene") || name.starts_with("Package");
+    let files = qml_files().into_iter().filter(|(name, _)| scened(name) == scenes);
     let text: String = files.map(|(_, text)| text).collect();
     let used = literals(&text, ".run(").into_iter().map(String::from).collect();
     (text, used)

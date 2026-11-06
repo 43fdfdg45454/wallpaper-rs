@@ -68,6 +68,8 @@ pub enum Meta {
         #[arg(long, value_name = "SETTING", help = "Remove a setting")]
         clear: Vec<String>,
     },
+    #[command(flatten)]
+    Page(crate::paging::Page),
 }
 
 pub(crate) fn edit(what: Meta) -> M {
@@ -109,5 +111,6 @@ pub(crate) fn edit(what: Meta) -> M {
             accent.into_iter().for_each(|a| drop(values.insert("accent".into(), a)));
             M::Display { values, clear }
         }
+        Meta::Page(page) => crate::paging::edit(page),
     }
 }

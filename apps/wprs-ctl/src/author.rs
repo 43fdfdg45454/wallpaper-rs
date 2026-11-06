@@ -9,7 +9,9 @@ pub(crate) const ID: &str = "Layer id";
 
 #[derive(Subcommand, Debug)]
 pub enum Author {
-    #[command(about = "Create a scene folder from a starting point: empty, particles, parallax or clock")]
+    #[command(
+        about = "Create a package folder from a starting point: the scenes empty, particles, parallax or clock, or web for a web page"
+    )]
     New {
         #[arg(help = DIR)]
         dir: PathBuf,

@@ -60,6 +60,11 @@ pub(crate) fn manifest(dir: &Path, doc: &Value, e: &M) -> Result<Vec<Op>> {
         }
         M::Authors { authors } => listed(doc, "/manifest/authors", authors.clone()),
         M::Display { values, clear } => display(doc, values, clear)?,
+        M::Playback { values, clear } => super::page::section(doc, "playback", values, clear)?,
+        M::Web { values, clear } => super::page::section(doc, "web", values, clear)?,
+        M::Network { origins, add, remove } => super::page::network(doc, origins, *add, *remove)?,
+        M::Inputs { inputs, add, remove } => super::page::inputs(doc, inputs, *add, *remove)?,
+        M::AddFile { file, to } => return super::page::add_file(dir, doc, file, to.as_deref()),
     };
     refused(dir, doc, ops)
 }

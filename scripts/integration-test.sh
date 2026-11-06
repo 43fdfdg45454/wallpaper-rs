@@ -20,6 +20,7 @@ source "$(dirname "$0")"/integration-sound.sh
 source "$(dirname "$0")"/integration-recovery.sh
 source "$(dirname "$0")"/integration-sources.sh
 source "$(dirname "$0")"/integration-web.sh
+source "$(dirname "$0")"/integration-pages.sh
 source "$(dirname "$0")"/integration-gpu.sh
 source "$(dirname "$0")"/integration-quality.sh
 

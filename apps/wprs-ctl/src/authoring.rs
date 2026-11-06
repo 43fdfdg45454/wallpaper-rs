@@ -21,7 +21,16 @@ fn describe(project: &Project, json: bool) -> Result<()> {
     let text = |k: &str| m[k].as_str().unwrap_or("?").to_owned();
     let title = wprs_editor::meta::title(&project.doc, &wprs_core::locale::languages());
     let (layers, errors) = (count(layers, "layer"), count(errors, "problem"));
-    println!("{title} ({} {}): {layers}, {errors}", text("id"), text("version"));
+    if !wprs_editor::pages::scened(&project.doc) {
+        let kind = wprs_editor::pages::kind(&project.doc);
+        println!("{title} ({} {}, {kind}): {errors}", text("id"), text("version"));
+        for file in wprs_editor::pages::files(&project.dir, &project.doc) {
+            let (path, role) = (file["path"].as_str().unwrap_or(""), file["role"].as_str().unwrap_or(""));
+            println!("  {path}: {role}, {}, {} bytes", file["kind"].as_str().unwrap_or(""), file["size"]);
+        }
+    } else {
+        println!("{title} ({} {}): {layers}, {errors}", text("id"), text("version"));
+    }
     if pending {
         println!("the app kept unsaved changes; wprs-ctl scene recover restores or drops them");
     }

@@ -10,18 +10,22 @@ Kirigami.ScrollablePage {
 
     property var scenes: []
     property var projects: JSON.parse(helper.projects() || "[]")
-    readonly property var starters: [["empty", "document-new"], ["particles", "weather-snow"], ["parallax", "view-list-details"], ["clock", "clock"]]
+    readonly property var starters: [["empty", "document-new"], ["particles", "weather-snow"], ["parallax", "view-list-details"], ["clock", "clock"], ["web", "text-html"]]
 
     function exercise() {
         App.compose(helper.folderFor("check"), "empty", "");
+        App.compose(helper.folderFor("page"), "web", "");
     }
 
     title: App.tr("Scenes")
-    Component.onCompleted: App.query("Search", ["kind:scene", 0, 200], "Library1", reply => {
-        if (!page)
-            return;
-        page.scenes = (reply?.items ?? []).filter(item => String(item.path ?? "").endsWith(".wpak"));
-    })
+    Component.onCompleted: {
+        for (const kind of ["scene", "web"])
+            App.query("Search", ["kind:" + kind, 0, 200], "Library1", reply => {
+                if (!page)
+                    return;
+                page.scenes = page.scenes.concat((reply?.items ?? []).filter(item => String(item.path ?? "").endsWith(".wpak")));
+            });
+    }
 
     SceneEditor {
         id: helper
@@ -79,7 +83,7 @@ Kirigami.ScrollablePage {
         }
 
         QQC2.Button {
-            text: App.tr("Open a scene folder…")
+            text: App.tr("Open a scene or package folder…")
             icon.name: "document-open-folder"
             onClicked: folders.open()
         }
@@ -99,7 +103,7 @@ Kirigami.ScrollablePage {
 
         Kirigami.Heading {
             level: 3
-            text: App.tr("Edit a copy of a scene from the library")
+            text: App.tr("Edit a copy of a scene or web page from the library")
             visible: page.scenes.length > 0
         }
 

@@ -47,6 +47,9 @@ pub fn read(dir: &Path) -> Result<Value> {
             .map_err(|e| said("editor.not_json", "%1 is not valid JSON: %2", &[&name, &e]).into())
     };
     let manifest = load(MANIFEST)?;
+    if !crate::pages::scened(&json!({"manifest": manifest})) {
+        return Ok(json!({"manifest": manifest}));
+    }
     let scene = load(&entry(&json!({"manifest": manifest}))?)?;
     Ok(json!({"manifest": manifest, "scene": scene}))
 }
@@ -80,10 +83,11 @@ impl Project {
     pub fn create(dir: &Path, doc: Value) -> Result<Project> {
         let empty = !dir.exists() || fs::read_dir(dir)?.next().is_none();
         ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
-        fs::create_dir_all(dir.join("assets"))?;
+        fs::create_dir_all(if crate::pages::scened(&doc) { dir.join("assets") } else { dir.to_owned() })?;
         let (history, base) = (History::default(), String::new());
         let mut project = Project { dir: dir.to_owned(), doc, history, base, pending: None, recorded: None };
         project.write_files()?;
+        crate::pages::seed(dir, &project.doc)?;
         project.history.mark_saved();
         project.persist()?;
         Ok(project)
@@ -92,7 +96,9 @@ impl Project {
     fn write_files(&mut self) -> Result<()> {
         let pretty = |v: &Value| serde_json::to_string_pretty(v).map(|t| t + "\n");
         write(&self.dir.join(MANIFEST), &pretty(&self.doc["manifest"])?, 0o644)?;
-        write(&self.dir.join(entry(&self.doc)?), &pretty(&self.doc["scene"])?, 0o644)?;
+        if crate::pages::scened(&self.doc) {
+            write(&self.dir.join(entry(&self.doc)?), &pretty(&self.doc["scene"])?, 0o644)?;
+        }
         self.base = stamp(&self.doc);
         Ok(())
     }

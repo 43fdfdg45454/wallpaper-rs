@@ -653,9 +653,35 @@ SCENE OUT --part KIND:ID… --id ID --title TITLE --license SPDX --attribution N
 anything is copied, the license and credit of every file it brings; the checked parts are imported
 with `import_assets`, one step of the history. `wprs-ctl pack parts FILE [--json]` lists the same.
 
+## Web pages and other packages
+
+The editor opens and creates every kind of package folder, not only scenes. A folder whose
+manifest has a `kind` other than `scene` or `assets` is a document of the manifest alone
+(`{"manifest": …}`, without `scene`): actions on `/manifest` work as in a scene, saving writes only
+`manifest.json`, and the problems are those of the manifest, the files of the folder (`validate`
+of the format: a missing entry, a preload that is not in the folder) and the verdicts of each
+platform. The outline adds `kind` and, for such packages, `files`: every file of the folder but
+hidden ones, with `path`, `size`, `kind` (`page`, `script`, `style`, `wasm`, `data`, `image`,
+`video`, `sound`, `font` or `other`) and `role` (`entry`, `preload`, `preview`, `manifest`,
+`locale`, `signature` or `file`).
+
+The starting point `web` writes `index.html` and `app.js`, a clock that takes its color from a
+`color` property, hides nothing and stops its timer while the page is paused, and a valid `web`
+manifest (`entry` `index.html`, no inputs, `web.background`). `wprs-ctl scene open DIR` lists the
+files of such a folder with their role, kind and size, and `--from FILE.wpak` extracts a package of
+any kind into an empty folder.
+
+| Action | Arguments | `wprs-ctl scene manifest DIR` |
+|--------|-----------|-------------------------------|
+| `manifest` `add_file` | `file`, `to` (a folder of the package, optional); copies the file into a web, picture or video package folder, never over `manifest.json` or its signature, and records nothing in the history | `add-file FILE [--to FOLDER]` |
+
+The app opens such folders on a page of their own, *Package*: the file list (size, role, *Add
+files…*, *Open the folder*, and per file *Use as the entry page* or *Use as the thumbnail*), the
+settings of the kind in the middle, and the inspector and the problems on the right.
+
 ## Starting points, building and applying
 
-`wprs-ctl scene new DIR --from empty|particles|parallax|clock [--id ID] [--title TITLE] [--locale
+`wprs-ctl scene new DIR --from empty|particles|parallax|clock|web [--id ID] [--title TITLE] [--locale
 LANGUAGE]` and the *Scenes* page of the app create a folder from a starting point, with the id
 `org.example.<folder name>` (accents dropped, so `Canción` becomes `cancion`) and the folder name as
 title unless given: an empty canvas, falling particles with a density property, layered hills that

@@ -67,6 +67,37 @@ pub enum ManifestEdit {
         #[serde(default)]
         clear: Vec<String>,
     },
+    Playback {
+        #[serde(default)]
+        values: Map<String, Value>,
+        #[serde(default)]
+        clear: Vec<String>,
+    },
+    Web {
+        #[serde(default)]
+        values: Map<String, Value>,
+        #[serde(default)]
+        clear: Vec<String>,
+    },
+    Network {
+        origins: Vec<String>,
+        #[serde(default)]
+        add: bool,
+        #[serde(default)]
+        remove: bool,
+    },
+    Inputs {
+        inputs: Vec<String>,
+        #[serde(default)]
+        add: bool,
+        #[serde(default)]
+        remove: bool,
+    },
+    AddFile {
+        file: std::path::PathBuf,
+        #[serde(default)]
+        to: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
