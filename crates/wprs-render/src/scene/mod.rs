@@ -12,6 +12,7 @@ mod field;
 mod flight;
 mod fonts;
 mod fused;
+mod gather;
 mod held;
 mod hits;
 mod inked;

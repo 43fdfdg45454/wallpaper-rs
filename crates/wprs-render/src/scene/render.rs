@@ -143,8 +143,8 @@ impl Renderer {
             _ => None,
         };
         painter.run(Src::Canvas, background.map(f64::from), keep);
-        let clip = painter.clip;
-        let reused = painter.reused;
+        let (clip, reused) = (painter.clip, painter.reused);
+        super::gather::gather(&mut scratch.ops, &scratch.sets);
         let (trial, drawn) = (super::flight::trial(v.id), !scratch.drawn.is_empty());
         let timing = v.clock.start(self, &scratch.ops, trial, drawn);
         let serial = super::flight::sending(self, v.id, &scratch.drawn)
