@@ -40,6 +40,7 @@ pub struct Joint {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Piece {
     pub part: u16,
+    pub source: [u16; 2],
     pub first: u32,
     pub count: u32,
     pub base: u32,

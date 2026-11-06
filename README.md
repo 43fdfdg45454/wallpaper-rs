@@ -2119,9 +2119,10 @@ deja de seguirlo. Los puntos nunca cuentan como el final de un hueso, así que n
 cadenas ni la física. Las partes se
 ordenan arrastrándolas en una lista de atrás hacia delante, se ocultan y se recortan para verse solo
 sobre otra parte, cuyo contorno se marca en la vista previa. Los contornos de las partes, los huesos
-y puntos y las asas de cadenas y física se ven en cualquier malla que el editor muestre, también en
-las que dibujan una misma malla con varios nodos, aunque en esas los huesos y pesos solo se cambian en
-el archivo. En el inspector general, todo campo que
+y puntos y las asas de cadenas y física se ven en cualquier malla que el editor muestre; una malla
+que dibujan varios nodos recibe en la primera edición una malla propia para cada uno (`<malla>_<nodo>`),
+así sus huesos y pesos también se editan aquí, y cada primitiva se empareja con su parte por el nodo y
+la primitiva de los que sale. En el inspector general, todo campo que
 nombra un hueso, un punto, una parte o una forma de mezcla (cadenas, objetivos y límites, física,
 reglas, máscaras de huesos de las capas de animación, `hit`, `attach` y `parts`) ofrece los de la
 malla en una lista.

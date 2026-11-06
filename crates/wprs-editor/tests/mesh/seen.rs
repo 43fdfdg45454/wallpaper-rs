@@ -33,14 +33,14 @@ fn twinned(p: &mut Project) {
 }
 
 #[test]
-fn a_mesh_drawn_twice_shows_its_bones_part_outlines_and_chains_without_being_rewritten() {
+fn a_mesh_drawn_twice_gets_a_mesh_of_its_own_for_each_drawing_once_it_is_edited() {
     let root = tempfile::tempdir().unwrap();
     let mut p = rigged(&root);
     let before = info(&p, "net");
     let outline = query(&p, "net", json!({ "outline": true }));
     twinned(&mut p);
     let seen = info(&p, "net");
-    assert_eq!(seen["editable"], json!(false), "a mesh drawn twice keeps the bones of its file");
+    assert_eq!(seen["editable"], json!(true), "a mesh drawn twice is edited like any other");
     let at = |v: &Value, name: &str| {
         v["bones"].as_array().unwrap().iter().find(|b| b["name"] == name).unwrap()["at"].clone()
     };
@@ -60,7 +60,11 @@ fn a_mesh_drawn_twice_shows_its_bones_part_outlines_and_chains_without_being_rew
     let handles = query(&p, "net", json!({ "handles": true }));
     let chain = &handles["ik"][0];
     assert!(chain["at"].as_array().is_some_and(|a| a.len() == 2 && a[0].is_array()), "{handles}");
-    let refused =
-        act(&mut p, json!({ "bone": { "layer": "net", "name": "hand", "parent": "arm", "at": [0.8, 0.5] } }));
-    assert!(refused.is_err(), "bones are still placed only on meshes the editor can rewrite");
+    act(&mut p, json!({ "bone": { "layer": "net", "name": "hand", "parent": "arm", "at": [0.8, 0.5] } }))
+        .unwrap();
+    let path = p.doc["scene"]["assets"]["net"]["path"].as_str().unwrap().to_owned();
+    let rig = wprs_scene::Rigged::decode(&std::fs::read(p.dir.join(path)).unwrap()).unwrap();
+    assert!(rig.joint("hand").is_some() && rig.parts.len() >= 2, "{:?}", rig.parts);
+    let sources: Vec<[u16; 2]> = rig.pieces.iter().map(|piece| piece.source).collect();
+    assert!(sources.windows(2).all(|w| w[0] != w[1]), "{sources:?}");
 }
