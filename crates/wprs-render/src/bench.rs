@@ -61,7 +61,7 @@ pub fn scene_bench(
         Level::Fitted | Level::Timed(_) => fitted,
     };
     let mut run = frames::Run::new(r, runtime, assets, bench, (tier, quality))?;
-    run.view.profile_particles(true);
+    run.view.profile_particles(bench.paced.is_none());
     run.view.time_passes(bench.passes);
     crate::reset_profiled_passes();
     let mut report = match bench.paced {
