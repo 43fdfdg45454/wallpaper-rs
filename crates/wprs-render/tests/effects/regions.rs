@@ -50,3 +50,24 @@ fn scenes_that_blend_in_srgb_draw_no_more_passes_than_linear_ones() {
     let (Some((srgb, a)), Some((linear, _))) = (passes("srgb"), passes("linear")) else { return };
     assert!(srgb <= linear && a.at(32, 16) != [0, 0, 0], "{srgb} passes in srgb, {linear} in linear");
 }
+
+fn after_waves(effect: Value, strength: f32) -> Option<Shot> {
+    let mut far = effect;
+    far["mask"] = json!({ "texture": "box", "channel": "r", "strength": strength });
+    let list = json!([{ "effect": "waves", "params": { "amplitude": 0.5 } }, far]);
+    Fx::chain(list).input(ramp()).image("box", corner(4, 20), true).shot()
+}
+
+#[test]
+fn masked_effects_that_sample_far_from_their_pixel_keep_the_whole_picture_to_read() {
+    let quad = json!({ "top_left": [-0.5, 0], "top_right": [0.5, 0], "bottom_right": [0.5, 1], "bottom_left": [-0.5, 1] });
+    for effect in [json!({ "effect": "perspective", "params": quad }), json!({ "effect": "crt" })] {
+        let (Some(narrow), Some(whole)) = (after_waves(effect.clone(), 1.0), after_waves(effect.clone(), 0.9999))
+        else {
+            return;
+        };
+        let most = narrow.0.pixels().zip(whole.0.pixels()).map(|(a, b)| (0..3).map(|c| a.0[c].abs_diff(b.0[c])).max());
+        let most = most.flatten().max().unwrap_or(0);
+        assert!(most <= 2, "{effect} differs by {most}: {:?} against {:?}", narrow.at(10, 8), whole.at(10, 8));
+    }
+}

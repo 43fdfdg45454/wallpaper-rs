@@ -6,6 +6,7 @@ use wprs_scene::*;
 mod checks;
 mod costs;
 mod inputs;
+mod locality;
 
 const VIEW: [f32; 4] = [0.0, 0.0, 64.0, 32.0];
 

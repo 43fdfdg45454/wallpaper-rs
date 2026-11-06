@@ -42,7 +42,7 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn region(&self, e: &EffectDraw<'_>, uv: Affine, (w, h): (u32, u32)) -> Region {
         let d = e.descriptor;
         let single = d.passes.len() == 1 && d.state.is_none() && d.targets.is_empty() && !d.below();
-        if !single || e.chain > 1 {
+        if !single || e.chain > 1 || (d.reach.is_none() && !d.reads_its_pixel()) {
             return Region::Whole;
         }
         let found = match (self.masked(e), self.bounded(e)) {
