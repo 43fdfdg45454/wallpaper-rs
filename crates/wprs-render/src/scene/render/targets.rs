@@ -17,7 +17,9 @@ pub(super) fn retarget(r: &Renderer, view: &mut SceneView, size: (u32, u32)) {
         }
         pool.give(canvas);
     }
-    let shared = view.tone == 0 && [wanted, wanted.remove_srgb_suffix()].contains(&view.format);
+    let views = r.gpu.get_downlevel_capabilities().flags.contains(wgpu::DownlevelFlags::VIEW_FORMATS);
+    let viewed = views && wanted.remove_srgb_suffix() == view.format;
+    let shared = view.tone == 0 && (wanted == view.format || viewed);
     let canvas = match shared && wanted != view.format {
         true => Tex::viewed(&r.device, size, (view.format, &[wanted])),
         false => pool.take(&r.device, size, view.format),

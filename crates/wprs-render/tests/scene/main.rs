@@ -13,6 +13,7 @@ use wprs_scene::{AudioFrame, Property, Quality, Runtime, SCHEMA, Scene, effectiv
 
 mod compose;
 mod covers;
+mod gl;
 mod packed;
 mod passes;
 mod stage;
