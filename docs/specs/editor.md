@@ -184,7 +184,7 @@ mask: none, a picture, another layer or a shape (rect, ellipse, ring, polygon, s
 started at half the size of the layer), the channel, invert, a soft edge (a slider up to 200 px and
 a field up to 10000) and the strength, all through `effects mask`; the canvas draws it over the
 layer while the use or its mask is selected: a picture half see-through over the layer box (a KTX2
-picture decoded once into a PNG in the cache of the app, keyed by the hash of the file), the
+picture decoded once into a PNG in the cache of the app, keyed by the hash of the file, the 16 most recently shown kept), the
 masking layer framed, and a shape centered on the layer with its outline, its feather inside and
 outside in dashes, a handle that sizes it (or moves the end of a line, which runs from −`to`/2 to
 `to`/2 around the middle) and a dot past its edge that sets the feather; each drag is one gesture.
