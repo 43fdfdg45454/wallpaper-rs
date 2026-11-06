@@ -87,3 +87,20 @@ pub(crate) fn option(o: &Variant, value: &Value, base: &str, depth: usize) -> Fi
         ..Field::default()
     }
 }
+
+pub(crate) fn wake(doc: &Value, d: &wprs_scene::Descriptor, base: &str, depth: usize) -> Field {
+    let own = doc.pointer(&format!("/scene/effects/{}", escape(&d.id))).is_some();
+    let params = d
+        .params
+        .iter()
+        .map(|p| json!({ "id": p.id, "uses": p.uses, "waits_for": p.waits_for, "yields_to": p.yields_to }));
+    let value = json!({ "effect": d.id, "own": own, "uses": d.uses, "params": params.collect::<Vec<_>>() });
+    Field {
+        pointer: format!("{base}/wake"),
+        key: "wake".into(),
+        widget: "rules".into(),
+        value,
+        depth,
+        ..Field::default()
+    }
+}

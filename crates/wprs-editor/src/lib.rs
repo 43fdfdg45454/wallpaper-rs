@@ -9,6 +9,7 @@ mod cache;
 pub mod canvas;
 pub mod check;
 mod clips;
+pub mod clocks;
 mod contents;
 pub mod covers;
 mod credit;

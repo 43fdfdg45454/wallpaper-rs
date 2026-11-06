@@ -120,6 +120,7 @@ ColumnLayout {
                 "points": hosts.pairs,
                 "styles": hosts.styles,
                 "emitters": hosts.emitters,
+                "rules": hosts.rules,
                 "list": editors.list,
                 "ref:mask": editors.mask,
                 "ref:model": editors.rig,

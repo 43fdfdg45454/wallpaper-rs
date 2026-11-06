@@ -110,6 +110,12 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("palette").is_some() => crate::covers::palette(dir, doc, q["palette"].as_str()),
         _ if q.get("wind").is_some() => wind_arrow(doc),
+        _ if q.get("rules").is_some() => {
+            crate::shaders::rules(dir, doc, q["rules"]["effect"].as_str().unwrap_or(id))
+        }
+        _ if q.get("clocks").is_some() => {
+            crate::clocks::clocks(dir, doc, q["clocks"]["time"].as_f64().unwrap_or(0.0))
+        }
         _ if q.get("spread").is_some() => crate::spread::spread(doc, &q["spread"]),
         _ => rig(dir, doc, id),
     }
@@ -127,16 +133,16 @@ pub fn staged(look: &Value) -> Option<Value> {
 pub fn preview(scene: &mut Value, look: &Value) {
     crate::lamps::preview(scene);
     crate::stage3d::preview(scene);
+    if let Some(alone) = look["template"].as_str().and_then(|t| scene["templates"].get(t)).cloned() {
+        scene["layers"] = json!([alone]);
+        drop(scene.as_object_mut().map(|s| s.remove("scripts")));
+    }
     let Some(id) = look["layer"].as_str() else { return };
     fn find<'a>(list: &'a mut Value, id: &str) -> Option<&'a mut Value> {
         for l in list.as_array_mut()?.iter_mut() {
             if l["id"] == id {
                 return Some(l);
             }
-    if let Some(alone) = look["template"].as_str().and_then(|t| scene["templates"].get(t)).cloned() {
-        scene["layers"] = json!([alone]);
-        drop(scene.as_object_mut().map(|s| s.remove("scripts")));
-    }
             if let Some(found) = l.get_mut("layers").and_then(|c| find(c, id)) {
                 return Some(found);
             }

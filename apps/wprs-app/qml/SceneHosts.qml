@@ -10,6 +10,7 @@ Item {
     readonly property Component meta: metaEditor
     readonly property Component styles: stylesEditor
     readonly property Component emitters: emittersEditor
+    readonly property Component rules: rulesEditor
 
     visible: false
 
@@ -49,6 +50,14 @@ Item {
         id: stylesEditor
 
         SceneStyles {
+            host: hosts.input
+        }
+    }
+
+    Component {
+        id: rulesEditor
+
+        SceneWakeRules {
             host: hosts.input
         }
     }

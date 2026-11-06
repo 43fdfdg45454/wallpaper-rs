@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -3180,6 +3180,31 @@ msgstr "Copiar a %1 s"
 msgid "Move to %1 s"
 msgstr "Mover a %1 s"
 
+#: apps/wprs-app/qml/SceneClockLanes.qml
+msgid "%1 · own clock"
+msgstr "%1 · reloj propio"
+
+#: apps/wprs-app/qml/SceneClockLanes.qml
+msgid "Start %1 s"
+msgstr "Inicio %1 s"
+
+#: apps/wprs-app/qml/SceneClockLanes.qml
+msgid "End %1 s"
+msgstr "Fin %1 s"
+
+#: apps/wprs-app/qml/SceneClockLanes.qml
+msgid "Speed of this clock"
+msgstr "Velocidad de este reloj"
+
+#: apps/wprs-app/qml/SceneClockLanes.qml apps/wprs-app/qml/ScenePathRow.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Loop"
+msgstr "Bucle"
+
+#: apps/wprs-app/qml/SceneClockLanes.qml
+msgid "Plays"
+msgstr "Se reproduce"
+
 #: apps/wprs-app/qml/SceneCombPad.qml
 msgid "Comb"
 msgstr "Peinado"
@@ -3305,6 +3330,10 @@ msgstr "Fuerza %1"
 #: apps/wprs-app/qml/SceneEmitters.qml
 msgid "Fluid emitter %1: drag to move it"
 msgstr "Emisor de fluido %1: arrástralo para moverlo"
+
+#: apps/wprs-app/qml/SceneEmitters.qml
+msgid "Direction %1°, strength %2"
+msgstr "Dirección %1°, fuerza %2"
 
 #: apps/wprs-app/qml/SceneEmitters.qml
 msgid "Fluid emitter %1: drag to turn it and change its strength"
@@ -3571,6 +3600,7 @@ msgstr ""
 "del tamaño; la vista previa muestra el nivel elegido abajo."
 
 #: apps/wprs-app/qml/SceneLightCast.qml apps/wprs-app/qml/SceneModelTools.qml
+#: apps/wprs-app/qml/SceneWakeRules.qml
 msgid "Nothing"
 msgstr "Nada"
 
@@ -4435,10 +4465,6 @@ msgstr "Recorrido de cámara %1"
 msgid "%1, %2 s"
 msgstr "%1, %2 s"
 
-#: apps/wprs-app/qml/ScenePathRow.qml apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Loop"
-msgstr "Bucle"
-
 #: apps/wprs-app/qml/ScenePathRow.qml
 msgid "Remove this key"
 msgstr "Quitar esta clave"
@@ -4597,6 +4623,7 @@ msgid "A point"
 msgstr "Un punto"
 
 #: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
+#: apps/wprs-app/qml/SceneWakeRules.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "The pointer"
 msgstr "El puntero"
@@ -4661,13 +4688,9 @@ msgstr "Colocar huesos sobre la vista previa"
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid ""
-"Bones are placed here on meshes whose parts are each drawn once; other "
-"meshes keep the bones of their file, which the preview still shows with the "
-"outlines of their parts and the handles of their chains."
-msgstr ""
-"Aquí se colocan huesos en mallas cuyas partes se dibujan una sola vez; las "
-"demás mallas conservan los huesos de su archivo, que la vista previa igual "
-"muestra con el contorno de sus partes y las asas de sus cadenas."
+"Bones are placed here on meshes drawn in at most 64 primitives; a part drawn "
+"by several nodes gets a mesh of its own for each of them on the first edit."
+msgstr "Aquí se colocan huesos en mallas dibujadas con 64 primitivas como mucho; una parte que dibujan varios nodos recibe una malla propia para cada uno en la primera edición."
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Clip in the preview"
@@ -5466,6 +5489,22 @@ msgstr ""
 "semilla %1, tal como las corre la vista previa."
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Keep this seed"
+msgstr "Conservar esta semilla"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Every start of the scene then draws the particles the preview shows"
+msgstr "Así cada inicio de la escena dibuja las partículas que muestra la vista previa"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "Sound on the rays"
+msgstr "Sonido en los rayos"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
+msgid "How loud the band is for the rays drawn on the preview: %1%"
+msgstr "Cuánto suena la banda para los rayos de la vista previa: %1%"
+
+#: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Sound multiplies the phase"
 msgstr "El sonido multiplica la fase"
 
@@ -5833,6 +5872,20 @@ msgstr "Emisores"
 msgid "Drag to move the collider"
 msgstr "Arrastra para mover el colisionador"
 
+#: apps/wprs-app/qml/SceneTemplates.qml
+msgid "The scene"
+msgstr "La escena"
+
+#: apps/wprs-app/qml/SceneTemplates.qml
+msgid "Template %1 alone"
+msgstr "Plantilla %1 sola"
+
+#: apps/wprs-app/qml/SceneTemplates.qml
+msgid ""
+"Show one template alone on the canvas, as a copy of it draws, and edit it in "
+"the inspector"
+msgstr "Muestra una plantilla sola en el lienzo, como se dibuja una copia, y la edita en el inspector"
+
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"
 msgstr "Quitar este idioma"
@@ -5913,6 +5966,58 @@ msgstr ""
 #: apps/wprs-app/qml/SceneTones.qml
 msgid "HDR is on for: %1"
 msgstr "HDR activado en: %1"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+#: apps/wprs-app/qml/facade/SceneLabels.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Time"
+msgstr "Tiempo"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+#: apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "The sound"
+msgstr "El sonido"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Clicks"
+msgstr "Clics"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid ""
+"Each parameter may ask for an input while it is not zero, wait for another "
+"parameter or yield to one; the scene sleeps when none of them asks."
+msgstr "Cada parámetro puede pedir una entrada mientras no es cero, esperar a otro parámetro o cederle el paso; la escena duerme cuando ninguno pide nada."
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid ""
+"A built-in effect keeps these rules; an effect of the package changes them "
+"here."
+msgstr "Un efecto incluido conserva estas reglas; un efecto del paquete las cambia aquí."
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Always asks for: %1"
+msgstr "Siempre pide: %1"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Asks for"
+msgstr "Pide"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Waits for nothing"
+msgstr "No espera a nada"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Waits for %1"
+msgstr "Espera a %1"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Yields to nothing"
+msgstr "No cede a nada"
+
+#: apps/wprs-app/qml/SceneWakeRules.qml
+msgid "Yields to %1"
+msgstr "Cede a %1"
 
 #: apps/wprs-app/qml/ScenesPage.qml
 msgid "My scene"
@@ -7608,10 +7713,6 @@ msgid "Violence"
 msgstr "Violencia"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "The sound"
-msgstr "El sonido"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "The clicks"
 msgstr "Los clics"
 
@@ -7921,11 +8022,6 @@ msgstr "Ondulaciones del agua"
 #: apps/wprs-app/qml/facade/SceneEffects.qml
 msgid "Waves"
 msgstr "Ondas"
-
-#: apps/wprs-app/qml/facade/SceneLabels.qml
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Time"
-msgstr "Tiempo"
 
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Taper"
@@ -9042,10 +9138,6 @@ msgstr "Centrado"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Clamp"
 msgstr "Recortar"
-
-#: apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Clicks"
-msgstr "Clics"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Clockwise"

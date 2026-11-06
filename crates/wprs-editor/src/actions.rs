@@ -8,7 +8,9 @@ use std::collections::BTreeSet;
 use wprs_core::message::said;
 use wprs_format::features;
 
-pub use crate::action::{ACTIONS, Action, AssetEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, ScriptFile};
+pub use crate::action::{
+    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, RuleEdit, ScriptFile,
+};
 pub use crate::action::{
     AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthSet, DepthStroke,
     ExpressionEdit, IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut,
@@ -171,7 +173,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
         }
         Action::RenameProperty { id, to } => crate::references::rename_property(doc, id, to)?,
         Action::RemoveProperty { id } => crate::references::remove_property(doc, id)?,
-        Action::Condition { id, enabled, text } => crate::references::condition(doc, id, *enabled, text)?,
+        Action::Condition(c) => crate::references::condition(doc, &c.id, c.enabled, &c.text)?,
         Action::AddPreset { id, label } => crate::props::add_preset(doc, id.as_deref(), label.as_deref())?,
         _ => Vec::new(),
     })

@@ -52,7 +52,8 @@ impl Walk<'_> {
                     let params =
                         d.params.iter().map(|p| crate::params::param(self.doc, p, value, &path, depth));
                     let options = d.options.iter().map(|o| crate::params::option(o, value, &path, depth));
-                    self.out.extend(params.chain(options).collect::<Vec<_>>())
+                    let wake = std::iter::once(crate::params::wake(self.doc, d, &path, depth));
+                    self.out.extend(params.chain(options).chain(wake).collect::<Vec<_>>())
                 }
                 _ => self.field(&meta, value.get(&key), path, &key, depth),
             }

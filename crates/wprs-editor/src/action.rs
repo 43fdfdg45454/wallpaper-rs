@@ -15,7 +15,7 @@ mod tend;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
 pub use limbs::{AttachEdit, BodyEdit, DepthSet, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, AssetEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile};
+pub use names::{ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
@@ -161,13 +161,8 @@ pub enum Action {
     RemoveProperty {
         id: String,
     },
-    Condition {
-        id: String,
-        #[serde(default)]
-        enabled: bool,
-        #[serde(default)]
-        text: String,
-    },
+    Condition(ConditionEdit),
+    EffectRule(RuleEdit),
     AddPreset {
         #[serde(default)]
         id: Option<String>,

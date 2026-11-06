@@ -1163,7 +1163,10 @@ vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y e
 scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, tiempo, duración y aviso de
 fin).
 
-El escritorio y el teléfono ya dibujan también los efectos propios del paquete. Cada uno es un
+El escritorio y el teléfono ya dibujan también los efectos propios del paquete. El inspector de cada
+uso de efecto muestra sus reglas para despertar la escena (qué entrada pide cada parámetro, a cuál
+espera y a cuál cede el paso) y en los efectos del paquete las cambia con selectores, igual que
+`wprs-ctl scene effect-rule DIR EFECTO PARÁMETRO --uses time --waits-for OTRO`. Cada uno es un
 descriptor JSON y un shader WGSL con hasta 16 pasadas que escriben en la siguiente textura o en
 objetivos con nombre a su escala (en 8 o 16 bits por canal), los copian, los intercambian para
 alternar entre dos (ping-pong), acumulan con fusión por pasada (reemplazar, normal, sumar o

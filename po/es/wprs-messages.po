@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -240,6 +240,10 @@ msgstr "el grupo %1 tiene problemas; corrígelos primero"
 #: crates/wprs-editor/src/arrange.rs
 msgid "the group %1 has its own %2; reset them before ungrouping"
 msgstr "el grupo %1 tiene su propio %2; restablécelo antes de desagrupar"
+
+#: crates/wprs-editor/src/arrange.rs
+msgid "scripts cannot copy a layer of type %1"
+msgstr "los scripts no pueden copiar una capa de tipo %1"
 
 #: crates/wprs-editor/src/assets.rs
 msgid "a sound may have at most %1 MiB"
@@ -1095,6 +1099,14 @@ msgstr "el efecto %1 %2"
 msgid "a scene has at most %1 effects of its own"
 msgstr "una escena tiene como mucho %1 efectos propios"
 
+#: crates/wprs-editor/src/shaders.rs
+msgid "%1 is no effect of this package"
+msgstr "%1 no es un efecto de este paquete"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "%1 has no parameter %2"
+msgstr "%1 no tiene el parámetro %2"
+
 #: crates/wprs-editor/src/shapes.rs
 msgid "an expression has a name of 1 to 64 characters"
 msgstr "una expresión tiene un nombre de 1 a 64 caracteres"
@@ -1150,11 +1162,8 @@ msgstr "no hay ningún punto «%1»"
 
 #: crates/wprs-editor/src/skin/read.rs
 msgid ""
-"bones and weights are edited here on meshes whose parts are each drawn once, "
-"in at most 64 primitives"
-msgstr ""
-"aquí se editan huesos y pesos de mallas cuyas partes se dibujan una sola "
-"vez, en 64 primitivas como mucho"
+"bones and weights are edited here on meshes drawn in at most 64 primitives"
+msgstr "aquí se editan huesos y pesos de mallas dibujadas con 64 primitivas como mucho"
 
 #: crates/wprs-editor/src/spots.rs
 msgid "say where the new point goes"
