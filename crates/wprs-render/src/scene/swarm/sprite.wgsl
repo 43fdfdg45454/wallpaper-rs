@@ -14,6 +14,7 @@ struct Look {
     light: vec4<f32>,
     place: vec4<f32>,
     bend: vec4<f32>,
+    hull: array<vec4<f32>, 2>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };
@@ -46,6 +47,22 @@ fn encode(c: vec3<f32>) -> vec3<f32> {
     return select(1.055 * pow(c, vec3<f32>(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3<f32>(0.0031308));
 }
 
+fn hull_corner(v: u32) -> vec2<f32> {
+    let lo = look.hull[0];
+    let hi = look.hull[1];
+    var at = array<vec2<f32>, 8>(
+        vec2<f32>(lo.y + hi.w, lo.y),
+        vec2<f32>(hi.x, hi.x - hi.w),
+        vec2<f32>(lo.z - lo.y, lo.y),
+        vec2<f32>(hi.x, hi.z - hi.x),
+        vec2<f32>(lo.x, lo.z - lo.x),
+        vec2<f32>(hi.z - hi.y, hi.y),
+        vec2<f32>(lo.x, lo.x - lo.w),
+        vec2<f32>(hi.y + lo.w, hi.y),
+    );
+    return at[min(v, 7u)];
+}
+
 @vertex
 fn vs_particle(
     @builtin(vertex_index) v: u32,
@@ -66,7 +83,7 @@ fn vs_particle(
     let k = select(1.0, look.deep.x / far, look.deep.w > 0.5);
     let center = look.deep.yz + (a.xy - look.deep.yz) * k;
     let size = b.z * curve(t) * look.tint.z * e.w * k;
-    let corner = vec2<f32>(f32(v & 1u), f32(v >> 1u));
+    let corner = select(vec2<f32>(f32(v & 1u), f32(v >> 1u)), hull_corner(v), look.hull[1].x > 0.0);
     let speed = length(a.zw);
     let turned = look.shade.z > 0.0 && look.shade.z == look.shade.w;
     let tail = select(clamp(look.trail.x * speed, look.shade.z, look.shade.w), 0.0, turned || speed <= 0.0);

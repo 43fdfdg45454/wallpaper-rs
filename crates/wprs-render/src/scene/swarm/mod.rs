@@ -5,6 +5,7 @@ mod chart;
 mod dispatch;
 mod fence;
 mod flight;
+mod hull;
 mod kit;
 mod lamp;
 mod looks;
@@ -35,7 +36,7 @@ use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
 const SIM: u64 = 3584;
-const LOOK: u64 = 1536;
+const LOOK: u64 = 1792;
 const PARTICLE: u64 = 96;
 
 #[derive(Default)]

@@ -23,6 +23,7 @@ pub(super) struct Look {
     pub(super) light: [f32; 4],
     pub(super) place: [f32; 4],
     pub(super) bend: [f32; 4],
+    pub(super) hull: [[f32; 4]; 2],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }
@@ -44,7 +45,7 @@ pub(super) struct Kit {
     pub(super) bend: Option<f32>,
 }
 
-type Sprite<'a> = (Option<(&'a str, Option<&'a Image>)>, &'a [[f32; 4]]);
+type Sprite<'a> = (Option<(&'a str, Option<&'a Image>)>, &'a [[f32; 4]], Option<[[f32; 4]; 2]>);
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn kit(
@@ -53,7 +54,7 @@ pub(super) fn kit(
     (system, layer): (usize, Option<String>),
     render: &Render,
     scene: &Scene,
-    (sprite, cells): Sprite,
+    (sprite, cells, hull): Sprite,
     white: &wgpu::TextureView,
     srgb: bool,
 ) -> Kit {
@@ -91,6 +92,9 @@ pub(super) fn kit(
         cord: super::looks::cord(render),
         sizes: std::array::from_fn(|i| std::array::from_fn(|j| sizes[i * 4 + j])),
         colors: colors.map(tone),
+        hull: hull
+            .filter(|_| image.is_some() && cells.is_empty() && render.cutout.is_none())
+            .unwrap_or_default(),
         ..Zeroable::zeroed()
     };
     let view = image.map_or(white, |i| &i.0.view);
@@ -119,5 +123,8 @@ pub(super) fn kit(
     let mut kit =
         Kit { id, system, layer, look, order, trail, long, rope, tex, stage, shader, refused, lit, bend };
     super::stage::stage(r, scene, &mut kit, render.shader.as_deref());
+    if kit.stage.is_some() {
+        kit.look.hull = Default::default();
+    }
     kit
 }

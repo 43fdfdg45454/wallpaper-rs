@@ -73,8 +73,12 @@ impl Swarms {
         let lamp = super::Lamp { layout: &layouts[6], lights, images, white, layers };
         let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
             let frames = sprite.as_ref().and_then(|t| cells.get(t)).map_or(&[][..], |c| &c.cells[..]);
+            let grid = |t: &str| scene.assets.get(t).and_then(|a| a.atlas).map_or([1, 1], |[a, b]| [b, a]);
+            let pixels = sprite.as_deref().and_then(|t| Some((assets.images.get(t)?.image()?, grid(t))));
+            let hull = pixels.and_then(|(image, grid)| super::hull::hull(&image, grid));
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            let mut kit = kit(r, &layouts[2], (system, layer), render, scene, (sprite, frames), white, srgb);
+            let parts = (sprite, frames, hull);
+            let mut kit = kit(r, &layouts[2], (system, layer), render, scene, parts, white, srgb);
             super::lamp::light(r, &mut kit, render, &lamp);
             kit
         });

@@ -165,3 +165,24 @@ fn sorted_herds_drawn_together_leave_nothing_behind_once_their_particles_die() {
     let gone = (0..20).map(|_| run.frame(r, 1.0 / 30.0)).last().unwrap();
     assert!(gone.chunks(4).all(|p| p[..3] == [0, 0, 0]), "dead particles are drawn again");
 }
+
+#[test]
+fn round_sprites_drawn_inside_an_octagon_look_the_same_as_on_a_square() {
+    let Some(r) = renderer() else { return };
+    let disc = RgbaImage::from_fn(64, 64, |x, y| {
+        let d = ((x as f32 - 31.5).powi(2) + (y as f32 - 31.5).powi(2)).sqrt();
+        Rgba([255, 200, 100, (255.0 * (1.0 - d / 26.0)).clamp(0.0, 255.0) as u8])
+    });
+    let shot = |cutout: Value| {
+        let init = json!({ "life": [30, 30], "speed": [0, 0], "size": [70, 70], "rotation": [30, 30] });
+        let render = json!({ "texture": "disc", "cutout": cutout });
+        let systems = json!({ "glow": still([80.0, 40.0], json!({ "init": init, "render": render })) });
+        let scene = (systems, json!([layer("glow", "add")]), json!({ "disc": { "path": "disc.png" } }));
+        let mut run = run(r, scene, &[("disc", disc.clone())], true)?;
+        run.frame(r, 0.0);
+        Some(run.frame(r, 1.0 / 30.0))
+    };
+    let (Some(hull), Some(square)) = (shot(Value::Null), shot(json!([0, 1, 1]))) else { return };
+    let most = hull.iter().zip(&square).map(|(a, b)| a.abs_diff(*b)).max().unwrap_or(0);
+    assert!(most <= 1 && at(&hull, 80, 40)[0] > 100, "{most} {:?}", at(&hull, 80, 40));
+}

@@ -115,7 +115,7 @@ impl Swarms {
                 (None, None) => pass.set_pipeline(pipeline),
             }
             pass.set_vertex_buffer(0, sorted.map_or(&store.particles, |s| &s.sorted).slice(..));
-            pass.draw(0..4, 0..herd.bake.allocs[p]);
+            pass.draw(0..if kit.look.hull[1][0] > 0.0 { 8 } else { 4 }, 0..herd.bake.allocs[p]);
         }
     }
 }
