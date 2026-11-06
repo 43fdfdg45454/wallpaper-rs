@@ -10,8 +10,8 @@
   ],
   "passes": [
     { "entry": "fs_bloom_bright", "scale": 0.5 },
-    { "entry": "fs_bloom_h", "scale": 0.5 },
-    { "entry": "fs_bloom_v", "scale": 0.5 },
+    { "entry": "fs_bloom_h", "scale": 0.25 },
+    { "entry": "fs_bloom_v", "scale": 0.25 },
     { "entry": "fs_bloom_mix", "inputs": ["input", "pass:2"] }
   ],
   "cost": { "taps": 3, "passes": 4, "scale": 0.5 },

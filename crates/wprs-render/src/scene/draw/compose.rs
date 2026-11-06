@@ -1,7 +1,7 @@
 use super::super::item::{Item, Rect, invert, ndc, toned};
 use super::super::map::Map;
 use super::super::paint::{Painter, Target};
-use super::super::pipes::Mode;
+use super::super::pipes::{Mode, Shader};
 use super::super::{Op, Src};
 use wprs_scene::Content;
 
@@ -39,6 +39,20 @@ impl Painter<'_, '_, '_> {
         self.release(back);
     }
 
+    fn added(&mut self, from: usize, out: Src, onto: Src) -> bool {
+        let mut last = self.ops[from..].iter_mut().filter_map(|op| match op {
+            Op::Effect(f) if f.target == out => Some(f),
+            _ => None,
+        });
+        let Some(f) = last.next_back() else { return false };
+        let Shader::Fx(key, "fs_bloom_mix") = f.shader else { return false };
+        (f.target, f.shader, f.mode, f.load) = (onto, Shader::Fx(key, "fs_bloom_add"), Mode::Add, true);
+        let set = f.tex as usize;
+        self.sets[set][0] = Src::Clear;
+        self.release(out);
+        true
+    }
+
     pub(crate) fn adjust(&mut self, i: usize, target: Target) {
         self.adjusted(i, target);
         self.strip(i, target);
@@ -53,8 +67,9 @@ impl Painter<'_, '_, '_> {
         if d.effects.is_empty() || self.idle(i) {
             return;
         }
+        let from = self.ops.len();
         let out = self.effects(i, target.src, target.rect, invert(self.stage).then(target.rect.affine()));
-        if out == target.src {
+        if out == target.src || (d.opacity >= 1.0 && self.added(from, out, target.src)) {
             return;
         }
         let mut item = Item {

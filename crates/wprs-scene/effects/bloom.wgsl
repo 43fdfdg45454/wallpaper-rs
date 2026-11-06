@@ -20,6 +20,12 @@ fn fs_bloom_v(in: VertexOut) -> @location(0) vec4<f32> {
 }
 
 @fragment
+fn fs_bloom_add(in: VertexOut) -> @location(0) vec4<f32> {
+    let tint = from_linear(param(4u).rgb) * param(4u).a;
+    return vec4<f32>(sample(aux0, in.uv).rgb * tint * param(1u).x, 0.0);
+}
+
+@fragment
 fn fs_bloom_mix(in: VertexOut) -> @location(0) vec4<f32> {
     let tint = from_linear(param(4u).rgb) * param(4u).a;
     return tap(in.uv) + sample(aux0, in.uv) * vec4<f32>(tint, 1.0) * param(1u).x;

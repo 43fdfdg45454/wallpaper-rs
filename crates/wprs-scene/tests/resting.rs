@@ -36,3 +36,15 @@ fn depth_parallax_is_left_out_of_frames_where_it_would_not_move_the_picture() {
     weak.set_pointer(touch);
     assert_eq!(effects(&weak), ["waves"]);
 }
+
+#[test]
+fn a_glow_without_intensity_is_left_out_of_frames() {
+    let fx = |intensity: f32| json!([{ "effect": "bloom", "params": { "intensity": intensity } }]);
+    let layer = |i: f32| json!({ "id": "a", "type": "solid", "color": "#ff0000", "effects": fx(i) });
+    let rt = |i: f32| {
+        let text = json!({ "schema": SCHEMA, "canvas": { "size": [100, 100] }, "layers": [layer(i)] });
+        Runtime::new(Arc::new(Scene::from_json(&text.to_string()).unwrap()), Default::default())
+    };
+    assert!(effects(&rt(0.0)).is_empty());
+    assert_eq!(effects(&rt(0.5)), ["bloom"]);
+}

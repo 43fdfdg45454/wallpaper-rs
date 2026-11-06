@@ -11,10 +11,17 @@ pub(super) fn chain(
 }
 
 fn resting(d: &Descriptor, slots: &[[f32; 4]], pointer: &PointerState, chain: usize) -> bool {
-    if chain != 1 || !crate::descriptor("depth_parallax").is_some_and(|b| std::ptr::eq(b, d)) {
+    let builtin = |id: &str| crate::descriptor(id).is_some_and(|b| std::ptr::eq(b, d));
+    let at = |id: &str| d.param(id).map_or(0.0, |i| slots[i][0]);
+    if chain != 1 {
         return false;
     }
-    let at = |id: &str| d.param(id).map_or(0.0, |i| slots[i][0]);
+    if builtin("bloom") {
+        return at("intensity") == 0.0;
+    }
+    if !builtin("depth_parallax") {
+        return false;
+    }
     let p = pointer.presence.clamp(0.0, 1.0);
     let follow = at("follow") * p * p * (3.0 - 2.0 * p);
     let aim = pointer.smooth.map(|c| (c - 0.5) * 2.0 * follow);

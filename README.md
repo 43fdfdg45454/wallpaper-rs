@@ -1154,7 +1154,8 @@ describe cada campo y sus límites.
 
 De esa lista, el escritorio y el teléfono ya dibujan la cámara 2D (centro, zoom, giro y una
 sacudida de ruido que se apaga con «reducir movimiento» y en la calidad más baja), el resplandor de
-escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente), los
+escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente; difumina
+a un cuarto del tamaño, se suma al lienzo con la mezcla sin copiarlo y no cuesta nada con fuerza cero), los
 fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redibuja la imagen
 entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
 de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
