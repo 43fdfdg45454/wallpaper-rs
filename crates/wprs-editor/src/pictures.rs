@@ -11,6 +11,10 @@ fn failure(e: wprs_ktx2::Error) -> ImageError {
 }
 
 pub fn open(path: impl AsRef<Path>) -> ImageResult<DynamicImage> {
+    raw(path).map(|picture| wprs_ktx2::light::shown(picture, false))
+}
+
+pub fn raw(path: impl AsRef<Path>) -> ImageResult<DynamicImage> {
     let path = path.as_ref();
     if !ktx2(path) {
         return image::open(path);

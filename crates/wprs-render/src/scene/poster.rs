@@ -7,15 +7,15 @@ use std::sync::Arc;
 use wprs_core::Fit;
 use wprs_scene::{Lut, Quality, Runtime, Scene, Values};
 
-const PICTURES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
+const PICTURES: [&str; 9] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2", "hdr", "exr"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
 const DECODED: u64 = 512 << 20;
 
 type Failure = Box<dyn std::error::Error + Send + Sync>;
 
-fn still(bytes: Vec<u8>) -> Result<RgbaImage, Failure> {
+fn still(bytes: Vec<u8>, linear: bool) -> Result<RgbaImage, Failure> {
     let reader = image::ImageReader::new(std::io::Cursor::new(bytes));
-    Ok(crate::decode_limited(reader, crate::picture_limits())?.into_rgba8())
+    Ok(crate::decode_asset(reader, crate::picture_limits(), linear)?)
 }
 
 impl SceneAssets {
@@ -53,13 +53,14 @@ impl SceneAssets {
         let (open, mut made) = (Arc::new(open), HashMap::new());
         for (id, pixels) in &mut self.images {
             let Some(asset) = scene.assets.get(id).filter(|_| pixels.packed().is_none()) else { continue };
-            let (path, animated, open) = (asset.path.clone(), asset.animated, open.clone());
+            let (path, animated, linear, open) =
+                (asset.path.clone(), asset.animated, asset.linear, open.clone());
             let reload = move || {
                 let bytes = open()?(&path).ok()?;
                 if animated {
                     crate::animation(&bytes).ok().map(|(atlas, _)| atlas)
                 } else {
-                    still(bytes).ok()
+                    still(bytes, linear).ok()
                 }
             };
             let fresh = made.entry(Arc::as_ptr(pixels)).or_insert_with(|| {

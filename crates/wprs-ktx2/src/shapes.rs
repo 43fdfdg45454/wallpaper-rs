@@ -69,13 +69,10 @@ pub(crate) fn panorama(t: &Transcoder<'_>, info: &Info, level: u32, target: Targ
 }
 
 pub(crate) fn clamped(half: &[u8]) -> Vec<u8> {
-    let encode = |v: f32| {
-        let v = v.clamp(0.0, 1.0);
-        let s = if v <= 0.003_130_8 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 };
-        (s * 255.0).round() as u8
-    };
+    use crate::light::{alpha, encoded};
     let channel = |b: &[u8; 8], i: usize| half::f16::from_le_bytes([b[2 * i], b[2 * i + 1]]).to_f32();
-    let alpha = |b: &[u8; 8]| (channel(b, 3).clamp(0.0, 1.0) * 255.0).round() as u8;
-    let texel = |b: &[u8; 8]| [encode(channel(b, 0)), encode(channel(b, 1)), encode(channel(b, 2)), alpha(b)];
+    let texel = |b: &[u8; 8]| {
+        [encoded(channel(b, 0)), encoded(channel(b, 1)), encoded(channel(b, 2)), alpha(channel(b, 3))]
+    };
     half.as_chunks::<8>().0.iter().flat_map(texel).collect()
 }

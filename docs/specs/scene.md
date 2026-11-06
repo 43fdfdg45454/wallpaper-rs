@@ -157,7 +157,7 @@ RGBA. Picture packages may use a `.ktx2` entry too; it is shown uncompressed.
 KTX2 files are made where scenes are made: Convert to KTX2 in the desktop editor and `wprs-ctl
 scene asset --ktx2`, with the Basis Universal encoder: a picture becomes a texture, an animation an array
 that keeps the delay of each frame, a Radiance `.hdr` or OpenEXR `.exr` picture (pictures of a scene too,
-clamped at white where they are drawn) a UASTC HDR texture, and a panorama or six square faces a cube map. The phone only reads them: it has no scene
+drawn on the desktop and the phone with their light clamped at white and encoded in sRGB, so that they look as their KTX2 texture does, or kept as plain values when the asset is `linear`; six faces that mix such pictures with 8-bit ones take the 8-bit ones as sRGB light) a UASTC HDR texture, and a panorama or six square faces a cube map. The phone only reads them: it has no scene
 editor, and its app carries the transcoder written in Rust but not the C++ encoder, which would add
 a C++ toolchain to the phone build and several megabytes to the app for a tool it has no screen
 for. Packages made on the desktop play on the phone with the same files.

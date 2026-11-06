@@ -107,14 +107,14 @@ fn ktx2_pictures_are_read_like_other_pictures() {
     let asset: wprs_scene::Asset = serde_json::from_value(json!({ "path": "p.ktx2" })).unwrap();
     let mut pictures = wprs_render::Pictures::default();
     let total = pictures
-        .add::<image::ImageError>((&mut assets, "p", &asset), || Ok(bytes), |_| unreachable!())
+        .add::<image::ImageError>((&mut assets, "p", &asset), || Ok(bytes), |_, _| unreachable!())
         .unwrap();
     assert_eq!(total, 64 * 32 * 4);
     assert!(assets.images["p"].packed().is_some() && !assets.images["p"].resident());
     assert_eq!(assets.images["p"].image().unwrap().dimensions(), (64, 32));
     let other: wprs_scene::Asset = serde_json::from_value(json!({ "path": "q.ktx2" })).unwrap();
     let read = || Ok(wprs_ktx2::MAGIC.to_vec());
-    let broken = pictures.add::<image::ImageError>((&mut assets, "q", &other), read, |_| unreachable!());
+    let broken = pictures.add::<image::ImageError>((&mut assets, "q", &other), read, |_, _| unreachable!());
     assert!(broken.is_err());
 }
 

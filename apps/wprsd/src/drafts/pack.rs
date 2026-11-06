@@ -62,10 +62,14 @@ impl Daemon {
                     assets.sheets.insert(id.clone(), durations);
                     assets.images.insert(id.clone(), wprs_render::Pixels::new(atlas));
                 }
-                "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "ktx2" => {
+                "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp" | "ktx2" | "hdr" | "exr" => {
                     let image = match ext.as_str() {
                         "ktx2" => wprs_render::Pixels::ktx2(std::fs::read(&path)?)
                             .map_err(|e| invalid(format!("{} {e}", asset.path)))?,
+                        "hdr" | "exr" if asset.linear => wprs_render::Pixels::new(
+                            crate::scenes::image(std::fs::read(&path)?, true)
+                                .map_err(|e| invalid(format!("{} {e}", asset.path)))?,
+                        ),
                         _ => self.scene_pixels(&path)?,
                     };
                     decoded += u64::from(image.size().0) * u64::from(image.size().1) * 4;

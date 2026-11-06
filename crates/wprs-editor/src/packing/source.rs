@@ -35,14 +35,10 @@ fn entry<'a>(doc: &'a Value, id: &str) -> Result<(&'a Value, String)> {
     Ok((asset, path))
 }
 
-fn bright(picture: &DynamicImage) -> bool {
-    matches!(picture, DynamicImage::ImageRgb32F(_) | DynamicImage::ImageRgba32F(_))
-}
-
 fn faces(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Vec<DynamicImage>> {
     let open = |id: &String| -> Result<DynamicImage> {
         let path = entry(doc, id)?.1;
-        crate::pictures::open(dir.join(path)).map_err(|e| unreadable(&e))
+        crate::pictures::raw(dir.join(path)).map_err(|e| unreadable(&e))
     };
     let list: Vec<DynamicImage> = wanted.faces.iter().map(open).collect::<Result<_>>()?;
     let size = list.first().map(GenericImageView::dimensions);
@@ -80,24 +76,24 @@ pub(super) fn source(dir: &Path, doc: &Value, wanted: &AssetEdit) -> Result<Sour
     let pictures = match (&frames, wanted.faces.is_empty()) {
         (Some(_), _) => Vec::new(),
         (None, false) => faces(dir, doc, wanted)?,
-        (None, true) => vec![crate::pictures::open(&file).map_err(|e| unreadable(&e))?],
+        (None, true) => vec![crate::pictures::raw(&file).map_err(|e| unreadable(&e))?],
     };
-    let light = pictures.iter().any(bright);
-    let wide: Vec<Rgba32FImage> = pictures.iter().map(|p| p.to_rgba32f()).collect();
+    let srgb = asset["linear"] != true;
+    let light = pictures.iter().any(wprs_ktx2::light::bright);
+    let wide: Vec<Rgba32FImage> = pictures.iter().map(|p| wprs_ktx2::light::wide(p, !srgb)).collect();
     let wide = match wanted.cube {
         true => wprs_ktx2::faces(&wide[0]).map_err(|e| unreadable(&e))?,
         false => wide,
     };
     let plain: Vec<RgbaImage> = match wanted.cube && !light {
         true => wprs_ktx2::plain_faces(&pictures[0].to_rgba8()).map_err(|e| unreadable(&e))?,
-        false => pictures.iter().map(DynamicImage::to_rgba8).collect(),
+        false => pictures.iter().map(|p| wprs_ktx2::light::eight(p, !srgb)).collect(),
     };
     let image = match &frames {
         Some((list, _)) => list[0].clone(),
         None => plain.first().cloned().unwrap_or_default(),
     };
     let repeat = matches!(asset["wrap"].as_str(), Some("repeat" | "mirror"));
-    let srgb = asset["linear"] != true;
     let options = Options { codec, quality: quality as u8, srgb, mips: asset["mipmaps"] != false, repeat };
     let faces = (shaped && !light).then_some(plain);
     let light = light.then_some(wide);

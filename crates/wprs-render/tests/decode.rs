@@ -92,8 +92,8 @@ fn ids_that_share_an_animated_picture_decode_it_once_and_all_play() {
             reads += 1;
             Ok(gif.clone())
         };
-        let total =
-            pictures.add((&mut assets, id, &asset), read, |b| Ok(image::load_from_memory(&b)?.into_rgba8()));
+        let total = pictures
+            .add((&mut assets, id, &asset), read, |b, _| Ok(image::load_from_memory(&b)?.into_rgba8()));
         assert_eq!(total.unwrap(), 8 * 2 * 4);
     }
     assert_eq!(reads, 1);

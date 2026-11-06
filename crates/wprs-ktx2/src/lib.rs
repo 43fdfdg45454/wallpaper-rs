@@ -6,6 +6,7 @@ mod cube;
 #[cfg(feature = "encode")]
 mod encode;
 pub mod kv;
+pub mod light;
 pub mod moving;
 mod shapes;
 mod target;

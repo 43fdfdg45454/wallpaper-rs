@@ -57,6 +57,8 @@ fn ktx2_arrays_are_sprite_sheets_and_cubes_are_panoramas() {
         serde_json::from_value(json!({ "path": "a.ktx2", "animated": true })).unwrap();
     let mut pictures = wprs_render::Pictures::default();
     let timed = wprs_ktx2::timed(&bytes, 0.5);
-    pictures.add::<image::ImageError>((&mut assets, "a", &asset), || Ok(timed), |_| unreachable!()).unwrap();
+    pictures
+        .add::<image::ImageError>((&mut assets, "a", &asset), || Ok(timed), |_, _| unreachable!())
+        .unwrap();
     assert_eq!((assets.sheets["a"].clone(), assets.images["a"].size()), (vec![0.5; 5], (48, 32)));
 }

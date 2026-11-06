@@ -26,7 +26,7 @@ impl Pictures {
         &mut self,
         (assets, id, asset): (&mut SceneAssets, &str, &Asset),
         read: impl FnOnce() -> Result<Vec<u8>, E>,
-        still: impl FnOnce(Vec<u8>) -> Result<RgbaImage, E>,
+        still: impl FnOnce(Vec<u8>, bool) -> Result<RgbaImage, E>,
     ) -> Result<u64, E> {
         let key = format!("{}#{}", asset.path, asset.animated);
         let (image, sheet) = match self.0.get(&key) {
@@ -42,7 +42,7 @@ impl Pictures {
                         animation(&bytes).map(|(atlas, d)| (crate::Pixels::new(atlas), Some(d)))?
                     }
                     (false, true) => (crate::Pixels::ktx2(bytes).map_err(crate::packed::failure)?, None),
-                    (false, false) => (crate::Pixels::new(still(bytes)?), None),
+                    (false, false) => (crate::Pixels::new(still(bytes, asset.linear)?), None),
                 };
                 self.0.entry(key).or_insert((image, sheet)).clone()
             }

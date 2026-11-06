@@ -68,6 +68,11 @@ fn extensions_depend_on_the_kind() {
     }
     with_file(Kind::Video, entry("clip.WEBM", 10)).unwrap();
     assert!(matches!(with_file(Kind::Scene, entry("tool.exe", 10)), Err(Error::Extension { .. })));
+    for path in ["assets/sky.hdr", "assets/sun.EXR"] {
+        with_file(Kind::Scene, entry(path, 10)).unwrap();
+        let result = with_file(Kind::Image, entry(path, 10));
+        assert!(matches!(result, Err(Error::Extension { kind: Kind::Image, .. })), "{path}: {result:?}");
+    }
 }
 
 #[test]

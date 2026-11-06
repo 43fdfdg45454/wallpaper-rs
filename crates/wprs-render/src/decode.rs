@@ -3,7 +3,7 @@ use image::metadata::Orientation;
 use image::{DynamicImage, GrayImage, ImageDecoder, ImageReader, Limits, RgbImage, RgbaImage};
 use jpeg_decoder::{CodingProcess, PixelFormat};
 use std::borrow::Cow;
-use std::io::{BufRead, BufReader, Seek};
+use std::io::BufReader;
 use std::path::Path;
 use wprs_core::{Edit, Fit, Place, UvRect};
 
@@ -32,31 +32,6 @@ pub fn decode_image(path: &Path, max_edge: u32) -> image::ImageResult<RgbaImage>
     let mut image = shrink(image, max_edge);
     image.apply_orientation(orientation);
     Ok(image.into_rgba8())
-}
-
-pub fn decode_unoriented<R: BufRead + Seek>(
-    reader: ImageReader<R>,
-    mut limits: Limits,
-) -> image::ImageResult<(DynamicImage, Orientation)> {
-    let reader = match crate::packed::picture(reader, &limits)? {
-        Ok(image) => return Ok((image, Orientation::NoTransforms)),
-        Err(reader) => reader,
-    };
-    let mut reader = reader.with_guessed_format()?;
-    reader.limits(limits.clone());
-    let mut decoder = reader.into_decoder()?;
-    limits.reserve(decoder.total_bytes())?;
-    let orientation = decoder.orientation().unwrap_or(Orientation::NoTransforms);
-    Ok((DynamicImage::from_decoder(decoder)?, orientation))
-}
-
-pub fn decode_limited<R: BufRead + Seek>(
-    reader: ImageReader<R>,
-    limits: Limits,
-) -> image::ImageResult<DynamicImage> {
-    let (mut image, orientation) = decode_unoriented(reader, limits)?;
-    image.apply_orientation(orientation);
-    Ok(image)
 }
 
 pub fn decode_reduced(path: &Path, max_edge: u32) -> Option<(DynamicImage, (u32, u32))> {
@@ -185,8 +160,10 @@ pub(crate) fn scaled(img: &RgbaImage, factor: f32, max_edge: u32) -> Cow<'_, Rgb
     }
 }
 
+mod read;
 #[cfg(test)]
 mod tests;
 mod thumbs;
 
+pub use read::{decode_asset, decode_limited, decode_unoriented};
 pub use thumbs::thumbnails;

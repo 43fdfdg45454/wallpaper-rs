@@ -51,8 +51,8 @@ pub use animation::{MAX_ANIMATION, Pictures, animation};
 pub use choose::{Chosen, Fallback};
 pub use coded::Coding;
 pub use decode::{
-    decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size, needed_edge,
-    picture_limits, thumbnails,
+    decode_asset, decode_image, decode_limited, decode_reduced, decode_unoriented, decoded_size, image_size,
+    needed_edge, picture_limits, thumbnails,
 };
 pub use deep::{Deep, DeepPlanes, GAMUT, KNEE, PEAK_NITS, REFERENCE_NITS, deep_rows};
 pub use device::{Display, Renderer};
