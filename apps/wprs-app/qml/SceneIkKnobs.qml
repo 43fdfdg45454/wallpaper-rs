@@ -25,6 +25,12 @@ Item {
         return out;
     }
 
+    function flip(index) {
+        run(index, {
+            "bend": chains[index].bend !== "counterclockwise" ? "counterclockwise" : "clockwise"
+        });
+    }
+
     function run(index, args) {
         host.page.run("ik", Object.assign({
             "layer": host.layerId,
@@ -92,9 +98,7 @@ Item {
             }
 
             TapHandler {
-                onTapped: knobs.run(bend.index, {
-                    "bend": bend.clockwise ? "counterclockwise" : "clockwise"
-                })
+                onTapped: knobs.flip(bend.index)
             }
 
             HoverHandler {

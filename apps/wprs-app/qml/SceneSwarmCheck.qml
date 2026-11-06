@@ -84,6 +84,9 @@ QtObject {
     }
 
     function exercise() {
+        const rays = ask();
+        if (typeof rays?.seed !== "number" || rays.sound !== 0)
+            throw new Error("the rays have no seed or sound level: " + JSON.stringify(rays?.seed));
         page.editor.select("/scene/particles/flakes");
         page.run("particles", {
                 "point": {

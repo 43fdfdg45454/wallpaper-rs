@@ -166,10 +166,14 @@ QtObject {
                     "page": page
                 }).exercise();
             }
-            if (kind === "empty")
+            if (kind === "empty") {
                 Qt.createComponent("SceneMeshCheck.qml").createObject(page, {
                     "page": page
                 }).exercise();
+                Qt.createComponent("SceneHandleCheck.qml").createObject(page, {
+                    "page": page
+                }).exercise();
+            }
             if (kind === "parallax") {
                 manifest();
                 Qt.createComponent("SceneSettingsCheck.qml").createObject(page, {
