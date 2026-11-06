@@ -87,6 +87,40 @@ fn a_longer_chain_keeps_the_curl_of_its_clip_while_it_reaches() {
 }
 
 #[test]
+fn a_longer_chain_takes_back_the_curl_of_its_clip_once_its_target_needs_no_arc() {
+    let pose = curled(None);
+    let bend = if turns(&pose)[0] < 0.0 { "clockwise" } else { "counterclockwise" };
+    let spot = |d: [f32; 2]| [pose[3][0] + d[0] + 32.0, 32.0 - pose[3][1] - d[1]];
+    let goal = |target: Value| json!({ "chain": ["root", "arm", "hand"], "target": target, "bend": bend });
+    let ran = |target: Value, frames: usize| {
+        let bones = json!({ "arm": { "rotation": [[0, 20]] }, "hand": { "rotation": [[0, 50]] } });
+        let mut rt =
+            runtime(json!({ "clips": [{ "id": "curl", "bones": bones }], "animations": [{ "clip": "curl" }],
+            "ik": [goal(target)] }));
+        (0..frames).for_each(|_| rt.advance(1.0 / 60.0));
+        [at(&rt, "root"), at(&rt, "arm"), at(&rt, "hand")]
+    };
+    let moving =
+        json!({ "keys": [[0, spot([5.0, 15.0])], [0.2, spot([5.0, 15.0])], [0.25, spot([-3.0, 2.0])]] });
+    let live = ran(moving, 30);
+    let fresh = ran(json!(spot([-3.0, 2.0])), 1);
+    assert!(
+        live.iter().zip(&fresh).all(|(a, b)| close(*a, *b, 0.05)),
+        "{live:?} after the arc, {fresh:?} at once"
+    );
+}
+
+#[test]
+fn limits_of_a_two_bone_chain_may_bend_it_against_its_side() {
+    for (limits, bend) in [(json!([-150, -5]), "clockwise"), (json!([5, 150]), "counterclockwise")] {
+        let ik = json!({ "chain": ["root", "arm"], "target": [-10, 25], "limits": { "arm": limits }, "bend": bend });
+        let mut rt = runtime(json!({ "ik": [ik] }));
+        rt.advance(1.0 / 60.0);
+        assert!(close(at(&rt, "hand"), [-42.0, 7.0], 0.05), "{bend}: {:?}", at(&rt, "hand"));
+    }
+}
+
+#[test]
 fn a_longer_chain_holds_the_same_reach_from_one_frame_to_the_next() {
     let ik = json!({ "chain": ["root", "arm", "hand"], "target": [40.0, 40.0] });
     let mut rt = runtime(json!({ "ik": [ik] }));
