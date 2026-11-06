@@ -395,10 +395,9 @@ size (twice its size, from 16 to 256 pixels), so it grows and shrinks without be
 `raster` draws it again at its size on the screen, as plain texts are, and `sdf` uses the field
 even without a style. The texture keeps room around the letters for the widest style, rounded up to
 a power of two, so animating a style within that room draws nothing again. At the lowest quality
-level shadows blur at most 4 pixels. Devices whose GPU cannot draw into 16-bit float textures make
-the same field on the processor (the same jump flood, run once each time the text, its layout or the
-room of its styles changes, never per frame) and hand it to the GPU as a picture, so styled texts
-look the same there; only a GPU that cannot even read such pictures draws them plain.
+level shadows blur at most 4 pixels. The GPU makes the field in plain 8-bit textures, which every
+GPU can draw into, packing each offset and each distance into two channels (16 bits), so styled
+texts look the same on GPUs without 16-bit float textures and the processor never builds it.
 
 A text is laid out again only when its text, size on screen or layout changes; its color, the color of
 its background and its position never lay it out again. Each character comes from the first font of

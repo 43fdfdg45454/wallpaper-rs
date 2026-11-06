@@ -11,6 +11,7 @@ pub(crate) struct Raster {
     pub(crate) size: [f32; 2],
     pub(crate) used: u64,
     pub(crate) field: f32,
+    pub(crate) span: f32,
 }
 
 fn reference(size: f32) -> f32 {
@@ -30,8 +31,7 @@ impl Renderer {
                 continue;
             };
             let k = scale_of(screen.then(d.world)).max(1e-3);
-            let half = view.state_format == wgpu::TextureFormat::Rgba16Float;
-            let fielded = ink.filter(|_| half || self.floods());
+            let fielded = *ink;
             let px = match fielded {
                 Some(ink) if ink.field => reference(*size),
                 _ => (size * k * 2.0).round() / 2.0,
@@ -54,13 +54,14 @@ impl Renderer {
                     let (w, h) = image.dimensions();
                     let mut gpu = create_image(&self.device, &self.queue, image.as_raw(), w, h, w * 4);
                     let reach = (layout.reach * px / size).ceil() as u32;
+                    let span = if fielded.is_some() { super::field::span(reach) } else { 0.0 };
                     if fielded.is_some() {
-                        gpu = if half { self.field(&gpu, reach) } else { self.flooded(&image, reach) };
+                        gpu = self.field(&gpu, reach);
                     }
                     view.pool.created += 1 + 3 * u32::from(fielded.is_some());
                     let field = if fielded.is_some() { px / size } else { 0.0 };
                     let size = [w as f32 * size / px, h as f32 * size / px];
-                    view.texts.insert(key, Raster { image: gpu, size, used: frame_no, field });
+                    view.texts.insert(key, Raster { image: gpu, size, used: frame_no, field, span });
                 }
             }
             if view.texts.contains_key(&key) {

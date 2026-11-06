@@ -1155,8 +1155,9 @@ fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redi
 entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
 de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
 espejo, el espaciado entre letras, el contorno, la sombra y el desenfoque del texto desde un campo de
-distancias que la GPU construye una vez por cada cambio del texto (y que deja escalarlo sin volver a
-dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
+distancias que la GPU construye una vez por cada cambio del texto en texturas de 8 bits, que todas las
+GPU pueden dibujar, también las que no tienen texturas de coma flotante de 16 bits (y que deja
+escalarlo sin volver a dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
 vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y el control desde
 scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, tiempo, duración y aviso de
 fin).
