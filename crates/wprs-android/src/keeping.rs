@@ -9,7 +9,6 @@ use std::time::Instant;
 use wprs_core::stash::Keeper;
 use wprs_scene::{Control, Mode, Property, Scene, ScriptApi, ScriptOutputs, Values};
 
-const EVERY: f64 = 2.0;
 pub(crate) const SHOWN: usize = 8;
 static SALT: OnceLock<RandomState> = OnceLock::new();
 
@@ -19,7 +18,7 @@ pub(crate) struct Keeping {
     pub(crate) text: String,
     files: Vec<(String, PathBuf)>,
     pub(crate) shown: Vec<(String, PathBuf)>,
-    listed_at: Option<f64>,
+    listed: Option<(u64, Vec<Option<Json>>)>,
 }
 
 fn opaque(parts: impl std::hash::Hash) -> String {
@@ -63,14 +62,23 @@ impl Keeping {
         &mut self,
         (properties, scene): (&BTreeMap<String, Property>, &Scene),
         values: &Values,
-        time: f64,
     ) {
         self.keeper.iter_mut().for_each(|k| k.refresh(Instant::now()));
-        let lists = scene.scripts.iter().any(|s| s.wants(ScriptApi::Folders));
-        if !lists || self.listed_at.is_some_and(|at| time >= at && time < at + EVERY) {
+        if !scene.scripts.iter().any(|s| s.wants(ScriptApi::Folders)) {
             return;
         }
-        self.listed_at = Some(time);
+        let all = |c: &Control| matches!(c, Control::Folder { mode: Mode::All, .. });
+        let chosen = || properties.iter().filter(|(_, p)| all(&p.control)).map(|(id, _)| values.get(id));
+        let mirrored = crate::chosen::mirrored();
+        let same = |(at, old): &(u64, Vec<Option<Json>>)| {
+            *at == mirrored
+                && old.len() == chosen().count()
+                && old.iter().zip(chosen()).all(|(a, b)| a.as_ref() == b)
+        };
+        if self.listed.as_ref().is_some_and(same) {
+            return;
+        }
+        self.listed = Some((mirrored, chosen().map(Option::<&Json>::cloned).collect()));
         let (mut listing, mut files) = (serde_json::Map::new(), Vec::new());
         for id in folders(properties) {
             let dir =

@@ -2435,7 +2435,9 @@ interfaz completa; lo esencial:
   mientras la escena se ve, la carpeta se vigila con avisos de cambios del sistema y solo se vuelve a
   leer cuando llega uno, fuera del hilo que dibuja; oculta, deja de vigilarla y la mira una vez al
   volver. En carpetas de red, o si la carpeta falta, se borra, se mueve o se desmonta, la mira cada
-  2 s mientras se ve hasta poder vigilarla otra vez. Los scripts nunca ven rutas.
+  2 s mientras se ve hasta poder vigilarla otra vez. El teléfono vuelve a listar su copia de la
+  carpeta solo cuando la copia cambia, y la rehace cuando el sistema avisa que la carpeta cambió. Los
+  scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no

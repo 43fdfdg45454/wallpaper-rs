@@ -19,7 +19,7 @@ fn stored() -> std::sync::Arc<pack::Pack> {
 }
 
 fn scopes(keeping: &mut Keeping, pack: &pack::Pack) -> Value {
-    keeping.list((&pack.properties, &pack.scene), &Default::default(), 0.0);
+    keeping.list((&pack.properties, &pack.scene), &Default::default());
     serde_json::from_str(keeping.storage().1).unwrap()
 }
 

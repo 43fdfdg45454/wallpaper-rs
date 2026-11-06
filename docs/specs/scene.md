@@ -1980,7 +1980,8 @@ desktop watches the chosen folder and its listed subfolders for change notices a
 away from the thread that draws, only when one arrives; a hidden scene drops the watch and looks once
 when shown again. Where the system gives no change notices (a network or user space file system, a
 folder that is missing, or one removed, moved or unmounted until it can be watched again) it looks
-every 2 s while the scene is shown. The phone looks again while it draws. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
+every 2 s while the scene is shown. The phone lists its copy of the chosen folder again only when the
+copy changes, which it makes again when the system says the folder changed. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
 with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
 the `playback` of the layer and that `layer.video` (play, pause, seek, rate, volume, `ended`) controls like the
 videos of the package, with its sound at the volume of the videos of the package on the desktop (the

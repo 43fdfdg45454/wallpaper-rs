@@ -64,7 +64,7 @@ pub(crate) fn request(request: Request) -> Result<Value, Error> {
         Request::Unchoose { uid, key } => chosen::clear(&*scene(&uid)?, &key),
         Request::Mirrors => Ok(chosen::mirrors()),
         Request::Mirrored => {
-            store::changed();
+            chosen::changed();
             Ok(Value::Null)
         }
     }

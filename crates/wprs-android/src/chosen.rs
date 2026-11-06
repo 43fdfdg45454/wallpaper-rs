@@ -117,6 +117,17 @@ pub(crate) fn clear(pack: &Pack, key: &str) -> Result<Value, Error> {
     Ok(json!(tree))
 }
 
+static MIRRORED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+pub(crate) fn mirrored() -> u64 {
+    MIRRORED.load(std::sync::atomic::Ordering::Acquire)
+}
+
+pub(crate) fn changed() {
+    MIRRORED.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    store::changed();
+}
+
 pub(crate) fn mirrors() -> Value {
     json!(trees().into_iter().map(|(name, plan)| json!({ "name": name, "plan": plan })).collect::<Vec<_>>())
 }

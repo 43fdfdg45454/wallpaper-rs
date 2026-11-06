@@ -148,6 +148,8 @@ fn the_library_imports_rotates_and_keeps_settings() {
     scenes::scenes();
     kept::home_and_lock_keep_their_own_storage();
     listed::script_folders_list_videos_and_play_the_shown_ones();
+    listed::script_folders_are_listed_again_only_when_their_copy_changes();
+    listed::folder_videos_get_their_length_and_a_clock_scripts_steer();
     screens::home_and_lock();
     screens::ruled_lists();
     screens::synced_lists_fade_their_own_way();

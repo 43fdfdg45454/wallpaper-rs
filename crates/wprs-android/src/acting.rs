@@ -81,7 +81,7 @@ impl Acting {
         self.ended.extend(runtime.take_ended().into_iter().take(room));
         runtime.fill_playbacks(&mut self.courses);
         let rt = &*runtime;
-        self.keeping.list((sent.properties, &rt.scene), rt.props(), rt.time());
+        self.keeping.list((sent.properties, &rt.scene), rt.props());
         rt.fill_reads(&mut self.reads);
         rt.fill_sounds(&mut self.sounds);
         rt.fill_videos(&mut self.filmed);
