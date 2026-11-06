@@ -41,6 +41,21 @@ QtObject {
             });
         if (lane.span < 7 || lane.delay !== 1 || lane.every !== 2 || lane.ranged([1, 2], 3)[0] !== 2.5)
             throw new Error("emission: the lane does not lay out the emission");
+        const brief = lane.ranged([1, 3], 1.01);
+        if (brief[0] < 1 / 60 || brief[1] < brief[0] || lane.ranged([0.5, 0.5], 0)[0] < 1 / 60)
+            throw new Error("emission: a dragged span went below the shortest the scene takes: " + brief);
+        emission.put({
+                "burst": {
+                    "count": 5,
+                    "every": 0.02
+                },
+                "delay": 0,
+                "duration": 86400
+            });
+        lane.width = 400;
+        const begun = Date.now(), ticks = lane.ticks(86400);
+        if (ticks.length > 1000 || Date.now() - begun > 50)
+            throw new Error("emission: a day of bursts drew " + ticks.length + " lines in " + (Date.now() - begun) + " ms");
         lane.destroy();
         emission.destroy();
         const stack = Qt.createComponent("SceneSwarmStack.qml").createObject(page, {

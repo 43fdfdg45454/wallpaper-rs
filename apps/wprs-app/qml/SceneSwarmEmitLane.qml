@@ -27,8 +27,15 @@ ColumnLayout {
     }
 
     function ranged(pair, v) {
-        const width = pair[1] - pair[0];
-        return [Math.max(0, Math.round((v - width / 2) * 100) / 100), Math.round((v + width / 2) * 100) / 100];
+        const width = pair[1] - pair[0], low = Math.min(3600, Math.max(0.02, Math.round((v - width / 2) * 100) / 100));
+        return [low, Math.min(3600, Math.max(low, Math.round((v + width / 2) * 100) / 100))];
+    }
+
+    function ticks(end) {
+        const out = [], last = Math.min(end, span), step = every > 0 ? Math.max(every, 2 * span / Math.max(1, strip.width)) : span + 1;
+        for (let s = delay; s <= last; s += step)
+            out.push(s);
+        return out;
     }
 
     onEChanged: art.requestPaint()
@@ -54,22 +61,30 @@ ColumnLayout {
                 ctx.globalAlpha = 0.35;
                 if (lane.on) {
                     const rows = [[lane.on[0], lane.off[0], 4], [lane.on[1], lane.off[1], h / 2 + 1]];
-                    for (const [on, off, top] of rows)
-                        for (let s = lane.delay, n = 0; s < end && on + off > 0 && n < 2000; s += on + off, n++)
+                    for (const [on, off, top] of rows) {
+                        if (lane.place(on + off) < 1) {
+                            ctx.globalAlpha = 0.35 * on / Math.max(on + off, 0.001);
+                            ctx.fillRect(lane.place(lane.delay), top, lane.place(Math.min(end, lane.span)) - lane.place(lane.delay), h / 2 - 5);
+                            ctx.globalAlpha = 0.35;
+                            continue;
+                        }
+                        for (let s = lane.delay, n = 0; s < Math.min(end, lane.span) && n < 2000; s += on + off, n++)
                             ctx.fillRect(lane.place(s), top, lane.place(Math.min(end, s + on)) - lane.place(s), h / 2 - 5);
+                    }
                 } else {
                     ctx.fillRect(lane.place(lane.delay), 4, lane.place(end) - lane.place(lane.delay), h - 8);
                 }
                 ctx.globalAlpha = 1;
                 ctx.strokeStyle = Kirigami.Theme.positiveTextColor;
                 ctx.lineWidth = 2;
-                if (lane.e.burst && !lane.e.burst.on)
-                    for (let s = lane.delay; s <= end; s += lane.every > 0 ? lane.every : lane.span + 1) {
-                        ctx.beginPath();
+                if (lane.e.burst && !lane.e.burst.on) {
+                    ctx.beginPath();
+                    for (const s of lane.ticks(end)) {
                         ctx.moveTo(lane.place(s), 0);
                         ctx.lineTo(lane.place(s), h);
-                        ctx.stroke();
                     }
+                    ctx.stroke();
+                }
             }
         }
 
@@ -113,11 +128,11 @@ ColumnLayout {
                         knob.moved = Math.max(0, knob.mapToItem(strip, centroid.position.x, 0).x);
                         const at = lane.when(knob.moved), key = knob.modelData[0], start = lane.delay + (lane.on ? (lane.on[0] + lane.on[1]) / 2 : 0);
                         const value = ({
-                                "delay": at,
-                                "duration": Math.max(0.01, at - lane.delay),
+                                "delay": Math.min(86400, at),
+                                "duration": Math.min(86400, Math.max(0.01, at - lane.delay)),
                                 "on": ["on", lane.ranged(lane.on ?? [0, 0], Math.max(0.01, at - lane.delay))],
                                 "off": ["off", lane.ranged(lane.off ?? [0, 0], Math.max(0.01, at - start))],
-                                "every": Math.max(0.01, at - lane.delay)
+                                "every": Math.min(86400, Math.max(0.02, at - lane.delay))
                             })[key];
                         if (key === "on" || key === "off")
                             lane.emission.put({
