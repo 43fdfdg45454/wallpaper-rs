@@ -7,6 +7,7 @@ mod pins;
 mod points;
 mod refs;
 mod revisions;
+mod scoped;
 mod seen;
 mod shapes;
 mod swing;

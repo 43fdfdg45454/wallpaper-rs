@@ -150,7 +150,7 @@ pub(crate) fn run(command: Flying) -> Result<()> {
         other => anyhow::bail!("{other:?} changes the scene"),
     };
     let p = Project::open(&dir)?;
-    let found: Value = wprs_editor::rigs::query(&p.dir, &p.doc, "", &q);
+    let found: Value = wprs_editor::rigs::query(&p.dir, &p.seen(), "", &q);
     anyhow::ensure!(!found.is_null(), "there is nothing to show");
     println!("{}", serde_json::to_string_pretty(&found)?);
     if found["ok"] == false {

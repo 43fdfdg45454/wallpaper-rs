@@ -139,9 +139,56 @@ QtObject {
             throw new Error("the depth panel did not keep the file order");
     }
 
+    function mapped() {
+        const layer = page.mesh.pointer("smoke"), at = layer + "/effects/0/params/emitters";
+        page.run("set", {
+            "pointer": "/manifest/properties/night",
+            "value": {
+                "type": "bool",
+                "label": "Night",
+                "default": false
+            }
+        });
+        page.run("set", {
+            "pointer": at,
+            "value": {
+                "prop": "night",
+                "map": {
+                    "false": [{ "from": [0.5, 0.9], "strength": 4 }],
+                    "true": [{ "from": [0.2, 0.9], "strength": 4 }, { "from": [0.8, 0.9], "strength": 4 }]
+                }
+            }
+        });
+        const canvas = made("SceneEmitters.qml", {
+            "page": page,
+            "pointer": layer,
+            "width": 400,
+            "height": 200
+        });
+        if (canvas.spots.length !== 1)
+            throw new Error("the emitters of the current value have no handles: " + JSON.stringify(canvas.spots));
+        canvas.place(canvas.spots[0], 100, 100);
+        if (value(at + "/map/false")[0].from[0] !== 0.25)
+            throw new Error("a drag did not move the emitter of the current value: " + JSON.stringify(value(at)));
+        const picked = {};
+        picked[layer + "/effects/0"] = "true";
+        page.emitterEntry = picked;
+        if (canvas.spots.length !== 2)
+            throw new Error("the picked value does not show its emitters: " + JSON.stringify(canvas.spots));
+        canvas.place(canvas.spots[1], 300, 100);
+        if (value(at + "/map/true")[1].from[0] !== 0.75 || value(at + "/map/false")[0].from[0] !== 0.25)
+            throw new Error("a drag did not move the emitter of the picked value: " + JSON.stringify(value(at)));
+        page.emitterEntry = {};
+        canvas.destroy();
+    }
+
     function exercise() {
         knobs();
         depth();
         fluid();
+        mapped();
+        made("SceneTemplateCheck.qml", {
+            "page": page
+        }).exercise();
     }
 }

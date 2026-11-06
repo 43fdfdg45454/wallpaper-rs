@@ -45,7 +45,7 @@ undo and redo walk through, the undone ones marked.
 | `set` | `pointer`, `value`; creates the objects on the way | `set DIR POINTER VALUE` |
 | `add`, `remove`, `move` | `pointer` and `value`, `pointer`, `from` and `to` | `add`, `remove`, `move` |
 | `add_layer` | `kind`, optional `id`, `name` (the name of the layer in the author's language), `source` (the asset of an image, video or sound layer, the system of a particles layer), `into` (a group), `at` (0 is the bottom) | `add-layer DIR KIND [--name N]` |
-| `remove_layer`, `duplicate_layer` | `id`; a copy gets new ids for itself and its children | `remove-layer`, `duplicate-layer` |
+| `remove_layer`, `duplicate_layer` | `id`; a copy gets new ids for itself and its children; with `template` (`true`) the layer, a picture, text, shape, solid, spectrum, mesh or group of them, is copied as it is into the script `templates` instead, under the first free name of `<id>_template`, `<id>_template_2`… (the layers bar offers it as *Make a template*) | `remove-layer`, `duplicate-layer [--template]` |
 | `move_layer` | `id`, `to`, optional `into`; without `into` the layer goes to the top level | `move-layer DIR ID TO` |
 | `group`, `ungroup` | `ids` of layers with the same parent, each taken once, and an optional group `id`; the `id` of a group, refused while the group has an opacity, transform, anchor, blend, mask, effects, parallax, visibility or clip of its own that ungrouping would lose | `group`, `ungroup` |
 | `hide` | `id`, `hidden`; sets `visible`, or `play` on a sound layer, to `false`, keeping what it held under `hidden`, and puts it back when shown | `hide DIR ID --hidden BOOL` |
@@ -104,6 +104,23 @@ keys sorted and turns the value back into a plain one when its last key goes; it
 that follows another source. Keyframe times are seconds on the named timeline, or on the scene
 clock without one. In the timeline of the app a keyframe is dragged along its track, to the
 hundredth of a second, and dropped with `keyframe` and `from`.
+
+The template picker of the layers bar shows the scene, or one script template alone on the canvas as
+a copy of it draws (the preview look `template`). While a template is shown, the layers panel lists
+its layers, the canvas puts its move, bone, chain, weight, point and attachment handles on them, and
+every action and query that names layers, from `bone`, `ik`, `attach`, `weights` and `parts` to
+`hide` and `add_layer`, works on the layers of that template by their own ids, so an attachment, a
+parent or a chain target names a layer of the same template as each copy needs; a template holds one
+layer, so new layers go inside its group (`group` on its layer makes one) and an action that would
+add a second one beside it is refused. Its fields are the fields of `/scene/templates/<name>` in the
+inspector. Bones, weights and points live in the mesh asset, so a mesh layer in a template and the
+layers of the scene that name the same asset change together, as any two layers sharing a mesh do;
+chains, attachments, parts and depth live in the layer and stay its own. `wprs-ctl scene --inside TEMPLATE …` does the same for every scene
+command, and `wprs-ctl scene open DIR --json --inside TEMPLATE` prints what the editor shows.
+
+The timeline shows a lane for each own video clock (`playback.own_clock`): the range of the video as
+a bar whose grips trim `start` and `end`, its speed, loop and play switches and a mark where the clock
+is at the playhead; `wprs-ctl scene clocks DIR [--time T]` prints the same lanes as JSON.
 
 `import` copies pictures, videos, sounds, fonts and `.cube` tables. It refuses a file over the
 limits of the format (256 assets, 1 GiB per file, 512 MiB of pictures once decoded, sounds of 32

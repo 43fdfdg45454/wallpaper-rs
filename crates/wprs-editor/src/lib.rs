@@ -47,6 +47,7 @@ mod rig;
 mod rigging;
 pub mod rigs;
 pub mod schema;
+pub mod scope;
 pub mod scripts;
 mod sculpt;
 mod session;

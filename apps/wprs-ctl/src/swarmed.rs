@@ -108,14 +108,21 @@ pub(crate) fn run(command: Swarming) -> Result<()> {
         }
         Particle::Budget { time, quality, layer } => {
             let quality = quality.as_deref().and_then(parsed).unwrap_or_default();
-            wprs_editor::swarms::budget(&project.dir, &project.doc, &system, layer.as_deref(), time, quality)
+            wprs_editor::swarms::budget(
+                &project.dir,
+                &project.seen(),
+                &system,
+                layer.as_deref(),
+                time,
+                quality,
+            )
         }
         Particle::Rope(r) => {
             let (off, layer) = (r.off, r.layer.clone().filter(|l| !l.is_empty()));
             crate::steps::edit(&dir, Action::Particles(crate::tended::rope(system.clone(), r)))?;
             let project = Project::open(&dir)?;
             let shown =
-                wprs_editor::swarms::handles(&project.dir, &project.doc, &system, layer.as_deref(), 0.0);
+                wprs_editor::swarms::handles(&project.dir, &project.seen(), &system, layer.as_deref(), 0.0);
             let uneven = shown["strands"]["uneven"].as_array().map_or(0, Vec::len);
             if !off && uneven > 0 {
                 let dir = dir.display();
@@ -126,7 +133,7 @@ pub(crate) fn run(command: Swarming) -> Result<()> {
             return Ok(());
         }
         Particle::Lit(Lit { layer, .. }) | Particle::Refract(Bend { layer, .. }) => {
-            wprs_editor::lamps::swarm_light(&project.dir, &project.doc, &system, layer.as_deref())
+            wprs_editor::lamps::swarm_light(&project.dir, &project.seen(), &system, layer.as_deref())
         }
         _ => return Ok(()),
     };

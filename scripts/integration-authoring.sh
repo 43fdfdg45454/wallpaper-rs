@@ -22,3 +22,10 @@ ctl scene effect-rule "$made" throb gain --uses time --waits-for speed || fail "
 ctl scene effect-rule "$made" throb | grep '"waits_for": "speed"' >/dev/null || fail "the wake rules were not printed"
 if ctl scene effect-rule "$made" throb gain --waits-for nothing 2>/dev/null; then fail "a rule naming no parameter was kept"; fi
 ctl scene effect-rule "$made" throb gain --uses '' --waits-for '' || fail "the wake rule was not cleared"
+ctl scene --inside fill_template group "$made" fill --id box || fail "the template layer was not grouped"
+ctl scene add-layer "$made" solid --id dot --into box --inside fill_template >/dev/null || fail "no layer was added inside the template"
+ctl scene show "$made" /scene/templates/fill_template/layers/1/id | grep '"dot"' >/dev/null ||
+  fail "the layer did not land in the template"
+if ctl scene --inside fill_template add-layer "$made" solid --id loose 2>/dev/null; then fail "a second root was added to a template"; fi
+ctl scene open "$made" --json --inside fill_template | grep -F '"pointer":"/scene/templates/fill_template/layers/1"' >/dev/null ||
+  fail "the outline of the template did not list its layers"

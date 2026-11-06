@@ -14,6 +14,13 @@ const EDGE: f64 = 1280.0;
 static STREAMS: AtomicU32 = AtomicU32::new(0);
 
 impl SceneEditor {
+    pub(crate) fn scoped(mut self: Pin<&mut Self>) {
+        let scope = wprs_editor::scope::of(&serde_json::from_str(&self.look.to_string()).unwrap_or_default());
+        if let Some(project) = self.as_mut().rust_mut().project.as_mut() {
+            project.scope = scope;
+        }
+    }
+
     pub fn attach(mut self: Pin<&mut Self>) {
         let Some(project) = self.project.as_ref() else { return };
         let size = &project.doc["scene"]["canvas"]["size"];

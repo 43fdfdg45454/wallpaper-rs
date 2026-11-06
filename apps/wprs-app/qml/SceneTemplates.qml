@@ -29,6 +29,6 @@ RowLayout {
         currentIndex: templates.names.indexOf(templates.alone) + 1
         onActivated: index => templates.show(index > 0 ? templates.names[index - 1] : "")
         QQC2.ToolTip.visible: hovered
-        QQC2.ToolTip.text: App.tr("Show one template alone on the canvas, as a copy of it draws, and edit it in the inspector")
+        QQC2.ToolTip.text: App.tr("Show one template alone on the canvas, as a copy of it draws, and edit its layers with the layers panel and the canvas tools")
     }
 }

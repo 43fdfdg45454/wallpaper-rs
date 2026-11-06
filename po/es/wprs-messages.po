@@ -1028,6 +1028,14 @@ msgstr "un trazo de pesos tiene una fuerza y un borde suave de 0 a 1"
 msgid "the mesh has no bones yet"
 msgstr "la malla todavía no tiene huesos"
 
+#: crates/wprs-editor/src/scope.rs
+msgid "there is no template \"%1\""
+msgstr "no hay ninguna plantilla «%1»"
+
+#: crates/wprs-editor/src/scope.rs
+msgid "a template holds one layer; add layers inside its group"
+msgstr "una plantilla tiene una sola capa; añade capas dentro de su grupo"
+
 #: crates/wprs-editor/src/scripts.rs
 msgid "the script has no file name"
 msgstr "el script no tiene nombre de archivo"
@@ -1163,7 +1171,9 @@ msgstr "no hay ningún punto «%1»"
 #: crates/wprs-editor/src/skin/read.rs
 msgid ""
 "bones and weights are edited here on meshes drawn in at most 64 primitives"
-msgstr "aquí se editan huesos y pesos de mallas dibujadas con 64 primitivas como mucho"
+msgstr ""
+"aquí se editan huesos y pesos de mallas dibujadas con 64 primitivas como "
+"mucho"
 
 #: crates/wprs-editor/src/spots.rs
 msgid "say where the new point goes"

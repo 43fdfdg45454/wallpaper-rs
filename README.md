@@ -2385,8 +2385,11 @@ interfaz completa; lo esencial:
   copiada nombran el hueso de esa copia, y el botón
   *Hacer plantilla* del editor copia la capa elegida a `templates` con un nombre libre
   (`<id>_template`, luego `<id>_template_2`…; `wprs-ctl scene duplicate-layer DIR ID --template`
-  hace lo mismo) y la barra de capas muestra una plantilla sola en el lienzo, como se dibuja una copia,
-  mientras el inspector la edita.
+  hace lo mismo) y la barra de capas muestra una plantilla sola en el lienzo, como se dibuja una copia;
+  mientras se ve, el panel de capas, las manijas del lienzo (mover, huesos, cadenas, pesos, puntos y
+  enganches) y cada acción de capas trabajan sobre las capas de esa plantilla con sus propios ids
+  (`wprs-ctl scene --inside PLANTILLA …` igual), y como una plantilla tiene una sola capa las nuevas van
+  dentro de su grupo.
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del

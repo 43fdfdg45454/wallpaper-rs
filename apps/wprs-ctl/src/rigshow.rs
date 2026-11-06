@@ -17,13 +17,13 @@ pub(crate) fn print(
 pub(crate) fn run(command: Rigging) -> Result<()> {
     match command {
         Rigging::Bones { dir, layer } => {
-            print(&dir, &layer, |p| wprs_editor::rigs::rig(&p.dir, &p.doc, &layer))
+            print(&dir, &layer, |p| wprs_editor::rigs::rig(&p.dir, &p.seen(), &layer))
         }
         Rigging::PartOutlines { dir, layer } => {
-            print(&dir, &layer, |p| wprs_editor::rigs::outline(&p.dir, &p.doc, &layer))
+            print(&dir, &layer, |p| wprs_editor::rigs::outline(&p.dir, &p.seen(), &layer))
         }
         Rigging::VertexWeights { dir, layer } => {
-            print(&dir, &layer, |p| wprs_editor::rigs::vertices(&p.dir, &p.doc, &layer))
+            print(&dir, &layer, |p| wprs_editor::rigs::vertices(&p.dir, &p.seen(), &layer))
         }
         _ => Ok(()),
     }

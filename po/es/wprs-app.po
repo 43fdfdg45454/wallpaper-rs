@@ -3308,6 +3308,10 @@ msgid "Add a line emitter"
 msgstr "Agregar un emisor de línea"
 
 #: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Place these emitters on the canvas"
+msgstr "Colocar estos emisores en el lienzo"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
 msgid "Drag the emitters on the canvas to place them"
 msgstr "Arrastra los emisores sobre el lienzo para colocarlos"
 
@@ -3318,6 +3322,14 @@ msgstr "Línea %1"
 #: apps/wprs-app/qml/SceneEmitterList.qml
 msgid "Point %1"
 msgstr "Punto %1"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "Start: x, y in fractions of the layer"
+msgstr "Inicio: x, y en fracciones de la capa"
+
+#: apps/wprs-app/qml/SceneEmitterList.qml
+msgid "End: x, y in fractions of the layer"
+msgstr "Final: x, y en fracciones de la capa"
 
 #: apps/wprs-app/qml/SceneEmitterList.qml
 msgid "Direction %1°"
@@ -4690,7 +4702,10 @@ msgstr "Colocar huesos sobre la vista previa"
 msgid ""
 "Bones are placed here on meshes drawn in at most 64 primitives; a part drawn "
 "by several nodes gets a mesh of its own for each of them on the first edit."
-msgstr "Aquí se colocan huesos en mallas dibujadas con 64 primitivas como mucho; una parte que dibujan varios nodos recibe una malla propia para cada uno en la primera edición."
+msgstr ""
+"Aquí se colocan huesos en mallas dibujadas con 64 primitivas como mucho; una "
+"parte que dibujan varios nodos recibe una malla propia para cada uno en la "
+"primera edición."
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Clip in the preview"
@@ -5494,7 +5509,9 @@ msgstr "Conservar esta semilla"
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Every start of the scene then draws the particles the preview shows"
-msgstr "Así cada inicio de la escena dibuja las partículas que muestra la vista previa"
+msgstr ""
+"Así cada inicio de la escena dibuja las partículas que muestra la vista "
+"previa"
 
 #: apps/wprs-app/qml/SceneSwarmFields.qml
 msgid "Sound on the rays"
@@ -5882,9 +5899,9 @@ msgstr "Plantilla %1 sola"
 
 #: apps/wprs-app/qml/SceneTemplates.qml
 msgid ""
-"Show one template alone on the canvas, as a copy of it draws, and edit it in "
-"the inspector"
-msgstr "Muestra una plantilla sola en el lienzo, como se dibuja una copia, y la edita en el inspector"
+"Show one template alone on the canvas, as a copy of it draws, and edit its "
+"layers with the layers panel and the canvas tools"
+msgstr "Muestra una plantilla sola en el lienzo, como se dibuja una copia, y edita sus capas con el panel de capas y las herramientas del lienzo"
 
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"
@@ -5987,13 +6004,17 @@ msgstr "Clics"
 msgid ""
 "Each parameter may ask for an input while it is not zero, wait for another "
 "parameter or yield to one; the scene sleeps when none of them asks."
-msgstr "Cada parámetro puede pedir una entrada mientras no es cero, esperar a otro parámetro o cederle el paso; la escena duerme cuando ninguno pide nada."
+msgstr ""
+"Cada parámetro puede pedir una entrada mientras no es cero, esperar a otro "
+"parámetro o cederle el paso; la escena duerme cuando ninguno pide nada."
 
 #: apps/wprs-app/qml/SceneWakeRules.qml
 msgid ""
 "A built-in effect keeps these rules; an effect of the package changes them "
 "here."
-msgstr "Un efecto incluido conserva estas reglas; un efecto del paquete las cambia aquí."
+msgstr ""
+"Un efecto incluido conserva estas reglas; un efecto del paquete las cambia "
+"aquí."
 
 #: apps/wprs-app/qml/SceneWakeRules.qml
 msgid "Always asks for: %1"
