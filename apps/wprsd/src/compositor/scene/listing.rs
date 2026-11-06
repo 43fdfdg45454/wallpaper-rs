@@ -30,6 +30,7 @@ pub(in crate::compositor) struct Listed {
     wake: Option<watch::Wake>,
 }
 
+mod mounts;
 mod scan;
 mod watch;
 
@@ -70,13 +71,13 @@ impl SceneState {
     }
 
     pub(super) fn listing_wake(&self, now: Instant) -> Wake {
-        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.load(Ordering::Acquire));
+        let told = self.listed.watch.as_ref().and_then(|w| w.pending(now));
         match (self.lists(), self.listed.scanning.is_some(), told) {
             (false, ..) => Wake::Idle,
             _ if self.listed.unset => Wake::Idle,
             (_, true, _) if self.listed.wake.is_some() => Wake::Idle,
             (_, true, _) => Wake::At(SOON.as_secs_f64()),
-            (_, _, true) => Wake::At(0.0),
+            (_, _, Some(wait)) => Wake::At(wait),
             _ if self.watching() && self.listed.due.is_some() => Wake::Idle,
             _ => Wake::At(self.listed.due.map_or(0.0, |at| at.saturating_duration_since(now).as_secs_f64())),
         }
@@ -105,7 +106,7 @@ impl SceneState {
         if self.listed.scanning.is_some() {
             return changed;
         }
-        let told = self.listed.watch.as_ref().is_some_and(|w| w.changed.swap(false, Ordering::AcqRel));
+        let told = self.listed.watch.as_ref().is_some_and(|w| w.take(now));
         let polled = !self.watching() && self.listed.due.is_none_or(|at| now >= at);
         if !(told || polled || self.listed.due.is_none()) {
             return changed;

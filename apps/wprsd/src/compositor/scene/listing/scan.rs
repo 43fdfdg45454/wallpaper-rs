@@ -42,9 +42,16 @@ pub(super) fn job(wanted: Wanted, kept: Option<Vec<PathBuf>>, wake: Option<Wake>
         _ => 0,
     };
     let chosen = wanted.iter().filter_map(|(_, d)| d.as_ref());
-    let dirs: Vec<PathBuf> = chosen.flat_map(|(d, p)| watch::dirs(d, deep(p))).collect();
+    let mut cut = false;
+    let dirs: Vec<PathBuf> = chosen
+        .flat_map(|(d, p)| {
+            let (found, more) = watch::dirs(d, deep(p));
+            cut |= more;
+            found
+        })
+        .collect();
     let fresh = (kept.as_ref() != Some(&dirs))
-        .then(|| wake.filter(|_| !dirs.is_empty()).and_then(|w| Watch::new(dirs, w)));
+        .then(|| wake.filter(|_| !dirs.is_empty()).and_then(|w| Watch::new((dirs, cut), w)));
     let (text, files) = scan(wanted);
     (text, files, fresh)
 }

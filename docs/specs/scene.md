@@ -1979,10 +1979,14 @@ written again), `name(id)` the name of the file, `kind(id)` `"image"` or `"video
 `on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
 pairs, only of the files that `folder` lists) when the folder changes: while the scene is shown, the
 desktop watches the chosen folder and its listed subfolders for change notices and reads them again,
-away from the thread that draws, only when one arrives; a hidden scene drops the watch and looks once
-when shown again. Where the system gives no change notices (a network or user space file system, a
-folder that is missing, or one removed, moved or unmounted until it can be watched again) it looks
-every 2 s while the scene is shown. The phone lists its copy of the chosen folder again only when the
+away from the thread that draws, once the notices settle (half a second after the last one, at most
+5 s after the first, so a copy of many files is read once), leaving out hidden files that sync tools
+write while they work; a hidden scene drops the watch and looks once when shown again. A folder that
+is missing, removed or moved is awaited in the nearest folder above it that exists and watched again
+when it comes back, and subfolders nobody may read are left out, as the listing leaves them out.
+Only where the system gives no change notices, on a network file system (a user space file system
+counts when it reaches the network, such as `sshfs` or `rclone`, not a local disk or a vault), or
+when a folder holds more than 8 192 subfolders to watch, it looks every 2 s while the scene is shown. The phone lists its copy of the chosen folder again only when the
 copy changes, which it makes again when the system says the folder changed. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
 with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
 the `playback` of the layer and that `layer.video` (play, pause, seek, rate, volume, `ended`) controls like the

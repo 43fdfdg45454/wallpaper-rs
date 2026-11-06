@@ -70,16 +70,17 @@ fn a_folder_removed_and_made_again_is_watched_again() {
     std::fs::remove_dir_all(&dir).unwrap();
     assert!(told(&state), "removing the folder sent no notice");
     assert!(listed(&mut state, later) && !state.listed.text.contains("a.png"));
-    assert!(!state.watching(), "a watch of a removed folder is not trusted");
+    assert!(state.watching(), "a removed folder is awaited in the folder above it, not looked at every 2 s");
     std::fs::create_dir(&dir).unwrap();
+    assert!(told(&state), "making the folder again sent no notice");
     picture(&dir, "d.png");
-    let next = later + EVERY;
-    assert!(listed(&mut state, next) && state.listed.text.contains("d.png"), "the new folder was not seen");
-    let shown = (0..200).any(|_| {
-        state.listing(next + EVERY);
-        state.watching() || (std::thread::sleep(Duration::from_millis(5)), false).1
+    let shown = (0..400).any(|_| {
+        state.listing(later);
+        let whole = state.listed.watch.as_ref().is_some_and(|w| w.whole());
+        (whole && state.listed.text.contains("d.png"))
+            || (std::thread::sleep(Duration::from_millis(5)), false).1
     });
-    assert!(shown, "the made again folder is watched again");
+    assert!(shown, "the folder made again is watched and listed again");
 }
 
 #[test]
@@ -87,9 +88,58 @@ fn only_the_folders_a_recursive_look_reaches_are_read() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("sub/deeper")).unwrap();
     std::fs::create_dir(dir.path().join(".hidden")).unwrap();
-    assert_eq!(watch::dirs(dir.path(), 0), vec![dir.path().to_owned()]);
-    let one = watch::dirs(dir.path(), 1);
+    assert_eq!(watch::dirs(dir.path(), 0), (vec![dir.path().to_owned()], false));
+    let (one, _) = watch::dirs(dir.path(), 1);
     assert!(one.len() == 2 && one.contains(&dir.path().join("sub")));
-    assert_eq!(watch::dirs(dir.path(), 2).len(), 3);
-    assert_eq!(watch::dirs(&dir.path().join("missing"), 2), vec![dir.path().join("missing")]);
+    assert_eq!(watch::dirs(dir.path(), 2).0.len(), 3);
+    assert_eq!(watch::dirs(&dir.path().join("missing"), 2), (vec![dir.path().join("missing")], false));
+}
+
+#[test]
+fn hidden_files_wake_nothing_and_a_burst_of_changes_settles_before_a_look() {
+    let dir = tempfile::tempdir().unwrap();
+    picture(dir.path(), "a.png");
+    let Some((mut state, _, later)) = watched(dir.path()) else { return };
+    std::fs::write(dir.path().join(".partial"), b"x").unwrap();
+    std::thread::sleep(Duration::from_millis(200));
+    let pending = |state: &SceneState| state.listed.watch.as_ref().and_then(|w| w.pending(Instant::now()));
+    assert_eq!(pending(&state), None, "a hidden file woke the listing");
+    picture(dir.path(), "b.png");
+    assert!(told(&state), "no change notice arrived");
+    let wait = pending(&state).unwrap_or_default();
+    assert!(wait > 0.0 && wait <= 0.5, "the look waits for the copy to settle: {wait}");
+    state.listing(Instant::now());
+    assert!(state.listed.scanning.is_none(), "a look started while files were still arriving");
+    assert!(listed(&mut state, later) && state.listed.text.contains("b.png"));
+}
+
+#[test]
+fn unreadable_subfolders_and_too_many_folders_are_told_apart() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let locked = dir.path().join("locked");
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+    let open = std::fs::read_dir(&locked).is_ok();
+    let found = watch::Watch::new(watch::dirs(dir.path(), 1), Arc::new(|| {}));
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let Some(watch) = found else { return eprintln!("no change notices on this system") };
+    assert!(open || (watch.trusted() && watch.whole()), "a folder nobody may read made the watch untrusted");
+    (0..=watch::MOST).for_each(|i| std::fs::create_dir(dir.path().join(format!("d{i}"))).unwrap());
+    let (dirs, cut) = watch::dirs(dir.path(), 1);
+    assert!(cut && dirs.len() == watch::MOST);
+    let many = watch::Watch::new((dirs, cut), Arc::new(|| {}));
+    assert!(many.is_none_or(|w| !w.trusted()), "a cut list of folders was trusted");
+}
+
+#[test]
+fn only_network_fuse_mounts_count_as_remote() {
+    let info = "36 25 0:32 / /media/disk rw - fuseblk /dev/sdb1 rw\n\
+                37 25 0:33 / /mnt/sky rw - fuse.sshfs host:/ rw\n\
+                38 25 0:34 / /srv/vault rw - fuse.gocryptfs vault rw\n\
+                39 25 0:35 / /mnt/my\\040drive rw - fuse.rclone remote: rw\n";
+    assert!(!super::mounts::fuse(std::path::Path::new("/media/disk/photos"), info));
+    assert!(super::mounts::fuse(std::path::Path::new("/mnt/sky/album"), info));
+    assert!(!super::mounts::fuse(std::path::Path::new("/srv/vault/album"), info));
+    assert!(super::mounts::fuse(std::path::Path::new("/mnt/my drive/album"), info));
 }

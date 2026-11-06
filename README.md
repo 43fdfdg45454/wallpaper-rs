@@ -2495,9 +2495,13 @@ interfaz completa; lo esencial:
   `layer.video` controla (reproducir, pausar, saltar, velocidad, volumen, fin) como los vídeos del paquete,
   hasta ocho archivos a la vez, vídeos o fotos, en el escritorio y en el teléfono. En el escritorio,
   mientras la escena se ve, la carpeta se vigila con avisos de cambios del sistema y solo se vuelve a
-  leer cuando llega uno, fuera del hilo que dibuja; oculta, deja de vigilarla y la mira una vez al
-  volver. En carpetas de red, o si la carpeta falta, se borra, se mueve o se desmonta, la mira cada
-  2 s mientras se ve hasta poder vigilarla otra vez. El teléfono vuelve a listar su copia de la
+  leer cuando los avisos se calman (medio segundo tras el último, 5 s como mucho tras el primero, así
+  una copia de muchos archivos se lee una vez), sin contar los archivos ocultos que escriben las
+  herramientas de sincronización, fuera del hilo que dibuja; oculta, deja de vigilarla y la mira una
+  vez al volver. Si la carpeta falta, se borra o se mueve, la espera en la carpeta de arriba que exista
+  y la vuelve a vigilar cuando aparece, y deja fuera las subcarpetas que nadie puede leer. Solo en
+  carpetas de red (también las de espacio de usuario que van a la red, como `sshfs` o `rclone`, no un
+  disco local ni una bóveda) o con más de 8 192 subcarpetas que vigilar la mira cada 2 s mientras se ve. El teléfono vuelve a listar su copia de la
   carpeta solo cuando la copia cambia, y la rehace cuando el sistema avisa que la carpeta cambió. Los
   scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
