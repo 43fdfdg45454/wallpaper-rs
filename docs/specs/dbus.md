@@ -1974,9 +1974,11 @@ and the vote of this account. `InvalidArgs` for another vote, an id that is not 
 
 ### `GetVotes(as ids) → (s json)`
 
-`{items: {id: {up, down, mine}}, shown, repo_id}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 100 package ids, each a package id of the
+`{items: {id: {up, down, mine}}, shown, repo_id}` from the linked server (`mine` is the vote of this account: `up`, `down` or `none`) for at most 1000 package ids, each a package id of the
 server's repository or `repo_id/id`; `items` is keyed by the ids as given, and ids whose `repo_id` is
-not the server's repository are never sent and get no item. `repo_id` is the repository of the linked
+not the server's repository are never sent and get no item. Clients pass every row they show; the
+daemon keeps the ids of the server's repository and asks for them at most 100 at a time, so its
+packages get counts however many rows of other repositories come first. `repo_id` is the repository of the linked
 server (`null` when none is linked or it announces none), so a client shows vote buttons only on its
 packages. `shown` is
 `false`, with no items and without reaching the network, while no server is linked, no id is of its

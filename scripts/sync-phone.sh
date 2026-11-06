@@ -80,6 +80,9 @@ server_repo=$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "
 both="[\"$server_repo/org.example.noon\", \"$(printf '%064d' 7)/org.example.noon\"]"
 [ "$(ask "account {\"op\": \"votes\", \"ids\": $both}" | jq_ "sorted(r['items'])")" = "['$server_repo/org.example.noon']" ] ||
   fail "the phone asked the server about a package of another repository"
+many=$(python3 -c "import json, sys; print(json.dumps(['%064d/org.example.row%d' % (7, i) for i in range(150)] + [sys.argv[1] + '/org.example.noon']))" "$server_repo")
+[ "$(ask "account {\"op\": \"votes\", \"ids\": $many}" | jq_ "list(r['items'])")" = "['$server_repo/org.example.noon']" ] ||
+  fail "the phone gave no counts to a package of the server after 150 other rows"
 send 'account {"op": "vote", "id": "org.example.noon", "vote": "sideways"}'
 IFS= read -r -t 60 refused <&8 || fail "the phone did not answer a bad vote"
 [[ $refused == *'"error":'* ]] || fail "the phone sent a vote other than up, down or none"

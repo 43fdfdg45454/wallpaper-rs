@@ -34,7 +34,7 @@ pub(super) fn records() {
     assert!(refused(json!({"op": "vote", "id": dawn, "vote": "sideways"})).contains("up, down or none"));
     assert!(refused(json!({"op": "vote", "id": "Not An Id", "vote": "up"})).contains("package id"));
     assert!(refused(json!({"op": "vote", "id": dawn, "vote": "up"})).contains("add a server"));
-    assert!(refused(json!({"op": "votes", "ids": vec![dawn; 101]})).contains("100"));
+    assert!(refused(json!({"op": "votes", "ids": vec![dawn; 1001]})).contains("1000"));
     assert_eq!(
         ask(json!({"op": "votes", "ids": [dawn]})),
         json!({"items": {}, "shown": false, "repo_id": null})

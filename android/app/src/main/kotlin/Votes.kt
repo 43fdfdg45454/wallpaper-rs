@@ -11,7 +11,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 suspend fun votes(ids: List<String>): JSONObject =
-    account("votes", "ids" to JSONArray(ids.take(100))) as? JSONObject ?: JSONObject()
+    account("votes", "ids" to JSONArray(ids.take(1000))) as? JSONObject ?: JSONObject()
 
 @Composable
 fun Votes(id: String, counts: JSONObject?, shown: Boolean, run: Run, voted: (JSONObject) -> Unit) {
