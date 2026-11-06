@@ -56,7 +56,7 @@ GridLayout {
                 text: span.modelData[1]
             }
 
-            QQC2.RangeSlider {
+            SceneRangeSlider {
                 Layout.fillWidth: true
                 from: span.modelData[0] === "depth" ? -2000 : -500
                 to: span.modelData[0] === "depth" ? 4000 : 500

@@ -57,7 +57,7 @@ GridLayout {
                 })
     }
 
-    QQC2.RangeSlider {
+    SceneRangeSlider {
         id: input
 
         Layout.fillWidth: true
@@ -73,7 +73,7 @@ GridLayout {
             }, true)
     }
 
-    QQC2.RangeSlider {
+    SceneRangeSlider {
         Layout.fillWidth: true
         from: Math.min(remap.span[0], remap.value.out[0], remap.value.out[1])
         to: Math.max(remap.span[1], remap.value.out[0], remap.value.out[1])

@@ -41,7 +41,11 @@ QtObject {
     }
 
     function slide() {
-        const slider = Qt.createComponent("SceneSlider.qml").createObject(page);
+        for (const kind of ["SceneSlider.qml", "SceneRangeSlider.qml"])
+            press(Qt.createComponent(kind).createObject(page));
+    }
+
+    function press(slider) {
         page.run("canvas", {
             "bloom": {}
         });
@@ -58,6 +62,8 @@ QtObject {
         }
         if (page.view.history.done.length !== steps + 2)
             throw new Error("slider: two presses took " + (page.view.history.done.length - steps) + " steps");
+        if (slider.owner() !== page.editor)
+            throw new Error("slider: it holds no editor");
         slider.destroy();
     }
 

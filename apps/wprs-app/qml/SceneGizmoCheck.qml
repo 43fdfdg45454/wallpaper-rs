@@ -37,6 +37,15 @@ QtObject {
         page.overwrite = false;
         if (read(base + "rotation") !== 15)
             throw new Error("gizmo: writing over keyframes did not leave a fixed value");
+        const before = page.view.history.done.length;
+        page.editor.hold(true);
+        gizmo.commit("tilt", [20, 0]);
+        const until = Date.now() + 700;
+        while (Date.now() < until) {}
+        gizmo.commit("tilt", [30, 5]);
+        page.editor.hold(false);
+        if (page.view.history.done.length !== before + 1)
+            throw new Error("gizmo: a held drag that paused took " + (page.view.history.done.length - before) + " steps");
         gizmo.destroy();
         page.editor.seek(0, false);
         while (page.view.history.done.length > steps)

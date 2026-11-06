@@ -51,7 +51,7 @@ ColumnLayout {
             text: App.tr("Speed")
         }
 
-        QQC2.RangeSlider {
+        SceneRangeSlider {
             id: speed
 
             Layout.fillWidth: true

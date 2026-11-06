@@ -111,6 +111,7 @@ impl History {
     }
 
     pub fn undo(&mut self, doc: &mut Value) -> Result<Option<(String, Vec<Op>)>> {
+        self.begun = false;
         let Some(step) = self.done.pop() else { return Ok(None) };
         if let Err(e) = apply(doc, &step.undo) {
             self.done.push(step);
@@ -122,6 +123,7 @@ impl History {
     }
 
     pub fn redo(&mut self, doc: &mut Value) -> Result<Option<(String, Vec<Op>)>> {
+        self.begun = false;
         let Some(step) = self.undone.pop() else { return Ok(None) };
         if let Err(e) = apply(doc, &step.redo) {
             self.undone.push(step);

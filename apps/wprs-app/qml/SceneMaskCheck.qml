@@ -40,6 +40,19 @@ QtObject {
         const mask = read(use + "/mask");
         if (JSON.stringify(mask.shape.rect.size) !== "[120,50]" || mask.feather !== 12)
             throw new Error("mask: the handles did not size or soften the shape: " + JSON.stringify(mask));
+        const before = page.view.history.done.length;
+        page.editor.hold(true);
+        overlay.put({
+                "feather": 20
+            });
+        const until = Date.now() + 700;
+        while (Date.now() < until) {}
+        overlay.put({
+                "feather": 30
+            });
+        page.editor.hold(false);
+        if (page.view.history.done.length !== before + 1 || read(use + "/mask/feather") !== 30)
+            throw new Error("mask: a held drag of the soft edge that paused took " + (page.view.history.done.length - before) + " steps");
         panel.put({
                 "shape": panel.shaped("star")
             });

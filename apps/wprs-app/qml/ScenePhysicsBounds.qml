@@ -41,7 +41,7 @@ ColumnLayout {
                 }
             }
 
-            QQC2.RangeSlider {
+            SceneRangeSlider {
                 id: range
 
                 Layout.fillWidth: true

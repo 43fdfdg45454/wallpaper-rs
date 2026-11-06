@@ -31,7 +31,7 @@ GridLayout {
         } : {})
     }
 
-    QQC2.RangeSlider {
+    SceneRangeSlider {
         id: cutRange
 
         Layout.columnSpan: 2

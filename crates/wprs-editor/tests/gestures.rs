@@ -66,3 +66,28 @@ fn a_held_gesture_stays_one_step_however_long_it_pauses() {
     project.hold(false);
     assert_eq!(project.history.done.len(), steps + 2, "two presses of the same handle made one step");
 }
+
+#[test]
+fn an_undo_while_a_handle_is_held_starts_a_step_of_its_own() {
+    let root = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    let dir = root.path().join("noon");
+    let mut project =
+        Project::create(&dir, starter("parallax", "org.example.noon", "Noon", "en").unwrap()).unwrap();
+    let background = |value: &str| json!({"set": {"pointer": "/scene/canvas/background", "value": value}});
+    let undo = serde_json::from_value::<Action>(json!({"undo": {}})).unwrap();
+    let start = project.doc["scene"]["canvas"]["background"].clone();
+    project.hold(true);
+    drag(&mut project, background("#101010"));
+    project.hold(false);
+    std::thread::sleep(Duration::from_millis(MERGE_MS + 100));
+    project.hold(true);
+    drag(&mut project, background("#202020"));
+    project.act(&undo).unwrap();
+    drag(&mut project, background("#303030"));
+    project.hold(false);
+    project.act(&undo).unwrap();
+    assert_eq!(project.doc["scene"]["canvas"]["background"], "#101010", "the first drag lost its own step");
+    project.act(&undo).unwrap();
+    assert_eq!(project.doc["scene"]["canvas"]["background"], start);
+}

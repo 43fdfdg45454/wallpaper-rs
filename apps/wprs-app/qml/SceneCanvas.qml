@@ -33,12 +33,6 @@ ColumnLayout {
         }
     }
 
-    function guide(aspect) {
-        const parts = aspect.split(":").map(Number);
-        const ratio = parts[0] / parts[1], own = size[0] / size[1];
-        return ratio > own ? [size[0], size[0] / ratio] : [size[1] * ratio, size[1]];
-    }
-
     spacing: 0
 
     Connections {
@@ -139,6 +133,11 @@ ColumnLayout {
             onTapped: canvas.page.editor.select("/scene/canvas")
         }
 
+        PointHandler {
+            acceptedButtons: Qt.LeftButton
+            onActiveChanged: canvas.page.editor.hold(active)
+        }
+
         SceneBand {
             anchors.fill: parent
             enabled: !canvas.page.moving
@@ -183,17 +182,12 @@ ColumnLayout {
                 layout: spans.layout
             }
 
-            Rectangle {
-                readonly property var box: guides.currentIndex > 0 ? canvas.guide(canvas.aspects[guides.currentIndex]) : [0, 0]
-
+            SceneGuide {
                 anchors.centerIn: parent
                 z: 3
-                visible: guides.currentIndex > 0
-                width: box[0] * canvas.ratio
-                height: box[1] * canvas.ratio
-                color: "transparent"
-                border.color: Kirigami.Theme.highlightColor
-                border.width: 2
+                size: canvas.size
+                ratio: canvas.ratio
+                aspect: canvas.aspects[guides.currentIndex]
             }
         }
     }
