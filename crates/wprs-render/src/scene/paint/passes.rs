@@ -1,4 +1,5 @@
-use super::super::item::{Rect, invert};
+use super::super::item::{Item, Rect, invert, ndc};
+use super::super::pipes::Mode;
 use super::super::pool::BUDGET;
 use super::super::{Op, Src};
 use super::{Painter, Target};
@@ -44,11 +45,27 @@ impl<'a> Painter<'a, '_, '_> {
                 self.reused += 1;
             }
             self.kept.push(0);
-            self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
+            match self.clip {
+                Some(_) => {
+                    self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin })
+                }
+                None => self.blit(Src::Cache(0), canvas),
+            }
         }
         self.list(static_end..draws.len(), root, false);
         self.air_until(usize::MAX, root);
         self.unshare();
+    }
+
+    fn blit(&mut self, from: Src, to: Src) {
+        let full = self.full;
+        let mut item =
+            Item { quad: [0.0, 0.0, 1.0, 1.0], uv: [0.0, 0.0, 1.0, 1.0], color: [1.0; 4], ..Item::default() };
+        (item.m0, item.m1) = ndc(full, full.affine());
+        let slot = self.pool.push(&item);
+        self.ops.push(Op::Clear(to, [0.0; 4]));
+        let tex = [from, Src::White, Src::Clear];
+        self.ops.push(Op::Draw { target: to, entry: "fs_texture", mode: Mode::Replace, slot, tex });
     }
 
     pub(crate) fn list(&mut self, range: Range<usize>, target: Target, clip: bool) {
