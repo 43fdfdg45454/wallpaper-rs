@@ -32,6 +32,15 @@ impl Shown {
         self.content.same_look(&spec.content) && self.fit == spec.fit && self.background == spec.background
     }
 
+    pub(in crate::compositor) fn videos(&self) -> Vec<(&Reel, u32)> {
+        match (&self.content, &self.scene) {
+            (Content::Scene(_), Some(scene)) => {
+                scene.spec.reels().map(|(_, reel, volume)| (reel, volume)).collect()
+            }
+            _ => self.content.videos(),
+        }
+    }
+
     pub(in crate::compositor) fn layer<'a>(
         &'a self,
         players: &'a HashMap<Reel, PlayerSlot>,

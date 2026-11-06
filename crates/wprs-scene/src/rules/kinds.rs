@@ -21,6 +21,27 @@ impl Check<'_> {
                 self.size(&format!("{p}/size"), *size);
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
+                if playback.as_ref().is_some_and(|b| b.own_clock) {
+                    let film = |a: &String| {
+                        let path = self.scene.assets.get(a).map(|a| a.extension());
+                        path.is_some_and(|e| crate::stage::VIDEOS.contains(&e.as_str()))
+                    };
+                    let video = |p: &crate::Property| match &p.control {
+                        crate::Control::File { default_asset, .. } => {
+                            p.accepts("video") || default_asset.as_ref().is_some_and(film)
+                        }
+                        _ => false,
+                    };
+                    let file = |b: &crate::Binding<String>| {
+                        b.map.is_some()
+                            || b.prop.as_ref().and_then(|id| self.props.get(id)).is_some_and(video)
+                    };
+                    let picked = !matches!(named, crate::Value::Bound(b) if !file(b));
+                    match picked && !crate::footage::owned(self.scene, kind).is_empty() {
+                        true => self.uses(true, "video_clocks"),
+                        false => self.issues.push(Issue::Clock(format!("{p}/playback/own_clock"))),
+                    }
+                }
             }
             Kind::Text(t) => self.text(p, t),
             Kind::Shape { shape, fill, gradient, stroke } => {

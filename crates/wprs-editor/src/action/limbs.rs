@@ -127,4 +127,19 @@ pub struct PartsEdit {
     pub clip: BTreeMap<String, String>,
     #[serde(default)]
     pub unclip: Vec<String>,
+    #[serde(default)]
+    pub depth: Option<DepthSet>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DepthSet {
+    #[serde(default)]
+    pub off: bool,
+    #[serde(default)]
+    pub scale: Option<f32>,
+    #[serde(default)]
+    pub cull: Option<bool>,
+    #[serde(default)]
+    pub sort: Option<bool>,
 }

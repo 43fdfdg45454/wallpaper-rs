@@ -1,15 +1,18 @@
 use crate::rigged::math::{Mat, Trs};
 use crate::rigged::{MAX_ACTIVE_SHAPES, Rigged};
-use crate::{Kind, Layer, MeshLayer, MeshPart, Rig, Wake};
-use std::collections::BTreeMap;
+use crate::{Layer, Wake};
 use std::sync::Arc;
 
+mod arc;
 mod cues;
 mod drive;
 #[cfg(test)]
 mod far;
+mod fig;
 mod finish;
 mod heads;
+#[cfg(test)]
+mod held;
 pub(crate) mod limb;
 pub(crate) mod mount;
 mod pose;
@@ -20,6 +23,8 @@ mod swing;
 mod touch;
 mod world;
 
+pub use fig::MODEL_UNIT;
+pub(crate) use fig::{Fig, figure, mesh};
 pub(crate) use mount::Seat;
 pub use reach::IK_ROUNDS;
 pub(crate) use swing::Sim;
@@ -40,18 +45,6 @@ pub struct Posed {
     pub draws: Vec<Drawn>,
     pub travel: [f32; 3],
 }
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct Fig<'a> {
-    pub rig: &'a Rig,
-    pub parts: &'a BTreeMap<String, MeshPart>,
-    pub size: Option<[f32; 2]>,
-    pub unit: f32,
-    pub root: bool,
-}
-
-static NO_PARTS: BTreeMap<String, MeshPart> = BTreeMap::new();
-pub const MODEL_UNIT: f32 = 0.01;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Head {
@@ -101,23 +94,6 @@ pub struct Puppet {
     pub(crate) bodies: Vec<swing::Body>,
     pub(crate) lag: f32,
     pub(crate) since: f32,
-}
-
-pub(crate) fn mesh(layer: &Layer) -> Option<&MeshLayer> {
-    match &layer.kind {
-        Kind::Mesh(m) => Some(m),
-        _ => None,
-    }
-}
-
-pub(crate) fn figure(layer: &Layer) -> Option<Fig<'_>> {
-    match &layer.kind {
-        Kind::Mesh(m) => Some(Fig { rig: &m.rig, parts: &m.parts, size: m.size, unit: 1.0, root: false }),
-        Kind::Model(m) if !m.rig.is_empty() || m.root_motion => {
-            Some(Fig { rig: &m.rig, parts: &NO_PARTS, size: m.size, unit: MODEL_UNIT, root: m.root_motion })
-        }
-        _ => None,
-    }
 }
 
 impl Puppet {

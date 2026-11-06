@@ -22,7 +22,8 @@ Item {
         const q = {
             "particles": {
                 "layer": own || null,
-                "time": page.editor.time
+                "time": page.editor.time,
+                "sound": page.heard
             }
         };
         info = system ? JSON.parse(page.editor.rig(system, JSON.stringify(q)) || "null") : null;
@@ -78,6 +79,14 @@ Item {
         }
 
         target: swarm.page.editor
+    }
+
+    Connections {
+        function onHeardChanged() {
+            swarm.load();
+        }
+
+        target: swarm.page
     }
 
     SceneRepeater {

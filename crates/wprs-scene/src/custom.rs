@@ -52,6 +52,7 @@ impl Descriptor {
                 || p.channels.is_some()
                 || p.paint.is_some()
                 || p.yields_to.is_some()
+                || p.waits_for.is_some()
         });
         let passes = self.passes.iter().any(|p| {
             let fields = p.target.is_some()
@@ -126,8 +127,10 @@ impl Descriptor {
                 .as_ref()
                 .is_none_or(|v| p.kind == ParamKind::Mask && matches!(v, Param::Color(_) | Param::Number(_)));
             fail(paint, format!("{id} paints with something other than a color or a number, or is no mask"));
-            let yields = p.yields_to.as_ref().is_none_or(|o| o != id && self.param(o).is_some());
-            fail(yields, format!("{id} yields to no other parameter of the effect"));
+            for (o, what) in [(&p.yields_to, "yields to"), (&p.waits_for, "waits for")] {
+                let other = o.as_ref().is_none_or(|o| o != id && self.param(o).is_some());
+                fail(other, format!("{id} {what} no other parameter of the effect"));
+            }
         }
         let c = self.cost;
         fail(
@@ -137,10 +140,8 @@ impl Descriptor {
         fail(self.targets.len() <= MAX_TARGETS, format!("more than {MAX_TARGETS} targets"));
         for (name, target) in &self.targets {
             fail(valid(name), format!("the target {name} must match [a-z0-9_]{{1,32}}"));
-            fail(
-                target.scale > 0.0 && target.scale <= 2.0,
-                format!("the target {name} has a scale outside (0, 2]"),
-            );
+            let scale = target.scale > 0.0 && target.scale <= 2.0;
+            fail(scale, format!("the target {name} has a scale outside (0, 2]"));
         }
         fail(self.passes.len() <= MAX_PASSES, format!("more than {MAX_PASSES} passes"));
         for (n, pass) in self.passes.iter().enumerate() {
@@ -163,10 +164,8 @@ impl Descriptor {
                 pass.target.is_none() || pass.output == crate::Output::Next,
                 format!("pass {n} writes both a target and the state"),
             );
-            fail(
-                pass.vertex.as_ref().is_none_or(|v| !v.is_empty()),
-                format!("pass {n} has an empty vertex entry"),
-            );
+            let vertex = pass.vertex.as_ref().is_none_or(|v| !v.is_empty());
+            fail(vertex, format!("pass {n} has an empty vertex entry"));
             let grid = pass
                 .grid
                 .is_none_or(|g| pass.vertex.is_some() && g.iter().all(|c| (1..=MAX_GRID).contains(c)));

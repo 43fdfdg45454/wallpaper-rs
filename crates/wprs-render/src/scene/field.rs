@@ -5,7 +5,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use wgpu::{BindGroupLayout, RenderPipeline, TextureFormat, TextureUsages, TextureView};
 
-const FORMAT: TextureFormat = TextureFormat::Rgba16Float;
+const FORMAT: TextureFormat = TextureFormat::Rgba8Unorm;
 const ENTRIES: [&str; 3] = ["fs_seed", "fs_jump", "fs_field"];
 
 pub(crate) type Fielders = Arc<(BindGroupLayout, [RenderPipeline; 3])>;
@@ -72,9 +72,13 @@ impl Pipes {
     }
 }
 
-fn steps(reach: u32) -> Vec<u32> {
+pub(crate) fn steps(reach: u32) -> Vec<u32> {
     let first = (reach + 2).next_power_of_two();
     std::iter::successors(Some(first), |s| (*s > 1).then_some(s / 2)).chain([1]).collect()
+}
+
+pub(crate) fn span(reach: u32) -> f32 {
+    2.0 * (reach + 2).next_power_of_two() as f32 + 2.0
 }
 
 impl Renderer {
@@ -90,7 +94,7 @@ impl Renderer {
         let mut pass = |pipeline: &RenderPipeline, to: &TextureView, from: &TextureView, step: u32| {
             let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: None,
-                contents: bytemuck::cast_slice(&[step as f32, 0.0, 0.0, 0.0]),
+                contents: bytemuck::cast_slice(&[step as f32, span(reach), 0.0, 0.0]),
                 usage: wgpu::BufferUsages::UNIFORM,
             });
             let view = |v| wgpu::BindingResource::TextureView(v);

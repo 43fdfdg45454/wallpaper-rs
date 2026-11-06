@@ -67,8 +67,11 @@ fn the_fan_and_the_offset_arrows_are_what_the_engine_computes() {
     assert_eq!((fan["forward"].clone(), fan["fan"].clone()), (json!(30.0), json!([-15.0, 75.0])));
     let samples = fan["samples"].as_array().unwrap();
     assert_eq!(samples.len(), 12);
+    let t: wprs_scene::Turbulent = serde_json::from_value(gust).unwrap();
+    let seed = system(&p)["seed"].as_u64().unwrap_or(0);
+    let salt = wprs_scene::particle_salt(seed, h["seed"].as_u64().unwrap(), 0, 0);
     for (k, s) in samples.iter().enumerate() {
-        let want = wprs_scene::swirl(30.0, 0.25, 3.0 + 4.0 * k as f32 / 12.0);
+        let want = wprs_scene::turbulent_ray(&t, salt, k as u32, 1.5);
         assert!((s.as_f64().unwrap() - f64::from(want)).abs() < 0.01, "{k}: {s} {want}");
     }
     assert_eq!(fan["at"], json!([960.0, -20.0]), "the fan starts at the middle of the emitter");
@@ -144,4 +147,24 @@ fn systems_whose_id_needs_escaping_are_edited_through_their_layer() {
         json!({ "particles": { "cutout": { "system": "a/b", "layer": "flakes", "range": [0.2, 0.8, 1] } } });
     act(&mut p, cut).unwrap();
     assert_eq!(p.doc["scene"]["layers"][1]["render"]["cutout"], json!([0.2, 0.8, 1.0]));
+}
+
+#[test]
+fn rays_that_follow_a_band_turn_with_the_sound_level_the_preview_is_told() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let gust = json!({ "forward": 0, "scale": 0.5, "noise_speed": 0, "offset": 4, "speed": [10, 80], "phase": 3, "audio": "bass" });
+    edit(&mut p, "turbulent", json!({ "turbulent": gust.clone() })).unwrap();
+    let rays = |sound: f32| {
+        let h = wprs_editor::swarms::heard(&p.dir, &p.doc, "flakes", None, (0.0, sound));
+        (h["sound"].clone(), h["fields"]["turbulent"]["samples"].clone(), h["seed"].as_u64().unwrap())
+    };
+    let ((quiet_level, quiet, seed), (loud_level, loud, _)) = (rays(0.0), rays(1.0));
+    assert_eq!((quiet_level, loud_level), (json!(0.0), json!(1.0)));
+    assert_ne!(quiet, loud, "the band moves the phase of the rays");
+    let mut t: wprs_scene::Turbulent = serde_json::from_value(gust).unwrap();
+    let salt = wprs_scene::particle_salt(system(&p)["seed"].as_u64().unwrap_or(0), seed, 0, 0);
+    t.phase = 0.0;
+    let want = f64::from(wprs_scene::turbulent_ray(&t, salt, 0, 0.0));
+    assert!((quiet[0].as_f64().unwrap() - want).abs() < 0.01, "{quiet} {want}");
 }

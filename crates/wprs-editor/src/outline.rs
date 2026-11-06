@@ -24,23 +24,26 @@ fn tracks(value: &Value, pointer: &str, out: &mut Vec<(String, Value)>) {
 }
 
 pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
-    let doc = &project.doc;
-    let (locked, solo, all) = (locked(doc), solo(doc), walk(doc));
+    let (doc, seen, scope) = (&project.doc, project.seen(), project.scope.as_deref());
+    let walked = walk(&seen).into_iter();
+    let all: Vec<_> =
+        walked.map(|(p, l)| (crate::scope::shown(&p, scope), l, p.matches("/layers/").count())).collect();
+    let (locked, solo) = (locked(doc), solo(doc));
     let layers: Vec<Value> = all
         .iter()
-        .map(|(pointer, l)| {
+        .map(|(pointer, l, depth)| {
             let id = l["id"].as_str().unwrap_or_default();
             let label = crate::starters::label(id).map_or_else(|| id.to_owned(), |m| m.local());
             let hidden = l["visible"] == false || l["play"] == false;
-            json!({"id": id, "label": label, "type": l["type"], "pointer": pointer, "depth": pointer.matches("/layers/").count() - 1,
+            json!({"id": id, "label": label, "type": l["type"], "pointer": pointer, "depth": depth - 1,
                 "hidden": hidden, "locked": locked.iter().any(|x| x == id), "solo": solo == Some(id),
                 "effects": l["effects"].as_array().map_or(0, Vec::len)})
         })
         .collect();
     let layer_of = |pointer: &str| {
         let owner =
-            all.iter().filter(|(p, _)| pointer.starts_with(&format!("{p}/"))).max_by_key(|(p, _)| p.len());
-        owner.map_or(Value::Null, |(_, l)| l["id"].clone())
+            all.iter().filter(|(p, ..)| pointer.starts_with(&format!("{p}/"))).max_by_key(|(p, ..)| p.len());
+        owner.map_or(Value::Null, |(_, l, _)| l["id"].clone())
     };
     let mut found = Vec::new();
     tracks(&doc["scene"], "/scene", &mut found);
@@ -82,11 +85,13 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
     let (done, undone) = project.history.labels();
     let step = |name: Option<&&str>| name.map(|n| crate::history::step(n).local());
     let (undo, redo) = (step(done.last()), step(undone.first()));
+    let mut shown = gizmos(&project.dir, &seen, time);
+    shown.iter_mut().for_each(|g| g.pointer = crate::scope::shown(&g.pointer, scope));
     let m = &doc["manifest"];
     let title = crate::meta::title(doc, &wprs_core::locale::languages());
     json!({"title": title, "id": m["id"], "version": m["version"], "license": m["license"], "canvas": doc["scene"]["canvas"],
         "v2": m["schema"] == wprs_format::SCHEMA, "rating": m["content"]["rating"], "photosensitive": m["photosensitive"],
-        "layers": layers, "gizmos": gizmos(&project.dir, doc, time), "problems": problems, "assets": assets,
+        "layers": layers, "gizmos": shown, "problems": problems, "assets": assets,
         "properties": crate::listing::rows(doc), "presets": crate::listing::presets(doc),
         "property_kinds": crate::props::PROPERTY_KINDS, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
         "history": {"done": done, "undone": undone, "undo": undo, "redo": redo}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),

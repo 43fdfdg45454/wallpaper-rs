@@ -28,6 +28,8 @@ pub struct ParamDef {
     pub paint: Option<Param>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub yields_to: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waits_for: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

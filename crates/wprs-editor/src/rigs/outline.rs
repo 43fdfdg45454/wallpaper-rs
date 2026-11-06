@@ -6,7 +6,7 @@ use std::path::Path;
 
 pub fn outline(dir: &Path, doc: &Value, id: &str) -> Value {
     let Ok((_, layer)) = crate::actions::layer(doc, id) else { return Value::Null };
-    let Ok((_, skin)) = Skin::load(dir, doc, layer) else { return Value::Null };
+    let Ok(skin) = Skin::view(dir, doc, layer) else { return Value::Null };
     let mut out = Map::new();
     for p in &skin.pieces {
         let name = skin.glb.json["meshes"][p.mesh]["name"].as_str().filter(|n| !n.is_empty());

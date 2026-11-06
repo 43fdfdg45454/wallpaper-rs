@@ -53,3 +53,48 @@ pub fn import(dir: &Path, doc: &Value, descriptor: &Path, wgsl: Option<&Path>) -
         (true, false) => vec![Op::Add { path, value }],
     })
 }
+
+pub fn rule(dir: &Path, doc: &Value, r: &crate::actions::RuleEdit) -> Result<Vec<Op>> {
+    let path = format!("/scene/effects/{}", escape(&r.effect));
+    let entry = doc.pointer(&path).cloned().ok_or_else(|| {
+        anyhow!(said("editor.no_package_effect", "%1 is no effect of this package", &[&r.effect]))
+    })?;
+    let file = |key: &str| entry[key].as_str().map(|p| dir.join(p)).ok_or_else(|| anyhow!("{path}/{key}"));
+    let (descriptor, wgsl) = (file("descriptor")?, file("wgsl")?);
+    let mut json: Value = serde_json::from_str(&text(&descriptor)?)?;
+    let params = json["params"].as_array_mut().into_iter().flatten();
+    let param = params.into_iter().find(|p| p["id"] == r.param.as_str()).ok_or_else(|| {
+        anyhow!(said("editor.no_parameter", "%1 has no parameter %2", &[&r.effect, &r.param]))
+    })?;
+    for (key, wanted) in [("uses", &r.uses), ("waits_for", &r.waits_for), ("yields_to", &r.yields_to)] {
+        match wanted.as_deref() {
+            None => {}
+            Some("") => drop(param.as_object_mut().and_then(|m| m.remove(key))),
+            Some(v) => param[key] = json!(v),
+        }
+    }
+    let body = serde_json::to_string_pretty(&json)?;
+    Descriptor::packaged(&r.effect, &body, &text(&wgsl)?)
+        .map_err(|e| anyhow!(said("editor.effect", "the effect %1 %2", &[&r.effect, &e])))?;
+    let free = |n: usize| format!("effects/{}-{n}.json", r.effect);
+    let written =
+        (2..).map(free).take(10_000).find(|p| !dir.join(p).exists() && !crate::revisions::kept(dir, p));
+    let written = written.ok_or_else(|| anyhow!("effects/{}", r.effect))?;
+    fs::write(dir.join(&written), body)
+        .map_err(|e| said("editor.cannot_write", "cannot write %1: %2", &[&written, &e]))?;
+    Ok(vec![Op::Replace { path: format!("{path}/descriptor"), value: json!(written) }])
+}
+
+pub fn rules(dir: &Path, doc: &Value, id: &str) -> Value {
+    let Ok(mut scene) = serde_json::from_value::<wprs_scene::Scene>(doc["scene"].clone()) else {
+        return Value::Null;
+    };
+    crate::cache::read_files(&mut scene, dir);
+    let found = scene.loaded.get(id).map(|d| (**d).clone()).or_else(|| wprs_scene::descriptor(id).cloned());
+    let Some(d) = found else { return Value::Null };
+    let params = d.params.iter().map(|p| {
+        json!({ "id": p.id, "kind": p.kind, "uses": p.uses, "waits_for": p.waits_for, "yields_to": p.yields_to })
+    });
+    let own = doc.pointer(&format!("/scene/effects/{}", escape(id))).is_some();
+    json!({ "effect": id, "own": own, "uses": d.uses, "settle": d.state.as_ref().map(|s| s.settle), "params": params.collect::<Vec<_>>() })
+}

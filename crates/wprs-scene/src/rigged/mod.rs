@@ -7,6 +7,7 @@ pub mod math;
 pub(crate) mod motion;
 pub(crate) mod read;
 mod sketch;
+mod stack;
 mod write;
 
 use math::{Mat, Trs};
@@ -39,6 +40,7 @@ pub struct Joint {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Piece {
     pub part: u16,
+    pub source: [u16; 2],
     pub first: u32,
     pub count: u32,
     pub base: u32,
@@ -61,6 +63,8 @@ pub struct Rigged {
     pub defaults: Vec<f32>,
     pub motions: Vec<Motion>,
     pub picture: Option<Vec<u8>>,
+    pub stack: Vec<Vec<(u16, [f32; 4])>>,
+    pub swells: Vec<Vec<(u16, u16, [f32; 3])>>,
     pub digest: u64,
 }
 
@@ -79,6 +83,7 @@ impl Rigged {
         build::joints(&doc, &mut rig)?;
         geometry::pieces(&bin, &mut rig)?;
         motion::motions(&bin, &mut rig)?;
+        (rig.stack, rig.swells) = (stack::stack(&rig), stack::swells(&rig));
         rig.picture = geometry::picture(&bin);
         Ok(rig)
     }

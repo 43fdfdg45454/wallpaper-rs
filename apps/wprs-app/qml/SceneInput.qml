@@ -23,18 +23,11 @@ ColumnLayout {
     }
 
     function at(list, option) {
-        const key = JSON.stringify(option);
-        return list.findIndex(item => JSON.stringify(item) === key);
+        return SceneOptions.at(list, option);
     }
 
     function name(option) {
-        if (option !== null && typeof option === "object" && option.layer !== undefined)
-            return App.tr("Layer %1", option.layer);
-        if (field.widget === "ref:language")
-            return ManifestWords.language(option);
-        if (["variant", "ref:effect"].includes(field.widget) || (field.widget === "enum" && !(field.names ?? []).length))
-            return SceneWords.value(option);
-        return (field.names ?? [])[at(field.options, option)] || (field.widget === "ref:trigger" ? SceneWords.label(option) : String(option));
+        return SceneOptions.name(field, option);
     }
 
     Layout.leftMargin: field.depth * Kirigami.Units.largeSpacing
@@ -103,6 +96,12 @@ ColumnLayout {
         input: parent
     }
 
+    SceneHosts {
+        id: hosts
+
+        input: parent
+    }
+
     Loader {
         Layout.fillWidth: true
         active: !input.bound && input.field.widget !== "group"
@@ -114,21 +113,24 @@ ColumnLayout {
                 "variant": choiceEditor,
                 "color": colorEditor,
                 "rgb": colorEditor,
-                "condition": conditionEditor,
+                "condition": hosts.condition,
                 "vec2": editors.pair,
                 "curve": editors.curve,
-                "stops": pairsEditor,
-                "points": pairsEditor,
+                "stops": hosts.pairs,
+                "points": hosts.pairs,
+                "styles": hosts.styles,
+                "emitters": hosts.emitters,
+                "rules": hosts.rules,
                 "list": editors.list,
                 "ref:mask": editors.mask,
                 "ref:model": editors.rig,
-                "texts": textsEditor,
-                "markup": textsEditor,
-                "flags": metaEditor,
-                "lines": metaEditor,
-                "computed": metaEditor,
-                "ref:thumbnail": metaEditor,
-                "ref:animated": metaEditor
+                "texts": hosts.texts,
+                "markup": hosts.texts,
+                "flags": hosts.meta,
+                "lines": hosts.meta,
+                "computed": hosts.meta,
+                "ref:thumbnail": hosts.meta,
+                "ref:animated": hosts.meta
             })[input.field.widget] ?? (/^(refs|map):|^ref:reach$/.test(input.field.widget) ? editors.refs : input.field.widget.startsWith("ref:") ? choiceEditor : editors.raw)
     }
 
@@ -160,38 +162,6 @@ ColumnLayout {
             alpha: input.field.widget !== "rgb"
             hex: typeof input.value === "string" ? input.value : "#ffffff"
             onPicked: hex => input.commit(hex)
-        }
-    }
-
-    Component {
-        id: pairsEditor
-
-        ScenePairs {
-            host: input
-        }
-    }
-
-    Component {
-        id: conditionEditor
-
-        SceneCondition {
-            host: input
-        }
-    }
-
-    Component {
-        id: textsEditor
-
-        SceneTexts {
-            host: input
-        }
-    }
-
-    Component {
-        id: metaEditor
-
-        SceneMeta {
-            host: input
         }
     }
 }

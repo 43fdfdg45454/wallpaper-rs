@@ -36,9 +36,12 @@ ctl scene undo "$draft" && ctl scene undo "$draft" && ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/solid '{"alpha": 0.5}'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid layers was not previewed"
 ctl scene undo "$draft"
-ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"source_strength": 8}}, {"effect": "god_rays", "params": {"mode": 2}}]'
+ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"emitters": [{"from": [0.3, 0.9], "strength": 8}, {"from": [0.2, 1], "to": [0.8, 1], "strength": 4}]}}, {"effect": "god_rays", "params": {"mode": 2}}]'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with glitter, fluid and a star of rays was not previewed"
-ctl scene undo "$draft"
+ctl scene keyframe "$draft" /scene/layers/0/effects/1/params/emitters 0 && ctl scene keyframe "$draft" /scene/layers/0/effects/1/params/emitters 3 '[{"from": [0.7, 0.5], "angle": 0, "strength": 2}, {"from": [0.2, 0.9], "to": [0.8, 0.9], "strength": 6}]'
+grep -q '"keys"' "$draft/scene.json" || fail "fluid emitters were not keyframed"
+ctl scene preview "$draft" -o preview:1 --time 1.5 || fail "a scene with keyframed fluid emitters was not previewed"
+ctl scene undo "$draft" && ctl scene undo "$draft" && ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "blend_gradient"}]'
 ctl scene paint-mask "$draft" /scene/layers/0/effects/0/params/map '0.4,0.5;0.6,0.5' --channel g || fail "a mask was not painted"
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a painted mask was not previewed"
@@ -55,7 +58,8 @@ ctl scene import "$draft" "$ROOT/tests/fixtures/green-64x32.png" --id leaf >/dev
 ctl scene mesh-from-picture "$draft" leaf --cells 8 --id puppet >/dev/null || fail "no mesh was cut from a picture"
 ctl scene bone "$draft" puppet root --at 0.2,0.5 || fail "the mesh took no root bone"
 ctl scene bone "$draft" puppet arm --parent root --at 0.6,0.5 || fail "the mesh took no arm"
-ctl scene bones "$draft" puppet | grep -q '"arm"' || fail "the bones of the mesh were not listed"
+ctl scene bones "$draft" puppet | grep '"arm"' >/dev/null || fail "the bones of the mesh were not listed"
+ctl scene part-outlines "$draft" puppet | grep '\[' >/dev/null || fail "the outlines of the parts were not listed"
 ctl scene set "$draft" /scene/layers/1/clips '[{"id": "wave", "bones": {"arm": {"rotation": [[0, 0], [1, 40]]}}}]'
 ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "wave"}]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a bent mesh was not previewed"
@@ -68,7 +72,7 @@ ctl scene set "$draft" /scene/canvas/wind '[40, 0]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with reaching and swinging bones was not previewed"
 ctl scene bone "$draft" puppet hand --parent arm --at 0.9,0.5 || fail "the mesh took no hand"
 ctl scene weights "$draft" puppet arm '0.5,0.5;0.6,0.5' --mode add --by 0.5 --radius 0.2 --lock root || fail "no weights were painted"
-ctl scene vertex-weights "$draft" puppet | grep -q '"arm"' || fail "the weights of the vertices were not listed"
+ctl scene vertex-weights "$draft" puppet | grep '"arm"' >/dev/null || fail "the weights of the vertices were not listed"
 ctl scene bone "$draft" puppet hand --rename paw || fail "the hand was not renamed"
 ctl scene bone "$draft" puppet paw --root || fail "the paw was not rehung"
 ctl scene auto-weights "$draft" puppet || fail "the weights were not bound to the bones again"
@@ -96,11 +100,14 @@ ctl scene attach "$draft" badge --nudge 4,-2 || fail "the layer was not moved al
 ctl scene ik "$draft" puppet add root arm || fail "no chain without limits was added"
 ctl scene point "$draft" puppet pin --at 0.5,0.3 || fail "no point was placed"
 ctl scene point "$draft" puppet pin --rename peg --parent root || fail "the point was not renamed and rehung"
-ctl scene bones "$draft" puppet | grep -q '"peg"' || fail "the point was not listed"
+ctl scene bones "$draft" puppet | grep '"peg"' >/dev/null || fail "the point was not listed"
 ctl scene point "$draft" puppet peg --remove || fail "the point was not removed"
 ctl scene validate "$draft" >/dev/null || fail "removing a point left the scene invalid"
 ctl scene parts "$draft" puppet --order body 2 --hide body || fail "the part was not ordered"
 ctl scene parts "$draft" puppet --show body || fail "the part was not shown"
+ctl scene parts "$draft" puppet --depth-scale 2 --cull on --sort off || fail "the depth of the mesh was not set"
+if ctl scene parts "$draft" puppet --depth-scale 20 2>/dev/null; then fail "a depth scale of 20 was kept"; fi
+ctl scene parts "$draft" puppet --flat || fail "the depth of the mesh was not turned off"
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with chains, a rope, wind and attachments was not previewed"
 ctl scene attach "$draft" badge --detach || fail "the layer was not let go"
 source "$(dirname "$0")"/integration-particles.sh
@@ -175,22 +182,11 @@ shown "$s15" 0 0 255
 ctl scene set "$draft" /manifest/properties/tone/default red
 ctl scene preview "$draft" -o preview:1 --time 0
 shown "$s15" 255 0 0
-ctl scene show "$draft" /manifest/requires/features | grep -q properties2 || fail "a button left properties2 out of the features"
+ctl scene show "$draft" /manifest/requires/features | grep properties2 >/dev/null || fail "a button left properties2 out of the features"
 if ctl scene remove-property "$draft" tone 2>/dev/null; then fail "a property that a binding follows was removed"; fi
 ctl scene remove-property "$draft" flash
-if ctl scene show "$draft" /manifest/properties | grep -q flash; then fail "remove-property kept the button"; fi
+if ctl scene show "$draft" /manifest/properties | grep flash >/dev/null; then fail "remove-property kept the button"; fi
 ctl scene preview "$draft" -o preview:1 --stop
 ctl release preview:1 && expect "list(s['outputs'])" "[]"
 echo "scene editor preview checks passed"
-sea=org.example.sea
-inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
-[ "$(inputs "r['grants'], r['capturing'], r['tracking']")" = "({}, False, False)" ] || fail "inputs start on"
-if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was granted to a scene that is not shown"; fi
-grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
-ctl input pointer 10 10 && ctl input pointer -10 -10
-ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
-refused "is not audio, pointer, clicks, network, rgb, media or media_network" Inputs1 Grant ss "$sea" camera
-refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
-refused "Signature mismatch" Inputs1 SetPointer dd 1 1
-denied "only the KWin script of wprsd and wprs-ctl report the pointer" Inputs1.SetPointer int32:1 int32:1
-echo "input permission checks passed"
+source "$(dirname "$0")"/integration-grants.sh

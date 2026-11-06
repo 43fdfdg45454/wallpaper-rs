@@ -44,8 +44,10 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
     out["animations"] =
         json!(rig.motions.iter().map(|m| json!({ "name": m.name, "length": m.length })).collect::<Vec<_>>());
     out["model"] = json!(crate::skin::solid(layer));
-    let skin =
-        (!crate::skin::solid(layer)).then(|| Skin::read(dir, &path, &rig, crate::skin::size(doc, layer)));
+    let size = crate::skin::size(doc, layer);
+    let skin = (!crate::skin::solid(layer)).then(|| Skin::read(dir, &path, &rig, size));
+    let editable = skin.as_ref().is_some_and(Result::is_ok);
+    let skin = skin.map(|s| s.or_else(|_| Skin::shown(dir, &path, &rig, size)));
     match skin.unwrap_or_else(|| Err(anyhow::anyhow!("a model"))) {
         Ok(skin) => {
             let worlds = skin.worlds();
@@ -61,7 +63,7 @@ fn body(dir: &Path, doc: &Value, layer: &Value) -> Value {
                 json!({ "name": skin.names[n], "at": at, "part": !skin.is_point(n), "parent": parent })
             });
             out["points"] = json!(points.collect::<Vec<_>>());
-            (out["editable"], out["auto"]) = (json!(true), json!(skin.auto));
+            (out["editable"], out["auto"]) = (json!(editable), json!(skin.auto));
         }
         Err(_) => {
             let mut seen = std::collections::BTreeSet::new();
@@ -85,7 +87,8 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("handles").is_some() => handles(dir, doc, id),
         _ if q.get("particles").is_some() => {
             let p = &q["particles"];
-            crate::swarms::handles(dir, doc, id, p["layer"].as_str(), p["time"].as_f64().unwrap_or(0.0))
+            let (t, sound) = (p["time"].as_f64().unwrap_or(0.0), p["sound"].as_f64().unwrap_or(0.0) as f32);
+            crate::swarms::heard(dir, doc, id, p["layer"].as_str(), (t, sound))
         }
         _ if q.get("budget").is_some() => {
             let b = &q["budget"];
@@ -107,6 +110,13 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("outline").is_some() => outline(dir, doc, id),
         _ if q.get("palette").is_some() => crate::covers::palette(dir, doc, q["palette"].as_str()),
         _ if q.get("wind").is_some() => wind_arrow(doc),
+        _ if q.get("rules").is_some() => {
+            crate::shaders::rules(dir, doc, q["rules"]["effect"].as_str().unwrap_or(id))
+        }
+        _ if q.get("clocks").is_some() => {
+            let strip = q["clocks"]["strip"].as_u64().unwrap_or(0) as usize;
+            crate::clocks::clocks(dir, doc, q["clocks"]["time"].as_f64().unwrap_or(0.0), strip)
+        }
         _ if q.get("spread").is_some() => crate::spread::spread(doc, &q["spread"]),
         _ => rig(dir, doc, id),
     }
@@ -124,6 +134,10 @@ pub fn staged(look: &Value) -> Option<Value> {
 pub fn preview(scene: &mut Value, look: &Value) {
     crate::lamps::preview(scene);
     crate::stage3d::preview(scene);
+    if let Some(alone) = look["template"].as_str().and_then(|t| scene["templates"].get(t)).cloned() {
+        scene["layers"] = json!([alone]);
+        drop(scene.as_object_mut().map(|s| s.remove("scripts")));
+    }
     let Some(id) = look["layer"].as_str() else { return };
     fn find<'a>(list: &'a mut Value, id: &str) -> Option<&'a mut Value> {
         for l in list.as_array_mut()?.iter_mut() {

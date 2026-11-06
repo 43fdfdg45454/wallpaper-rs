@@ -18,14 +18,15 @@ pub struct Event {
     pub prev: [f32; 2],
     pub alive: u32,
     pub depth: f32,
+    pub vz: f32,
 }
 
 impl Event {
     pub(super) fn of(p: &Particle, slot: usize, prev: [f32; 2]) -> Event {
-        let (pos, vel, color, size, rot, id, depth) =
-            (p.pos, p.vel, p.color, p.size, p.rot, p.id, p.depth[0]);
+        let (pos, vel, color, size, rot, id, [depth, vz]) =
+            (p.pos, p.vel, p.color, p.size, p.rot, p.id, p.depth);
         let (slot, alive) = (slot as u32, u32::from(p.age < p.life));
-        Event { pos, vel, color, size, rot, id, slot, prev, alive, depth }
+        Event { pos, vel, color, size, rot, id, slot, prev, alive, depth, vz }
     }
 }
 

@@ -106,6 +106,7 @@ QtObject {
             "layer_textures": App.tr("feeds layers into effects"),
             "video_textures": App.tr("uses videos as masks, effect textures or light patterns"),
             "layer_playback": App.tr("sets the speed, range or frame of its videos and moving pictures"),
+            "video_clocks": App.tr("plays the same video in several layers, each on its own clock"),
             "texture_options": App.tr("sets how its pictures are filtered, repeated or shrunk"),
             "animated_textures": App.tr("plays sprite sheets or animated pictures"),
             "text_layout": App.tr("wraps or boxes its texts"),

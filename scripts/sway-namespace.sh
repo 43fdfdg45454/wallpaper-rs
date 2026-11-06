@@ -10,12 +10,12 @@ saw() {
 expect "s['layer_shell']" "{'namespace': 'wallpaper', 'from': 'default', 'restart': False, 'ignored': None}"
 saw 1 wallpaper
 [ -n "$(announced <"$WORK/sway.log")" ] || fail "the compositor log does not show layer surface namespaces"
-ctl config "$key" | grep -qx "$key = \"auto\"" || fail "config does not read back the automatic namespace"
+ctl config "$key" | grep -x "$key = \"auto\"" >/dev/null || fail "config does not read back the automatic namespace"
 ctl config "$key" wprs-check >"$WORK/namespace.out"
 grep -q "next time the daemon starts" "$WORK/namespace.out" || fail "no restart notice: $(cat "$WORK/namespace.out")"
 grep -qx "in use: wallpaper (from default)" "$WORK/namespace.out" || fail "no name in use: $(cat "$WORK/namespace.out")"
 expect "s['layer_shell']['restart'], s['options']['$key']" "(True, 'wprs-check')"
-ctl config "$key" | grep -qx "$key = \"wprs-check\"" || fail "config does not read back the namespace"
+ctl config "$key" | grep -x "$key = \"wprs-check\"" >/dev/null || fail "config does not read back the namespace"
 if ctl config "$key" "two words" 2>/dev/null; then fail "an invalid namespace was accepted"; fi
 for bad in "a/b" "" "   "; do
   if timeout 10 "$BIN/wprsd" --layer-namespace "$bad" 2>"$WORK/option.err"; then fail "the daemon took the namespace '$bad'"; fi

@@ -7,7 +7,7 @@ Item {
 
     required property var swarm
     required property var emitter
-    readonly property real r: swarm.ratio
+    readonly property real r: swarm?.ratio ?? 1
     readonly property var knobs: SceneSwarmKnobs.of(shape)
 
     function set(next) {

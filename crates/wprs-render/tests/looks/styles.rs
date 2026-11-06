@@ -1,7 +1,7 @@
 use super::fonts::boxes;
 use super::*;
 
-fn styled(r: &Renderer, more: Value) -> Shot {
+pub(super) fn styled(r: &Renderer, more: Value) -> Shot {
     let mut t = json!({ "id": "t", "type": "text", "text": "A", "font": "b", "size": 20, "color": "#ffffff",
         "transform": { "position": [50, 25] } });
     t.as_object_mut().unwrap().extend(more.as_object().unwrap().clone());

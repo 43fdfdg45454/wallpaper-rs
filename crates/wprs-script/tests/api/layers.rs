@@ -107,3 +107,31 @@ fn templates_spawn_destroy_and_order_layers() {
     );
     assert_eq!((out.layers["bar_3"].position, out.layers["first"].opacity), (Some([20.0, 0.0]), Some(0.5)));
 }
+
+#[test]
+fn scripts_set_fluid_emitters_clamped_and_refuse_lists_that_are_no_emitters() {
+    let source = r#"
+        import { scene } from "wprs";
+        const fluid = scene.layer("pic").effect(0);
+        fluid.set("emitters", [{ from: [0.5, 9], strength: 99 }, { from: [0.1, 1], to: [0.9, 1], angle: -60, strength: 3 }]);
+        const errors = [];
+        for (const bad of [3, [5], [{ from: [Number.NaN, 0] }], Array(65).fill({ from: [0, 0] })]) {
+            try { fluid.set("emitters", bad); } catch (e) { errors.push(e.constructor.name); }
+        }
+        const got = fluid.get("emitters");
+        got[0].from[0] = 3;
+        export function update() { scene.layer("pic").text = `${errors.join(" ")} ${fluid.get("emitters")[0].from[0]}`; }
+    "#;
+    let scene = json!({
+        "scripts": [{ "path": "main.js", "uses": ["effects"] }],
+        "layers": [{ "id": "pic", "type": "solid", "color": "#808080", "effects": [{ "effect": "fluid" }] }]
+    });
+    let mut script = staged(scene, &[("main.js", source)]);
+    let out = at(&mut script, 0.0).unwrap();
+    let wprs_scene::Param::Emitters(list) = &out.effects["pic"][0].params["emitters"] else { panic!() };
+    let point = wprs_scene::EffectEmitter { from: [0.5, 4.0], to: None, angle: -90.0, strength: 64.0 };
+    let line =
+        wprs_scene::EffectEmitter { from: [0.1, 1.0], to: Some([0.9, 1.0]), angle: -60.0, strength: 3.0 };
+    assert_eq!(list, &vec![point, line]);
+    assert_eq!(text(&out, "pic"), "TypeError TypeError TypeError TypeError 0.5");
+}

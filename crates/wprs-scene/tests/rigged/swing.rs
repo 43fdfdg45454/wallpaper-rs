@@ -74,6 +74,27 @@ fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_secon
 }
 
 #[test]
+fn puppet_motion_matches_at_every_frame_rate_on_mains_and_on_battery() {
+    let rates = [30.0, 60.0, 120.0];
+    for more in [json!({}), json!({ "mode": "spring", "stiffness": 0.3, "gravity": 1 })] {
+        let hands = rates.map(|fps| {
+            let mut rt = hanging(more.clone());
+            run(&mut rt, 1.0, 1.0 / fps);
+            at(&rt, "hand")
+        });
+        assert!(hands.iter().all(|h| close(*h, hands[0], 1e-3)), "{hands:?}");
+        let battery = [30.0, 60.0].map(|fps| {
+            let mut rt = hanging(more.clone());
+            rt.set_battery(true);
+            run(&mut rt, 1.0, 1.0 / fps);
+            at(&rt, "hand")
+        });
+        assert!(close(battery[0], battery[1], 1e-3), "{battery:?}");
+        assert!(close(battery[0], hands[0], 3.0), "{battery:?} {:?}", hands[0]);
+    }
+}
+
+#[test]
 fn a_spring_lags_behind_its_clip_and_comes_back_to_it() {
     let mut rt = runtime(json!({ "clips": [{ "id": "wave", "animation": "wave", "loop": "once" }],
         "animations": [{ "clip": "wave" }], "physics": [{ "bone": "arm", "stiffness": 0.2, "inertia": 1 }] }));

@@ -141,13 +141,13 @@ impl Output {
     }
 
     pub(super) fn loudest(&self, reel: &Reel) -> Option<u32> {
-        let volumes = self.layers().flat_map(|s| s.content.videos()).filter(|(r, _)| *r == reel);
+        let volumes = self.layers().flat_map(|s| s.videos()).filter(|(r, _)| *r == reel);
         volumes.map(|(_, volume)| volume).max()
     }
 
     pub(super) fn animated(&self) -> bool {
         let moving =
-            |s: &Shown| !s.content.videos().is_empty() || s.scene.as_ref().is_some_and(|sc| sc.due.is_some());
+            |s: &Shown| !s.videos().is_empty() || s.scene.as_ref().is_some_and(|sc| sc.due.is_some());
         let moving = |s: &Shown| moving(s) || s.content.page().is_some();
         self.fade.is_some() || self.moving || self.layers().any(moving)
     }

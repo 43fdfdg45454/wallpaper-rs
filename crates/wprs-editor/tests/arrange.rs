@@ -94,3 +94,15 @@ fn names_lose_their_accents_in_ids_and_folders() {
     assert_eq!(slug("Año nuevo, ¡ya!"), "ano-nuevo-ya");
     assert_eq!(default_id("Über Straße"), "org.example.uber-strasse");
 }
+
+#[test]
+fn layers_become_templates_under_free_names() {
+    let mut doc = starter("clock", "org.example.test", "Test", "en").unwrap();
+    act(&mut doc, json!({"duplicate_layer": {"id": "time", "template": true}})).unwrap();
+    act(&mut doc, json!({"duplicate_layer": {"id": "time", "template": true}})).unwrap();
+    let names: Vec<&String> = doc["scene"]["templates"].as_object().unwrap().keys().collect();
+    assert_eq!(names, ["time_template", "time_template_2"]);
+    let layers = doc["scene"]["layers"].as_array().unwrap();
+    let time = layers.iter().find(|l| l["id"] == "time").unwrap();
+    assert_eq!(&doc["scene"]["templates"]["time_template"], time);
+}

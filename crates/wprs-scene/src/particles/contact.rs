@@ -61,6 +61,9 @@ pub(super) fn follow(p: &mut Particle, s: &Sim, mirror: &[Event]) {
     }
     if bits & 8 != 0 {
         p.vel = h.vel.map(|v| v * near);
+        if s.depth[2][3] > 0.5 {
+            p.depth[1] = h.vz;
+        }
     }
 }
 

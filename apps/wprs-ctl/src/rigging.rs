@@ -1,8 +1,7 @@
 use crate::author::{Author, DIR, ID};
-use anyhow::Result;
+pub(crate) use crate::rigshow::{print, run};
 use clap::Subcommand;
 use std::path::PathBuf;
-use wprs_editor::Project;
 use wprs_editor::actions::{Action, AutoWeights, BoneEdit, DepthStroke, MeshCut, WeightStroke};
 use wprs_editor::skin::Mode;
 
@@ -118,6 +117,15 @@ pub enum Rigging {
         #[arg(help = ID)]
         layer: String,
     },
+    #[command(
+        about = "Print the outline of every part of a mesh layer as JSON, as the editor draws it, on any mesh"
+    )]
+    PartOutlines {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = ID)]
+        layer: String,
+    },
     #[command(about = "Print each vertex of a mesh layer with its place, part and bone weights as JSON")]
     VertexWeights {
         #[arg(help = DIR)]
@@ -168,28 +176,4 @@ pub(crate) fn action(command: Rigging) -> Result<(PathBuf, Action), Box<Author>>
         Rigging::AutoWeights { dir, layer } => (dir, Action::AutoWeights(AutoWeights { layer })),
         other => return Err(Box::new(Author::Rigging(other))),
     })
-}
-
-pub(crate) fn print(
-    dir: &std::path::Path,
-    layer: &str,
-    read: impl Fn(&Project) -> serde_json::Value,
-) -> Result<()> {
-    let project = Project::open(dir)?;
-    let found = read(&project);
-    anyhow::ensure!(!found.is_null(), "there is no mesh layer {layer:?} with that");
-    println!("{}", serde_json::to_string_pretty(&found)?);
-    Ok(())
-}
-
-pub(crate) fn run(command: Rigging) -> Result<()> {
-    match command {
-        Rigging::Bones { dir, layer } => {
-            print(&dir, &layer, |p| wprs_editor::rigs::rig(&p.dir, &p.doc, &layer))
-        }
-        Rigging::VertexWeights { dir, layer } => {
-            print(&dir, &layer, |p| wprs_editor::rigs::vertices(&p.dir, &p.doc, &layer))
-        }
-        _ => Ok(()),
-    }
 }

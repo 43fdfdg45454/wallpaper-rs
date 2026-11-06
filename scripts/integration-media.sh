@@ -28,7 +28,7 @@ consume "$s21"
 ctl lib apply "$uid" -o TEST-21
 wait_for 10 reads "r['shown']['TEST-21']['media'], r['shown']['TEST-21']['granted']" "(True, [])" ||
   fail "the media scene was not declared: $(ctl input status --json)"
-ctl media status | grep -q "^media player: not read" || fail "media status: $(ctl media status)"
+ctl media status | grep "^media player: not read" >/dev/null || fail "media status: $(ctl media status)"
 shown "$s21" 255 0 0
 mkfifo "$WORK/player"
 "$BIN/examples/player" example <"$WORK/player" >"$WORK/player.out" 2>&1 & pids+=($!)
@@ -43,7 +43,7 @@ idle=$(ticks) && sleep 2 && idle=$(($(ticks) - idle))
 ctl input grant "$tune" media
 wait_for 10 says "r['listening'], r['players'], r['playing'], r['track'], r['using']" "(True, 1, True, True, ['TEST-21'])" ||
   fail "the granted scene did not read the player: $(ctl media status --json)"
-ctl media status | grep -qx "track: yes, playing: yes, cover: no" || fail "media status: $(ctl media status)"
+ctl media status | grep -x "track: yes, playing: yes, cover: no" >/dev/null || fail "media status: $(ctl media status)"
 shown "$s21" 255 0 0
 play "{\"title\": \"Morning\", \"artist\": [\"Example Artist\"], \"length\": 100, \"art\": \"$art\"}"
 wait_for 10 says "r['cover']" True || fail "the cover of the track was not read: $(ctl media status --json)"
@@ -121,7 +121,7 @@ printf '{"title": "Night Drive", "artist": ["Example Artist"], "playing": true, 
 read -r _ _ _ s22 < <(ctl stream preview:2 160 90)
 consume "$s22"
 ctl scene preview "$tuning" -o preview:2 --time 0 --media "$WORK/track.json" || fail "a made-up track was not previewed"
-ctl media status | grep -q "^media player: not read" || fail "a made-up track read the media player: $(ctl media status)"
+ctl media status | grep "^media player: not read" >/dev/null || fail "a made-up track read the media player: $(ctl media status)"
 shown "$s22" 0 0 255
 ctl scene preview "$tuning" -o preview:2 --time 0 || fail "the scene was not previewed without a made-up track"
 shown "$s22" 255 0 0

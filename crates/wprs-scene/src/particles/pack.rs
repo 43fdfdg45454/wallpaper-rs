@@ -3,7 +3,7 @@ use bytemuck::{Pod, Zeroable};
 
 pub const PARTICLE_EVENTS: u32 = 1024;
 pub const MAX_HATCH: u32 = 1000;
-pub const EVENT: usize = 16;
+pub const EVENT: usize = 17;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
@@ -55,10 +55,8 @@ impl Sim {
     }
 
     pub(crate) fn of(s: &System, part: &Part, host: Option<&System>, seed: u64, canvas: [u32; 2]) -> Sim {
-        let mut b = Sim::default();
-        let seed = s.seed ^ seed ^ (part.depth as u64 * 0x9e37_79b9 + part.link as u64);
-        b.clock = [STEP, 0.0, canvas[0] as f32, canvas[1] as f32];
-        b.ids[0] = (seed ^ (seed >> 32)) as u32;
+        let mut b = Sim { clock: [STEP, 0.0, canvas[0] as f32, canvas[1] as f32], ..Sim::default() };
+        b.ids[0] = super::birth::particle_salt(s.seed, seed, part.depth, part.link);
         let counts = [s.emitters.len().min(MAX_EMITTERS2), s.forces.len().min(16), s.collide.len().min(8)];
         let [e, f, c] = counts.map(|n| n as u32);
         b.counts = [s.capacity, e, f, c];

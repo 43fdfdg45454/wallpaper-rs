@@ -82,6 +82,7 @@ fn spawn(e: u32, id: u32, ev: Event, hatched: bool, order: u32) -> Particle {
         p.host = vec2<u32>(ev.slot, ev.id);
         if sim.depth[2].w > 0.5 {
             p.depth.x += ev.depth;
+            p.depth.y += select(0.0, ev.vz, (bits & 8u) != 0u);
         }
         p.spare.y = ev.depth;
     }

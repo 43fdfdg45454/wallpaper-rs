@@ -53,7 +53,7 @@ fn wobble(p: Particle, k: u32, a: f32) -> vec3<f32> {
 }
 
 fn follow(p: ptr<function, Particle>) {
-    let o = 4u + sim.links.w + (*p).host.x * 16u;
+    let o = 4u + sim.links.w + (*p).host.x * EVENT_WORDS;
     if (*p).host.x >= sim.mode.w || host[o + 10u] != (*p).host.y || host[o + 14u] == 0u {
         (*p).age = (*p).life;
         return;
@@ -79,5 +79,8 @@ fn follow(p: ptr<function, Particle>) {
     }
     if (bits & 8u) != 0u {
         (*p).vel = h.vel * near;
+        if sim.depth[2].w > 0.5 {
+            (*p).depth.y = h.vz;
+        }
     }
 }

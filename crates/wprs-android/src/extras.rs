@@ -2,10 +2,10 @@ use crate::chosen::{kind, listed};
 use crate::pack::Pack;
 use serde_json::Value as Json;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wprs_render::{Pixels, SceneAssets};
-use wprs_scene::{Control, Values};
+use wprs_scene::{Control, Runtime, Values};
 
 const EDGE: u32 = 2048;
 
@@ -14,6 +14,7 @@ pub(crate) struct Extras {
     images: Vec<(String, PathBuf, Arc<Pixels>)>,
     pub(crate) videos: Arc<Vec<(String, PathBuf)>>,
     pub(crate) next: Option<u64>,
+    pub(crate) lengths: Vec<mpsc::Receiver<Vec<(String, f32)>>>,
 }
 
 pub(crate) fn now() -> u64 {
@@ -44,6 +45,10 @@ impl Extras {
     ) -> Extras {
         let (mut images, mut videos, mut next) = (Vec::new(), Vec::new(), None);
         for (key, file) in shown {
+            if kind(file) == Some("video") {
+                videos.extend((videos.len() < crate::keeping::SHOWN).then(|| (key.clone(), file.clone())));
+                continue;
+            }
             let kept = old.images.iter().find(|(k, f, _)| k == key && f == file).map(|(.., p)| Arc::clone(p));
             let decoded = kept.or_else(|| wprs_render::decode_image(file, EDGE).ok().map(Pixels::new));
             images.extend(decoded.map(|pixels| (key.clone(), file.clone(), pixels)));
@@ -59,6 +64,7 @@ impl Extras {
             };
             if kind(&file) == Some("video") {
                 videos.extend(keys.into_iter().map(|key| (key, file.clone())));
+                videos.extend(crate::pack::lanes(pack, id, &file));
                 continue;
             }
             let kept = old.images.iter().find(|(_, f, _)| *f == file).map(|(.., pixels)| Arc::clone(pixels));
@@ -75,7 +81,36 @@ impl Extras {
         let replaced =
             |id: &String| images.iter().any(|(key, ..)| key == id) || videos.iter().any(|(key, _)| key == id);
         let own: Vec<_> = pack.videos.iter().filter(|(id, _)| !replaced(id)).cloned().collect();
-        Extras { images, videos: Arc::new(own.into_iter().chain(videos).collect()), next }
+        let videos = Arc::new(own.into_iter().chain(videos).collect());
+        Extras { images, videos, next, lengths: Vec::new() }
+    }
+
+    pub(crate) fn measure(&mut self, films: Vec<(String, PathBuf)>) {
+        if films.is_empty() {
+            return;
+        }
+        let (tx, rx) = mpsc::channel();
+        let measured = move || {
+            let found =
+                films.into_iter().filter_map(|(key, path)| Some((key, wprs_scene::film_file(&path)?)));
+            drop(tx.send(found.collect()));
+        };
+        if std::thread::Builder::new().name("wprs-lengths".into()).spawn(measured).is_ok() {
+            self.lengths.push(rx);
+        }
+    }
+
+    pub(crate) fn timed(&mut self, runtime: &mut Runtime) -> bool {
+        let before = self.lengths.len();
+        self.lengths.retain(|rx| match rx.try_recv() {
+            Ok(found) => {
+                found.iter().for_each(|(key, seconds)| runtime.set_length(key, *seconds));
+                false
+            }
+            Err(mpsc::TryRecvError::Empty) => true,
+            Err(mpsc::TryRecvError::Disconnected) => false,
+        });
+        self.lengths.len() != before
     }
 
     pub(crate) fn same(&self, other: &Extras) -> bool {

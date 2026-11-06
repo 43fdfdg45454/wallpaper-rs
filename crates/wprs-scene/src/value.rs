@@ -4,8 +4,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+mod emitters;
 mod kinds;
 
+pub use emitters::{EMITTER_TEXELS, EffectEmitter, MAX_EFFECT_EMITTERS, emitter_key, emitter_texels};
 pub(crate) use kinds::ColorRepr;
 pub use kinds::{AudioChannel, Axis, Band, Level, Param, Vec2, Vec3};
 

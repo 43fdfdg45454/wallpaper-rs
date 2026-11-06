@@ -20,7 +20,7 @@ state=$XDG_DATA_HOME/wallpaper-rs/repos/$repo/state.json
 rm "$state"
 [ "$(ctl remote ls --json | jq_ "[r['broken'] is not None for r in r['repos']]")" = "[True]" ] ||
   fail "a repository without its state was not reported: $(ctl remote ls --json)"
-ctl remote ls | grep -q "broken, refresh or remove it" || fail "remote ls hides the broken repository"
+ctl remote ls | grep "broken, refresh or remove it" >/dev/null || fail "remote ls hides the broken repository"
 ctl pkg search sky >/dev/null || fail "a broken repository stopped browsing"
 if ctl remote refresh "${repo:0:8}" --wait >/dev/null 2>&1; then fail "a repository without an address was refreshed"; fi
 ctl remote add "http://127.0.0.1:$port/$anchor" --wait >/dev/null

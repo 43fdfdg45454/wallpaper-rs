@@ -242,6 +242,10 @@ msgstr "el grupo %1 tiene problemas; corrígelos primero"
 msgid "the group %1 has its own %2; reset them before ungrouping"
 msgstr "el grupo %1 tiene su propio %2; restablécelo antes de desagrupar"
 
+#: crates/wprs-editor/src/arrange.rs
+msgid "scripts cannot copy a layer of type %1"
+msgstr "los scripts no pueden copiar una capa de tipo %1"
+
 #: crates/wprs-editor/src/assets.rs
 msgid "a sound may have at most %1 MiB"
 msgstr "un sonido puede tener como mucho %1 MiB"
@@ -536,6 +540,14 @@ msgstr ""
 #: crates/wprs-editor/src/credit.rs
 msgid "a package is derived from at most 64 works"
 msgstr "un paquete deriva de 64 obras como mucho"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "depth is turned off or changed, not both"
+msgstr "la profundidad se apaga o se cambia, no las dos cosas"
+
+#: crates/wprs-editor/src/cutouts.rs
+msgid "the depth scale goes from 0 to 10"
+msgstr "la escala de la profundidad va de 0 a 10"
 
 #: crates/wprs-editor/src/cutouts.rs
 msgid "say what changes in the parts"
@@ -1120,6 +1132,14 @@ msgstr "un trazo de pesos tiene una fuerza y un borde suave de 0 a 1"
 msgid "the mesh has no bones yet"
 msgstr "la malla todavía no tiene huesos"
 
+#: crates/wprs-editor/src/scope.rs
+msgid "there is no template \"%1\""
+msgstr "no hay ninguna plantilla «%1»"
+
+#: crates/wprs-editor/src/scope.rs
+msgid "a template holds one layer; add layers inside its group"
+msgstr "una plantilla tiene una sola capa; añade capas dentro de su grupo"
+
 #: crates/wprs-editor/src/scripts.rs
 msgid "the script has no file name"
 msgstr "el script no tiene nombre de archivo"
@@ -1190,6 +1210,14 @@ msgstr "el efecto %1 %2"
 #: crates/wprs-editor/src/shaders.rs
 msgid "a scene has at most %1 effects of its own"
 msgstr "una escena tiene como mucho %1 efectos propios"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "%1 is no effect of this package"
+msgstr "%1 no es un efecto de este paquete"
+
+#: crates/wprs-editor/src/shaders.rs
+msgid "%1 has no parameter %2"
+msgstr "%1 no tiene el parámetro %2"
 
 #: crates/wprs-editor/src/shapes.rs
 msgid "an expression has a name of 1 to 64 characters"
@@ -1325,12 +1353,8 @@ msgid "there is no point \"%1\""
 msgstr "no hay ningún punto «%1»"
 
 #: crates/wprs-editor/src/skin/read.rs
-msgid ""
-"bones and weights are edited here on meshes whose parts are each drawn once, "
-"in at most 64 primitives"
-msgstr ""
-"aquí se editan huesos y pesos de mallas cuyas partes se dibujan una sola "
-"vez, en 64 primitivas como mucho"
+msgid "the parts of this mesh do not match the primitives of its file"
+msgstr "las partes de esta malla no coinciden con las primitivas de su archivo"
 
 #: crates/wprs-editor/src/spots.rs
 msgid "say where the new point goes"
@@ -2468,6 +2492,10 @@ msgstr ""
 "fija la velocidad, el tramo o el fotograma de sus vídeos e imágenes animadas"
 
 #: crates/wprs-format/src/scenery.rs
+msgid "plays the same video in several layers, each on its own clock"
+msgstr "reproduce el mismo vídeo en varias capas, cada una con su propio reloj"
+
+#: crates/wprs-format/src/scenery.rs
 msgid "sets how its pictures are filtered, repeated or shrunk"
 msgstr "fija cómo se filtran, repiten o reducen sus imágenes"
 
@@ -3104,6 +3132,14 @@ msgid ""
 msgstr ""
 "%1 nombra un sistema que hace nacer partículas desde una capa, algo que no "
 "puede hacer un hijo que nace de su padre"
+
+#: crates/wprs-scene/src/issue.rs
+msgid ""
+"%1 applies to video layers that name a video file, pick videos through a map "
+"or take a file property that may hold a video"
+msgstr ""
+"%1 solo se aplica a capas de vídeo que nombran un archivo de vídeo, eligen "
+"vídeos con un mapa o toman una propiedad de archivo que puede tener un vídeo"
 
 #: crates/wprs-scene/src/issue.rs
 msgid "invalid scene: %1"

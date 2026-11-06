@@ -55,15 +55,16 @@ fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
     if let Err(e) = wprs_video::init() {
         return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "video required: {e}");
     }
-    let (reel, (tx, _rx), now) =
-        (Reel { path: FIXTURE.into(), cut: Cut::default(), once: false }, mpsc::channel(), Instant::now());
+    let (reel, (tx, _rx), now) = (Reel::plain(FIXTURE.into()), mpsc::channel(), Instant::now());
     let mut slot = PlayerSlot::new(((64, 32), true, 60, 100), now);
     slot.shares = false;
     slot.tick(&reel, heard(), &tx, now);
     assert!(slot.player.as_ref().is_some_and(Player::audio_enabled), "the video opened without sound");
     playing(&slot, |_| true);
     let cut = Cut { speed: 200, start: 300, end: 700 };
-    slot.steer(Some(Steer { cut, jumps: 0, at: 0.0, wants: true }));
+    let steer = Steer { cut, jumps: 0, at: 0.0, wants: true, volume: 0.25 };
+    assert_eq!((super::super::steer::loud(80, Some(&steer)), super::super::steer::loud(80, None)), (20, 80));
+    slot.steer(Some(steer));
     assert_eq!(slot.steered, Some((cut, 0)));
     let range = Duration::from_millis(300) - FRAME..Duration::from_millis(700) + FRAME;
     playing(&slot, |pts| range.contains(&pts));

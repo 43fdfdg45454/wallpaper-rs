@@ -96,3 +96,19 @@ fn attachments_name_bones_and_points_of_meshes_without_loops() {
         two(json!({ "layer": "fox", "bone": "hand" }), Some(json!({ "layer": "badge", "bone": "hand" })));
     assert!(looped.unwrap_err().contains("depends on itself"));
 }
+
+#[test]
+fn the_back_to_front_order_of_depth_takes_only_a_switch() {
+    for bad in
+        [json!({ "sort": "yes" }), json!({ "sort": 1 }), json!({ "sort": null }), json!({ "order": true })]
+    {
+        assert!(
+            super::kit::scene(super::kit::fox(json!({ "depth": bad.clone() })), super::kit::arm().bytes())
+                .is_err(),
+            "{bad}"
+        );
+    }
+    let rt = super::kit::runtime(json!({ "depth": {} }));
+    let wprs_scene::Kind::Mesh(m) = &rt.scene.layer("fox").unwrap().kind else { panic!() };
+    assert_eq!(m.depth.map(|d| d.sort), Some(true), "on by default");
+}

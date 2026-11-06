@@ -142,7 +142,10 @@ impl Painter<'_, '_, '_> {
                     Some(("pass", p)) => {
                         p.parse().ok().and_then(|p: usize| self.outputs[at.base..].get(p).copied())
                     }
-                    Some(("asset", p)) => at.fed.get(p).or_else(|| self.asset(at.e, p, ParamKind::Texture)),
+                    Some(("asset", p)) => at.fed.get(p).or_else(|| {
+                        let drawn = self.asset(at.e, p, ParamKind::Texture);
+                        drawn.or_else(|| self.asset(at.e, p, ParamKind::Emitters))
+                    }),
                     _ => None,
                 }
                 .unwrap_or(Src::Clear),

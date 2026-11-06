@@ -56,7 +56,7 @@ fn emit<'a>(
     let origin = set.origin.or(t.origin).or(layer.anchor.map(|a| a.fraction())).unwrap_or([0.5, valign]);
     let mut content = content(cx, layer, set, canvas, quality);
     if let (Content::Mesh { size, relief, .. }, Kind::Mesh(m)) = (&mut content, &layer.kind) {
-        *relief = m.depth.map(|d| cx.relief(layer, &place, (origin, *size), d));
+        *relief = m.depth.map(|d| cx.relief(&place, (origin, *size), d));
     }
     let playing = match &content {
         Content::Image { asset, .. } => cx.playing.contains(asset.as_ref()) || cx.rolls(asset, false),
@@ -101,15 +101,8 @@ fn emit<'a>(
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
         let Some(chain) = rest::chain(layer, i, (d, &slots), cx.pointer) else { continue };
-        let textures = d.params.iter().filter(|p| p.kind.asset());
-        let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
-            (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {
-                crate::Param::Text(name) => Some((id, name)),
-                _ => None,
-            },
-            _ => None,
-        });
-        let (textures, mask_texture) = (textures.collect(), masked(cx, mask));
+        let (textures, emitters) = drawn::inputs(cx, d, effect, &found);
+        let mask_texture = masked(cx, mask);
         let mask_strength = strength(cx, mask);
         let follows = d.velocity.as_ref().and_then(|v| d.param(v)).is_some_and(|i| slots[i][0] != 0.0);
         let velocity =
@@ -132,6 +125,7 @@ fn emit<'a>(
             reach,
             chain,
             textures,
+            emitters,
             velocity,
         };
         frame.effects.push(draw);

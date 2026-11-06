@@ -18,7 +18,8 @@ fn children_of_parents_in_depth_agree_on_both_paths() {
     let Some(r) = renderer() else { return };
     let init = json!({ "life": [0.2, 0.5], "speed": [10, 30], "angle": [0, 360], "depth": [0, 300], "depth_speed": [-40, 40] });
     let children = json!([{ "system": "flat", "on": "death", "inherit": ["size", "velocity"] },
-        { "system": "deep", "on": "follow" }, { "system": "near", "on": "spawn" }]);
+        { "system": "deep", "on": "follow", "inherit": ["velocity"], "follow_inherit": true },
+        { "system": "near", "on": "spawn", "inherit": ["velocity"] }]);
     let parent = system(
         json!({ "box": [[40, 20], [120, 60]] }),
         init,
@@ -32,6 +33,10 @@ fn children_of_parents_in_depth_agree_on_both_paths() {
     agree("children in depth", &found, 0.05);
     let [cpu, _] = &found;
     assert!(cpu.iter().any(|p| p.depth[0] > 5.0), "deep children took the depth of their parents");
+    assert!(
+        cpu.iter().any(|p| p.depth[1].abs() > 1.0),
+        "deep children took the speed in depth of their parents"
+    );
 }
 
 #[test]

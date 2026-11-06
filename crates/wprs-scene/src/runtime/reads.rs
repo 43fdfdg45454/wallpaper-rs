@@ -60,7 +60,9 @@ impl Runtime {
         costs = if kept == at { costs } else { [None; 4] };
         let cost = *costs[quality as usize].get_or_insert_with(|| {
             let magnify = self.magnify.get();
-            self.scene.cost_at(quality, magnify) + self.scene.copies_cost(self.spawned(), quality, magnify)
+            let lent = self.glow[0].as_deref().filter(|_| self.scene.canvas.bloom.is_none());
+            let copies = self.scene.copies_cost(self.spawned().chain(lent), quality, magnify);
+            self.scene.priced(quality, false, magnify) + copies
         });
         self.costs.set((at, costs));
         cost

@@ -36,7 +36,7 @@ impl Painter<'_, '_, '_> {
             }
             Content::Text { color, ink, .. } => {
                 item.color = premultiplied(*color, srgb, opacity);
-                let ((image, _, k), (_, room)) = (self.text(i)?, self.lettered(i)?);
+                let ((image, _, k, span), (_, room)) = (self.text(i)?, self.lettered(i)?);
                 let [sx, sy] = room.map(|r| 1.0 / (1.0 + 2.0 * r));
                 item.uv = [room[0] * sx, room[1] * sy, sx, sy];
                 let Some(ink) = ink.filter(|_| k > 0.0) else {
@@ -45,7 +45,8 @@ impl Painter<'_, '_, '_> {
                 if let Some((c, w)) = ink.outline {
                     (item.stroke, item.style[0]) = (premultiplied(c, srgb, opacity), w * k);
                 }
-                (item.style[1], item.style[2]) = (ink.blur * k, f32::from(u8::from(ink.field)));
+                (item.style[1], item.style[2], item.style[3]) =
+                    (ink.blur * k, f32::from(u8::from(ink.field)), span);
                 if let Some((c, [x, y], b)) = ink.shadow {
                     let (w, h) = image.size();
                     item.stop_colors[0] = premultiplied(c, srgb, opacity);

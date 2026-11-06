@@ -3,7 +3,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_scene::*;
 
+mod clocks;
 mod forms;
+mod lanes;
 mod media;
 mod motion;
 mod sight;

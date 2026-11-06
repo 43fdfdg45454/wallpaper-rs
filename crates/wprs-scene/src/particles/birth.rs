@@ -8,13 +8,26 @@ pub fn swirl(forward: f32, scale: f32, x: f32) -> f32 {
     forward + (noise1(x) * 2.0 - 1.0) * scale * 180.0
 }
 
+pub fn particle_salt(system: u64, clock: u64, depth: usize, link: usize) -> u32 {
+    let seed = system ^ clock ^ (depth as u64 * 0x9e37_79b9 + link as u64);
+    (seed ^ (seed >> 32)) as u32
+}
+
+fn aim(forward: f32, scale: f32, x: f32, offset: f32, salt: u32, id: u32) -> f32 {
+    swirl(forward, scale, x + offset * rand(salt, id, KEY + 40) + (salt & 1023) as f32)
+}
+
+pub fn turbulent_ray(t: &crate::Turbulent, salt: u32, id: u32, time: f64) -> f32 {
+    let swept = super::phase::wrap(f64::from(t.noise_speed) * time, super::phase::PERIOD);
+    aim(t.forward, t.scale, swept + t.phase, t.offset, salt, id)
+}
+
 pub(super) fn turbulent(s: &Sim, id: u32) -> Option<[f32; 2]> {
     let ([forward, scale, swept, offset], g) = (s.fields[0], s.fields[1]);
     if g[3] < 0.5 {
         return None;
     }
-    let x = swept + g[2] + offset * rand(s.ids[0], id, KEY + 40) + (s.ids[0] & 1023) as f32;
-    let a = swirl(forward, scale, x).to_radians();
+    let a = aim(forward, scale, swept + g[2], offset, s.ids[0], id).to_radians();
     let v = lerp(g[0], g[1], rand(s.ids[0], id, KEY + 41));
     Some([a.cos() * v, a.sin() * v])
 }

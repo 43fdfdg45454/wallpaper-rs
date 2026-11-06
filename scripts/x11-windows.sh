@@ -19,7 +19,7 @@ ctl lib import "$WORK/clicks.wpak" --wait >/dev/null
 scene=$(ctl lib search kind:scene --json | python3 -c "import json, sys; print(json.load(sys.stdin)['items'][0]['uid'])")
 ctl lib apply "$scene" -o screen
 check "$full" "0.25,0.5,$blue" "0.75,0.5,#000000"
-region() { grep "pointer input of the background" "$WORK/wprsd.log" | tail -n 1 | grep -q "$1$"; }
+region() { grep "pointer input of the background" "$WORK/wprsd.log" | tail -n 1 | grep "$1$" >/dev/null; }
 taking() { ctl input status --json | python3 -c "import json, sys; sys.exit('screen' not in json.load(sys.stdin)['clicking'])"; }
 ctl input grant org.example.clicks pointer
 ctl input grant org.example.clicks clicks
@@ -46,7 +46,7 @@ echo "real and synthesized click checks passed"
 desks() {
   local w found=0
   for w in $(xdotool search --class '^wprsd$'); do
-    xwininfo -id "$w" | grep -q "Override Redirect State: $1" || return 1
+    xwininfo -id "$w" | grep "Override Redirect State: $1" >/dev/null || return 1
     found=1
   done
   [ "$found" = 1 ]

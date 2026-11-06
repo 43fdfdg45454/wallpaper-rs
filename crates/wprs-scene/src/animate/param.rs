@@ -9,6 +9,9 @@ impl Animate for Param {
             (Param::Number(a), Param::Number(b)) => Param::Number(a.lerp(b, f)),
             (Param::Vec2(a), Param::Vec2(b)) => Param::Vec2(Vec2(*a).lerp(&Vec2(*b), f).0),
             (Param::Color(a), Param::Color(b)) => Param::Color(a.lerp(b, f)),
+            (Param::Emitters(a), Param::Emitters(b)) if a.len() == b.len() => {
+                Param::Emitters(a.iter().zip(b).map(|(a, b)| a.lerp(b, f)).collect())
+            }
             _ if f < 1.0 => self.clone(),
             _ => to.clone(),
         }
@@ -18,7 +21,12 @@ impl Animate for Param {
             Json::Bool(b) => Some(Param::Bool(*b)),
             Json::Number(n) => n.as_f64().map(|n| Param::Number(n as f32)),
             Json::String(s) => Some(Color::parse(s).map_or_else(|| Param::Text(s.clone()), Param::Color)),
-            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)),
+            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)).or_else(|| {
+                serde_json::from_value(v.clone())
+                    .ok()
+                    .filter(|l: &Vec<crate::EffectEmitter>| !l.is_empty())
+                    .map(Param::Emitters)
+            }),
         }
     }
     fn from_signal(x: f32) -> Option<Param> {

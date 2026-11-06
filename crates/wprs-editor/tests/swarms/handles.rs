@@ -106,3 +106,30 @@ fn a_particles_layer_shows_its_own_control_points() {
     assert_eq!(points[1]["local"], json!([30.0, 40.0]));
     assert_eq!(handles(&p)["points"][0]["local"], json!([100.0, 50.0]), "the system keeps its own point");
 }
+
+#[test]
+fn turbulent_rays_follow_the_seed_of_the_scene_and_the_preview_runs_with_it() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let gust = json!({ "forward": 0, "scale": 0.5, "offset": 2, "speed": [10, 20] });
+    edit(&mut p, "turbulent", json!({ "turbulent": gust })).unwrap();
+    let rays = |p: &Project| handles(p)["fields"]["turbulent"]["samples"].clone();
+    act(&mut p, json!({ "set": { "pointer": "/scene/clock/seed", "value": 9 } })).unwrap();
+    let nine = rays(&p);
+    assert_eq!(handles(&p)["seed"], json!(9));
+    let t: wprs_scene::Turbulent = serde_json::from_value(gust).unwrap();
+    let salt = wprs_scene::particle_salt(system(&p)["seed"].as_u64().unwrap_or(0), 9, 0, 0);
+    let first = f64::from(wprs_scene::turbulent_ray(&t, salt, 0, 0.0));
+    assert!((nine[0].as_f64().unwrap() - first).abs() < 0.01, "{nine} {first}");
+    act(&mut p, json!({ "set": { "pointer": "/scene/clock/seed", "value": 10 } })).unwrap();
+    assert_ne!(rays(&p), nine, "another seed turns the rays");
+    act(&mut p, json!({ "set": { "pointer": "/scene/clock/seed", "value": null } })).unwrap();
+    let fresh = wprs_editor::swarms::preview_seed();
+    assert_eq!(handles(&p)["seed"], json!(fresh));
+    let mut scene = p.doc["scene"].clone();
+    wprs_editor::swarms::pin_seed(&mut scene);
+    assert_eq!(scene["clock"]["seed"], json!(fresh), "the preview starts with the seed the rays use");
+    let mut fixed = json!({ "clock": { "seed": 3 } });
+    wprs_editor::swarms::pin_seed(&mut fixed);
+    assert_eq!(fixed["clock"]["seed"], json!(3));
+}

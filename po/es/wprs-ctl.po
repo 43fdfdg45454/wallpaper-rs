@@ -402,7 +402,10 @@ msgid "Frames per second of the simulated clock"
 msgstr "Cuadros por segundo del reloj simulado"
 
 #: apps/wprs-ctl/src/bench.rs
-msgid "Quality level; picked like the daemon when omitted"
+#, fuzzy
+msgid ""
+"Quality level; picked like the daemon when omitted, steered by GPU time like "
+"the phone with auto"
 msgstr "Nivel de calidad; se elige como el daemon si se omite"
 
 #: apps/wprs-ctl/src/bench.rs
@@ -416,6 +419,18 @@ msgstr "Imprimir el informe como JSON"
 #: apps/wprs-ctl/src/bench.rs
 msgid "Apply the limits of this device tier"
 msgstr "Aplicar los límites de esta categoría de dispositivo"
+
+#: apps/wprs-ctl/src/bench.rs
+msgid "Time each render pass with GPU timestamps, where the GPU has them"
+msgstr ""
+
+#: apps/wprs-ctl/src/bench.rs
+msgid "Save the last frame as a PNG image"
+msgstr ""
+
+#: apps/wprs-ctl/src/bench.rs
+msgid "Render in real time at --fps for this long instead of frame after frame"
+msgstr ""
 
 #: apps/wprs-ctl/src/cli.rs
 msgid "Output name such as DP-1; every output when omitted"
@@ -1739,6 +1754,50 @@ msgstr "Solo comprobar el shader"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid ""
+"Print the video layers that play on a clock of their own: range, speed, loop "
+"and where each clock is"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+#, fuzzy
+msgid "Seconds on the scene clock"
+msgstr "Segundos desde el inicio de la escena"
+
+#: apps/wprs-ctl/src/flying.rs
+msgid ""
+"Also take N frames of each video, at most 16, for the strip the timeline "
+"shows"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+msgid ""
+"Print the wake rules of an effect, or change what a parameter of a package "
+"effect asks for, waits for or yields to"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+#, fuzzy
+msgid "Id of the effect"
+msgstr "Id del recurso nuevo"
+
+#: apps/wprs-ctl/src/flying.rs
+msgid "Parameter to change; without it the rules are printed"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+msgid "time, cursor, audio or clicks, or an empty value for nothing"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+msgid "A parameter that must not be zero, or an empty value"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+msgid "A parameter that takes over while not zero, or an empty value"
+msgstr ""
+
+#: apps/wprs-ctl/src/flying.rs
+msgid ""
 "Show the foliage mask, the chroma matte or the shadows in the 3D preview, or "
 "nothing"
 msgstr ""
@@ -2175,10 +2234,9 @@ msgid ""
 "out-handle bend the curve between keys and --straighten makes it straight "
 "again"
 msgstr ""
-"Añadir o reemplazar una clave de un valor animable, quitarla con "
-"--remove o moverla con --from; --base hace relativas las claves, "
-"--in-handle y --out-handle curvan el tramo entre claves y --straighten "
-"lo vuelve recto"
+"Añadir o reemplazar una clave de un valor animable, quitarla con --remove o "
+"moverla con --from; --base hace relativas las claves, --in-handle y --out-"
+"handle curvan el tramo entre claves y --straighten lo vuelve recto"
 
 #: apps/wprs-ctl/src/keying.rs
 msgid "Seconds on the timeline, or on the scene clock without one"
@@ -2292,11 +2350,10 @@ msgid ""
 "color or other list it is a share of the way from the previous key (0) to "
 "this one (1), in value units only when both keys are single numbers"
 msgstr ""
-"Asa Bézier de entrada a esta clave: segundos antes, hasta la clave "
-"anterior, y cuánto menos vale allí; entre claves de una posición, un "
-"color u otra lista es una fracción del camino de la clave anterior (0) "
-"a esta (1), y en unidades del valor solo cuando las dos claves son "
-"números sueltos"
+"Asa Bézier de entrada a esta clave: segundos antes, hasta la clave anterior, "
+"y cuánto menos vale allí; entre claves de una posición, un color u otra "
+"lista es una fracción del camino de la clave anterior (0) a esta (1), y en "
+"unidades del valor solo cuando las dos claves son números sueltos"
 
 #: apps/wprs-ctl/src/keying.rs
 msgid ""
@@ -2306,10 +2363,9 @@ msgid ""
 "(1), in value units only when both keys are single numbers"
 msgstr ""
 "Asa Bézier de salida de esta clave: segundos después, hasta la clave "
-"siguiente, y cuánto más vale allí; entre claves de una posición, un "
-"color u otra lista es una fracción del camino de esta clave (0) a la "
-"siguiente (1), y en unidades del valor solo cuando las dos claves son "
-"números sueltos"
+"siguiente, y cuánto más vale allí; entre claves de una posición, un color u "
+"otra lista es una fracción del camino de esta clave (0) a la siguiente (1), "
+"y en unidades del valor solo cuando las dos claves son números sueltos"
 
 #: apps/wprs-ctl/src/keying.rs
 msgid "%1 is not T:NAME"
@@ -2685,8 +2741,16 @@ msgid "Remove a layer"
 msgstr "Quitar una capa"
 
 #: apps/wprs-ctl/src/layering.rs
-msgid "Copy a layer, with new ids, just above it"
+#, fuzzy
+msgid ""
+"Copy a layer, with new ids, just above it, or with --template to a new "
+"template scripts spawn"
 msgstr "Copiar una capa, con ids nuevos, justo encima"
+
+#: apps/wprs-ctl/src/layering.rs
+msgid ""
+"Copy it to the templates under a free name, <id>_template or the next one"
+msgstr ""
 
 #: apps/wprs-ctl/src/layering.rs
 msgid ""
@@ -3016,6 +3080,25 @@ msgstr "Volver a mostrar una parte sobre todo"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid ""
+"How far the depth of the vertices pushes them, from 0 to 10; turns depth on"
+msgstr ""
+
+#: apps/wprs-ctl/src/limbing.rs
+msgid "Hide the triangles seen from behind; turns depth on"
+msgstr ""
+
+#: apps/wprs-ctl/src/limbing.rs
+msgid ""
+"Draw the parts from back to front by their depth (on by default); turns "
+"depth on"
+msgstr ""
+
+#: apps/wprs-ctl/src/limbing.rs
+msgid "Turn depth off"
+msgstr ""
+
+#: apps/wprs-ctl/src/limbing.rs
+msgid ""
 "What it reaches for: the pointer, a bone or node, a layer, or a point in "
 "pixels of the layer from its top left"
 msgstr ""
@@ -3031,7 +3114,8 @@ msgid "Let a bone turn freely again"
 msgstr "Dejar que un hueso gire libre otra vez"
 
 #: apps/wprs-ctl/src/limbing.rs
-msgid "Which way a chain of two bones bends"
+#, fuzzy
+msgid "Which way the joints of the chain bend"
 msgstr "Hacia qué lado se dobla una cadena de dos huesos"
 
 #: apps/wprs-ctl/src/limbing.rs
@@ -4331,8 +4415,7 @@ msgid ""
 "the argument '%1' cannot be used with one or more of the other specified "
 "arguments"
 msgstr ""
-"el argumento «%1» no puede usarse con uno o más de los otros argumentos "
-"dados"
+"el argumento «%1» no puede usarse con uno o más de los otros argumentos dados"
 
 #: apps/wprs-ctl/src/refusing.rs
 msgid "the argument '%1' cannot be used with:"
@@ -4347,8 +4430,7 @@ msgid ""
 "the subcommand '%1' cannot be used with one or more of the other specified "
 "arguments"
 msgstr ""
-"la orden «%1» no puede usarse con uno o más de los otros argumentos "
-"dados"
+"la orden «%1» no puede usarse con uno o más de los otros argumentos dados"
 
 #: apps/wprs-ctl/src/refusing.rs
 msgid "the subcommand '%1' cannot be used with:"
@@ -4951,11 +5033,23 @@ msgstr ""
 
 #: apps/wprs-ctl/src/rigging.rs
 msgid ""
+"Print the outline of every part of a mesh layer as JSON, as the editor draws "
+"it, on any mesh"
+msgstr ""
+
+#: apps/wprs-ctl/src/rigging.rs
+msgid ""
 "Print each vertex of a mesh layer with its place, part and bone weights as "
 "JSON"
 msgstr ""
 "Imprimir cada vértice de una capa de malla con su lugar, su parte y sus "
 "pesos de hueso como JSON"
+
+#: apps/wprs-ctl/src/scoped.rs
+msgid ""
+"Edit and show the layers of this script template instead of the layers of "
+"the scene; its own layer ids name them"
+msgstr ""
 
 #: apps/wprs-ctl/src/seeding.rs
 msgid "%1 is not none or FADE_IN,FULL,FADE_OUT,GONE"
@@ -5995,9 +6089,10 @@ msgid "Read the layer once (static) or each time it changes (on_change)"
 msgstr "Leer la capa una vez (static) o cada vez que cambia (on_change)"
 
 #: apps/wprs-ctl/src/swarming.rs
+#, fuzzy
 msgid ""
 "Choose what a child system takes from its parent particle: color, size, "
-"alpha, velocity"
+"alpha, velocity (with its speed in depth when both have perspective)"
 msgstr ""
 "Elegir qué toma un sistema hijo de su partícula padre: color, size, alpha, "
 "velocity"
@@ -6114,6 +6209,16 @@ msgid "Print what the editor draws over the preview for the system as JSON"
 msgstr ""
 "Imprimir lo que el editor dibuja sobre la vista previa para el sistema como "
 "JSON"
+
+#: apps/wprs-ctl/src/swarming.rs
+msgid ""
+"Seed of the run to draw the rays with, as the editor shows it; the scene "
+"seed by default"
+msgstr ""
+
+#: apps/wprs-ctl/src/swarming.rs
+msgid "Sound level from 0 to 1 that moves the phase of rays that follow a band"
+msgstr ""
 
 #: apps/wprs-ctl/src/swarming.rs
 msgid ""

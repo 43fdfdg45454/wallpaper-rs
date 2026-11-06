@@ -167,7 +167,7 @@ pub(crate) fn action(command: Modeling) -> Result<(PathBuf, Action), Box<Author>
 pub(crate) fn run(command: Modeling) -> Result<()> {
     let ask = |dir: &PathBuf, q: Value| -> Result<Value> {
         let p = Project::open(dir)?;
-        Ok(wprs_editor::rigs::query(&p.dir, &p.doc, "", &q))
+        Ok(wprs_editor::rigs::query(&p.dir, &p.seen(), "", &q))
     };
     let found = match command {
         Modeling::ModelInfo { file } => {
@@ -176,7 +176,7 @@ pub(crate) fn run(command: Modeling) -> Result<()> {
         }
         Modeling::Model { dir, what: ModelCmd::Info { layer } } => {
             let p = Project::open(&dir)?;
-            let asset = wprs_editor::actions::layer(&p.doc, &layer)
+            let asset = wprs_editor::actions::layer(&p.seen(), &layer)
                 .ok()
                 .and_then(|(_, l)| l["model"].as_str().map(String::from));
             wprs_editor::stage3d::model_info(&p.dir, &p.doc, &json!({ "asset": asset.unwrap_or(layer) }))

@@ -37,7 +37,18 @@ export const convert = {
         return v;
     },
 };
-export const copy = (v) => (Array.isArray(v) ? [...v] : v);
+export const copy = (v) => (Array.isArray(v) ? v.map(copy) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, copy(x)])) : v);
+
+const spot = (v, id) => numbers(v, 2, id).map((x) => Math.min(4, Math.max(-2, x)));
+function emitterList(value, id) {
+    if (!Array.isArray(value) || value.length > 64) throw new TypeError(`${id} takes a list of at most 64 emitters`);
+    return value.map((m) => {
+        if (!m || typeof m !== "object") throw new TypeError(`${id} takes emitters with from, to, angle and strength`);
+        const out = { from: spot(m.from, id), angle: Math.min(360, Math.max(-360, number(id)(m.angle ?? -90))), strength: Math.min(64, Math.max(0, number(id)(m.strength ?? 0))) };
+        if (m.to !== undefined && m.to !== null) out.to = spot(m.to, id);
+        return out;
+    });
+}
 
 export function paramValue(def, value, id) {
     const clamp = (x) => Math.min(def.max ?? Infinity, Math.max(def.min ?? -Infinity, x));
@@ -56,6 +67,8 @@ export function paramValue(def, value, id) {
             return Boolean(value);
         case "blend":
             return String(value);
+        case "emitters":
+            return emitterList(value, id);
         default:
             throw new TypeError(`${id} cannot be set by a script`);
     }

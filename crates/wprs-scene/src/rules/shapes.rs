@@ -43,7 +43,7 @@ impl Check<'_> {
             self.moving(texture);
         }
         if let Some(id) = &mask.layer {
-            let drawn = self.scene.layer(id).is_some_and(Layer::drawn);
+            let drawn = self.find(id).is_some_and(Layer::drawn);
             self.known(&format!("{path}/layer"), "layer", id, drawn);
         }
         if let Some(shape) = &mask.shape {

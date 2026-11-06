@@ -14,6 +14,7 @@ impl SceneState {
 
     pub(in crate::compositor) fn pause(&mut self) {
         self.tick = None;
+        self.unwatch();
         if let Some(view) = self.view.as_mut() {
             view.trim();
             self.runtime.restart_particles();

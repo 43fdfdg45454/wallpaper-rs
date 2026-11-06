@@ -64,11 +64,18 @@ ColumnLayout {
         timeline: timeline
     }
 
+    SceneClockLanes {
+        id: clocks
+
+        Layout.fillWidth: true
+        timeline: timeline
+    }
+
     Kirigami.PlaceholderMessage {
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.margins: Kirigami.Units.largeSpacing
-        visible: timeline.tracks.length === 0 && !lanes.visible
+        visible: timeline.tracks.length === 0 && !lanes.visible && !clocks.visible
         text: App.tr("No keyframes yet: the ◇ button next to a value adds one at the current time.")
     }
 

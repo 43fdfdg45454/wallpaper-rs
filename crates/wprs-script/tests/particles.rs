@@ -41,11 +41,37 @@ fn scripts_play_emit_and_tune_particles() {
 }
 
 #[test]
+fn scripts_aim_layer_sources_and_walls_at_any_layer() {
+    let source = r#"
+        import { particles } from "wprs";
+        let n = 0;
+        export function update() {
+            const sparks = particles("sparks");
+            n += 1;
+            if (n === 1) { sparks.from(0, "a.body"); sparks.wall(1, "a.body"); }
+            if (n === 2) { sparks.from(0, null); }
+        }
+    "#;
+    let mut script = common::load(source);
+    let first = update(&mut script);
+    let sparks = &first.particles["sparks"];
+    assert_eq!(
+        (sparks.sources.get(&0), sparks.walls.get(&1)),
+        (Some(&"a.body".to_string()), Some(&"a.body".to_string()))
+    );
+    let second = update(&mut script);
+    let sparks = &second.particles["sparks"];
+    assert!(sparks.sources.is_empty() && sparks.walls.len() == 1, "{sparks:?}");
+}
+
+#[test]
 fn particle_calls_are_bounded() {
     for (call, message) in [
         ("particles('a').emit(1001)", "emit takes 1 to 1000"),
         ("particles('a').emit(0)", "emit takes 1 to 1000"),
         ("particles('a').point(8, [0, 0])", "point takes 0 to 7"),
+        ("particles('a').from(8, 'b')", "emitter takes 0 to 7"),
+        ("particles('a').wall(0, '')", "a layer id takes 1 to 256 characters"),
         ("particles('a').instance.glow = 1", "glow is not an instance field"),
     ] {
         let source = format!("import {{ particles }} from \"wprs\";\nexport function update() {{ {call}; }}");

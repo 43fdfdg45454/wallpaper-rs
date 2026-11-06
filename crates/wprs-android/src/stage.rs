@@ -10,6 +10,8 @@ use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 
 mod heard;
 mod input;
+#[cfg(test)]
+mod probe;
 
 pub(crate) use heard::allowed as media_allowed;
 
@@ -181,14 +183,5 @@ impl Stage {
 
     pub(crate) fn videos(&self) -> Arc<Vec<(String, PathBuf)>> {
         Arc::clone(&self.extras.videos)
-    }
-
-    pub(crate) fn gather(&mut self) {
-        let shown = &self.acting.keeping.shown;
-        let fresh = Extras::gather(&self.pack, (self.runtime.props(), shown), extras::now(), &self.extras);
-        if !fresh.same(&self.extras) {
-            (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
-        }
-        self.extras = fresh;
     }
 }

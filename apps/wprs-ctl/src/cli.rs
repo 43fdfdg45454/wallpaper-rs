@@ -1,11 +1,11 @@
 pub use crate::args::{Out, Page, Wait};
-use crate::bench::SceneCommand;
 use crate::edit::Edits;
 use crate::inputs::Inputs;
 use crate::library::Lib;
 use crate::models::Models;
 use crate::presets::Preset;
 use crate::profiles::Profile;
+use crate::scoped::SceneArgs;
 use crate::{pack::Pack, pkg::Pkg, playlists::Playlist, props::Prop, providers::Provider};
 use crate::{remote::Remote, repo::Repo, server::Server};
 use clap::{Parser, Subcommand};
@@ -146,10 +146,9 @@ pub enum Command {
     #[command(subcommand, about = "Settings of the scene or video package shown on an output")]
     Prop(Prop),
     #[command(
-        subcommand,
         about = "Create, edit, build and benchmark scenes; needs no daemon except for preview and apply"
     )]
-    Scene(SceneCommand),
+    Scene(SceneArgs),
     #[command(subcommand, about = "Library folders, items, tags and thumbnails")]
     Lib(Lib),
     #[command(subcommand, about = "Placement presets of items, and global presets")]

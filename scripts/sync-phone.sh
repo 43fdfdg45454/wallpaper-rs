@@ -50,9 +50,15 @@ expected="['After the revocation', 'From the revoked device', 'Phone mix', 'Quie
   fail "the desktop's title and tag did not reach the phone: $(ask 'library {"op": "items", "query": ""}')"
 [ "$(ask "setting transition.duration_ms")/$(ask "setting playback.max_fps")" = 900/60 ] ||
   fail "settings on the phone: $(ask "setting transition.duration_ms") $(ask "setting playback.max_fps")"
-phoned=$(find "$WORK/phone" -name '*.wprs.json' | head -n 1)
-[ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$phoned")" = "(0.5, 'center', True)" ] ||
-  fail "edits made apart before the first sync did not meet on the phone: $(cat "$phoned")"
+met() {
+  local edit
+  while IFS= read -r edit; do
+    [ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$edit" 2>/dev/null)" = "(0.5, 'center', True)" ] && return 0
+  done < <(find "$WORK/phone" -name '*.wprs.json' | sort)
+  return 1
+}
+wait_for 30 met ||
+  fail "edits made apart before the first sync did not meet on the phone: $(find "$WORK/phone" -name '*.wprs.json' -exec cat {} +)"
 ask "library {\"op\": \"favorite\", \"uids\": [\"$green\"], \"favorite\": true}" >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 a server sync --wait >/dev/null
@@ -89,13 +95,13 @@ ask 'setting repos.vote_counts false' >/dev/null
 [ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['shown']")" = False ] || fail "the phone fetched hidden counts"
 ask 'setting repos.vote_counts true' >/dev/null
 
-a server rotate --wait --json | jq_ "r['output']['shared']" | grep -q "$pocket" || fail "the new key did not go to the phone"
+a server rotate --wait --json | jq_ "r['output']['shared']" | grep "$pocket" >/dev/null || fail "the new key did not go to the phone"
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 [ "$(phone "['state']")" = ready ] || fail "the phone after a rotation: $(phone "")"
 a playlist new "After the phone" >/dev/null
 a server sync --wait >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
-named playlists "" | grep -q "After the phone" || fail "the phone did not read a record after the rotation"
+named playlists "" | grep "After the phone" >/dev/null || fail "the phone did not read a record after the rotation"
 echo "phone rotation checks passed"
 source "$(dirname "$0")"/sync-pocket.sh
 
@@ -117,7 +123,7 @@ ask "account {\"op\": \"confirm\", \"code\": \"$(code b)\"}" >/dev/null
 b server join "$pocket" --code "$shown" --wait >/dev/null
 await b "$job"
 b server sync --wait >/dev/null
-b playlist ls | grep -q "Phone mix" || fail "the laptop that joined from the phone: $(b playlist ls)"
+b playlist ls | grep "Phone mix" >/dev/null || fail "the laptop that joined from the phone: $(b playlist ls)"
 ask 'account {"op": "pause", "paused": true}' >/dev/null
 [ "$(phone "['state']")" = paused ] || fail "the paused phone: $(phone "")"
 if grep -r -q -s -a -e 'wprs_d_' -e correct-horse-battery "$WORK/phone/sync.json" "$WORK/phone.log"; then

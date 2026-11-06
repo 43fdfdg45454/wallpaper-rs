@@ -45,8 +45,17 @@ impl State {
 
     pub(super) fn feed_inputs(&mut self) {
         let now = Instant::now();
+        let tx = &self.tx;
         for (name, o) in self.outputs.iter_mut() {
             o.dirty |= o.shown.scene.as_mut().is_some_and(|s| s.want_rgb(name));
+            let shown = o.active && o.open(self.exporter.is_streaming(name));
+            if let Some(s) = o.shown.scene.as_mut().filter(|_| shown) {
+                s.waker(|| {
+                    let tx = tx.clone();
+                    std::sync::Arc::new(move || drop(tx.send(super::Command::Wake)))
+                });
+                s.heard_folder(now);
+            }
         }
         let live: Vec<Live> = (self.outputs.iter())
             .filter(|(name, o)| o.active && o.open(self.exporter.is_streaming(name)))

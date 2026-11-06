@@ -20,13 +20,32 @@ impl Runtime {
         self.puppets.iter().find(|p| p.layer == layer)
     }
 
+    pub(crate) fn recast(&mut self, rebuilt: &[String]) {
+        let mut puppets = std::mem::take(&mut self.puppets);
+        let inside = |layer: &str, id: &String| {
+            layer.strip_prefix(id.as_str()).is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+        };
+        let fresh = |p: &Puppet| rebuilt.iter().any(|id| inside(&p.layer, id));
+        puppets.retain(|p| !fresh(p) && self.layer(&p.layer).and_then(figure).is_some());
+        let mut stack: Vec<&crate::Layer> = self.spawned().collect();
+        while let Some(l) = stack.pop() {
+            stack.extend(l.children());
+            let crate::Kind::Mesh(m) = &l.kind else { continue };
+            if puppets.len() >= 64 || puppets.iter().any(|p| p.layer == l.id) {
+                continue;
+            }
+            puppets.extend(self.scene.rigs.get(&m.mesh).and_then(|rig| Puppet::new(l, rig.clone())));
+        }
+        self.puppets = puppets;
+    }
+
     pub(crate) fn step_puppets(&mut self, dt: f32) {
         let mut puppets = std::mem::take(&mut self.puppets);
         let (mut ended, mut heard) = (std::mem::take(&mut self.ended), Vec::new());
         {
             let cx = self.context();
             for p in &mut puppets {
-                let Some(m) = self.scene.layer(&p.layer).and_then(figure) else { continue };
+                let Some(m) = self.layer(&p.layer).and_then(figure) else { continue };
                 cx.wake.set(Wake::Idle);
                 (p.lag, p.since) = ((p.lag + dt).min(1.0), (p.since + dt).min(1.0));
                 p.step(&cx, &m, dt, (&mut ended, &mut heard));
@@ -46,14 +65,14 @@ impl Runtime {
             let camera = cx.lens(self.level);
             let cx = Context { view: self.viewed.get(), camera, ..cx };
             let [x, y] = wind.map_or([0.0; 2], |w| w.get(&cx).0);
-            let h = crate::puppet::STEP;
+            let h = self.physics_step();
             let gust = self.scene.canvas.gusts.map_or([0.65, 0.35], |g| [1.0 - g, g]);
             let frozen = self.level == Quality::Q0;
             let sim = Sim { frozen, h, wind: [x, -y], gust, t: self.t as f32, unit: 1.0 };
             let pointer = self.pointer.pos.filter(|_| self.uses().cursor);
             for (i, p) in puppets.iter_mut().enumerate() {
                 let shown = i >= 64 || seen & (1 << i) != 0;
-                let Some(layer) = self.scene.layer(&p.layer) else { continue };
+                let Some(layer) = self.layer(&p.layer) else { continue };
                 let Some(m) = figure(layer) else { continue };
                 if !(shown || p.dirty || p.posed.generation == 0) {
                     continue;
@@ -69,26 +88,32 @@ impl Runtime {
         self.puppets = puppets;
     }
 
+    fn physics_step(&self) -> f32 {
+        crate::puppet::STEP
+    }
+
     pub(crate) fn steer_rigs(&mut self, rigs: &BTreeMap<String, RigControl>) {
-        let h = crate::puppet::STEP;
+        let h = self.physics_step();
         for (id, set) in rigs.iter().filter(|(_, r)| !r.impulses.is_empty()) {
             self.puppets.iter_mut().filter(|p| p.layer == *id).for_each(|p| p.push(set, h));
         }
     }
 
     pub(crate) fn steer_puppets(&mut self, videos: &BTreeMap<String, VideoControl>) {
+        let mut puppets = std::mem::take(&mut self.puppets);
         for (id, control) in videos {
             let Some((layer, clip)) = id.split_once('#') else { continue };
-            let Some(m) = self.scene.layer(layer).and_then(figure) else { continue };
-            if let Some(p) = self.puppets.iter_mut().find(|p| p.layer == layer) {
+            let Some(m) = self.layer(layer).and_then(figure) else { continue };
+            if let Some(p) = puppets.iter_mut().find(|p| p.layer == layer) {
                 p.steer(&m, clip, &control.commands);
             }
         }
+        self.puppets = puppets;
     }
 
     pub(crate) fn puppet_courses(&self, out: &mut Vec<Course>) {
         for p in &self.puppets {
-            if let Some(m) = self.scene.layer(&p.layer).and_then(figure) {
+            if let Some(m) = self.layer(&p.layer).and_then(figure) {
                 p.courses(&m, out);
             }
         }

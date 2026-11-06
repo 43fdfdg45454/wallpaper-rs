@@ -111,6 +111,7 @@ impl Runtime {
 
     pub fn set_script(&mut self, outputs: ScriptOutputs) -> bool {
         let outputs = outputs.bounded(&self.scene);
+        self.film_files(&outputs.layers);
         self.play_sounds(&outputs.sounds);
         self.steer(&outputs.videos);
         self.steer_puppets(&outputs.videos);

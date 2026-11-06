@@ -1,5 +1,6 @@
 use super::Stage;
-use crate::extras::Extras;
+use crate::extras::{self, Extras};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 use wprs_core::model::Input;
@@ -80,5 +81,20 @@ impl Stage {
             self.restock = true;
         }
         self.runtime.set_media(state) || restock
+    }
+
+    pub(crate) fn gather(&mut self) {
+        let shown = &self.acting.keeping.shown;
+        let mut fresh =
+            Extras::gather(&self.pack, (self.runtime.props(), shown), extras::now(), &self.extras);
+        if !fresh.same(&self.extras) {
+            (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
+        }
+        let user = |(k, _): &&(String, PathBuf)| !self.pack.videos.iter().any(|(o, _)| o == k);
+        let new = |(k, _): &&(String, PathBuf)| !self.extras.videos.iter().any(|(o, _)| o == k);
+        let films = fresh.videos.iter().filter(user).filter(new).cloned().collect();
+        fresh.lengths = std::mem::take(&mut self.extras.lengths);
+        fresh.measure(films);
+        self.extras = fresh;
     }
 }

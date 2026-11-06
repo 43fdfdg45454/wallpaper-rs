@@ -64,7 +64,9 @@ output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
 output HEADLESS-3 mode --custom 480x270@120Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
-sway --unsupported-gpu -d -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
+driver=()
+if [ -e /proc/driver/nvidia/version ]; then driver=(--unsupported-gpu); fi
+sway "${driver[@]}" -d -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
 wait_for 10 compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock" || fail "sway did not start"
 SWAYSOCK=$(compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock")
 WAYLAND_DISPLAY=$(basename "$(compgen -G "$XDG_RUNTIME_DIR/wayland-[0-9]")")
@@ -121,7 +123,7 @@ before=$(surfaces HEADLESS-2)
 swaymsg -q output HEADLESS-2 disable && swaymsg -q output HEADLESS-2 enable
 check HEADLESS-2 "0.5,0.5,$green" "0.02,0.02,$blue"
 sleep 1
-if grep "output removed" "$WORK/wprsd.log" | grep -q HEADLESS-2; then fail "a short output flap removed the output"; fi
+if grep "output removed" "$WORK/wprsd.log" | grep HEADLESS-2 >/dev/null; then fail "a short output flap removed the output"; fi
 [ $(($(surfaces HEADLESS-2) - before)) -le 1 ] || fail "a short output flap rebuilt the surface more than once"
 echo "hotplug checks passed"
 

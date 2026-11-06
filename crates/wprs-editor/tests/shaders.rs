@@ -97,3 +97,101 @@ fn package_effects_are_imported_listed_and_inspected() {
         wprs_editor::check::review(&project.doc, Some(&dir))
     );
 }
+
+#[test]
+fn shine_styles_are_picked_from_drawn_choices() {
+    let root = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    let dir = root.path().join("shine");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.shine", "Shine", "en").unwrap()).unwrap();
+    let layer = json!({"add_layer": {"kind": "solid", "id": "fill"}});
+    project.act(&serde_json::from_value::<Action>(layer).unwrap()).unwrap();
+    let pointer = wprs_editor::layers::find(&project.doc, "fill").unwrap();
+    let effect = json!({"add": {"pointer": format!("{pointer}/effects"), "value": [{ "effect": "shine" }]}});
+    project.act(&serde_json::from_value::<Action>(effect).unwrap()).unwrap();
+    let at = format!("{pointer}/effects/0");
+    let fields = fields_with(&project.doc, &at, 0.0, &project.effects());
+    let style = fields.iter().find(|f| f.key == "style").unwrap();
+    assert_eq!((style.widget.as_str(), &style.sample), ("styles", &json!({ "effect": "shine" })));
+    assert_eq!(style.options, vec![json!(0.0), json!(1.0), json!(2.0), json!(3.0)]);
+    assert_eq!(style.names, ["Line", "Double line", "Ring", "Glint"]);
+    let blend = fields.iter().find(|f| f.key == "blend").unwrap();
+    assert_eq!(blend.widget, "enum");
+    let set = json!({"set": {"pointer": format!("{at}/params/style"), "value": 2}});
+    project.act(&serde_json::from_value::<Action>(set).unwrap()).unwrap();
+    assert_eq!(project.doc.pointer(&format!("{at}/params/style")), Some(&json!(2)));
+    let wrong = json!({"set": {"pointer": format!("{at}/params/style"), "value": 9}});
+    project.act(&serde_json::from_value::<Action>(wrong).unwrap()).unwrap();
+    let found = wprs_editor::check::review(&project.doc, Some(&dir));
+    assert!(found.iter().any(|p| !p.warning && p.message.contains("style")), "{found:?}");
+}
+
+#[test]
+fn fluid_emitters_are_a_list_placed_on_the_canvas_that_may_be_keyframed() {
+    let root = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    let dir = root.path().join("fluid");
+    let mut project =
+        Project::create(&dir, starter("empty", "org.example.fluid", "Fluid", "en").unwrap()).unwrap();
+    let layer = json!({"add_layer": {"kind": "solid", "id": "fill"}});
+    project.act(&serde_json::from_value::<Action>(layer).unwrap()).unwrap();
+    let pointer = wprs_editor::layers::find(&project.doc, "fill").unwrap();
+    let effect = json!({"add": {"pointer": format!("{pointer}/effects"), "value": [{ "effect": "fluid" }]}});
+    project.act(&serde_json::from_value::<Action>(effect).unwrap()).unwrap();
+    let at = format!("{pointer}/effects/0");
+    let fields = fields_with(&project.doc, &at, 0.0, &project.effects());
+    let emitters = fields.iter().find(|f| f.key == "emitters").unwrap();
+    assert_eq!(
+        (emitters.widget.as_str(), emitters.bindable, &emitters.default),
+        ("emitters", true, &json!([]))
+    );
+    assert!(fields.iter().find(|f| f.key == "strength").unwrap().bindable);
+    let list = json!([{ "from": [0.2, 0.9], "strength": 4 }, { "from": [0.1, 1], "to": [0.9, 1], "angle": -80, "strength": 6 }]);
+    let set = json!({"set": {"pointer": format!("{at}/params/emitters"), "value": list}});
+    project.act(&serde_json::from_value::<Action>(set).unwrap()).unwrap();
+    assert!(wprs_editor::check::review(&project.doc, Some(&dir)).iter().all(|p| p.warning));
+    let far = json!({"set": {"pointer": format!("{at}/params/emitters/0/strength"), "value": 99}});
+    project.act(&serde_json::from_value::<Action>(far).unwrap()).unwrap();
+    let found = wprs_editor::check::review(&project.doc, Some(&dir));
+    assert!(found.iter().any(|p| !p.warning && p.message.contains("emitters")), "{found:?}");
+}
+
+#[test]
+fn the_wake_rules_of_package_effects_are_shown_and_changed_in_their_descriptor() {
+    let root = tempfile::tempdir().unwrap();
+    unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
+    let dir = root.path().join("rules");
+    let mut p = Project::create(&dir, starter("empty", "org.example.rules", "Rules", "en").unwrap()).unwrap();
+    let source = root.path().join("source");
+    fs::create_dir_all(&source).unwrap();
+    fs::write(source.join("glow.json"), descriptor("glow").to_string()).unwrap();
+    fs::write(source.join("glow.wgsl"), WGSL).unwrap();
+    p.act(&Action::ImportEffect { descriptor: source.join("glow.json"), wgsl: None }).unwrap();
+    let rule = |p: &mut Project, rule: Value| {
+        p.act(&serde_json::from_value(json!({ "effect_rule": rule })).unwrap())
+    };
+    let at = |p: &Project| p.dir.join(p.doc["scene"]["effects"]["glow"]["descriptor"].as_str().unwrap());
+    let read = |p: &Project| -> Value { serde_json::from_str(&fs::read_to_string(at(p)).unwrap()).unwrap() };
+    rule(&mut p, json!({ "effect": "glow", "param": "gain", "uses": "time", "waits_for": "style" })).unwrap();
+    let written = read(&p)["params"][0].clone();
+    assert_eq!((&written["uses"], &written["waits_for"]), (&json!("time"), &json!("style")));
+    assert!(p.dirty(), "a changed rule is a change of the project");
+    p.act(&Action::Undo {}).unwrap();
+    assert!(read(&p)["params"][0].get("waits_for").is_none(), "undo puts the old rule back");
+    p.act(&Action::Redo {}).unwrap();
+    assert_eq!(read(&p)["params"][0]["waits_for"], json!("style"), "redo brings the new rule again");
+    let shown = wprs_editor::rigs::query(&p.dir, &p.doc, "", &json!({ "rules": { "effect": "glow" } }));
+    assert_eq!((&shown["own"], &shown["params"][0]["waits_for"]), (&json!(true), &json!("style")), "{shown}");
+    assert!(rule(&mut p, json!({ "effect": "glow", "param": "gain", "waits_for": "nothing" })).is_err());
+    assert!(
+        rule(&mut p, json!({ "effect": "fluid", "param": "strength", "uses": "time" })).is_err(),
+        "built-in rules stay"
+    );
+    rule(&mut p, json!({ "effect": "glow", "param": "gain", "uses": "", "waits_for": "" })).unwrap();
+    let cleared = read(&p);
+    assert!(cleared["params"][0].get("uses").is_none() && cleared["params"][0].get("waits_for").is_none());
+    let fluid = wprs_editor::rigs::query(&p.dir, &p.doc, "", &json!({ "rules": { "effect": "fluid" } }));
+    assert_eq!(fluid["own"], json!(false));
+    assert!(fluid["params"].as_array().unwrap().iter().any(|q| q["waits_for"] == "strength"), "{fluid}");
+}

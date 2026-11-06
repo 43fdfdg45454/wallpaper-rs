@@ -12,9 +12,11 @@ use wprs_render::{Pictures, SceneAssets};
 use wprs_scene::{Preset, Property, Scene};
 
 mod info;
+mod lanes;
 mod mirror;
 
 pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
+pub(crate) use lanes::lanes;
 pub(crate) use mirror::flip;
 
 const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
@@ -143,6 +145,16 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
             videos.push((id.clone(), file));
         }
     }
+    let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
+    for (key, asset) in scene.played_lanes(&m.properties) {
+        let Some(file) = videos.iter().find(|(id, _)| *id == asset).map(|(_, f)| f.clone()) else { continue };
+        let kind = file.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
+        let link = file.with_file_name(format!("{key}.{kind}"));
+        if fs::symlink_metadata(&link).is_err() {
+            std::os::unix::fs::symlink(&file, &link)?;
+        }
+        videos.push((key, link));
+    }
     assets.luts.extend(package.luts(&scene)?);
     let (file, kept) = (path.to_owned(), stamp.clone());
     assets.reloadable(&scene, move || {
@@ -159,7 +171,6 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     if scripts.iter().map(|(_, s)| s.len()).sum::<usize>() > wprs_scene::MAX_SCRIPT_BYTES {
         return Err(said("android.scene_scripts_take", "the scene scripts take more than 1 MiB", &[]));
     }
-    let (m, inputs) = (package.manifest.localized(), package.manifest.declared());
     let labels = wprs_scene::labels(&m.properties, &m.default_locale.iter().cloned().collect::<Vec<_>>());
     let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
     let (properties, presets) = (m.properties, m.presets);

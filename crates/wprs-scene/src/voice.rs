@@ -123,6 +123,17 @@ impl Runtime {
             self.scene.sounds().enumerate().map(|(i, s)| Playlist::of(s, &lengths, seed(i))).collect();
     }
 
+    pub fn set_length(&mut self, asset: &str, seconds: f32) {
+        if seconds.is_finite() && seconds > 0.0 {
+            self.lengths.insert(asset.to_owned(), seconds);
+        }
+    }
+
+    pub fn plays_once(&self, layer: &str) -> bool {
+        let found = crate::copies::found(&self.scene, &self.spawned, layer);
+        found.and_then(crate::footage::played).is_some_and(|p| !p.repeat)
+    }
+
     pub fn playlists(&self) -> &[Playlist] {
         &self.lists
     }

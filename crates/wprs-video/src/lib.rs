@@ -11,6 +11,7 @@ mod player;
 mod probe;
 mod sound;
 mod still;
+mod strip;
 mod video_sink;
 mod wish;
 
@@ -22,6 +23,7 @@ pub use player::Player;
 pub use probe::probe;
 pub use sound::Soundtrack;
 pub use still::{Still, still};
+pub use strip::{MAX_STRIP, strip};
 
 use gstreamer as gst;
 use gstreamer::prelude::*;

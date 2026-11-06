@@ -94,6 +94,14 @@ fn descriptors_check_their_new_fields() {
             "k yields to no other",
         ),
         (
+            params(json!({ "id": "k", "type": "float", "default": 0, "waits_for": "k" })),
+            "k waits for no other",
+        ),
+        (
+            params(json!({ "id": "k", "type": "float", "default": 0, "waits_for": "q" })),
+            "k waits for no other",
+        ),
+        (
             json!({ "id": "probe", "pace": { "steps": [0, 15] }, "passes": [{ "entry": "fs_a" }] }),
             "pace steps are outside 1..=240",
         ),

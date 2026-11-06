@@ -81,10 +81,10 @@ impl<'a> Painter<'a, '_, '_> {
         Src::Ext(self.exts.len() - 1)
     }
 
-    pub(crate) fn text(&self, i: usize) -> Option<(&'a GpuImage, [f32; 2], f32)> {
+    pub(crate) fn text(&self, i: usize) -> Option<(&'a GpuImage, [f32; 2], f32, f32)> {
         let rasters = self.rasters;
         let at = self.texts.binary_search_by_key(&i, |(i, _)| *i).ok()?;
-        rasters.get(&self.texts[at].1).map(|r| (&r.image, r.size, r.field))
+        rasters.get(&self.texts[at].1).map(|r| (&r.image, r.size, r.field, r.span))
     }
 
     pub(crate) fn picture(&self, id: &str) -> Option<&'a GpuImage> {

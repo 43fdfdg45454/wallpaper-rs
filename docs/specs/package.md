@@ -303,6 +303,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `layer_textures` | feeds a layer into an effect texture with `{ "layer" }` | runs | runs |
 | `video_textures` | uses a video asset as a mask, an effect texture or the picture of a light | runs | runs |
 | `layer_playback` | sets `playback` on a picture or video layer | runs | runs |
+| `video_clocks` | plays the same video in several layers, each on its own clock (`playback.own_clock`) | runs | runs |
 | `texture_options` | sets `filter`, `wrap` or `mipmaps` on an asset | runs | runs |
 | `animated_textures` | sets `frames`, `fps`, `durations`, `rects` or `animated` on an asset | runs | runs |
 | `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | runs | runs |

@@ -39,6 +39,7 @@ impl Renderer {
         let mut scratch = std::mem::take(&mut view.scratch);
         scratch.reset(frame.draws.len(), runtime);
         self.rasters(view, frame, screen, &mut scratch.texts);
+        self.emitted(view, frame);
         let v = &mut *view;
         let (srgb, format, state_format) = (v.srgb, v.format, v.state_format);
         let full = Rect { x: 0.0, y: 0.0, w: size.0 as f32, h: size.1 as f32 };
@@ -158,9 +159,8 @@ impl Renderer {
         v.swarms.iter_mut().for_each(|s| s.upload(self, &v.uniform));
         let (canvas, output) = v.target.as_ref().expect("created above");
         let (caches, states, luts, swarms) = (&v.caches, &v.states, &v.luts, v.swarms.as_ref());
-        let exts = &scratch.exts;
+        let (exts, sets) = (&scratch.exts, &scratch.sets);
         let scissor = clip.map(|c| [c.x as u32, c.y as u32, c.w as u32, c.h as u32]);
-        let sets = &scratch.sets;
         let sources = encode::Sources { caches, states, luts, exts, canvas, output, swarms, scissor, sets };
         let (clock, at) = ((&v.clock, timing), (v.id, serial, v.timed));
         let encoded = self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, at));

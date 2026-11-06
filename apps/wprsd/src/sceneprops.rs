@@ -64,7 +64,8 @@ impl Props {
         let end = if end > start + 100 { end } else { 0 };
         let cut = Cut { speed: (num("speed") * 100.0).round() as u32, start, end };
         let play = &self.authored.playback;
-        let (reel, volume) = (Reel { path, cut, once: play.once() }, num("volume").round() as u32);
+        let (reel, volume) =
+            (Reel { path, cut, once: play.once(), lane: String::new() }, num("volume").round() as u32);
         let (zoom, pan, max_fps) = (num("zoom") as f32, [num("x") as f32, num("y") as f32], play.frame_cap());
         Movie { reel, volume, zoom, pan, max_fps }
     }

@@ -11,10 +11,11 @@ pub(crate) struct Place {
     pub(crate) opacity: f32,
 }
 
-pub(crate) fn homes(scene: &Scene) -> HashMap<String, String> {
-    let mut found = HashMap::new();
-    for group in scene.layers() {
+pub(crate) fn homes<'a>(top: impl Iterator<Item = &'a Layer>) -> HashMap<String, String> {
+    let (mut found, mut stack) = (HashMap::new(), top.collect::<Vec<_>>());
+    while let Some(group) = stack.pop() {
         found.extend(group.children().iter().map(|l| (l.id.clone(), group.id.clone())));
+        stack.extend(group.children());
     }
     found
 }
@@ -68,7 +69,7 @@ impl Context<'_> {
         }
         let set = self.script.layers.get(&layer.id).unwrap_or(&crate::input::UNSET);
         let by_id = |id: &String| {
-            let found = self.scene.layer(id).filter(|_| depth < 2 * MAX_DEPTH);
+            let found = self.find(id).filter(|_| depth < 2 * MAX_DEPTH);
             found.map(|l| self.placed(l, None, depth + 1))
         };
         let parent = parent_of(layer, set).and_then(by_id);

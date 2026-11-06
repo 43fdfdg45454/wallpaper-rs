@@ -54,3 +54,27 @@ fn parts_are_ordered_hidden_and_shown_only_over_others() {
         assert!(ends.len() >= 3 && ends.values().all(|n| n % 2 == 0), "{part}: {edges}");
     }
 }
+
+#[test]
+fn depth_is_turned_on_tuned_and_off_with_its_back_to_front_order() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = parts(&root);
+    let depth = |p: &Project| p.doc["scene"]["layers"][0]["depth"].clone();
+    act(&mut p, edit(json!({ "depth": { "scale": 2, "cull": true } }))).unwrap();
+    assert_eq!(depth(&p), json!({ "scale": 2.0, "cull": true }));
+    act(&mut p, edit(json!({ "depth": { "sort": false }, "order": { "legs": 3 } }))).unwrap();
+    assert_eq!((depth(&p)["sort"].clone(), shown(&p)["legs"]["order"].clone()), (json!(false), json!(3.0)));
+    act(&mut p, edit(json!({ "depth": { "sort": true } }))).unwrap();
+    assert!(depth(&p).get("sort").is_none(), "on is the default: {}", depth(&p));
+    for bad in [
+        json!({ "depth": { "scale": 11 } }),
+        json!({ "depth": { "scale": -1 } }),
+        json!({ "depth": { "off": true, "sort": false } }),
+    ] {
+        let before = p.doc.clone();
+        assert!(act(&mut p, edit(bad.clone())).is_err(), "{bad}");
+        assert_eq!(p.doc, before);
+    }
+    act(&mut p, edit(json!({ "depth": { "off": true } }))).unwrap();
+    assert!(depth(&p).is_null());
+}

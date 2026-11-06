@@ -44,7 +44,7 @@ impl Check<'_> {
             self.uses(s.wants(ScriptApi::Geometry), "script_geometry");
             self.uses(s.wants(ScriptApi::Sounds), "script_sounds");
             self.uses(s.wants(ScriptApi::Animations), "script_animations");
-            self.uses(s.wants(ScriptApi::Camera), "script_camera");
+            self.uses(s.wants(ScriptApi::Camera) || s.wants(ScriptApi::Bloom), "script_camera");
             self.uses(s.wants(ScriptApi::Shortcuts), "script_shortcuts");
             self.uses(s.wants(ScriptApi::Hierarchy), "script_hierarchy");
             self.uses(s.wants(ScriptApi::Folders), "script_folders");
@@ -92,14 +92,17 @@ impl Check<'_> {
                         | Kind::Shape { .. }
                         | Kind::Solid { .. }
                         | Kind::Spectrum(_)
+                        | Kind::Mesh(_)
                 );
                 if !copied {
                     self.issues.push(Issue::Type(format!("{p}/type")));
                 }
             }
             self.count(&format!("{p}/layers"), flat, MAX_LAYERS);
+            self.kept = Some(layer);
             self.layer(&p, layer, 1);
         }
+        self.kept = None;
         self.count("/pools", scene.pools.len(), MAX_POOLS);
         for (id, pool) in &scene.pools {
             let p = format!("/pools/{id}");

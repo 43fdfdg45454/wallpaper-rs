@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use wprs_editor::Project;
-use wprs_editor::actions::{Action, AnimEdit, Edit3d, PathEdit, PathKey, PlayEdit, ShadowEdit};
+use wprs_editor::actions::{Action, AnimEdit, Edit3d, PathEdit, PathKey, PlayEdit, RuleEdit, ShadowEdit};
 
 pub(crate) fn three(text: &str) -> Option<[f32; 3]> {
     let list: Vec<f32> = text.split(',').map(|v| v.trim().parse().ok()).collect::<Option<_>>()?;
@@ -24,6 +24,8 @@ fn shown(command: &Flying) -> bool {
         Flying::CameraPath { what, .. } => matches!(what, PathCmd::Show { .. }),
         Flying::NewMaterial { check, .. } => *check,
         Flying::Debug3d { .. } => false,
+        Flying::EffectRule { param, .. } => param.is_none(),
+        Flying::Clocks { .. } => true,
     }
 }
 
@@ -104,6 +106,11 @@ fn edit(command: Flying) -> Result<(PathBuf, Action)> {
         }
         Flying::CameraPath { dir, what } => (dir, Action::Scene3d(Edit3d::Path(path(what)?))),
         Flying::NewMaterial { dir, name, .. } => (dir, Action::Scene3d(Edit3d::NewMaterial { name })),
+        Flying::EffectRule { dir, effect, param, uses, waits_for, yields_to } => {
+            let param = param.unwrap_or_default();
+            (dir, Action::EffectRule(RuleEdit { effect, param, uses, waits_for, yields_to }))
+        }
+        Flying::Clocks { .. } => anyhow::bail!("clocks only prints"),
         Flying::Debug3d { dir, show } => {
             let show = (show != "none").then_some(show);
             (dir, Action::Scene3d(Edit3d::Debug { show }))
@@ -138,10 +145,12 @@ pub(crate) fn run(command: Flying) -> Result<()> {
             (dir, json!({ "paths3d": { "time": time } }))
         }
         Flying::NewMaterial { dir, name, .. } => (dir, json!({ "material_check": { "name": name } })),
+        Flying::EffectRule { dir, effect, .. } => (dir, json!({ "rules": { "effect": effect } })),
+        Flying::Clocks { dir, time, strip } => (dir, json!({ "clocks": { "time": time, "strip": strip } })),
         other => anyhow::bail!("{other:?} changes the scene"),
     };
     let p = Project::open(&dir)?;
-    let found: Value = wprs_editor::rigs::query(&p.dir, &p.doc, "", &q);
+    let found: Value = wprs_editor::rigs::query(&p.dir, &p.seen(), "", &q);
     anyhow::ensure!(!found.is_null(), "there is nothing to show");
     println!("{}", serde_json::to_string_pretty(&found)?);
     if found["ok"] == false {

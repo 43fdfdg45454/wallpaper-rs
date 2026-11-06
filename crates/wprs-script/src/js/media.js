@@ -36,10 +36,19 @@ export function timeline(id) {
     });
 }
 
+const aim = (map, n, layer) => {
+    const id = layer == null ? undefined : String(layer);
+    if (id !== undefined && !(id.length > 0 && id.length <= 256)) throw new RangeError("a layer id takes 1 to 256 characters");
+    if (id === map[n]) return;
+    if (id === undefined) delete map[n];
+    else map[n] = id;
+    dirty.add("particles");
+};
+
 export function particles(id) {
     id = String(id);
     if (!particleState[id]) dirty.add("particles");
-    const own = (particleState[id] ??= { playing: true, instance: {}, points: {} });
+    const own = (particleState[id] ??= { playing: true, instance: {}, points: {}, sources: {}, walls: {} });
     const send = (command) => void ((state.out.particles[id] ??= {}).commands ??= []).push(command);
     const whole = (n, lo, hi, what) => {
         n = Math.floor(Number(n));
@@ -58,6 +67,8 @@ export function particles(id) {
             return own.playing;
         },
         emit: (n) => send({ emit: whole(n, 1, 1000, "emit") }),
+        from: (n, layer) => aim(own.sources, whole(n, 0, 7, "emitter"), layer),
+        wall: (n, layer) => aim(own.walls, whole(n, 0, 7, "collider"), layer),
         point(n, at) {
             if (put(own.points, whole(n, 0, 7, "point"), numbers(at, 2, "point"))) dirty.add("particles");
         },
@@ -142,7 +153,19 @@ function playback(id, more = () => ({})) {
     return Object.freeze(handle);
 }
 
-export const video = (id) => playback(String(id));
+const loudness = {};
+
+export const video = (id) =>
+    playback(String(id), (send, number) => ({
+        get volume() {
+            return loudness[id] ?? 1;
+        },
+        set volume(v) {
+            const level = Math.min(1, Math.max(0, number(v, "volume")));
+            if (loudness[id] !== level) send({ volume: level });
+            loudness[id] = level;
+        },
+    }));
 
 const weights = {};
 

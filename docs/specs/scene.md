@@ -411,11 +411,11 @@ an exact result should use the other modes.
 | `transform.z` | pixels towards the viewer (−100000 to 100000); a layer at or behind the viewer is not drawn | `tilt` |
 | `parallax` | a number or `[x, y]` (−10 to 10 each), with a different depth per axis | `parallax2` when the two differ |
 | `lighting` | on `image`, `video`, `text` and `particles` layers, `{ "normal", "roughness", "roughness_map", "reflection", "env", "emissive", "emissive_map", "strength" }`: how the layer takes the light of `light` layers (see "Lights"); on `particles` layers it also names `particle_lighting` | `lighting2d` |
-| `playback` | on `image` layers showing moving pictures or videos and on `video` layers, `{ "rate" (0 to 16; a video plays at 0 or from 0.1 to 4), "playing", "loop", "start", "end" (seconds), "frame" }`; `frame` picks a frame of a sprite sheet and may be bound to keyframes, the pointer, the audio or a script | `layer_playback` |
+| `playback` | on `image` layers showing moving pictures or videos and on `video` layers, `{ "rate" (0 to 16; a video plays at 0 or from 0.1 to 4), "playing", "loop", "start", "end" (seconds), "frame", "own_clock" }`; `frame` picks a frame of a sprite sheet and may be bound to keyframes, the pointer, the audio or a script; layers that show the same video share one clock, led by the first of them, and a `video` layer with `own_clock: true` plays its video on a clock of its own, with its own rate, range, play and pause, seeks of scripts and decoder (`video_clocks`), so each such layer costs one more decoder; a video picked by a property through a `map` keeps one own clock per video of the map (each runs while it is shown, and the seeks, rate and pauses of scripts reach all of them), and a video a `file` property that may hold a video (it accepts `video`, or its `default_asset` is a video) picks at run time (`{ "prop": "<id>" }`) keeps one own clock, `<id>@<layer>`, for whatever file the user picks, with a decoder of its own on the desktop and the phone; `own_clock: true` anywhere else (an image layer, a video bound without a `map` to a property that is no `file` or to a `file` property that only takes pictures, or a video layer showing a geometry pool) is refused, and the editor offers the switch only where it applies; its timeline shows a lane for each own clock, with a strip of frames of the video, the range of the video as a bar whose grips trim `start` and `end`, its speed, loop and play switches and a mark where the clock is at the playhead, and `wprs-ctl scene clocks DIR [--time T] [--strip N]` prints the same | `layer_playback`, `video_clocks` |
 | mask `strength` | 0 to 1 (default 1), weakens the mask: m′ = mix(1, m, strength) | `mask_strength` |
 | adjustment `size` | `[width, height]` in pixels (at most twice the canvas): only that rectangle around the layer position (placed by `origin`, without the rotation, skew or scale of the layer) is captured and its effects change only that part, and `redraw: true` draws what was captured again with the whole transform of the layer, its opacity, blend mode and mask, as a magnifier or a mirror; without `size` the whole canvas is captured and turned around its middle. A capture is one copy of the rectangle and one pass more, and any change in the scene redraws the whole frame | `capture` |
 | adjustment `rgb` | `true` sends what the layer captures, shrunk to at most 64 × 16 (keeping its shape), to the RGB lighting of the computer, at most 30 times a second and only when the frame changes; with `size` that region (placed like the capture), without it the whole canvas; the picture below is not changed; the manifest must set `permissions.rgb`, the user must allow `rgb` for the package and turn RGB lighting on (`package.md`) | `rgb` |
-| `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`, as posed in the same frame; `inherit` lists `position`, `rotation` and `scale` (all by default; without `position` the layer stays on the origin of the mesh layer); `offset` is in pixels along the bone; the layer hides with its mesh layer, and its own `transform` applies on top as under a parent; a layer may not follow itself, through other attachments either | `attach` |
+| `attach` | `{ "layer", "bone" \| "point", "offset": [x, y], "inherit" }`: follows a bone or a node of a `mesh` or `model` layer instead of a `parent`, as posed in the same frame; `inherit` lists `position`, `rotation` and `scale` (all by default; without `position` the layer stays on the origin of the mesh layer, and what it does not take from the bone it still takes from the camera, which zooms and turns it like the rest of the scene); `offset` is in pixels along the bone; the layer hides with its mesh layer, and its own `transform` applies on top as under a parent; a layer may not follow itself, through other attachments either | `attach` |
 | `solid` | `true` or `{ "alpha" (0 to 1) }`: the layer takes the pointer for `click:`, `enter:` and `leave:` triggers and script pointer events, over its box or, with `alpha`, only where it is at least that opaque (pictures by the alpha of their pixels, the other kinds by their color and opacity); a solid group takes the pointer over the boxes of its layers; layers are tested from the top down, as they were drawn in the last frame, with their transforms, parents and parallax, and hidden layers never take it | `layer_events` with `alpha` |
 | `depth_test` | inside a group with `space: 3d`, a flat layer hides behind the models in front of it instead of covering them | `model3d` |
 
@@ -424,7 +424,7 @@ instead of the flat one, so the GPU spreads its picture with the right perspecti
 nothing more. The projection follows the camera, so zooming the camera zooms a tilted layer as a
 picture of it. The effects of a tilted layer run in its own plane before it is projected, and its
 mask leans with it. A tilted group is drawn apart first (one more pass over its box) and then
-projected, and its layers lean with it; tilts nested in groups add up. The pointer finds a tilted
+projected, and its layers lean with it; a layer tilted inside a tilted group turns in the plane of the group as one rigid body seen by one camera (its tilt and `z` are 3D turns and moves within that plane, and the group's tilt then turns both), never as a picture of a picture. The pointer finds a tilted
 layer where it shows.
 
 ### Text
@@ -456,8 +456,9 @@ size (twice its size, from 16 to 256 pixels), so it grows and shrinks without be
 `raster` draws it again at its size on the screen, as plain texts are, and `sdf` uses the field
 even without a style. The texture keeps room around the letters for the widest style, rounded up to
 a power of two, so animating a style within that room draws nothing again. At the lowest quality
-level shadows blur at most 4 pixels. Devices whose GPU cannot draw into 16-bit float textures draw
-styled texts as plain ones.
+level shadows blur at most 4 pixels. The GPU makes the field in plain 8-bit textures, which every
+GPU can draw into, packing each offset and each distance into two channels (16 bits), so styled
+texts look the same on GPUs without 16-bit float textures and the processor never builds it.
 
 A text is laid out again only when its text, size on screen or layout changes; its color, the color of
 its background and its position never lay it out again. Each character comes from the first font of
@@ -576,10 +577,10 @@ file is refused as soon as it passes a limit.
 | `texture` | a picture or video asset (or bound value) that replaces the textures of the file; without it, the picture of the first material that has one, or white; the base color of each material multiplies its parts |
 | `size`, `color` | the box in pixels the mesh fills (the canvas by default) and a color that multiplies it |
 | `parts` | per part (mesh name of the file): `order` (−1000 to 1000, may follow keyframes with `step`), `clip_to` (another part it only shows over) and `visible`; parts are drawn by `order` (0 by default), in the order of the file when it is the same |
-| `depth` | `{ "scale" (0 to 10, 1 by default), "cull" }`: how far the depth of the vertices (z of the file, towards the viewer, in pixels) pushes them with the perspective of `canvas.perspective` or of the 3D camera, also under `transform.tilt`, and whether triangles seen from behind (turning clockwise on screen) are hidden; with `depth` nearer vertices also cover farther ones whatever the order of their parts, and parts at the same depth keep their order (soft edges look best when parts are also ordered from back to front); without `depth` the depth of vertices is ignored |
+| `depth` | `{ "scale" (0 to 10, 1 by default), "cull", "sort" }`: how far the depth of the vertices (z of the file, towards the viewer, in pixels) pushes them with the perspective of `canvas.perspective` or of the 3D camera, also under `transform.tilt` and under the tilts of the groups and parents around the layer, always along the face of the layer as all of them turn it, and whether triangles seen from behind (turning clockwise on screen) are hidden; with `depth` nearer vertices also cover farther ones whatever the order of their parts, and parts at the same depth keep their order, a later part covering the soft pixels of an earlier one as it does without `depth`; the opaque pixels of every part are drawn first, writing depth, and the soft ones (alpha below 1) after them, tested against that depth without writing it, so a soft edge never hides what lies behind it as a halo whatever the order of the parts, even where parts span each other's depth or cut through each other; `sort` (on by default, `false` keeps the order of the file and of `parts`) draws the parts from back to front each frame by the average depth of their vertices as posed, blend shapes included (a part cut to another one goes with it), so soft pixels over soft pixels blend in order, at no cost while depth is off; without `depth` the depth of vertices is ignored |
 | `clips` | at most 64 `{ "id", "animation", "from", "to", "loop", "events", "bones", "shapes", "order" }`: a stretch of an animation of the file (the first one without `animation`, unless the clip has keys of its own) in seconds within its length (a clip with keys of its own and no `animation` lasts until its last key, or until a later `to`, holding its last keys), played `repeat` (default), `pingpong` or `once`, with named `events` (seconds from the start of the clip) that fire like those of timelines each time a playing clip passes them, both ways for `pingpong`, start what `event:<name>` triggers and reach scripts as `timelineEvent` with the timeline `<layer>#<clip>`, and keys of its own on the same seconds (below) |
 | `animations` | at most 16 animation layers `{ "clip", "weight" (0 to 1), "rate" (0 to 16), "additive", "blend_in", "blend_out" (0 to 10 s), "enabled", "bones" }`, mixed in order: replacing layers first, then additive ones; `bones` limits a layer to those bones; bones without a track keep their rest pose |
-| `ik` | at most 16 chains `{ "chain" (2 to 8 bones, each hanging from the one before), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }`; `target` is a point in pixels of the box from its top left (which may be bound), `"cursor"`, `"bone:<name>"` (any node of the file) or `"layer:<id>"`; see "Reaching and swinging" (`ik`) |
+| `ik` | at most 16 chains `{ "chain" (2 to 8 bones, each hanging from the one before), "target", "limits": { "<bone>": [min, max] }, "weight", "bend": "clockwise" \| "counterclockwise" }` (the way every joint of the chain bends); `target` is a point in pixels of the box from its top left (which may be bound), `"cursor"`, `"bone:<name>"` (any node of the file) or `"layer:<id>"`; see "Reaching and swinging" (`ik`) |
 | `physics` | at most 64 `{ "bone", "mode": "spring" \| "rigid" \| "rope", "stiffness", "damping", "inertia" (0 to 1, 0.5 by default), "wind" (0 to 1), "gravity" (−10 to 10), "rotation": [min, max] degrees, "translation": [min, max] px }`; see "Reaching and swinging" (`bone_physics`) |
 | `rules` | at most 64 `{ "bone", "parent", "weight" }`: moves a bone over to another parent as `weight` goes from 0 to 1, keeping its pose, as a sword passing from a rock to a hand (`bone_rules`) |
 | `shapes`, `expressions` | weights from 0 to 1 of the blend shapes of the file, and at most 64 expressions `{ "<name>": { "<shape>": weight (−1 to 1) } }` whose names `shapes` may also set; at most 8 shapes act at once on each part, the heaviest (`blend_shapes`) |
@@ -627,9 +628,19 @@ chains in their order, what scripts set (see "Bones, blend shapes and attachment
 A chain turns its bones so that its end (where the first child of its last bone starts, leaving
 out nodes marked `extras.point`, or as far again along the last bone when it has none) reaches the
 target; bodies of `physics` take the end of their bone, and ropes their links, the same way. Chains of two bones are solved
-exactly, bending at their middle joint the way `bend` says; longer chains, and chains whose `limits`
-stop a bone, take at most 10 rounds that turn each bone towards the target from the end back. A
-target out of reach stretches the chain towards it. `limits` keep each listed bone within `[min,
+exactly, bending at their middle joint the way `bend` says; when `limits` stop one of their bones,
+up to 10 rounds then turn each bone towards the target within its limits, so limits that only allow
+the other side bend the middle joint that way. A longer chain takes at most 10 rounds that turn each
+bone towards the target from the end back without letting any joint bend the other way, starting
+from its pose, so the curl of its clips stays while it reaches. When that pose is straight or already
+bends a joint the other way, the chain first curls into an even arc, every joint turning the way
+`bend` says by the same angle, that reaches the target; when the rounds from the pose miss a target
+within reach, the same frame tries again from that arc. A joint whose `limits` leave no room on the
+`bend` side turns within its limits only, the other way, as in chains of two bones; a chain with
+such a joint takes no arc. Each frame starts from its own pose, so a chain reaches the same way
+live, after a seek or after a restart; a frame whose pose, limits and target are those of the frame
+before takes its turns again without running any round. A target out of reach
+stretches the chain towards it. `limits` keep each listed bone within `[min,
 max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cursor"` follows the
 pointer only while the scene may read it (the pointer input, told to the user like any other use of
 the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
@@ -643,8 +654,8 @@ its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings lik
 loosely to its pose, and a `rope` links the bone and its first children (those without a body of
 their own, at most 8 links) into a chain that hangs and sways. `inertia` is how much a body stays
 behind when its parent moves, `damping` how fast it calms down, `gravity` pulls down (98 pixels per
-second squared for each unit), `wind` is how much `canvas.wind` (in pixels a second, with gusts)
-pushes it, `rotation` bounds how far each link turns from its pose and `translation` lets the head of
+second squared for each unit), `wind` is how much `canvas.wind` (in pixels a second, with gusts
+taken at the time each step stands for, so they blow alike at every frame rate) pushes it, `rotation` bounds how far each link turns from its pose and `translation` lets the head of
 the bone itself move that many pixels each way. A body that has not moved for half a second, while
 its pose and the wind stay still, asks for no frames; at the lowest quality bodies keep the pose
 of the animation and ask for nothing. Scripts can push bones with `impulse`.
@@ -1059,7 +1070,7 @@ and `life`. Package descriptors may also use:
 
 | Field | Meaning |
 |-------|---------|
-| `params` | at most 24; besides the kinds above, `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 34 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value (its `default`, the value an effect use gives it or a value of its `map`) names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture, and the editor offers those four next to the assets; every parameter may have a `label` and a `help` per language, of at most 256 characters, and `yields_to`, another parameter that, while not zero, takes over: this one then asks for no input of its `uses` |
+| `params` | at most 24; besides the kinds above, `emitters` (a list of at most 64 point and line emitters, given to the shader as a picture of three texels each, read with `textureLoad`, and its count in the slot, 0 while no emitter has a strength above 0; the list may be keyframed, where two keys with as many emitters blend each emitter of the same shape and a point that becomes a line jumps, follow a property through a `map` of lists, or be set by a script, but follows no sound, pointer or other number), `int` (whole numbers), `enum` (with `values`: 1 to 64 `{ "value", "label" }`), `blend` (one of the 34 blend modes, given to the shader as its number in the order of the list), `position` (a point of the layer the editor lets the author place) and `mask` (a picture painted per channel, with `channels` 1, 3 or 4 and `paint`, the color or number a mask without a picture has); a `texture` or `mask` whose value (its `default`, the value an effect use gives it or a value of its `map`) names no asset but is `white`, `black`, `noise` or `normal_flat` reads that generic picture, and the editor offers those four next to the assets; every parameter may have a `label` and a `help` per language, of at most 256 characters, and `yields_to`, another parameter that, while not zero, takes over: this one then asks for no input of its `uses`, and `waits_for`, another parameter that must not be zero for this one to ask for the input of its `uses` (the emitters of `fluid` wait for its `strength`, so a fluid at strength 0 rests once it settles) |
 | `targets` | at most 8 named textures `{ "scale" (0 to 2 of the layer size), "format" }` with `rgba8` (default) or `rgba16f`, kept between passes of one frame |
 | `options` | at most 8 variants `{ "id", "values", "default", "when_bound" }`, each a WGSL `override` of the shader with 1 to 16 whole numbers or flags; a use sets them through `params`, as literals or bound to a property, and every combination it may need (at most 8 per use) is built when the scene loads, never during a frame; `when_bound` turns an option on while the named texture parameter has a picture |
 | `compose` | `true` draws the layer over what lies below it first; the effect reads that picture as its input and its result replaces the layer's box on the scene |
@@ -1283,7 +1294,7 @@ rules are also what a phone or a laptop on battery draws.
 | `displace` | bends the layer by a normal map (`mode` 0, refracted through its slope) or an offset map (`mode` 1, 0.5 still), repeated over the layer, or by built-in noise without one | `map`, `mode`, `scale` (0.1 to 16), `strength` (0 to 256 px), `scroll` (−4 to 4 a second, needs time while not zero), `ratio` (0.1 to 10, wider than tall) | light |
 | `electric` | thin crackling lines where two drifting noises meet | `color_a`, `color_b`, `bounds` (0 to 1, where lines start and are full), `scale` (0.1 to 16), `smoothness` (0 to 1), `speed` (0 to 8, needs time while not zero), `multiply` (0 to 8), `blend` (`add`) | light; changes 30 times a second and asks for a frame only then, 15 times at Q0 |
 | `fire` | lifts and flickers flames already in the picture, and colors them by brightness with a `gradient` | `speed` (0 to 8, needs time while not zero), `strength` (0 to 64 px), `scale` (0.1 to 16), `gradient` | light |
-| `fluid` | smoke, fire or liquid simulated over the layer, from one point emitter, one line emitter and the pointer | `render` (0 gradient, 1 emitter color, 2 the picture itself, 3 distortion only), `gradient`, `color`, `velocity_decay`, `dye_decay` (0 to 1, kept each 1/60 s), `push` (0 to 8, needs the pointer while not zero), `source`, `source_angle` (−360 to 360, −90 is up), `source_strength` (0 to 64), `line_from`, `line_to`, `line_strength` (0 to 64; a strength above zero needs time), `blend`, `perspective` (0 to 1), `opaque` | heavy: a state of a quarter of the layer, 20 pressure steps every 1/60 s (8 at Q1, where the state is halved); frozen at Q0, where it shows its last state and asks for no frames; draws only while it emits, the pointer pushes it, or for 6 s after |
+| `fluid` | smoke, fire or liquid simulated over the layer, from any number of point and line emitters and the pointer | `render` (0 gradient, 1 emitter color, 2 the picture itself, 3 distortion only), `gradient`, `color`, `velocity_decay`, `dye_decay` (0 to 1, kept each 1/60 s), `push` (0 to 8, needs the pointer while not zero), `emitters` (at most 64 `{ "from", "to", "angle", "strength" }`: a point at `from`, or a line from `from` to `to`, in fractions of the layer from −2 to 4, pushing towards `angle` (−360 to 360, −90 is up, the default) with `strength` (0 to 64); the list may be keyframed, follow a property through a `map` or be set by a script; any emitter with a strength above 0 needs time while `strength` is not 0), `strength` (0 to 8, default 1, scales every emitter and may be bound), `blend`, `perspective` (0 to 1), `opaque`; the editor places emitters with handles on the canvas, and a grip at the end of each direction line turns it and sets its strength; for a list that follows a property through a `map` the canvas shows and edits the list of the current value of the property, or the one *Place these emitters on the canvas* picks in the inspector, and every list takes the ends of each emitter typed as `x, y` | heavy: a state of a quarter of the layer, 20 pressure steps every 1/60 s (8 at Q1, where the state is halved); frozen at Q0, where it shows its last state and asks for no frames; draws only while it emits, the pointer pushes it, or for 6 s after |
 | `glitter` | short star-shaped sparkles in a grid of cells | `density` (0 to 1), `size` (0.5 to 16 px), `speed` (0 to 8 new patterns a second, the scene sleeps in between), `color` | light; cells twice as large at Q0 |
 | `lens_flare` | a core, a halo and ghosts along the line from a light to the middle | `source`, `follow` (needs the pointer when set), `intensity` (0 to 4), `ghosts` (0 to 8), `halo` (0 to 1), `color` | medium |
 | `local_contrast` | deepens contrast around edges (unsharp mask) | `radius` (1 to 64 px), `amount` (0 to 4), `luma_only` (on by default: colors keep their hue) | medium, two blur passes at half size; best marked `optional` |
@@ -1307,7 +1318,7 @@ rules are also what a phone or a laptop on battery draws.
 | `reflection` | `angle` (−360 to 360) turns the mirror line around its middle |
 | `scroll` | `repeat_x`, `repeat_y`: off, the picture leaves that side instead of coming back |
 | `shake` | `noise` (0 to 1, jerkier), `friction` (0 to 1, longer near rest), `bounds` (0 to 1 of `strength` on each axis), `phase` |
-| `shine` | `blend` (`add`, as before), `gradient` (read across the band) |
+| `shine` | `blend` (`add`, as before), `gradient` (read across the band), `style` (0 a line, as before; 1 a double line, a thinner one at 60 % trailing the first; 2 a ring that grows from the middle of the layer and ignores `angle`; 3 a glint, a star with a bright core and four rays that travels along `angle`), picked in the editor from drawings of each style |
 | `sway` | `double` (a second, slower wave over the first), `phase` |
 | `twirl` | `aspect` (0.1 to 10, an ellipse), `inner` (0 to 1, turned whole inside), `noise` (0 to 1), `repeat` (wraps the picture around instead of stretching its edge) |
 | `water_ripple` | `perspective` (0 to 1, smaller waves towards the top), `reflection` (a picture seen in the slopes), `tint` (colors the moving water), `walls` (a picture where the water stays still), `speed` (0 to 4) |
@@ -1529,7 +1540,8 @@ The newer fields behave as follows.
   parent (`spawn`, `death` or `follow`) cannot start particles from a `layer`.
 - **Children in depth.** A child of a system with `perspective` that has `perspective` of its own is
   born at the depth of its parent plus its own `init.depth`, and a `follow` child moves in depth
-  with its parent; a child without `perspective` is born where its parent is drawn, at
+  with its parent; with `velocity` in `inherit` it also adds the speed in depth of its parent to its
+  own `init.depth_speed` (and takes it every step with `follow_inherit`); a child without `perspective` is born where its parent is drawn, at
   `f / (f + z)` times its size and inherited speed, and a `follow` child moves as far as its parent
   is drawn to move.
 - **Instances.** `alpha`, `size`, `brightness` and `color` multiply the look of the layer; `count` is
@@ -1582,8 +1594,10 @@ positions as its own `trail` asks for, or none.
   particle is born.
 - **Turbulent start.** `init.turbulent` replaces `speed` and `angle`: each particle starts at a speed
   picked from `speed`, along `forward` degrees turned by up to `scale` half turns by a smooth noise
-  read at `phase + noise_speed · t + offset · u` (`t` the time of the system, `u` a number picked per
-  particle, so `offset` spreads the directions of the particles born together); with `audio` the
+  read at `phase + noise_speed · t + offset · u + s` (`t` the time of the system, `u` a number picked per
+  particle, so `offset` spreads the directions of the particles born together, and `s` a whole number
+  below 1024 taken from the `seed` of the system mixed with `clock.seed`, so each seed reads another
+  stretch of the noise); with `audio` the
   level of that band multiplies `phase`. The noise is read again from its start every 4 096 units,
   so a long run never loses precision.
 - **Fractal offset.** `init.offset_noise` moves each birth by up to `distance` pixels along the
@@ -1911,7 +1925,7 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `folder(prop)` | the pictures of a folder the user chose (see below) |
 | `media` | what the media player plays (`uses: ["media"]` or a media event, input `media`): `enabled`, `state` (`playing`, `paused` or `stopped`), `playing`, the texts `title`, `artist`, `album`, `album_artist`, `subtitle`, `genres` and `kind`, `has_cover`, `colors` (as in `mediaThumbnail`), `position` (running on from the last reading at its `rate`, without new frames), `duration`, `rate`, `progress` (0 to 1) and `snapshot()`, a frozen copy of all of them. Without the grant it reads `enabled: false`, `stopped` and empty texts; it never carries the cover or the name of the player, and the engine never logs it. Reading it from a module that does not declare it throws |
 | `timeline(id)` | `play()`, `pause()`, `reverse()`, `stop()`, `seek(t)`, `speed` (−100 to 100; below zero the timeline runs backwards like after `reverse()`, and one that plays `once` ends at its start), `time`, `duration`, `playing` and `on(name, handler)` for its events and `ended` |
-| `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])` and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
+| `particles(layer)` | `play`, `pause` (no births, particles keep moving), `stop` (removes them until `play`), `playing`, `emit(n)` (1 to 1000), `point(n, [x, y])`, `from(n, id)` and `wall(n, id)` (emitter or collider `n`, 0 to 7, of kind `layer` takes the picture of layer `id`, any layer a frame draws, a copy of a template included, instead of the one its system names, until `null` gives it back) and the `instance` fields `alpha`, `size`, `count`, `speed`, `life`, `time_scale`, `brightness` and `color`, which last until changed |
 | `shared` | an object shared by all the modules of the scene: at most 256 values, each a frozen copy of what was set (numbers, strings, booleans, arrays, typed arrays and objects of them, at most 65536 items and 32 levels in all), so a value changes by setting it again; getters, functions and other prototypes are refused; modules may also `import` each other with relative paths (`./lib/bands.js`), among the files of `scripts` |
 | `setTimeout(fn, ms)`, `setInterval(fn, ms)` | timers on the scene clock: they return a function that cancels them (`clearTimeout` and `clearInterval` call it), run at the start of a frame, at most once a frame each, without making up for missed periods and never under 16 ms; at most 64 wait at once, they wait while the scene is paused, and the scene sleeps until the next one |
 | `console` | `log`, `info`, `warn`, `error` and `debug`: at most 20 lines a second of at most 512 characters, to the log of the engine at debug level and to the editor |
@@ -1939,7 +1953,10 @@ the `down`. They reach the scripts in the next frame, at most 64 a frame.
 `layer.video` controls the video the layer shows (`uses: ["animations"]`): `play()` (from `start`
 once it ended), `pause()`, `stop()` (back to `start`, paused), `seek(seconds)` (at most one jump a
 frame: the last `seek` of a frame counts), `time`, `duration` (`undefined` while it is not known),
-`playing`, `rate` (0 to 16, read and written) and `on("ended", handler)`, called with `{ layer,
+`playing`, `rate` (0 to 16, read and written), `volume` (0 to 1, 1 by default, read and written: it
+scales the sound of the video under the volume of the videos of the package and the general volume;
+layers that share a clock share it; the phone plays scenes without sound, so there it changes
+nothing) and `on("ended", handler)`, called with `{ layer,
 name }` in the frame after a video without `loop` reaches its end. Calls take the video over from the
 `playback` of the layer until the scene starts again.
 
@@ -1971,8 +1988,9 @@ most 256 of them; the engine bounds positions to 100000 pixels, scales to 1000 a
 frame.
 
 `layer.effect(index or name)` controls one effect of the layer: `enabled`, `set(parameter, value)`
-(numbers, vectors, colors, switches and blend modes, checked against the effect's description and
-clamped to its range; pictures cannot be changed), `get(parameter)`, `reset()` (clears what an effect
+(numbers, vectors, colors, switches, blend modes and emitter lists, checked against the effect's
+description and clamped to its range, where an emitter list takes at most 64 `{ from, to, angle,
+strength }` and clamps each field to its range; pictures cannot be changed), `get(parameter)`, `reset()` (clears what an effect
 with `state` keeps) and `index`, `name` and `effect`. What a script sets lasts until changed, and the
 inputs of the scene count every effect of a scene whose scripts use `effects` as shown.
 
@@ -1993,8 +2011,11 @@ speed } }`), `scene.parallax` (`{ amount, delay }`), `scene.bloom` (`{ threshold
 tint }`), `scene.background`, `scene.ambient` and `scene.sky` (colors) read what the scene sets in
 `canvas` and what the script wrote; writing an object changes only the fields it names, within the ranges of `canvas`, and `null`
 gives the field back to the scene. The camera is the same transformation as `canvas.camera`, without
-passes, its shake stays still with *reduce motion* and at Q0, and bloom changes only a scene whose
-`canvas` sets `bloom`.
+passes, and its shake stays still with *reduce motion* and at Q0. Bloom also reaches a scene whose
+`canvas` sets no `bloom`: writing it adds the glow of `canvas.bloom` with the defaults of that object
+for the fields it does not name (threshold 0.8, strength 1, radius 16, white), kept only while the
+script keeps it (`null` takes it away again), dropped at Q0 and given its plain set on battery like
+the glow a scene declares; until a script writes it nothing is added and nothing costs more.
 
 With `geometry`, `scene.mesh(pool)` gives a pool of `pools`: `create({ vertices, indices, format,
 visible })` adds a shape and returns it, with `update(fields)`, `destroy()`, `id` and `alive`;
@@ -2021,17 +2042,46 @@ and each keeps its own `output` scope (at most 16 screens, the one used longest 
 on the phone the home screen and the lock screen are two screens, each with its own `output` scope).
 Previews in the editor read what is kept but never write it.
 
-With `folders`, `folder(prop)` lists a `folder` property with `mode: all`: `files` are opaque ids of
-its pictures (an id changes when its file is written again), `name(id)` the name of the file, and
+With `folders`, `folder(prop, options)` lists a `folder` property with `mode: all`: `files` are opaque
+ids of its pictures, and also of its videos with `options.videos: true` when the property `accept`s
+`video` (an id changes when its file is
+written again), `name(id)` the name of the file, `kind(id)` `"image"` or `"video"`, and
 `on("added" | "removed" | "changed", handler)` gets `{ prop, files }` (`changed` as `[old, new]`
-pairs) when the folder changes, looked at every 2 s while the scene is shown. `show(layer, id)` makes
-an image layer show that file instead of its own picture (`null` gives it back), at most eight files
-at once. Scripts never see paths, and the phone lists the folder the user chose in the same way.
+pairs, only of the files that `folder` lists) when the folder changes: while the scene is shown, the
+desktop watches the chosen folder and its listed subfolders for change notices and reads them again,
+away from the thread that draws, once the notices settle (half a second after the last one, at most
+5 s after the first, so a copy of many files is read once), leaving out hidden files that sync tools
+write while they work; a hidden scene drops the watch and looks once when shown again. A folder that
+is missing, removed or moved is awaited in the nearest folder above it that exists and watched again
+when it comes back, and subfolders nobody may read are left out, as the listing leaves them out.
+Only where the system gives no change notices, on a network file system (a user space file system
+counts when it reaches the network, such as `sshfs` or `rclone`, not a local disk or a vault), or
+when a folder holds more than 8 192 subfolders to watch, it looks every 2 s while the scene is shown. The phone lists its copy of the chosen folder again only when the
+copy changes, which it makes again when the system says the folder changed. `show(layer, id)` makes an image layer show that picture, or a `video` layer play that video
+with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
+the `playback` of the layer and that `layer.video` (play, pause, seek, rate, volume, `ended`) controls like the
+videos of the package, with its sound at the volume of the videos of the package on the desktop (the
+phone plays scenes without sound, folder videos too), instead of its own
+(`null` gives it back), at most eight files at once, any of them videos; a video on another
+kind of layer throws. Scripts never see paths, and the phone lists the folder the user chose in the same way.
 
 `templates` maps at most 64 ids to layers that scripts with `layers` copy into the scene, validated
 like the other layers (`script_layers`); a template id may not be the id of a layer, a template holds
-at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra and
-groups of them. `scene.spawn(template, options)` adds a
+at most 256 layers with its children, and templates are pictures, texts, shapes, solids, spectra,
+meshes and groups of them. Each copy of a `mesh` gets a puppet of its own, with the bones, clips,
+physics, IK and attachments of a mesh layer of the scene (scripts drive it by the id of the copy), at
+most 64 puppets in a scene, and the puppet goes with the copy. An `attach`, a `parent`, an IK target
+`layer:<id>`, the `mask.layer` of a layer or of an effect, or an effect parameter fed by `{ "layer" }`
+inside a template may name a layer of the same template, which each copy turns into its own
+`<copy>.<child>` (so a badge pinned to a bone follows the bone of its own copy and a mask cuts its
+own copy), or a layer of the scene; pointer hits on the bones of a copied mesh name the bone of that
+copy; particle systems are scene-wide, so a particle source written in the scene names a layer of the
+scene, and a script points the layer source of an emitter or a layer collider of one particles layer
+at any layer, a layer of a copy included, with `particles(layer).from(n, id)` and `.wall(n, id)`; the editor's *Make a template* (`wprs-ctl scene duplicate-layer DIR ID --template`)
+copies the layer under a free name, `<id>_template` or the next `<id>_template_<n>`, and the layers bar
+of the editor shows one template alone on the canvas, as a copy of it draws, with the layers panel,
+the canvas handles (move, bones, chains, weights, points, attachments) and every layer action on the
+layers of that template, named by their own ids (`wprs-ctl scene --inside TEMPLATE …` likewise). `scene.spawn(template, options)` adds a
 copy on top of the layers (or at `options.at`, 0 being the bottom) with the id `options.id` (letters,
 digits, `_` and `-`, at most 64) or `<template>_<n>`, sets the fields `options` names and returns its
 handle; the children of a copied group are `<id>.<child>`. `destroy()` removes it, `scene.order(id,
@@ -2076,7 +2126,7 @@ module's exports, imports and calls.
 | Field | Meaning |
 |-------|---------|
 | `events` | the functions the module exports and the events it handles, each once: the lifecycle above (`update` is the only one older engines call), the pointer events of `solid` layers and `hit` bones `click`, `down`, `up` (input `clicks`), `enter`, `leave` and `move` (input `pointer`), delivered with `scene.layer(id).on(event, handler)` as `{ type, layer, local, scene }` with the touched bone, and `mediaStatus`, `mediaPlayback`, `mediaProperties`, `mediaThumbnail` and `mediaTimeline` (input `media`) |
-| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`, `layer.anim(clip)` and, on `mesh` layers, `layer.bone(name)`, `bones`, `shape`, `impulse`, `hit` and `attachment`; texture frames and model clips come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `bloom`, `background`, `ambient` and `sky`; `script_camera`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
+| `uses` | the parts of the `wprs` module it uses, each once: `audio`, `pointer` and `clicks` (those inputs), `timers`, `layers` (`spawn`, `destroy` and `order`; `script_layers`), `effects`, `particles` (it names `particles2` and gives each particles layer particles of its own), `math`, `console`, `shared`, `media` (the `media` object and its colors, input `media`; `media_info`, which engines run later), `storage` (`storage`; `script_storage`), `geometry` (`scene.mesh(pool)`; needs `pools`; `script_geometry`), `sounds` (`sound(id)` with `play`, `pause`, `stop`, `playing` and `volume`; `script_sounds`), `animations` (`layer.video`, `layer.anim(clip)` and, on `mesh` layers, `layer.bone(name)`, `bones`, `shape`, `impulse`, `hit` and `attachment`; texture frames and model clips come with the layers that have them; `script_animations`), `camera` (`scene.camera`, `parallax`, `background`, `ambient` and `sky`; `script_camera`), `bloom` (`scene.bloom`, which may turn on a glow the scene does not declare; `script_camera`; the static cost of the scene, `wprs-ctl pack check` and the cost per level of the editor count that glow at every level, while the running scene counts it only while a script asks for it; the editor adds `bloom` to the uses of a script that writes `.bloom`), `shortcuts` (`openShortcut(prop)`, which asks to open what the user chose for that `shortcut` property and returns `true` only inside the handler of a `click`, at most four properties a frame; see "User properties and presets"; `script_shortcuts`), `hierarchy` (`layer.parent`, `layer.children`, `layer.world` and `layer.setParent(id, keep)`; `script_hierarchy`) and `folders` (`folder(prop)`; `script_folders`), described in "Parents, the camera, shapes, storage and folders" |
 | `params` | at most 32 settings of the module `{ "type": "number" \| "bool" \| "text" \| "color" \| "vec2", "default", "min", "max" }` that values bound to it with `fn` and `params` fill in; ids `[a-z0-9_]{1,32}`. They live only here: the module does not export them and `scene import-script` does not propose them |
 
 Any event but `update`, any part but `audio`, `pointer` and `clicks`, and `params` name `scripts2`;

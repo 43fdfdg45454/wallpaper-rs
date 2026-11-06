@@ -37,6 +37,22 @@ impl Glb {
         push(&mut self.json, "accessors", accessor)
     }
 
+    pub fn unshare(&mut self) {
+        let mut seen = Vec::new();
+        let count = self.json["nodes"].as_array().map_or(0, Vec::len);
+        for n in 0..count {
+            let Some(m) = self.json["nodes"][n]["mesh"].as_u64() else { continue };
+            if !seen.contains(&m) {
+                seen.push(m);
+                continue;
+            }
+            let mut copy = self.json["meshes"][m as usize].clone();
+            let name = copy["name"].as_str().map_or_else(|| format!("mesh_{m}"), str::to_owned);
+            copy["name"] = json!(format!("{name}_{n}"));
+            self.json["nodes"][n]["mesh"] = json!(push(&mut self.json, "meshes", copy));
+        }
+    }
+
     fn compact(&mut self) {
         let doc = &self.json;
         let mut used: Vec<u64> = Vec::new();

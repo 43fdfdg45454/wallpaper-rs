@@ -1,6 +1,6 @@
 pub const EDITOR: &str = "/scene/ext/editor";
 
-pub const ACTIONS: [&str; 60] = [
+pub const ACTIONS: [&str; 61] = [
     "set",
     "add",
     "remove",
@@ -29,6 +29,7 @@ pub const ACTIONS: [&str; 60] = [
     "rename_property",
     "remove_property",
     "condition",
+    "effect_rule",
     "add_preset",
     "paint_mask",
     "mesh_from_picture",
@@ -151,4 +152,17 @@ pub(super) fn whole() -> f32 {
 
 pub(super) fn tenth() -> f32 {
     0.1
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuleEdit {
+    pub effect: String,
+    pub param: String,
+    #[serde(default)]
+    pub uses: Option<String>,
+    #[serde(default)]
+    pub waits_for: Option<String>,
+    #[serde(default)]
+    pub yields_to: Option<String>,
 }

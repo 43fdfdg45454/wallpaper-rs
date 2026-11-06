@@ -8,8 +8,8 @@ GridLayout {
 
     required property var steer
     required property var keep
-    readonly property bool ring: keep.kind === "keep_distance"
-    readonly property var targets: steer.targets
+    readonly property bool ring: keep?.kind === "keep_distance"
+    readonly property var targets: steer?.targets ?? []
 
     columns: 2
 

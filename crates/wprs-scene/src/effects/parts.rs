@@ -123,4 +123,5 @@ pub enum ParamKind {
     Blend,
     Position,
     Mask,
+    Emitters,
 }

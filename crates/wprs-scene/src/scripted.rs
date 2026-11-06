@@ -8,6 +8,7 @@ pub const MAX_SCRIPT_BYTES: usize = 1 << 20;
 pub const MAX_SCRIPT_TEXT: usize = 4096;
 pub const MAX_CONSOLE: usize = 20;
 pub const MAX_LINE: usize = 512;
+pub const USER_FILES: &str = "wpak-user://";
 const GENERIC_FONTS: [&str; 3] = ["sans-serif", "serif", "monospace"];
 const FONT_FILES: [&str; 5] = [".ttf", ".otf", ".ttc", ".otc", ".woff2"];
 
@@ -48,6 +49,10 @@ fn finite<const N: usize>(v: Option<[f32; N]>, lo: f32, hi: f32) -> Option<[f32;
     v.filter(|v| v.iter().all(|c| c.is_finite())).map(|v| v.map(|c| c.clamp(lo, hi)))
 }
 
+fn listed(p: &Param) -> bool {
+    !matches!(p, Param::Emitters(l) if l.len() > crate::MAX_EFFECT_EMITTERS || !l.iter().all(crate::EffectEmitter::fits))
+}
+
 fn one(v: Option<f32>, lo: f32, hi: f32) -> Option<f32> {
     finite(v.map(|v| [v]), lo, hi).map(|[v]| v)
 }
@@ -74,7 +79,7 @@ impl LayerOverride {
             font: self.font.filter(|f| f.len() <= 128 && font(f)),
             align: self.align,
             parent: self.parent.filter(|p| p.len() <= 192),
-            file: self.file.filter(|f| f.len() <= 256 && f.starts_with("wpak-user://")),
+            file: self.file.filter(|f| f.len() <= 256 && f.starts_with(USER_FILES)),
         }
     }
 }
@@ -125,6 +130,7 @@ impl ScriptOutputs {
         self.watch.truncate(MAX_WATCHED);
         self.effects.retain(|_, list| {
             list.retain(|c| c.at < MAX_EFFECTS && c.params.len() <= MAX_PARAMS);
+            list.iter_mut().for_each(|c| c.params.retain(|_, p| listed(p)));
             list.truncate(MAX_EFFECTS);
             !list.is_empty()
         });

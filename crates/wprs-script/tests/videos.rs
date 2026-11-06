@@ -18,10 +18,10 @@ const SOURCE: &str = r#"import { scene } from "wprs";
     let heard = 0;
     clip.on("ended", (e) => { heard += 1; });
     export function update(f) {
-        if (f.time === 0) { clip.pause(); clip.rate = 2; }
+        if (f.time === 0) { clip.pause(); clip.rate = 2; clip.volume = 0.5; clip.volume = 0.5; }
         if (f.time === 1) { clip.seek(1); clip.seek(2.5); clip.play(); }
         if (f.time === 3) { clip.stop(); }
-        scene.layer("a").text = `${clip.time} ${clip.duration} ${clip.playing} ${clip.rate} ${heard}`;
+        scene.layer("a").text = `${clip.time} ${clip.duration} ${clip.playing} ${clip.rate} ${heard} ${clip.volume}`;
     }"#;
 
 #[test]
@@ -30,15 +30,16 @@ fn scripts_drive_videos_and_hear_them_end() {
     let course =
         |time: f32, playing: bool| Course { id: "clip".into(), time, duration: 3.0, playing, speed: 1.0 };
     let out = script.update(&Frame { videos: &[course(0.0, true)], ..Frame::at(0.0) }).unwrap();
-    assert_eq!(out.videos["clip"].commands, [VideoCommand::Pause, VideoCommand::Rate(2.0)]);
-    assert_eq!(text(&out, "a"), "0 3 true 1 0");
+    let first = [VideoCommand::Pause, VideoCommand::Rate(2.0), VideoCommand::Volume(0.5)];
+    assert_eq!(out.videos["clip"].commands, first, "the same volume twice is sent once");
+    assert_eq!(text(&out, "a"), "0 3 true 1 0 0.5");
     let out = script.update(&Frame { videos: &[course(0.5, false)], ..Frame::at(1.0) }).unwrap();
     let seeks = [VideoCommand::Seek(1.0), VideoCommand::Seek(2.5), VideoCommand::Play];
     assert_eq!(out.videos["clip"].commands, seeks);
     let ended = ["clip".to_string()];
     let out =
         script.update(&Frame { videos: &[course(3.0, false)], ended: &ended, ..Frame::at(2.0) }).unwrap();
-    assert_eq!(text(&out, "a"), "3 3 false 1 1");
+    assert_eq!(text(&out, "a"), "3 3 false 1 1 0.5");
     let refused = staged(filmed(&["layers"]), &[("main.js", SOURCE)]);
     let message = |mut s: wprs_script::Script| {
         let out = s.update(&Frame::at(0.0)).unwrap();

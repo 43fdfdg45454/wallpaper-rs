@@ -72,6 +72,8 @@ ColumnLayout {
                                 "velocity": App.tr("Velocity")
                             })[modelData]
                         checked: child.modelData.inherit.includes(modelData)
+                        QQC2.ToolTip.visible: hovered && modelData === "velocity"
+                        QQC2.ToolTip.text: App.tr("Also the speed in depth, when the parent and the child both have perspective")
                         onToggled: kin.tools.edit("inherit", {
                             "child": child.modelData.index,
                             "follow": child.modelData.follow_inherit,

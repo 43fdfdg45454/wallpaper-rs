@@ -1175,16 +1175,22 @@ sacudida de ruido que se apaga con «reducir movimiento» y en la calidad más b
 escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente; difumina
 a un cuarto del tamaño, se suma al lienzo con la mezcla sin copiarlo y no cuesta nada con fuerza cero), los
 fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redibuja la imagen
-entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
+entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual (una capa
+inclinada dentro de un grupo inclinado gira como un solo cuerpo visto por una sola cámara), la captura
 de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
 espejo, el espaciado entre letras, el contorno, la sombra y el desenfoque del texto desde un campo de
-distancias que la GPU construye una vez por cada cambio del texto (y que deja escalarlo sin volver a
-dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
+distancias que la GPU construye una vez por cada cambio del texto en texturas de 8 bits, que todas las
+GPU pueden dibujar, también las que no tienen texturas de coma flotante de 16 bits (y que deja
+escalarlo sin volver a dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
 vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y el control desde
-scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, tiempo, duración y aviso de
-fin).
+scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, volumen de 0 a 1, tiempo,
+duración y aviso de fin; el teléfono reproduce las escenas sin sonido, así que allí el volumen no
+cambia nada).
 
-El escritorio y el teléfono ya dibujan también los efectos propios del paquete. Cada uno es un
+El escritorio y el teléfono ya dibujan también los efectos propios del paquete. El inspector de cada
+uso de efecto muestra sus reglas para despertar la escena (qué entrada pide cada parámetro, a cuál
+espera y a cuál cede el paso) y en los efectos del paquete las cambia con selectores, igual que
+`wprs-ctl scene effect-rule DIR EFECTO PARÁMETRO --uses time --waits-for OTRO`. Cada uno es un
 descriptor JSON y un shader WGSL con hasta 16 pasadas que escriben en la siguiente textura o en
 objetivos con nombre a su escala (en 8 o 16 bits por canal), los copian, los intercambian para
 alternar entre dos (ping-pong), acumulan con fusión por pasada (reemplazar, normal, sumar o
@@ -1313,18 +1319,32 @@ cuando se dibuja más pequeña, así que los bordes del personaje siguen suaves,
 
 También se mueven solas: las cadenas de cinemática inversa giran sus huesos hasta alcanzar un punto,
 un hueso, otra capa o el puntero (este solo con el permiso del puntero, que la app avisa como
-cualquier otro uso del puntero), exactas para dos huesos y por rondas para cadenas más largas, con
-límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
+cualquier otro uso del puntero), exactas para dos huesos (cuyos límites pueden doblarlas al otro lado) y,
+en cadenas más largas, por rondas desde la pose de sus clips (que conservan su curva) que nunca doblan
+una articulación al otro lado, o desde un arco parejo si la pose está recta, se dobla al otro lado o no
+alcanza el objetivo; cada fotograma parte de su propia pose, igual en vivo, tras saltar o al volver a
+empezar, con límites por hueso, peso y el
+sentido en que se doblan todas las articulaciones (que el editor invierte con un toque sobre la cadena). La física de huesos simula muelles, péndulos y cuerdas a
 subpasos de 1/120 s que siguen el intervalo entre fotogramas (uno a 120 fps, dos a 60, cuatro a 30,
 también con batería, así que se mueve igual a esas frecuencias, y como mucho un cuarto de segundo por
 fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
-(`canvas.gusts`, de 0 a 1);
+(`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
 quedan en la pose de la animación. Con `depth` la profundidad de los vértices se proyecta con la
-perspectiva de `canvas.perspective` (también bajo la inclinación de la capa) y las caras vistas por
-detrás se ocultan si se pide. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
-`attach`, siguiendo su posición, giro y escala del mismo fotograma. Los scripts leen y mueven huesos
+perspectiva de `canvas.perspective` (también bajo la inclinación de la capa y la de los grupos y padres
+que la contienen, siempre a lo largo de la cara de la capa tal como la giran) y las caras vistas por
+detrás se ocultan si se pide; primero se dibujan los píxeles opacos de todas las piezas, que marcan
+la profundidad, y después los suaves, que solo la consultan, así los bordes suaves de una pieza
+cercana dejan ver lo de atrás sin halo en cualquier orden, aunque las piezas se crucen, y entre
+piezas a la misma profundidad la que va después tapa los bordes suaves de la anterior; además las
+piezas se ordenan solas de atrás hacia adelante según la profundidad media de sus vértices en la
+pose, formas mezcladas incluidas (se puede apagar por capa con `depth.sort: false`), para que lo
+suave sobre lo suave se mezcle en orden. El panel de la malla en el
+editor enciende la profundidad y ajusta su perspectiva, el ocultado de caras y este orden, y
+`wprs-ctl scene parts` hace lo mismo con `--depth-scale`, `--cull`, `--sort` y `--flat`. Cualquier capa se sujeta a un hueso o a un nodo de una malla con
+`attach`, siguiendo su posición, giro y escala del mismo fotograma; lo que no hereda del hueso
+lo sigue tomando de la cámara, que la acerca y la gira igual que al resto de la escena. Los scripts leen y mueven huesos
 con `scene.layer("zorro").bone("brazo")` (giro, posición y escala locales o del mundo, para el
 fotograma siguiente y antes de la física, de modo que el hueso vuelve con su muelle al soltarlo),
 fijan formas de mezcla con `shape`, empujan huesos con `impulse`, buscan el hueso más cercano con
@@ -1343,7 +1363,9 @@ de atractores, vórtices con anillo y turbulencia con desplazamiento y máscara)
 estáticos, al nacer, al morir o que siguen a cada partícula (dos generaciones como mucho), los ajustes
 por capa (alfa, tamaño, cantidad, velocidad, vida, ritmo, brillo, color y puntos, con bloqueo en el
 sistema), el brillo, los ciclos y el estiramiento acotado del dibujo, y el control desde scripts con
-`particles(capa)`: `play`, `pause`, `stop`, `playing`, `emit(n)`, `point(n, [x, y])` e `instance`.
+`particles(capa)`: `play`, `pause`, `stop`, `playing`, `emit(n)`, `point(n, [x, y])`, `instance` y
+`from(n, capa)` y `wall(n, capa)`, que hacen que el emisor o el colisionador `n` de tipo capa tome
+otra capa, también una copia de una plantilla (`null` vuelve a la del sistema).
 Una escena simula como mucho 64 sistemas contando hijos y capas con partículas propias, dentro de
 las 200 000 partículas, y el precalentamiento llega a 30 s en pasos de 1/15 s. Lo demás de la lista
 anterior sigue pidiendo una versión más nueva.
@@ -1375,7 +1397,7 @@ de un punto o entre dos con arco y extremos afinados, la reasignación de valore
 (`init.remap`, hasta ocho, con la hora, el tiempo, la vida, la velocidad, el azar, la distancia a un
 punto, el sonido o el puntero), la herencia del color, el tamaño, el alfa y la velocidad de la
 partícula padre (los hijos de un sistema con perspectiva nacen a su profundidad o donde se lo ve
-dibujado), y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
+dibujado, y al heredar la velocidad también toman la que lleva en profundidad), y los shaders de partículas de un efecto del paquete (`render.shader`, con las mismas
 comprobaciones, el mismo tiempo de construcción y el mismo límite de tiempo en la GPU que los demás
 efectos del paquete, y dejado fuera, sin dejar de dibujar las partículas, si no se puede construir o
 es demasiado lento).
@@ -1461,11 +1483,16 @@ negro o cruzado entre ellos y bucles cerrados sin saltos.
 El escritorio y el teléfono dibujan también la mezcla por degradado, el revelado con el puntero,
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
-de movimiento, el VHS, los fluidos, el destello de lente y el chisporroteo eléctrico, y los parámetros
+de movimiento, el VHS, los fluidos (con tantos emisores de punto y de línea como haga falta, hasta 64,
+que el editor coloca con asas sobre el lienzo y gira y refuerza desde la punta de su flecha, que
+se animan con fotogramas clave en la línea de tiempo, siguen una propiedad (el lienzo muestra los
+del valor actual o los que el inspector elige para cada valor, y cada emisor acepta sus extremos
+escritos) o cambian desde un script; quietos mientras su fuerza es 0), el destello de lente y el chisporroteo eléctrico, y los parámetros
 nuevos de los efectos que ya existían: rayos de luz direccionales o en estrella, aberración cromática
 en cuatro modos, grano en blanco y negro o con otro modo de fusión, desenfoque mezclado con la imagen,
 fondo visible en el iris y la lente, reflejo inclinado, desplazamiento sin repetición, sacudida con
-ruido, fricción y límites, brillo con fusión y degradado, balanceo doble, remolino elíptico,
+ruido, fricción y límites, brillo con fusión, degradado y cuatro estilos (línea, línea doble, anillo
+o destello, elegidos en el editor entre dibujos de cada uno), balanceo doble, remolino elíptico,
 ondulaciones con perspectiva, reflejo, tinte, paredes y velocidad, ondas dobles con perspectiva y un
 desfase por píxel (`phase`) que evita que las zonas vecinas se muevan a la vez. Con los valores por
 defecto todo se ve exactamente como antes. Los efectos que dependen del tiempo dejan de pedir
@@ -1476,7 +1503,18 @@ pueden cambiar. Se nombran `effect.<id>` y `effect.<id>.<parámetro>`, de modo q
 anteriores rechazan con el aviso de versión más nueva los paquetes que los usan. Las líneas de
 tiempo pueden medirse en fotogramas (`frames` y `fps`, que ya funciona en las dos plataformas) y
 enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el motor no lo dibuje), y
-`"seed": null` da a una escena una semilla nueva cada vez que empieza. Un paquete con un vídeo HDR
+`"seed": null` da a una escena una semilla nueva cada vez que empieza. Varias capas que muestran el mismo
+vídeo comparten su reloj, guiado por la primera; con `playback.own_clock` una capa `video` lo
+reproduce con un reloj propio (su velocidad, tramo, pausa y saltos de los scripts, a costa de un
+decodificador más; un vídeo elegido por una propiedad con `map` lleva un reloj propio para cada
+vídeo de la lista y los saltos de los scripts los mueven a todos, y un vídeo que una propiedad de
+archivo elige al vuelo lleva el suyo para el archivo que el usuario elija; en una capa de imagen, en
+un vídeo atado sin `map` a una propiedad que no es de archivo o en una capa que muestra geometría de
+scripts se rechaza), que el inspector del editor ofrece como *Reloj propio*; la línea de tiempo del editor
+muestra cada reloj propio con una tira de fotogramas del vídeo, el tramo como una barra cuyos
+extremos se arrastran, su velocidad, bucle y reproducción y dónde está en el instante elegido
+(`wprs-ctl scene clocks DIR --time T --strip N` lo imprime, con N fotogramas), y `wprs-ctl scene set DIR
+/scene/layers/N/playback/own_clock true` también. Un paquete con un vídeo HDR
 (PQ o HLG) recibe la faceta `hdr` y `wprs-ctl pack check` lo dice: en el ordenador se decodifica con
 10 bits y la gráfica adapta sus tonos a colores normales (BT.2020 a sRGB, el blanco de la pantalla
 a 203 nits y la luz más fuerte a 1000), también dentro de las escenas, y los vídeos normales no
@@ -2189,7 +2227,11 @@ son cuadrados que se arrastran; un punto creado para una sola capa se va con ell
 deja de seguirlo. Los puntos nunca cuentan como el final de un hueso, así que no cambian las
 cadenas ni la física. Las partes se
 ordenan arrastrándolas en una lista de atrás hacia delante, se ocultan y se recortan para verse solo
-sobre otra parte, cuyo contorno se marca en la vista previa. En el inspector general, todo campo que
+sobre otra parte, cuyo contorno se marca en la vista previa. Los contornos de las partes, los huesos
+y puntos y las asas de cadenas y física se ven en cualquier malla que el editor muestre; una malla
+que dibujan varios nodos recibe en la primera edición una malla propia para cada uno (`<malla>_<nodo>`),
+así sus huesos y pesos también se editan aquí, y cada primitiva se empareja con su parte por el nodo y
+la primitiva de los que sale. En el inspector general, todo campo que
 nombra un hueso, un punto, una parte o una forma de mezcla (cadenas, objetivos y límites, física,
 reglas, máscaras de huesos de las capas de animación, `hit`, `attach` y `parts`) ofrece los de la
 malla en una lista.
@@ -2204,7 +2246,8 @@ RAÍZ PUNTA`, `set N` y `remove N`, con `--target`, `--limit HUESO MÍN MÁX`, `
 HUESO...`), `wind` (`--angle`, `--strength`, `--noise` y `--off`), `attach` (`--to`, `--bone`,
 `--point X,Y` o un nodo, `--offset`, `--nudge`, `--inherit` y `--detach`), `point` (puntos de sujeción
 con `--at`, `--parent`, `--root`, `--rename` y `--remove`) y `parts` (`--order`, `--hide`,
-`--show`, `--clip` y `--unclip`); `bones`, `vertex-weights` y `keys` imprimen los huesos y puntos,
+`--show`, `--clip`, `--unclip`, `--depth-scale`, `--cull`, `--sort` y `--flat`); `bones`,
+`part-outlines`, `vertex-weights` y `keys` imprimen los huesos y puntos, el contorno de cada parte,
 los pesos de cada vértice y las claves de un clip.
 
 Al elegir un sistema de partículas o una capa de partículas, la vista previa dibuja encima sus
@@ -2214,7 +2257,12 @@ un punto en cada lugar de nacimiento; para `between`, sus extremos, un asa que c
 que desliza el punto más ancho del afinado; para `layer`, el contorno de la capa y los píxeles que
 pasan el umbral), los puntos de control `p0` a `p7` como marcadores que se arrastran y un anillo con
 un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja el abanico de
-direcciones que puede dar el ruido, las de algunas partículas que nacen ahora y una flecha con un asa
+direcciones que puede dar el ruido, las exactas de las primeras partículas que nacen ahora con la
+semilla con que corre la vista previa (`clock.seed` o, si es `null`, una que el editor elige para la
+sesión y le pasa a la vista previa; *Conservar esta semilla* la escribe en `clock.seed`, y si el
+arranque sigue una banda de sonido un control fija cuánto suena para los rayos, que giran con ella
+como en el motor; `wprs-ctl scene particles DIR SISTEMA handles --seed N --sound S` dibuja lo mismo)
+y una flecha con un asa
 que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
 de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
 un asa para la distancia. Atractores, vórtices, órbitas y frenadas cerca de un punto dibujan un
@@ -2481,7 +2529,22 @@ interfaz completa; lo esencial:
   parámetros dentro de su rango o vacía lo que guarda. Con plantillas (`templates`),
   `scene.spawn("barra", {position: [x, y]})` crea hasta 256 copias, que con las capas de la escena y
   las de dentro de cada copia suman como mucho 512 (una plantilla tiene como mucho 256), `destroy()`
-  las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores.
+  las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores. Una plantilla
+  puede ser también una capa `mesh` (o un grupo con ellas): cada copia recibe su propio títere, con
+  huesos, clips, física, IK y adjuntos como las mallas de la escena (64 títeres como mucho en total);
+  un `attach`, un `parent`, un objetivo `layer:<id>`, una máscara de capa (de la capa o de un
+  efecto) o un parámetro de efecto que toma una capa, de dentro de la plantilla y que nombra otra capa
+  de ella, apunta en cada copia a la capa de esa misma copia, los toques en los huesos de una malla
+  copiada nombran el hueso de esa copia; los sistemas de partículas son de toda la escena, pero
+  `particles(capa).from(n, "copia.capa")` y `.wall(n, …)` hacen que una capa de partículas nazca de
+  la capa de una copia o choque con ella, y el botón
+  *Hacer plantilla* del editor copia la capa elegida a `templates` con un nombre libre
+  (`<id>_template`, luego `<id>_template_2`…; `wprs-ctl scene duplicate-layer DIR ID --template`
+  hace lo mismo) y la barra de capas muestra una plantilla sola en el lienzo, como se dibuja una copia;
+  mientras se ve, el panel de capas, las manijas del lienzo (mover, huesos, cadenas, pesos, puntos y
+  enganches) y cada acción de capas trabajan sobre las capas de esa plantilla con sus propios ids
+  (`wprs-ctl scene --inside PLANTILLA …` igual), y como una plantilla tiene una sola capa las nuevas van
+  dentro de su grupo.
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del
@@ -2502,7 +2565,12 @@ interfaz completa; lo esencial:
   cambiar el orden de dibujo; `lookAt(desde, hacia)` de `wprs/math` da el ángulo para mirar hacia un
   punto. Con `uses: ["camera"]`, `scene.camera = {zoom: 2, shake: {amplitude: 6}}`,
   `scene.parallax`, `scene.bloom` y `scene.background` cambian la cámara, el paralaje, el resplandor
-  y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`.
+  y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`. El resplandor
+  también se enciende en escenas que no lo declaran (con los valores por defecto de `canvas.bloom`
+  para lo que el script no nombra) y se apaga con `null`; sigue las mismas reglas de calidad y batería
+  y no cuesta nada hasta que un script lo pide; el script lo declara con `bloom` en `uses` (el editor
+  lo añade solo al ver `.bloom` en el código) y el costo de la escena, el de cada nivel en el editor
+  y `wprs-ctl pack check` lo cuentan desde el principio.
 - **Formas propias**: con `uses: ["geometry"]` y un `pools` en `scene.json`,
   `scene.mesh("barras").create({vertices, indices, format: "xyuv"})` crea triángulos con
   `Float32Array` que `update()` cambia y `destroy()` quita, dentro de los límites del pool y de 1 MiB
@@ -2517,8 +2585,21 @@ interfaz completa; lo esencial:
 - **Carpeta elegida**: con `uses: ["folders"]` y una propiedad `folder` con `"mode": "all"`,
   `folder("fotos").files` da identificadores opacos de sus imágenes, `name(id)` el nombre del
   archivo, `on("added" | "removed" | "changed", …)` avisa de los cambios y `show("marco", id)` elige
-  qué foto muestra una capa. La carpeta se mira cada 2 s fuera del hilo que dibuja, también con la
-  escena quieta. Los scripts nunca ven rutas.
+  qué foto muestra una capa. Con `folder("fotos", {videos: true})` también lista sus vídeos si la
+  propiedad acepta `video` (`kind(id)` dice `image` o `video`) y `show("pantalla", id)` reproduce uno
+  en una capa `video` con su sonido, con un reloj propio que sigue el `playback` de la capa y que
+  `layer.video` controla (reproducir, pausar, saltar, velocidad, volumen, fin) como los vídeos del paquete,
+  hasta ocho archivos a la vez, vídeos o fotos, en el escritorio y en el teléfono. En el escritorio,
+  mientras la escena se ve, la carpeta se vigila con avisos de cambios del sistema y solo se vuelve a
+  leer cuando los avisos se calman (medio segundo tras el último, 5 s como mucho tras el primero, así
+  una copia de muchos archivos se lee una vez), sin contar los archivos ocultos que escriben las
+  herramientas de sincronización, fuera del hilo que dibuja; oculta, deja de vigilarla y la mira una
+  vez al volver. Si la carpeta falta, se borra o se mueve, la espera en la carpeta de arriba que exista
+  y la vuelve a vigilar cuando aparece, y deja fuera las subcarpetas que nadie puede leer. Solo en
+  carpetas de red (también las de espacio de usuario que van a la red, como `sshfs` o `rclone`, no un
+  disco local ni una bóveda) o con más de 8 192 subcarpetas que vigilar la mira cada 2 s mientras se ve. El teléfono vuelve a listar su copia de la
+  carpeta solo cuando la copia cambia, y la rehace cuando el sistema avisa que la carpeta cambió. Los
+  scripts nunca ven rutas.
 - **Sonido**: con `uses: ["sounds"]`, `sound("campana")` controla una capa de sonido con `play()`,
   `pause()`, `stop()`, `playing` y `volume`, de 0 a 1 y por debajo del volumen general, que también
   la silencia. La primera llamada se queda el sonido aunque tuviera `play_on`. El teléfono no

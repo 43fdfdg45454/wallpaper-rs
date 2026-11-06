@@ -49,7 +49,7 @@ pub(crate) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
                 rig.defaults.push(if weight.is_finite() { weight } else { 0.0 });
             }
         }
-        for p in &mesh.primitives {
+        for (k, p) in mesh.primitives.iter().enumerate() {
             let jointed = p.attributes.contains_key("JOINTS_0") && p.attributes.contains_key("WEIGHTS_0");
             let (base, joints) = match node.skin.filter(|_| jointed) {
                 Some(s) if s < skins.len() => match skins[s] {
@@ -66,7 +66,7 @@ pub(crate) fn pieces(bin: &Bin, rig: &mut Rigged) -> Result<(), String> {
                 return Err(format!("has more than {MAX_RIG_PALETTE} bones and parts"));
             }
             match rig.pieces.len() < MAX_RIG_PIECES {
-                true => primitive(bin, rig, p, (m, base, joints), &names)?,
+                true => primitive(bin, rig, p, (m, base, joints), &names, [n as u16, k as u16])?,
                 false => skipped += 1,
             }
         }
@@ -90,6 +90,7 @@ fn primitive(
     p: &Primitive,
     (mesh, base, joints): (usize, u32, usize),
     names: &[String],
+    source: [u16; 2],
 ) -> Result<(), String> {
     let at = |key: &str| p.attributes.get(key).copied();
     let position = at("POSITION").ok_or("has a primitive without positions")?;
@@ -158,7 +159,8 @@ fn primitive(
     let color = p.material.and_then(|m| bin.doc.materials.get(m)?.pbr.as_ref()?.color).unwrap_or([1.0; 4]);
     let count = rig.indices.len() as u32 - start;
     let part = mesh as u16;
-    rig.pieces.push(Piece { part, first: start, count, base: first, vertices: n as u32, targets, color });
+    let vertices = n as u32;
+    rig.pieces.push(Piece { part, source, first: start, count, base: first, vertices, targets, color });
     Ok(())
 }
 

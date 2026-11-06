@@ -27,7 +27,7 @@ fn scene(uses: serde_json::Value) -> serde_json::Value {
 
 #[test]
 fn scripts_move_the_camera_and_change_the_scene_settings() {
-    let mut script = staged(scene(json!(["camera"])), &[("main.js", SOURCE)]);
+    let mut script = staged(scene(json!(["camera", "bloom"])), &[("main.js", SOURCE)]);
     let out = at(&mut script, 0.0).unwrap();
     let stage = out.stage.unwrap();
     let camera = stage.camera.unwrap();
@@ -74,6 +74,14 @@ fn scripts_that_do_not_declare_camera_leave_the_scene_settings() {
         "{}",
         text(&out, "info")
     );
+}
+
+#[test]
+fn scripts_turn_the_glow_on_only_when_they_declare_bloom() {
+    let mut script = staged(scene(json!(["camera"])), &[("main.js", SOURCE)]);
+    let out = at(&mut script, 0.0).unwrap();
+    assert!(out.stage.is_some_and(|s| s.bloom.is_none() && s.camera.is_some()));
+    assert!(text(&out, "info").contains("main.js uses bloom without declaring it"), "{}", text(&out, "info"));
 }
 
 #[test]

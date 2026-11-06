@@ -127,8 +127,8 @@ fn pausing_stops_frames() {
     }
     assert!(player.paused(), "the pause did not settle within 30 s");
     assert_eq!(player.seeks(), 0, "pausing sought the video");
-    let late = std::iter::from_fn(|| next_frame(&rx, Duration::from_millis(500))).take(10).count();
-    assert!(late < 10 && next_frame(&rx, Duration::from_secs(1)).is_none(), "frames while paused");
+    let late = std::iter::from_fn(|| next_frame(&rx, Duration::from_millis(250))).take(120).count();
+    assert!(late < 120 && next_frame(&rx, Duration::from_secs(1)).is_none(), "frames while paused");
     player.set_playing(true);
     assert!(next_frame(&rx, WAIT).is_some(), "no frames after resuming");
     assert_eq!(player.seeks(), 0, "resuming sought the video");

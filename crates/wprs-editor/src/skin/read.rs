@@ -23,24 +23,27 @@ fn blend(bent: &[Mat], f: &[f32]) -> Mat {
 }
 
 impl Skin {
-    pub(super) fn from(glb: Glb, rig: &Rigged, size: [f32; 2]) -> Result<Skin> {
+    pub(super) fn from(mut glb: Glb, rig: &Rigged, size: [f32; 2]) -> Result<Skin> {
+        glb.unshare();
         let doc = &glb.json;
         let nodes = list(&doc["nodes"]);
         let mesh = |n: usize| nodes[n]["mesh"].as_u64().map(|m| m as usize);
         let drawn: Vec<usize> = (0..nodes.len()).filter_map(mesh).collect();
-        let once = drawn.iter().enumerate().all(|(i, m)| !drawn[..i].contains(m));
         let primitives: usize = drawn.iter().map(|m| list(&doc["meshes"][*m]["primitives"]).len()).sum();
         ensure!(
-            once && primitives == rig.pieces.len() && nodes.len() == rig.joints.len(),
-            said(
-                "editor.mesh_parts",
-                "bones and weights are edited here on meshes whose parts are each drawn once, in at most 64 primitives",
-                &[]
-            )
+            primitives == rig.pieces.len() && nodes.len() == rig.joints.len(),
+            said("editor.mesh_parts", "the parts of this mesh do not match the primitives of its file", &[])
         );
+        Ok(Skin::seen(glb, rig, size))
+    }
+
+    pub(super) fn seen(glb: Glb, rig: &Rigged, size: [f32; 2]) -> Skin {
+        let doc = &glb.json;
+        let nodes = list(&doc["nodes"]);
+        let mesh = |n: usize| nodes.get(n).and_then(|n| n["mesh"].as_u64()).map(|m| m as usize);
         let joints: Vec<u64> =
             list(&doc["skins"]).iter().flat_map(|s| list(&s["joints"])).filter_map(Value::as_u64).collect();
-        let point = |n: usize| nodes[n]["extras"]["point"] == true;
+        let point = |n: usize| nodes.get(n).is_some_and(|n| n["extras"]["point"] == true);
         let loose = |n: usize| mesh(n).is_none() && !point(n);
         let bones = (0..nodes.len()).filter(|n| joints.contains(&(*n as u64)) || loose(*n)).collect();
         let auto = list(&doc["skins"]).first().is_none_or(|s| s["extras"]["weights"] == "auto");
@@ -60,12 +63,12 @@ impl Skin {
         };
         let worlds = skin.worlds();
         let bent: Vec<Mat> = rig.palette.iter().map(|(n, ibm)| mul(&worlds[*n as usize], ibm)).collect();
-        let mut pieces = rig.pieces.iter();
         for n in 0..skin.names.len() {
             let Some(m) = skin.glb.json["nodes"][n]["mesh"].as_u64().map(|m| m as usize) else { continue };
             let count = list(&skin.glb.json["meshes"][m]["primitives"]).len();
             for primitive in 0..count {
-                let Some(piece) = pieces.next() else { break };
+                let source = [n as u16, primitive as u16];
+                let Some(piece) = rig.pieces.iter().find(|p| p.source == source) else { continue };
                 let first = skin.points.len();
                 let mut linear = Vec::with_capacity(piece.vertices as usize);
                 for v in piece.base..piece.base + piece.vertices {
@@ -93,6 +96,6 @@ impl Skin {
                 skin.pieces.push(Piece { node: n, mesh: m, primitive, first, count, targets });
             }
         }
-        Ok(skin)
+        skin
     }
 }

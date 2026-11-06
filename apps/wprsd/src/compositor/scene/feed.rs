@@ -8,8 +8,16 @@ impl SceneState {
     pub(in crate::compositor) fn update(&mut self, mut spec: SceneSpec) -> bool {
         spec.extra.retain(|(key, _)| !key.starts_with("wpak-user://"));
         spec.extra.extend(self.listed.pixels.iter().cloned());
+        spec.clips.retain(|(key, _)| !key.starts_with("wpak-user://"));
+        spec.clips.extend(self.listed.reels.iter().cloned());
         let mut changed = self.runtime.set_props(spec.values.clone());
         let media = self.spec.media() != spec.media();
+        let picked = spec.clips.iter().filter(|(k, _)| !k.starts_with(wprs_scene::USER_FILES));
+        for (key, reel) in picked.filter(|c| !self.spec.clips.contains(c)) {
+            crate::scenes::films::measured(&reel.path)
+                .into_iter()
+                .for_each(|s| self.runtime.set_length(key, s));
+        }
         if media {
             self.runtime.set_playing(spec.clips.iter().map(|(asset, _)| asset.clone()).collect());
         }

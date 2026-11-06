@@ -6,11 +6,11 @@ ctl scene new "$packed/scene" --id org.example.packed >/dev/null
 ctl scene set "$packed/scene" /scene/canvas/size '[64, 32]'
 ctl scene set "$packed/scene" /scene/canvas/fit stretch
 ctl scene import "$packed/scene" "$ROOT/tests/fixtures/green-64x32.png" --id meadow >/dev/null
-ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --json | grep -q '"size":\[64,32\]' || fail "no KTX2 trial"
+ctl scene asset "$packed/scene" meadow --ktx2 --dry-run --json | grep '"size":\[64,32\]' >/dev/null || fail "no KTX2 trial"
 [ "$(ctl scene asset "$packed/scene" meadow --ktx2)" = assets/green-64x32.ktx2 ] || fail "the picture did not become KTX2"
 ctl scene add-layer "$packed/scene" image --source meadow >/dev/null
 ctl scene build "$packed/scene" -o "$packed/scene.wpak" >/dev/null || fail "the KTX2 scene was not built"
-ctl pack check "$packed/scene.wpak" --json | grep -q ktx2 || fail "the KTX2 feature was not listed"
+ctl pack check "$packed/scene.wpak" --json | grep ktx2 >/dev/null || fail "the KTX2 feature was not listed"
 mkdir -p "$packed/picture"
 cp "$packed/scene/assets/green-64x32.ktx2" "$packed/picture/image.ktx2"
 cat >"$packed/picture/manifest.json" <<'MANIFEST'

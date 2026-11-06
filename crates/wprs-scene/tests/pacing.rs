@@ -119,3 +119,20 @@ fn electric_sparks_ask_for_a_frame_only_when_their_step_changes() {
         "{high} {low}"
     );
 }
+
+#[test]
+fn fluid_emitters_rest_once_settled_while_nothing_blows() {
+    let wake = |params: Value| {
+        let fluid = solid("a", json!({ "effects": [{ "effect": "fluid", "params": params }] }));
+        let mut runtime = Runtime::new(Arc::new(scene(json!([fluid]))), Default::default());
+        runtime.frame(VIEW, Quality::Q3);
+        runtime.advance(10.0);
+        runtime.frame(VIEW, Quality::Q3).wake
+    };
+    let spout = |strength: f32| json!([{ "from": [0.5, 0.9], "strength": strength }]);
+    assert_eq!(wake(json!({ "emitters": spout(4.0) })), Wake::Frame);
+    assert_eq!(wake(json!({ "emitters": spout(4.0), "strength": 0 })), Wake::Idle);
+    assert_eq!(wake(json!({ "emitters": spout(0.0) })), Wake::Idle);
+    let keyed = json!({ "timeline": "move", "keys": [[0, 1], [1, 0]] });
+    assert_eq!(wake(json!({ "emitters": spout(4.0), "strength": keyed })), Wake::Idle);
+}

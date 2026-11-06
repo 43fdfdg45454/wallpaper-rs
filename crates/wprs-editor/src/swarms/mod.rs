@@ -5,6 +5,7 @@ mod fields;
 mod handles;
 mod looks;
 mod pulls;
+mod salt;
 mod samples;
 mod shapes;
 mod sow;
@@ -23,8 +24,9 @@ use wprs_core::message::said;
 
 pub use crate::curves::{Curve, plot};
 pub use budget::budget;
-pub use handles::handles;
+pub use handles::{handles, heard};
 pub use looks::{controls, sources};
+pub use salt::{pin_seed, preview_seed};
 pub use walls::response;
 
 pub(crate) fn system(doc: &Value, id: &str) -> Result<String> {

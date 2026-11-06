@@ -71,3 +71,32 @@ fn births_inherit_the_motion_of_the_pointer() {
     fly.frame(0.0);
     assert!(fly.alive(0).iter().all(|p| near(p.vel, [20.0, 0.0], 1e-3)), "{:?}", fly.alive(0)[0].vel);
 }
+
+#[test]
+fn turbulent_rays_worked_out_apart_match_the_directions_particles_are_born_with() {
+    let gust =
+        json!({ "forward": 30, "scale": 0.4, "noise_speed": 0, "offset": 3, "speed": [10, 10], "phase": 2 });
+    let fly = |clock: Json| {
+        let s = still(json!({ "init": { "life": [10, 10], "size": [2, 2], "turbulent": gust } }));
+        let text = json!({ "schema": SCHEMA, "canvas": { "size": [200, 100] }, "layers": layer("a"),
+            "particles": { "a": s }, "clock": clock });
+        let scene = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_or_else(|e| panic!("{e}"));
+        let mut fly = Fly::new(Runtime::new(Arc::new(scene), Values::new()));
+        fly.frame(1.0 / 30.0);
+        fly.alive(0)
+    };
+    let t: Turbulent = serde_json::from_value(gust.clone()).unwrap();
+    for (clock, seed) in [(json!({}), 0u64), (json!({ "seed": 77 }), 77)] {
+        let born = fly(clock);
+        assert_eq!(born.len(), 50);
+        let salt = particle_salt(5, seed, 0, 0);
+        for p in &born {
+            let want = turbulent_ray(&t, salt, p.id, 0.0);
+            let got = p.vel[1].atan2(p.vel[0]).to_degrees();
+            let off = (got - want + 540.0).rem_euclid(360.0) - 180.0;
+            assert!(off.abs() < 0.01, "seed {seed}, particle {}: {got} {want}", p.id);
+        }
+    }
+    let unsalted = turbulent_ray(&t, 0, 0, 0.0);
+    assert!((unsalted - turbulent_ray(&t, particle_salt(5, 77, 0, 0), 0, 0.0)).abs() > 1e-3);
+}

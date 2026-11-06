@@ -84,7 +84,7 @@ use cxx_qt_lib::QString;
 use qobject::SceneEditor;
 use serde_json::{Value, json};
 use std::pin::Pin;
-use wprs_editor::{Action, Problem, Project, inspect, outline};
+use wprs_editor::{Action, Problem, Project, inspect, outline, references};
 
 #[derive(Default)]
 pub struct SceneEditorRust {
@@ -122,6 +122,7 @@ impl SceneEditor {
             Ok(action) => action,
             Err(e) => return self.fail(e),
         };
+        self.as_mut().scoped();
         let done = {
             let mut this = self.as_mut().rust_mut();
             let Some(project) = this.project.as_mut() else { return };
@@ -160,11 +161,16 @@ impl SceneEditor {
         QString::from(&found.unwrap_or_default().to_string())
     }
 
-    pub fn rig(&self, id: &QString, query: &QString) -> QString {
-        let q = serde_json::from_str(&query.to_string()).unwrap_or_default();
+    pub fn condition(&self, pointer: &QString, text: &QString) -> QString {
+        let doc = self.project.as_ref().map(|p| &p.doc);
         let found =
-            self.project.as_ref().map(|p| wprs_editor::rigs::query(&p.dir, &p.doc, &id.to_string(), &q));
-        QString::from(&found.unwrap_or_default().to_string())
+            doc.and_then(|d| wprs_editor::settings::condition(d, &pointer.to_string(), &text.to_string()));
+        QString::from(&found.unwrap_or_default())
+    }
+
+    pub fn scripts(&self, id: &QString) -> QString {
+        let found = self.project.as_ref().map(|p| references::scripts(&p.dir, &p.doc, &id.to_string()));
+        QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
     }
 
     pub fn count(&self, pointer: &QString) -> i32 {
@@ -179,6 +185,7 @@ impl SceneEditor {
     }
 
     pub fn refresh(mut self: Pin<&mut Self>) {
+        self.as_mut().scoped();
         let Some(project) = self.project.as_ref() else { return };
         let view = outline::outline(project, self.time, &self.files).to_string();
         let dirty = project.dirty();

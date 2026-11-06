@@ -18,6 +18,7 @@ pub struct Project {
     pub history: History,
     pub base: String,
     pub pending: Option<(Value, History)>,
+    pub scope: Option<String>,
     recorded: Option<u64>,
 }
 
@@ -69,7 +70,8 @@ impl Project {
             Some(s) => (History::default(), Some((s.doc, s.history))),
             None => (History::default(), None),
         };
-        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending, recorded: None };
+        let scope = crate::scope::picked();
+        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending, scope, recorded: None };
         project.bring_back();
         if project.history.done.is_empty() && project.history.saved.is_none() {
             project.history.mark_saved();
@@ -82,7 +84,8 @@ impl Project {
         ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
         fs::create_dir_all(dir.join("assets"))?;
         let (history, base) = (History::default(), String::new());
-        let mut project = Project { dir: dir.to_owned(), doc, history, base, pending: None, recorded: None };
+        let mut project =
+            Project { dir: dir.to_owned(), doc, history, base, pending: None, scope: None, recorded: None };
         project.write_files()?;
         project.history.mark_saved();
         project.persist()?;
@@ -130,10 +133,14 @@ impl Project {
                 self.bring_back();
                 return Ok(moved.map(|(_, o)| o).unwrap_or_default());
             }
-            action => match crate::files::act(&self.dir, &self.doc, action) {
-                Some(ops) => ops?,
-                None => plan(&self.doc, action)?,
-            },
+            action => {
+                let seen = crate::scope::seen(&self.doc, self.scope.as_deref())?;
+                let ops = match crate::files::act(&self.dir, &seen, action) {
+                    Some(ops) => ops?,
+                    None => plan(&seen, action)?,
+                };
+                crate::scope::ops(ops, self.scope.as_deref())?
+            }
         };
         self.commit(&action.name(), ops, gesture, at)
     }

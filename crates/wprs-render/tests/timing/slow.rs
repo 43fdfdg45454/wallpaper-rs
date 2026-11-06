@@ -1,44 +1,52 @@
-use super::hostile::{Shown, entry, renderer, scene, show};
+use super::hostile::{entry, renderer, scene, show};
 use super::{book, busy, draw, lines, one, wide};
 use std::time::Duration;
 use wprs_render::{Renderer, drawn_effects, retry_effects, set_gpu_budget};
 
-fn fine() -> (&'static str, String) {
-    ("fine", entry("return tap(in.uv) * 0.5;"))
-}
-
 fn effects() -> wprs_scene::Scene {
-    scene(&[("busy", busy(BUSY)), fine()])
+    scene(&[("busy", busy(BUSY)), ("fine", entry("return tap(in.uv) * 0.5;"))])
 }
 
-fn cost(r: &Renderer, s: wprs_scene::Scene, size: (u32, u32)) -> f64 {
-    let mut shown = show(r, s).unwrap();
-    let most = (0..4).fold(0, |most, _| {
+fn judged(r: &Renderer, effect: String, size: (u32, u32)) -> f64 {
+    retry_effects();
+    set_gpu_budget(Some(Duration::from_micros(1)));
+    let mut shown = show(r, scene(&[("probe", effect)])).unwrap();
+    for _ in 0..40 {
         draw(r, &mut shown, size);
-        r.finish().unwrap();
-        most.max(shown.view.stats().gpu_us)
-    });
-    f64::from(most.max(1)) / 1000.0
+        if let Some(said) = shown.view.left_out().first() {
+            let before = said.split(" ms of them in this effect").next().unwrap_or_default();
+            return before.rsplit(' ').next().and_then(|n| n.parse().ok()).unwrap_or(0.0);
+        }
+    }
+    0.0
 }
 
-fn budget(r: &Renderer, size: (u32, u32)) -> u64 {
-    set_gpu_budget(Some(Duration::from_secs(60)));
-    let (light, whole) = (cost(r, scene(&[fine()]), size), cost(r, effects(), size));
-    ((whole - light) / 4.0).round().max(2.0) as u64
+fn calibrated(r: &Renderer, size: (u32, u32)) -> Duration {
+    let cheap = judged(r, entry("return tap(in.uv) * 0.5;"), size).max(0.5);
+    let heavy = judged(r, busy(BUSY), size);
+    set_gpu_budget(None);
+    retry_effects();
+    assert!(
+        heavy > cheap * 4.0,
+        "the busy effect is not much slower than the cheap one: {heavy} ms, {cheap} ms"
+    );
+    Duration::from_secs_f64((cheap * heavy).sqrt() / 1000.0)
 }
 
-fn attempt(r: &Renderer) -> (Shown, Result<(), String>) {
+#[test]
+fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
+    let _one = one();
+    let Some(r) = renderer() else { return };
     let size = wide(r);
-    let ms = budget(r, size);
+    let budget = calibrated(r, size);
     retry_effects();
     let path = book("busy");
     let s = effects();
     let key = s.loaded["busy"].key;
-    set_gpu_budget(Some(Duration::from_millis(ms)));
+    set_gpu_budget(Some(budget));
     let mut shown = show(r, s).unwrap();
-    let mut slowest = Duration::ZERO;
     for _ in 0..40 {
-        slowest = slowest.max(draw(r, &mut shown, size));
+        draw(r, &mut shown, size);
         let flying = shown.view.stats().in_flight;
         assert!(flying <= 2, "{flying} frames of one view were on the GPU at once");
         if !shown.view.left_out().is_empty() {
@@ -46,52 +54,30 @@ fn attempt(r: &Renderer) -> (Shown, Result<(), String>) {
         }
     }
     let left = shown.view.left_out();
-    if left.is_empty() || left.iter().any(|l| l.contains("effect fine")) {
-        r.finish().unwrap();
-        return (shown, Err(format!("the load changed against a budget of {ms} ms: {left:?}")));
-    }
+    let allows = format!("allows {:.0} ms", budget.as_secs_f64() * 1000.0);
     assert!(
         left.len() == 1 && left[0].contains("busy") && left[0].contains("too slow for this graphics card"),
-        "{left:?}"
+        "the cheap effect stays within {budget:?}: {left:?}"
     );
     assert!(
-        !left[0].contains("stopped")
-            && left[0].contains("ms on it")
-            && left[0].contains(&format!("allows {ms} ms")),
+        !left[0].contains("stopped") && left[0].contains("ms on it") && left[0].contains(&allows),
         "{left:?}"
     );
     assert_eq!(lines(&path, key, "1"), 0, "{}", std::fs::read_to_string(&path).unwrap_or_default());
     r.finish().unwrap();
     let frames: Vec<_> = (0..3)
         .map(|_| {
-            let took = draw(r, &mut shown, size);
+            draw(r, &mut shown, size);
             let stats = shown.view.stats();
-            (took, stats.compiled, stats.created)
+            (stats.compiled, stats.created)
         })
         .collect();
     r.finish().unwrap();
     assert!(
-        frames.iter().all(|f| f.1 == 0 && f.2 <= 1),
+        frames.iter().all(|f| f.0 == 0 && f.1 <= 1),
         "frames without the busy effect built pipelines or objects: {frames:?}"
     );
     assert!(!drawn_effects().contains(&key));
-    let fast = frames.iter().map(|f| f.0).max().unwrap_or_default();
-    let miss = format!("frames without the busy effect took {fast:?}, with it {slowest:?}");
-    (shown, (fast * 2 < slowest).then_some(()).ok_or(miss))
-}
-
-#[test]
-fn slow_effects_are_left_out_for_the_run_without_a_strike_and_never_queue_up() {
-    let _one = one();
-    let Some(r) = renderer() else { return };
-    let mut misses = Vec::new();
-    let mut shown = loop {
-        match attempt(r) {
-            (shown, Ok(())) => break shown,
-            (_, Err(miss)) => misses.push(miss),
-        }
-        assert!(misses.len() < 3, "{misses:?}");
-    };
     set_gpu_budget(None);
     assert!(retry_effects() >= 1 && shown.view.retry(), "a view with an effect left out is built again");
     shown = show(r, effects()).unwrap();

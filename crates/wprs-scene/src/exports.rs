@@ -96,8 +96,8 @@ pub use crate::particles::{
     Perspective, Placement, Play, REMAP_INPUTS, ROPE_POINTS, Refract, Refresh, Remap, RemapOp, RemapOutput,
     Render, Ring, Rope, STEP, SUBSTEPS, Sim, SlowNear, Source, Spread, Stack, Strand, Stretch, Surface,
     Swarm, Sweep, System, Taper, Target, Trail, Tunable, Turbulent, WARM, WARM_WORK, Wall, Wave, Wobble, bin,
-    cells, distance_field, fbm, flocks, fractal, gradient, hash, largest, mark, noise1, remap_input,
-    remap_table, remapped, seen, stacked, strung, swirl, taper, turn,
+    cells, distance_field, fbm, flocks, fractal, gradient, hash, largest, mark, noise1, particle_salt,
+    remap_input, remap_table, remapped, seen, stacked, strung, swirl, taper, turbulent_ray, turn,
 };
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::projected::projectable;
@@ -125,7 +125,7 @@ pub use crate::scan::{beyond_first, imported};
 pub use crate::schema::{easings, property_schema, schema};
 pub use crate::scripted::{
     EffectControl, Extent, LayerRead, MAX_CONSOLE, MAX_LINE, MAX_SCRIPT_BYTES, MAX_SCRIPT_TEXT, MAX_SPAWNED,
-    MAX_WATCHED, plain_line,
+    MAX_WATCHED, USER_FILES, plain_line,
 };
 pub use crate::scripting::{
     MAX_POOL_LAYERS, MAX_POOL_VERTICES, MAX_POOLS, MAX_SCRIPT_PARAMS, MAX_SCRIPTS2, MAX_TEMPLATES, ParamType,
@@ -145,6 +145,9 @@ pub use crate::timeline::{Event, Handles, Key, Loop, Timeline, local, sample};
 pub use crate::typeset::{Backing, Glyphs, Layout, MAX_FALLBACK, Outline, Shadow, TextLayer, Valign, Wrap};
 pub use crate::uses::{Uses, needs, source, tells_time, variants};
 pub use crate::validate::Issue;
-pub use crate::value::{AudioChannel, Axis, Band, Binding, Level, Param, Value, Vec2, Vec3};
+pub use crate::value::{
+    AudioChannel, Axis, Band, Binding, EMITTER_TEXELS, EffectEmitter, Level, MAX_EFFECT_EMITTERS, Param,
+    Value, Vec2, Vec3, emitter_key, emitter_texels,
+};
 pub use crate::voice::{Playlist, Spot, Walk};
 pub use crate::wake::Wake;

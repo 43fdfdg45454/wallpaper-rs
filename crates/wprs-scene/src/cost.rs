@@ -104,12 +104,18 @@ impl Scene {
     }
 
     pub fn cost_at(&self, quality: Quality, magnify: f32) -> f32 {
+        self.priced(quality, self.scripts.iter().any(|s| s.wants(crate::ScriptApi::Bloom)), magnify)
+    }
+
+    pub(crate) fn priced(&self, quality: Quality, scripted: bool, magnify: f32) -> f32 {
         let areas = self.areas();
         let whole = self.canvas.camera.is_some();
         let area = |l: &Layer| areas.get(&std::ptr::from_ref(l)).copied().filter(|_| !whole).unwrap_or(1.0);
         let layers = self.layers().filter(|l| l.flat()).map(|l| self.units(l, quality, magnify) * area(l));
-        let glow =
-            crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality, magnify));
+        let lit = (scripted && self.canvas.bloom.is_none())
+            .then(|| crate::Canvas { bloom: Some(crate::Bloom::default()), ..self.canvas.clone() });
+        let glows = crate::glow::glows(lit.as_ref().unwrap_or(&self.canvas));
+        let glow = glows[0].as_deref().map_or(0.0, |g| self.units(g, quality, magnify));
         let particles = self.layers().filter_map(|l| match &l.kind {
             Kind::Particles { system, .. } => self.particles.get(system),
             _ => None,

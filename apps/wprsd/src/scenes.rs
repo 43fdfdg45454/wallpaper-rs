@@ -9,10 +9,13 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_render::{Pixels, SceneAssets};
-use wprs_scene::{Control, Scene, Uses, Values};
+use wprs_scene::{Control, Property, Scene, Uses, Values};
 use wprs_video::Bank;
 
+pub(crate) mod films;
 mod load;
+#[cfg(test)]
+mod tests;
 
 const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];
 const FONTS: [&str; 5] = ["ttf", "otf", "ttc", "otc", "woff2"];
@@ -81,6 +84,22 @@ pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeM
     (Bank::new(files), probed.collect())
 }
 
+pub(crate) fn lanes(
+    scene: &Scene,
+    properties: &BTreeMap<String, Property>,
+    videos: &mut Vec<(String, Reel)>,
+) {
+    for (key, asset) in scene.played_lanes(properties) {
+        let found = videos.iter().find(|(id, _)| *id == asset).map(|(_, reel)| reel.clone());
+        videos.extend(found.map(|reel| (key.clone(), Reel { lane: key, ..reel })));
+    }
+}
+
+pub(crate) fn picked(scene: &Scene, id: &str, file: &Path) -> Vec<(String, Reel)> {
+    let own = scene.lanes().into_iter().filter(|(_, asset)| asset == id);
+    own.map(|(key, _)| (key.clone(), Reel { lane: key, ..Reel::plain(file.to_owned()) })).collect()
+}
+
 pub(crate) fn filmed(lengths: &mut BTreeMap<String, f32>, videos: &[(String, Reel)]) {
     let found = videos.iter().filter_map(|(id, reel)| Some((id.clone(), wprs_scene::film_file(&reel.path)?)));
     lengths.extend(found);
@@ -142,7 +161,9 @@ impl Daemon {
                 _ => PathBuf::from(chosen),
             };
             if wprs_video::is_video(&file) {
+                films::measure(&file);
                 reels.extend(keys.into_iter().map(|key| (key, Reel::plain(file.clone()))));
+                reels.extend(picked(&pack.scene, id, &file));
                 continue;
             }
             match self.scene_pixels(&file) {

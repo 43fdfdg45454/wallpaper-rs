@@ -54,7 +54,7 @@ listed() { [ "$(count)" -gt "$1" ]; }
 gone() { ! bus_has io.github.wallpaper_rs; }
 activatable() {
   dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
-    org.freedesktop.DBus.ListActivatableNames | grep -q "\"$1\""
+    org.freedesktop.DBus.ListActivatableNames | grep "\"$1\"" >/dev/null
 }
 "$HOME/.local/bin/wprs-app" --page library >"$OUT/app.log" 2>&1 &
 app=$!

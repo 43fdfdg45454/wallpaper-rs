@@ -26,8 +26,9 @@ const read = (key) => {
     const shaken = key === "camera" && (set.shake || initial.camera?.shake) ? { shake: { ...plain(initial.camera?.shake), ...set.shake } } : {};
     return Object.freeze({ ...plain(initial[key]), ...set, ...shaken });
 };
+const gate = (key) => need(key === "bloom" ? "bloom" : "camera");
 const write = (key, value) => {
-    need("camera");
+    gate(key);
     if (value === null || value === undefined) delete stage[key];
     else if (colors.includes(key)) stage[key] = numbers(value, 4, key);
     else {
@@ -40,7 +41,7 @@ const write = (key, value) => {
 
 Object.defineProperties(scene, {
     ...Object.fromEntries(colors.map((key) => [key, { enumerable: true, get: () => (need("camera"), stage[key] ?? initial[key]), set: (v) => write(key, v) }])),
-    ...Object.fromEntries(["camera", "parallax", "bloom", "camera3d"].map((key) => [key, { enumerable: true, get: () => (need("camera"), read(key)), set: (v) => write(key, v) }])),
+    ...Object.fromEntries(["camera", "parallax", "bloom", "camera3d"].map((key) => [key, { enumerable: true, get: () => (gate(key), read(key)), set: (v) => write(key, v) }])),
     mesh: { value: mesh },
 });
 Object.freeze(scene);

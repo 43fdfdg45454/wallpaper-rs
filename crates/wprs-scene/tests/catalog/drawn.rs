@@ -32,6 +32,8 @@ fn newer_effects_refuse_values_outside_their_types_and_ranges() {
             "names the unknown asset \"moon\"",
         ),
         (json!({ "effect": "film_grain", "params": { "blend": "tinted" } }), "/params/blend does not fit"),
+        (json!({ "effect": "shine", "params": { "style": 4 } }), "/params/style does not fit"),
+        (json!({ "effect": "shine", "params": { "style": "ring" } }), "/params/style does not fit"),
     ];
     for (e, wanted) in cases {
         let found = issues(effect(e.clone()));
@@ -39,17 +41,29 @@ fn newer_effects_refuse_values_outside_their_types_and_ranges() {
     }
     let fine = [
         json!({ "effect": "film_grain", "params": { "blend": "diffuse_light", "mono": true, "bias": -1 } }),
-        json!({ "effect": "fluid", "params": { "gradient": "sky", "source_strength": 8, "render": 3 } }),
+        json!({ "effect": "fluid", "params": { "gradient": "sky", "emitters": [{ "from": [0.5, 0.9], "strength": 8 }], "render": 3 } }),
         json!({ "effect": "shake", "params": { "phase": "sky", "bounds": [0.5, 1] } }),
         json!({ "effect": "blur", "params": { "blend": "tint", "amount": 0.4 } }),
+        json!({ "effect": "shine", "params": { "style": 3, "gradient": "sky" } }),
     ];
     for e in fine {
         assert_eq!(issues(effect(e.clone())), Vec::<String>::new(), "{e}");
     }
-    let busy = scene(effect(json!({ "effect": "fluid", "params": { "source_strength": 4 } })));
+    let busy = scene(effect(
+        json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 4 }] } }),
+    ));
     let pushed = scene(effect(json!({ "effect": "fluid" })));
     let quiet = scene(effect(json!({ "effect": "fluid", "params": { "push": 0 } })));
     assert!(needs(&busy).cursor && needs(&pushed).cursor && !needs(&quiet).cursor);
+    let timed =
+        |e: Json| descriptor("fluid").unwrap().needs(Use::Time, &serde_json::from_value(e).unwrap(), None);
+    let spout =
+        json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 4 }] } });
+    assert!(timed(spout) && !timed(json!({ "effect": "fluid" })), "only emitters ask for time");
+    let still = json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 4 }], "strength": 0 } });
+    let calm =
+        json!({ "effect": "fluid", "params": { "emitters": [{ "from": [0.5, 0.9], "strength": 0 }] } });
+    assert!(!timed(still) && !timed(calm), "emitters that blow nothing ask for no time");
     let frozen = descriptor("fluid").unwrap();
     assert!(frozen.frozen(Quality::Q0) && !frozen.frozen(Quality::Q1) && frozen.class() == Class::Heavy);
     let trail = descriptor("trail").unwrap();

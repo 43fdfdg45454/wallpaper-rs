@@ -63,6 +63,8 @@ pub mod remote;
 pub mod repo;
 mod rgb;
 mod rigging;
+mod rigshow;
+mod scoped;
 mod seeding;
 pub mod server;
 pub mod serving;
@@ -125,7 +127,7 @@ pub fn main() -> ExitCode {
     wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
     let result = match told::parse().command {
         Command::Pack(command) => pack::run(command),
-        Command::Scene(command) => bench::run(command),
+        Command::Scene(command) => scoped::run(command),
         Command::Repo(command) => repo::run(command),
         Command::Edit(command) => edit::run(command),
         Command::Models(command) => models::run(command),

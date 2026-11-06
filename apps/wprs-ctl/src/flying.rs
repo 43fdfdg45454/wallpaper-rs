@@ -54,6 +54,43 @@ pub enum Flying {
         #[arg(long, help = "Only check the shader")]
         check: bool,
     },
+    #[command(
+        about = "Print the video layers that play on a clock of their own: range, speed, loop and where each clock is"
+    )]
+    Clocks {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(long, default_value_t = 0.0, help = "Seconds on the scene clock")]
+        time: f64,
+        #[arg(
+            long,
+            default_value_t = 0,
+            value_name = "N",
+            help = "Also take N frames of each video, at most 16, for the strip the timeline shows"
+        )]
+        strip: usize,
+    },
+    #[command(
+        about = "Print the wake rules of an effect, or change what a parameter of a package effect asks for, waits for or yields to"
+    )]
+    EffectRule {
+        #[arg(help = DIR)]
+        dir: PathBuf,
+        #[arg(help = "Id of the effect")]
+        effect: String,
+        #[arg(help = "Parameter to change; without it the rules are printed")]
+        param: Option<String>,
+        #[arg(long, help = "time, cursor, audio or clicks, or an empty value for nothing")]
+        uses: Option<String>,
+        #[arg(long, value_name = "PARAM", help = "A parameter that must not be zero, or an empty value")]
+        waits_for: Option<String>,
+        #[arg(
+            long,
+            value_name = "PARAM",
+            help = "A parameter that takes over while not zero, or an empty value"
+        )]
+        yields_to: Option<String>,
+    },
     #[command(about = "Show the foliage mask, the chroma matte or the shadows in the 3D preview, or nothing")]
     Debug3d {
         #[arg(help = DIR)]

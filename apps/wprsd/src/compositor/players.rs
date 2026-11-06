@@ -19,11 +19,8 @@ fn demand(outputs: &BTreeMap<String, Output>, exporter: &Exporter, reel: &Reel, 
 impl State {
     pub(super) fn sync_players(&mut self) {
         let (outputs, exporter, power, now) = (&self.outputs, &*self.exporter, self.power, Instant::now());
-        let wanted: Vec<&Reel> = outputs
-            .values()
-            .flat_map(|o| o.layers().flat_map(|s| s.content.videos()))
-            .map(|(r, _)| r)
-            .collect();
+        let wanted: Vec<&Reel> =
+            outputs.values().flat_map(|o| o.layers().flat_map(|s| s.videos())).map(|(r, _)| r).collect();
         let mut orphans: Vec<(Reel, PlayerSlot)> =
             self.players.extract_if(|reel, _| !wanted.contains(&reel)).collect();
         for reel in wanted {
@@ -46,6 +43,7 @@ impl State {
         for (reel, slot) in &mut self.players {
             let (max_size, active, fps, volume) = demand(outputs, exporter, reel, power);
             let steer = super::steer::steer(outputs, reel);
+            let volume = super::steer::loud(volume, steer.as_ref());
             let active = active && steer.is_none_or(|s| s.wants);
             if slot.fps != fps {
                 slot.player.iter_mut().for_each(|p| p.set_max_fps(fps));

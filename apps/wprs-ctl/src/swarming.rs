@@ -86,7 +86,7 @@ pub enum Particle {
         refresh: Option<String>,
     },
     #[command(
-        about = "Choose what a child system takes from its parent particle: color, size, alpha, velocity"
+        about = "Choose what a child system takes from its parent particle: color, size, alpha, velocity (with its speed in depth when both have perspective)"
     )]
     Inherit {
         #[arg(help = "The child system, 0 first")]
@@ -160,6 +160,17 @@ pub enum Particle {
         layer: Option<String>,
         #[arg(help = "Seconds into the scene", allow_negative_numbers = true, long, default_value_t = 0.0)]
         time: f64,
+        #[arg(
+            long,
+            help = "Seed of the run to draw the rays with, as the editor shows it; the scene seed by default"
+        )]
+        seed: Option<u64>,
+        #[arg(
+            long,
+            default_value_t = 0.0,
+            help = "Sound level from 0 to 1 that moves the phase of rays that follow a band"
+        )]
+        sound: f32,
     },
 }
 

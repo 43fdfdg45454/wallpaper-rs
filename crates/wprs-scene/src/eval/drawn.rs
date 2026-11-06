@@ -47,6 +47,7 @@ pub enum Content<'a> {
         system: &'a str,
         flock: usize,
         size: f32,
+        script: Option<&'a crate::ParticleControl>,
     },
     Mesh {
         layer: &'a str,
@@ -77,6 +78,7 @@ pub struct EffectDraw<'a> {
     pub reach: f32,
     pub chain: usize,
     pub textures: Vec<(&'a str, String)>,
+    pub emitters: Vec<(&'a str, Vec<crate::EffectEmitter>)>,
     pub velocity: [f32; 2],
     pub variant: u32,
     pub frozen: bool,
@@ -135,4 +137,28 @@ pub struct Frame<'a> {
     pub stages: Vec<super::Stage3d<'a>>,
     pub placed: Vec<super::Placed<'a>>,
     pub looks: Vec<super::Look>,
+}
+
+type Inputs<'a> = (Vec<(&'a str, String)>, Vec<(&'a str, Vec<crate::EffectEmitter>)>);
+
+pub(super) fn inputs<'a>(
+    cx: &crate::resolve::Context<'a>,
+    d: &'a Descriptor,
+    effect: &'a EffectUse,
+    found: &dyn Fn(&str) -> Option<Cow<'a, crate::Param>>,
+) -> Inputs<'a> {
+    let textures = d.params.iter().filter(|p| p.kind.asset());
+    let textures = textures.filter_map(|p| match effect.params.get(&p.id)? {
+        bound @ crate::Value::Bound(_) => match bound.get(cx) {
+            crate::Param::Text(name) => Some((p.id.as_str(), name)),
+            _ => None,
+        },
+        _ => None,
+    });
+    let lists = d.params.iter().filter(|p| p.kind == crate::ParamKind::Emitters);
+    let lists = lists.map(|p| match found(&p.id).as_deref().unwrap_or(&p.default) {
+        crate::Param::Emitters(list) => (p.id.as_str(), list.clone()),
+        _ => (p.id.as_str(), Vec::new()),
+    });
+    (textures.collect(), lists.collect())
 }

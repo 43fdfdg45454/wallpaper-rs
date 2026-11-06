@@ -83,7 +83,7 @@ pub(super) fn geometry(bin: &Bin, model: &mut Model, rig: &mut Rigged) -> Result
             return Err(format!("node {n} names the missing mesh {m}"));
         }
         let names = shapes(bin, rig, m, n)?;
-        for p in &doc.meshes[m].primitives {
+        for (k, p) in doc.meshes[m].primitives.iter().enumerate() {
             let skinned = p.attributes.contains_key("JOINTS_0") && p.attributes.contains_key("WEIGHTS_0");
             let (base, joints) = match node.skin.filter(|_| skinned) {
                 Some(s) if s < skins.len() => {
@@ -134,6 +134,7 @@ pub(super) fn geometry(bin: &Bin, model: &mut Model, rig: &mut Rigged) -> Result
             let (first, vertices) = (prim.base, prim.vertices);
             let piece = Piece {
                 part: m as u16,
+                source: [n as u16, k as u16],
                 first: prim.first,
                 count: prim.count,
                 base: first,

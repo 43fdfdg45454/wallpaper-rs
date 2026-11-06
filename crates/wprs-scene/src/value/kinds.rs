@@ -83,6 +83,7 @@ pub enum Param {
     Vec2([f32; 2]),
     Color(Color),
     Text(String),
+    Emitters(Vec<super::EffectEmitter>),
 }
 
 #[derive(Deserialize, JsonSchema)]

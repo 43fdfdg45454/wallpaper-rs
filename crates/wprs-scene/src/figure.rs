@@ -50,6 +50,7 @@ pub struct MeshDepth {
     #[schemars(extend("x-range" = [0, 10]))]
     pub scale: f32,
     pub cull: bool,
+    pub sort: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -162,7 +163,7 @@ pub struct Attach {
 
 impl Default for MeshDepth {
     fn default() -> Self {
-        MeshDepth { scale: 1.0, cull: false }
+        MeshDepth { scale: 1.0, cull: false, sort: true }
     }
 }
 

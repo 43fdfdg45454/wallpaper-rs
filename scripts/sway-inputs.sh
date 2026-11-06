@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 declare blue log sway wireplumber
+declare -a driver
 mkdir -p "$WORK/clicks"
 cat >"$WORK/clicks/scene.json" <<'SCENE'
 {"schema": "wallpaper-rs.scene/1", "canvas": {"size": [64, 36], "background": "#000000"},
@@ -24,7 +25,7 @@ mkfifo "$WORK/pointer.in"
 exec 7>"$WORK/pointer.in"
 wait_for 10 grep -q ready "$WORK/pointer.log" || fail "no virtual pointer"
 click() { printf '%s %s 1067 360\n1 1\n1 0\n' "$1" "$2" >&7; sleep 0.5; }
-region() { grep "pointer input of the background" "$WORK/wprsd.log" | grep "HEADLESS-1" | tail -n 1 | grep -q "$1$"; }
+region() { grep "pointer input of the background" "$WORK/wprsd.log" | grep "HEADLESS-1" | tail -n 1 | grep "$1$" >/dev/null; }
 taking() { ctl input status --json | python3 -c "import json, sys; sys.exit('HEADLESS-1' not in json.load(sys.stdin)['clicking'])"; }
 ctl input grant org.example.clicks pointer -o HEADLESS-1
 ctl input grant org.example.clicks clicks -o HEADLESS-1
@@ -106,7 +107,7 @@ echo "stream size and refresh rate of the output mode checks passed"
 
 kill "$sway"; wait "$sway" 2>/dev/null || true
 sed -i 's/HEADLESS-1 mode --custom 640x360/HEADLESS-1 mode --custom 960x540/' "$WORK/sway.conf"
-sway --unsupported-gpu -c "$WORK/sway.conf" >"$WORK/sway-restarted.log" 2>&1 & pids+=($!)
+sway "${driver[@]}" -c "$WORK/sway.conf" >"$WORK/sway-restarted.log" 2>&1 & pids+=($!)
 wait_for 10 test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" || fail "sway did not come back on $WAYLAND_DISPLAY"
 followed() { [ "$(field "(s['outputs']['HEADLESS-1']['width'], s['outputs']['HEADLESS-1']['height'])")" = "(960, 540)" ]; }
 wait_for 30 followed || fail "the stream did not follow the mode of the restarted compositor"

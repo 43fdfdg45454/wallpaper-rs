@@ -132,3 +132,26 @@ fn stills_come_from_inside_the_video() {
     assert!(center[0] > 160 && center[1] < 80 && center[2] > 60, "{center:?}");
     assert!(wprs_video::still(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml"))).is_err());
 }
+
+#[test]
+fn a_strip_takes_frames_spread_over_the_video_at_the_height_asked() {
+    if wprs_video::init().is_err() {
+        return;
+    }
+    let frames = match wprs_video::strip(Path::new(FIXTURE), 4, 16) {
+        Ok(frames) => frames,
+        Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_VIDEO").is_none(), "strip required: {e}"),
+    };
+    assert_eq!(frames.len(), 4);
+    assert!(
+        frames.windows(2).all(|w| w[0].0 < w[1].0),
+        "{:?}",
+        frames.iter().map(|f| f.0).collect::<Vec<_>>()
+    );
+    assert!(frames.iter().all(|(_, s)| (s.width, s.height) == (32, 16)));
+    assert_eq!(
+        wprs_video::strip(Path::new(FIXTURE), 999, 16).map(|f| f.len()).ok(),
+        Some(wprs_video::MAX_STRIP)
+    );
+    assert!(wprs_video::strip(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml")), 4, 16).is_err());
+}

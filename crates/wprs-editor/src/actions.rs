@@ -9,14 +9,14 @@ use wprs_core::message::said;
 use wprs_format::features;
 
 pub use crate::action::{
-    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, ScriptFile,
+    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, RuleEdit, ScriptFile,
     UpgradeEdit,
 };
 pub use crate::action::{
-    AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit,
-    IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut, NormalsMake,
-    ParticleEdit, PartsEdit, PointEdit, Response, SowEdit, Spot, Strand, SwarmLight, TendEdit, WeightStroke,
-    WindEdit,
+    AmbientEdit, AttachEdit, AutoWeights, BodyEdit, BoneEdit, ClipEdit, ClipKey, DepthSet, DepthStroke,
+    ExpressionEdit, IkEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, MaskStroke, MeshCut,
+    NormalsMake, ParticleEdit, PartsEdit, PointEdit, Response, SowEdit, Spot, Strand, SwarmLight, TendEdit,
+    WeightStroke, WindEdit,
 };
 pub use crate::action::{AnimEdit, EffectsEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
 pub use crate::action::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};
@@ -123,7 +123,8 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
             }
             ops
         }
-        Action::DuplicateLayer { id } => arrange::duplicate(doc, id)?,
+        Action::DuplicateLayer { id, template: false } => arrange::duplicate(doc, id)?,
+        Action::DuplicateLayer { id, template: true } => arrange::template(doc, id)?,
         Action::MoveLayer { id, to, into } => {
             let from = find(doc, id)?;
             let list = children(doc, into.as_deref())?;

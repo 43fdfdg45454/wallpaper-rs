@@ -9,7 +9,7 @@ first=$(used)
 first_kind=$(gpu "[a['kind'] for a in g['adapters'] if a['used']][0]")
 ctl gpu "no such card 42" >/dev/null
 [ "$(gpu "g['gpu'], g['restart']")" = "('no such card 42', True)" ] || fail "a new choice is not kept: $(ctl gpu)"
-ctl gpu | grep -q "next time the daemon starts" || fail "wprs-ctl gpu does not say when the choice takes effect"
+ctl gpu | grep "next time the daemon starts" >/dev/null || fail "wprs-ctl gpu does not say when the choice takes effect"
 ctl gpu auto >/dev/null
 [ "$(gpu "g['restart']")" = False ] || fail "going back to auto: $(ctl gpu)"
 if ctl config render.gpu "" 2>/dev/null; then fail "an empty card name was accepted"; fi
@@ -26,7 +26,7 @@ started() {
 }
 started "no such card 42" missing
 [ "$(used)" = "$first" ] || fail "a missing card did not fall back to the automatic choice: $(ctl gpu)"
-gpu "g['warning']" | grep -q "no such card 42" || fail "no warning for a missing card: $(ctl gpu --json)"
+gpu "g['warning']" | grep "no such card 42" >/dev/null || fail "no warning for a missing card: $(ctl gpu --json)"
 [ "$(gpu "g['restart']")" = False ] || fail "a missing card asks for a restart"
 started "$(tr '[:lower:]' '[:upper:]' <<<"${first:0:12}")" named
 [ "$(used), $(gpu "g['warning']")" = "$first, None" ] || fail "the card chosen by name: $(ctl gpu)"

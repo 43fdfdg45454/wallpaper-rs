@@ -2,7 +2,7 @@ use crate::scripted::{Extent, LayerRead};
 use crate::{Kind, Layer, LayerOverride, MAX_LAYERS, MAX_SPAWNED, ParamKind, Runtime, ScriptOutputs};
 use std::collections::HashMap;
 
-const SCRIPTED: [ParamKind; 8] = [
+const SCRIPTED: [ParamKind; 9] = [
     ParamKind::Float,
     ParamKind::Int,
     ParamKind::Enum,
@@ -11,43 +11,35 @@ const SCRIPTED: [ParamKind; 8] = [
     ParamKind::Color,
     ParamKind::Bool,
     ParamKind::Blend,
+    ParamKind::Emitters,
 ];
-
-fn flat(layer: &Layer) -> usize {
-    1 + layer.children().iter().map(flat).sum::<usize>()
-}
-
-fn renamed(layer: &mut Layer, id: &str) {
-    layer.id = id.to_owned();
-    if let Kind::Group { layers, .. } = &mut layer.kind {
-        layers.iter_mut().for_each(|child| {
-            let inner = format!("{id}.{}", child.id);
-            renamed(child, &inner);
-        });
-    }
-}
 
 impl Runtime {
     pub(crate) fn adopt(&mut self, mut outputs: ScriptOutputs) -> bool {
         let mut kept: HashMap<String, (String, Box<Layer>)> =
             std::mem::take(&mut self.spawned).into_iter().map(|(t, l)| (l.id.clone(), (t, l))).collect();
         let mut room = (MAX_LAYERS + MAX_SPAWNED).saturating_sub(self.scene.layers().count());
+        let mut rebuilt = Vec::new();
         for (id, template) in &outputs.spawned {
-            let Some(size) = self.scene.templates.get(template).map(flat).filter(|n| *n <= room) else {
+            let Some(size) =
+                self.scene.templates.get(template).map(crate::copies::flat).filter(|n| *n <= room)
+            else {
                 continue;
             };
             room -= size;
             let old = kept.remove(id).filter(|(t, _)| t == template);
             let made = old.or_else(|| {
-                let mut layer = Box::new(self.scene.templates.get(template)?.clone());
-                renamed(&mut layer, id);
-                Some((template.clone(), layer))
+                let layer = crate::copies::copied(self.scene.templates.get(template)?, id);
+                rebuilt.push(id.clone());
+                Some((template.clone(), Box::new(layer)))
             });
             self.spawned.extend(made);
         }
         outputs.spawned.retain(|(id, _)| self.spawned.iter().any(|(_, l)| l.id == *id));
-        if outputs.spawned != self.script.spawned {
+        if outputs.spawned != self.script.spawned || !rebuilt.is_empty() {
             self.costs.set((0, [None; 4]));
+            self.homes = crate::kin::homes(self.scene.layers.iter().chain(self.spawned()));
+            self.recast(&rebuilt);
         }
         for (id, list) in outputs.effects.iter_mut() {
             let Some(layer) = self.layer(id) else {
@@ -64,6 +56,15 @@ impl Runtime {
             }
         }
         outputs.effects.retain(|_, list| !list.is_empty());
+        for c in outputs.particles.values_mut() {
+            let named = |k: &u8, id: &mut String| *k < 8 && !id.is_empty() && id.len() <= 256;
+            c.sources.retain(named);
+            c.walls.retain(named);
+        }
+        let wanted = outputs.stage.is_some_and(|s| s.bloom.is_some());
+        if crate::glow::lend(&mut self.glow, &self.scene.canvas, wanted) {
+            self.costs.set((0, [None; 4]));
+        }
         if let Some(b) = outputs.stage.and_then(|s| s.bloom) {
             let numbers = [("threshold", b.threshold), ("intensity", b.strength), ("radius", b.radius)];
             let numbers =
@@ -112,16 +113,7 @@ impl Runtime {
     }
 
     pub fn layer(&self, id: &str) -> Option<&Layer> {
-        self.scene.layer(id).or_else(|| {
-            let mut stack: Vec<&Layer> = self.spawned().collect();
-            while let Some(l) = stack.pop() {
-                if l.id == id {
-                    return Some(l);
-                }
-                stack.extend(l.children());
-            }
-            None
-        })
+        crate::copies::found(&self.scene, &self.spawned, id)
     }
 
     pub(crate) fn arranged(&self) -> Option<Vec<&Layer>> {

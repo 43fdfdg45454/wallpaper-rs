@@ -43,7 +43,7 @@ impl Seat {
     }
 
     pub(crate) fn layer(&self, cx: &Context, id: &str) -> Option<[f32; 2]> {
-        let w = cx.placement(cx.scene.layer(id)?).world;
+        let w = cx.placement(cx.find(id)?).world;
         Some(self.to_mesh.apply([w.0[4], w.0[5]]))
     }
 }

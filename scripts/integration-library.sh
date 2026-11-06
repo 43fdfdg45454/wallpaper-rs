@@ -100,7 +100,7 @@ cat >"$WORK/storm/manifest.json" <<'STORM'
  "origin": {"kind": "original"}, "content": {"rating": "mature", "descriptors": ["violence"]}, "photosensitive": true,
  "display": {"background": "#ff0000"}}
 STORM
-ctl pack check "$WORK/storm" | grep -q '^rating = mature (violence)$' || fail "pack check: $(ctl pack check "$WORK/storm")"
+ctl pack check "$WORK/storm" | grep '^rating = mature (violence)$' >/dev/null || fail "pack check: $(ctl pack check "$WORK/storm")"
 ctl pack build "$WORK/storm" -o "$WORK/import/storm.wpak" >/dev/null
 job=$(bus Library1 Import asb 1 "$WORK/import/storm.wpak" false | out "d[0]")
 wait_for 20 finished "$job" || fail "rated package import: $(bus Daemon1 GetJob t "$job")"
@@ -126,7 +126,7 @@ refused "the user has not allowed it yet" Library1 Apply ssss "$storm" TEST-7 ""
 if ctl lib apply "$storm" -o TEST-7 </dev/null 2>"$WORK/flash.err"; then fail "a photosensitive package was applied without consent"; fi
 grep -q "photosensitive epilepsy.*lib confirm photosensitive" <(tr '\n' ' ' <"$WORK/flash.err") ||
   fail "photosensitivity warning: $(cat "$WORK/flash.err")"
-ctl lib show "$storm" | grep -q '^photosensitive = yes, asks before it is shown$' || fail "lib show: $(ctl lib show "$storm")"
+ctl lib show "$storm" | grep '^photosensitive = yes, asks before it is shown$' >/dev/null || fail "lib show: $(ctl lib show "$storm")"
 ctl lib confirm photosensitive "$storm" && ctl lib apply "$storm" -o TEST-7
 expect "s['outputs']['TEST-7']['item'], s['outputs']['TEST-7']['background']" "('$storm', '#000000')"
 ctl background '#102030' -o TEST-7 && ctl lib apply "$storm" -o TEST-7
@@ -145,7 +145,7 @@ wait_for 30 idle || fail "analysis did not finish: $(bus Daemon1 ListJobs)"
 sleep 0.5
 mark=$(wc -l <"$WORK/library-signals.log")
 ctl lib confirm mature "$storm"
-told() { tail -n "+$mark" "$WORK/library-signals.log" | grep -A5 "member=Changed" | grep -q "$newer"; }
+told() { tail -n "+$mark" "$WORK/library-signals.log" | grep -A5 "member=Changed" | grep "$newer" >/dev/null; }
 wait_for 5 told || fail "Confirm did not announce the other version: $(tail -n "+$mark" "$WORK/library-signals.log")"
 [ "$(reply "r['item']['package']['confirmed']" Library1 GetItem s "$newer")" = "['mature', 'photosensitive']" ] ||
   fail "the other version does not keep the decisions: $(ctl lib show "$newer" --json)"

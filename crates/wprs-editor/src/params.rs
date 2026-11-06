@@ -4,6 +4,8 @@ use crate::ops::escape;
 use serde_json::{Value, json};
 use wprs_scene::{Entry, ParamDef, ParamKind, Text, Variant};
 
+const PICTURED: [(&str, &str); 1] = [("shine", "style")];
+
 fn source(current: Option<&Value>) -> String {
     SOURCES.iter().find(|s| current.is_some_and(|c| c.get(**s).is_some())).map_or("", |s| *s).into()
 }
@@ -27,6 +29,7 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         ParamKind::Lut => ("ref:lut", Some("lut")),
         ParamKind::Int => ("integer", None),
         ParamKind::Enum | ParamKind::Blend => ("enum", None),
+        ParamKind::Emitters => ("emitters", None),
     };
     let listed = match p.kind {
         ParamKind::Blend => wprs_scene::BLENDS.iter().filter_map(|b| serde_json::to_value(b).ok()).collect(),
@@ -43,10 +46,11 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
     }
     let labeled = p.kind == ParamKind::Enum && p.values.iter().all(|e| !e.label.is_empty());
     let names = if labeled { p.values.iter().map(|e: &Entry| local(&e.label)).collect() } else { Vec::new() };
+    let drawn = value["effect"].as_str().filter(|e| PICTURED.contains(&(*e, p.id.as_str())));
     Field {
         pointer: format!("{base}/{}", escape(&p.id)),
         key: p.id.clone(),
-        widget: widget.into(),
+        widget: drawn.map_or(widget, |_| "styles").into(),
         value: current.cloned().unwrap_or_default(),
         default: serde_json::to_value(&p.default).unwrap_or_default(),
         set: current.is_some(),
@@ -57,10 +61,10 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         depth,
         names,
         title: local(&p.label),
-        sample: if p.kind == ParamKind::Mask {
-            json!({ "channels": p.channels.unwrap_or(1) })
-        } else {
-            Value::Null
+        sample: match (p.kind, drawn) {
+            (ParamKind::Mask, _) => json!({ "channels": p.channels.unwrap_or(1) }),
+            (_, Some(effect)) => json!({ "effect": effect }),
+            _ => Value::Null,
         },
         help: local(&p.help),
         ..Field::default()
@@ -79,6 +83,23 @@ pub(crate) fn option(o: &Variant, value: &Value, base: &str, depth: usize) -> Fi
         options: o.values.iter().filter_map(|v| serde_json::to_value(v).ok()).collect(),
         bindable: true,
         source: source(current),
+        depth,
+        ..Field::default()
+    }
+}
+
+pub(crate) fn wake(doc: &Value, d: &wprs_scene::Descriptor, base: &str, depth: usize) -> Field {
+    let own = doc.pointer(&format!("/scene/effects/{}", escape(&d.id))).is_some();
+    let params = d
+        .params
+        .iter()
+        .map(|p| json!({ "id": p.id, "uses": p.uses, "waits_for": p.waits_for, "yields_to": p.yields_to }));
+    let value = json!({ "effect": d.id, "own": own, "uses": d.uses, "params": params.collect::<Vec<_>>() });
+    Field {
+        pointer: format!("{base}/wake"),
+        key: "wake".into(),
+        widget: "rules".into(),
+        value,
         depth,
         ..Field::default()
     }

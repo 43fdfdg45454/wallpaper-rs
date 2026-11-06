@@ -16,10 +16,12 @@ mod swarm;
 mod tend;
 mod timing;
 pub use lamps::{AmbientEdit, LightEdit, LightSet, LightingEdit, Map, MapStroke, NormalsMake};
-pub use limbs::{AttachEdit, BodyEdit, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
+pub use limbs::{AttachEdit, BodyEdit, DepthSet, IkEdit, PartsEdit, PointEdit, Spot, WindEdit};
 pub use marks::{CanvasEdit, LayerEdit, ManifestEdit, PropertyEdit};
 pub use motion::{AnimEdit, PathEdit, PathKey, PlayEdit, ShadowEdit};
-pub use names::{ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, ScriptFile, UpgradeEdit};
+pub use names::{
+    ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile, UpgradeEdit,
+};
 pub use rigging::{
     AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
     WeightStroke,
@@ -68,6 +70,8 @@ pub enum Action {
     },
     DuplicateLayer {
         id: String,
+        #[serde(default)]
+        template: bool,
     },
     MoveLayer {
         id: String,
@@ -151,6 +155,7 @@ pub enum Action {
         id: String,
     },
     Condition(ConditionEdit),
+    EffectRule(RuleEdit),
     AddPreset {
         #[serde(default)]
         id: Option<String>,

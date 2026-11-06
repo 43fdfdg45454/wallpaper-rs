@@ -14,7 +14,8 @@ ColumnLayout {
     function load() {
         const q = {
             "particles": {
-                "time": page.editor.time
+                "time": page.editor.time,
+                "sound": page.heard
             }
         };
         info = system ? JSON.parse(page.editor.rig(system, JSON.stringify(q)) || "null") : null;

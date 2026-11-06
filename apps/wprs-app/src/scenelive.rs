@@ -7,7 +7,6 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use wprs_editor::actions::visible;
-use wprs_editor::references;
 
 const THROTTLE: Duration = Duration::from_millis(50);
 const REFRESH: Duration = Duration::from_secs(30);
@@ -21,16 +20,18 @@ impl SceneEditor {
         }
     }
 
-    pub fn condition(&self, pointer: &QString, text: &QString) -> QString {
-        let doc = self.project.as_ref().map(|p| &p.doc);
-        let found =
-            doc.and_then(|d| wprs_editor::settings::condition(d, &pointer.to_string(), &text.to_string()));
-        QString::from(&found.unwrap_or_default())
+    pub(crate) fn scoped(mut self: Pin<&mut Self>) {
+        let scope = wprs_editor::scope::of(&serde_json::from_str(&self.look.to_string()).unwrap_or_default());
+        if let Some(project) = self.as_mut().rust_mut().project.as_mut() {
+            project.scope = scope;
+        }
     }
 
-    pub fn scripts(&self, id: &QString) -> QString {
-        let found = self.project.as_ref().map(|p| references::scripts(&p.dir, &p.doc, &id.to_string()));
-        QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
+    pub fn rig(&self, id: &QString, query: &QString) -> QString {
+        let q = serde_json::from_str(&query.to_string()).unwrap_or_default();
+        let found =
+            self.project.as_ref().map(|p| wprs_editor::rigs::query(&p.dir, &p.seen(), &id.to_string(), &q));
+        QString::from(&found.unwrap_or_default().to_string())
     }
 
     pub fn attach(mut self: Pin<&mut Self>) {
@@ -99,6 +100,7 @@ impl SceneEditor {
             return;
         }
         let mut scene = visible(&project.doc);
+        wprs_editor::swarms::pin_seed(&mut scene);
         let look: Value = serde_json::from_str(&self.look.to_string()).unwrap_or_default();
         wprs_editor::rigs::preview(&mut scene, &look);
         let mut document = json!({"manifest": project.doc["manifest"], "scene": scene});

@@ -12,7 +12,7 @@ pub(crate) fn parts(f: Affine) -> ([f32; 2], f32, [f32; 2]) {
 
 impl Context<'_> {
     pub(crate) fn pinned(&self, a: &Attach, depth: usize) -> Option<(Affine, Option<Lean>, bool)> {
-        let target = self.scene.layer(&a.layer).filter(|_| depth < 2 * MAX_DEPTH)?;
+        let target = self.find(&a.layer).filter(|_| depth < 2 * MAX_DEPTH)?;
         let place = self.placed(target, None, depth + 1);
         let found = self.puppets.iter().find(|p| p.layer == target.id);
         let name = a.bone.as_deref().or(a.point.as_deref())?;
@@ -26,9 +26,12 @@ impl Context<'_> {
             _ => place.world,
         };
         let has = |f: Follows| a.inherit.as_ref().is_none_or(|l| l.contains(&f));
-        let (at, turn, scale) = parts(frame);
-        let at = if has(Follows::Position) { at } else { [place.world.0[4], place.world.0[5]] };
-        let base = Affine::translate(at)
+        let back = self.camera.inverse();
+        let (at, turn, scale) = parts(back.then(frame));
+        let at = if has(Follows::Position) { at } else { back.apply([place.world.0[4], place.world.0[5]]) };
+        let base = self
+            .camera
+            .then(Affine::translate(at))
             .then(Affine::rotate(if has(Follows::Rotation) { turn } else { 0.0 }))
             .then(Affine::scale(if has(Follows::Scale) { scale } else { [1.0; 2] }))
             .then(Affine::translate(a.offset.unwrap_or_default()));

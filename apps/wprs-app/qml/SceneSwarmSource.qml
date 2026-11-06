@@ -9,7 +9,7 @@ GridLayout {
 
     required property var tools
     required property var emitter
-    readonly property var layers: tools.info?.sources ?? []
+    readonly property var layers: tools?.info?.sources ?? []
 
     function set(change) {
         const args = {

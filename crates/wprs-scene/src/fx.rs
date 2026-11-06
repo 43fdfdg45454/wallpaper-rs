@@ -80,6 +80,9 @@ impl Descriptor {
             let value = e.params.get(&p.id).map_or(Some(p.default.clone()), |v| v.settled(props));
             value.is_none_or(|v| live(p.slot(&v)))
         };
+        let held =
+            |o: &Option<String>| o.as_ref().and_then(|o| self.param(o)).is_none_or(|i| on(&self.params[i]));
+        let on = |p: &ParamDef| on(p) && held(&p.waits_for);
         self.uses.contains(&input) || self.params.iter().any(|p| p.uses == Some(input) && on(p))
     }
 
@@ -171,7 +174,9 @@ impl Descriptor {
         let kind = |name: &str, kind| self.param(name).is_some_and(|i| self.params[i].kind == kind);
         match input.split_once(':') {
             Some(("pass", k)) => k.parse::<usize>().is_ok_and(|k| k < n),
-            Some(("asset", p)) => kind(p, ParamKind::Texture) || kind(p, ParamKind::Mask),
+            Some(("asset", p)) => {
+                [ParamKind::Texture, ParamKind::Mask, ParamKind::Emitters].into_iter().any(|k| kind(p, k))
+            }
             Some(("target", t)) => self.targets.contains_key(t),
             Some(_) => false,
             None => {

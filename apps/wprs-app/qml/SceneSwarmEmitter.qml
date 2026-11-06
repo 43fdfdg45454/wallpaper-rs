@@ -10,7 +10,7 @@ ColumnLayout {
     required property var tools
     required property var emitter
     readonly property var kinds: ["point", "box", "circle", "line", "edge", "around", "between", "layer"]
-    readonly property var targets: (tools.info?.points ?? []).map(p => p.name).concat(["cursor"])
+    readonly property var targets: (tools?.info?.points ?? []).map(p => p.name).concat(["cursor"])
 
     function fresh(kind) {
         const c = [960, 540];

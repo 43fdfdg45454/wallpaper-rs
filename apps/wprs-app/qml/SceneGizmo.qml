@@ -125,6 +125,14 @@ Item {
         gizmo: gizmo
     }
 
+    SceneEmitters {
+        anchors.fill: parent
+        z: 3
+        visible: gizmo.chosen
+        page: gizmo.page
+        pointer: gizmo.chosen ? gizmo.modelData.pointer : ""
+    }
+
     SceneBones {
         gizmo: gizmo
         visible: gizmo.page.mesh.rigging === gizmo.modelData.id || gizmo.page.mesh.posing(gizmo.modelData.id)

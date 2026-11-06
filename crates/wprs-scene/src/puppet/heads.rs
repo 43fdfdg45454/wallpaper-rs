@@ -115,6 +115,7 @@ impl Puppet {
                     }
                     VideoCommand::Rate(r) => h.rate = Some(r.clamp(0.0, 16.0)),
                     VideoCommand::Weight(w) => h.weight = Some(w.clamp(0.0, 1.0)),
+                    VideoCommand::Volume(_) => {}
                 }
             }
         }

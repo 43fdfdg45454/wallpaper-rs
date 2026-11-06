@@ -20,6 +20,7 @@ pub(crate) struct Check<'a> {
     pub(crate) scene: &'a Scene,
     pub(crate) props: &'a BTreeMap<String, Property>,
     pub(crate) found: BTreeSet<&'static str>,
+    pub(crate) kept: Option<&'a Layer>,
 }
 
 impl Scene {
@@ -32,7 +33,7 @@ impl Scene {
     }
 
     fn check<'a>(&'a self, props: &'a BTreeMap<String, Property>) -> Check<'a> {
-        let mut c = Check { issues: Vec::new(), scene: self, props, found: BTreeSet::new() };
+        let mut c = Check { issues: Vec::new(), scene: self, props, found: BTreeSet::new(), kept: None };
         if self.schema != SCHEMA {
             c.issues.push(Issue::Schema(self.schema.clone()));
         }

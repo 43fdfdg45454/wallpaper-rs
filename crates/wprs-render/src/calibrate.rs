@@ -80,6 +80,10 @@ impl Renderer {
         self.forced.store(code, std::sync::atomic::Ordering::Relaxed);
     }
 
+    pub fn force_eight_bit(&self, on: bool) {
+        self.eight.store(on, std::sync::atomic::Ordering::Relaxed);
+    }
+
     pub fn tier(&self) -> Tier {
         match self.forced.load(std::sync::atomic::Ordering::Relaxed) {
             0 => {}

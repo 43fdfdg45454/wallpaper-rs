@@ -3,30 +3,40 @@ fn fluid_reach(uv: vec2<f32>, at: vec2<f32>, k: vec2<f32>) -> f32 {
     return exp(-dot(d, d));
 }
 
-fn fluid_line(uv: vec2<f32>, k: vec2<f32>) -> f32 {
-    let a = from_layer(param(9u).xy);
-    let b = from_layer(param(10u).xy);
-    let ab = b - a;
-    let t = clamp(dot(uv - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0);
-    return fluid_reach(uv, a + ab * t, k);
+fn fluid_word(i: u32) -> vec2<f32> {
+    let b = round(textureLoad(aux0, vec2<i32>(i32(i), 0), 0) * 255.0);
+    return vec2<f32>(b.x * 256.0 + b.y, b.z * 256.0 + b.w) / 65535.0;
+}
+
+fn fluid_emitted(uv: vec2<f32>, k: vec2<f32>) -> vec3<f32> {
+    var out = vec3<f32>(0.0);
+    let n = min(u32(param(6u).x + 0.5), min(64u, textureDimensions(aux0).x / 3u));
+    for (var i = 0u; i < n; i++) {
+        let a = from_layer(fluid_word(i * 3u) * 6.0 - 2.0);
+        let b = from_layer(fluid_word(i * 3u + 1u) * 6.0 - 2.0);
+        let s = fluid_word(i * 3u + 2u);
+        let ab = b - a;
+        let t = clamp(dot(uv - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0);
+        let reach = fluid_reach(uv, a + ab * t, k) * s.y * 64.0;
+        let turn = radians(s.x * 720.0 - 360.0);
+        out += vec3<f32>(cos(turn) * reach, sin(turn) * reach, reach);
+    }
+    return out * param(7u).x;
 }
 
 @fragment
 fn fs_fluid_advect(in: VertexOut) -> @location(0) vec4<f32> {
     let now = tap(in.uv);
     let was = tap(in.uv - now.rg * fx.texel.xy);
-    let turn = radians(param(7u).x);
-    let up = vec2<f32>(cos(turn), sin(turn));
     let size = layer_extent();
     let k = 1.0 / (px(1.0) * max(max(size.x, size.y), 1.0) * 0.03);
-    let spot = fluid_reach(in.uv, from_layer(param(6u).xy), k) * param(8u).x;
-    let line = fluid_line(in.uv, k) * param(11u).x;
+    let e = fluid_emitted(in.uv, k);
     let moved = frame.cursor_delta * min(frame.dt, 0.07) * frame.resolution / max(fx.area.zw, vec2<f32>(1.0)) * fx.texel.zw;
     let first = f32(fx.info.y < 0.5) * frame.inside * param(5u).x;
     let touch = fluid_reach(in.uv, cursor_uv(), k) * first;
-    var vel = was.rg * param(3u).x + up * (spot + line) * 0.02 + moved * touch * 0.5;
+    var vel = was.rg * param(3u).x + e.xy * 0.02 + moved * touch * 0.5;
     vel = clamp(vel, vec2<f32>(-8.0), vec2<f32>(8.0));
-    let dye = min(was.b * param(4u).x + (spot + line) * 0.02 + touch * min(length(moved) * 0.2, 1.0), 4.0);
+    let dye = min(was.b * param(4u).x + e.z * 0.02 + touch * min(length(moved) * 0.2, 1.0), 4.0);
     return vec4<f32>(vel, dye, now.a);
 }
 
@@ -64,7 +74,7 @@ fn fs_fluid_step(in: VertexOut) -> @location(0) vec4<f32> {
 @fragment
 fn fs_fluid(in: VertexOut) -> @location(0) vec4<f32> {
     let c = tap(in.uv);
-    let y = mix(in.uv.y, in.uv.y * in.uv.y, param(13u).x);
+    let y = mix(in.uv.y, in.uv.y * in.uv.y, param(9u).x);
     let s = sample(aux0, vec2<f32>(in.uv.x, y));
     let m = mask_at(in.uv);
     let drift = s.rg / vec2<f32>(textureDimensions(aux0)) * 8.0 * m;
@@ -80,9 +90,9 @@ fn fs_fluid(in: VertexOut) -> @location(0) vec4<f32> {
     if mode == 2u {
         tone = straight(tap(in.uv - drift)).rgb;
     }
-    let opaque = param(14u).x > 0.5;
+    let opaque = param(10u).x > 0.5;
     let a = select(max(c.a, dye), 1.0, opaque);
     let base = select(tone, straight(c).rgb, c.a > 1e-4 || opaque);
-    let rgb = clamp(blend_mode(u32(param(12u).x + 0.5), base, tone, dye), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb = clamp(blend_mode(u32(param(8u).x + 0.5), base, tone, dye), vec3<f32>(0.0), vec3<f32>(1.0));
     return vec4<f32>(rgb * a, a);
 }

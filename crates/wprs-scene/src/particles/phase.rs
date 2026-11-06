@@ -1,8 +1,8 @@
 use super::{MAX_EMITTERS2, MAX_REMAPS, Sim};
 
-const PERIOD: f64 = 4096.0;
+pub(super) const PERIOD: f64 = 4096.0;
 
-fn wrap(v: f64, period: f64) -> f32 {
+pub(super) fn wrap(v: f64, period: f64) -> f32 {
     v.rem_euclid(period) as f32
 }
 

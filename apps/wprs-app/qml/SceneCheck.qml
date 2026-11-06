@@ -169,14 +169,11 @@ QtObject {
                     "page": page
                 }).exercise();
             }
-            if (kind === "empty") {
-                Qt.createComponent("SceneMeshCheck.qml").createObject(page, {
-                    "page": page
-                }).exercise();
-                Qt.createComponent("SceneTimingCheck.qml").createObject(page, {
-                    "page": page
-                }).exercise();
-            }
+            if (kind === "empty")
+                for (const check of ["SceneMeshCheck.qml", "SceneHandleCheck.qml", "SceneTimingCheck.qml"])
+                    Qt.createComponent(check).createObject(page, {
+                        "page": page
+                    }).exercise();
             if (kind === "parallax") {
                 manifest();
                 Qt.createComponent("SceneSettingsCheck.qml").createObject(page, {

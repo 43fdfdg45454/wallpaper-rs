@@ -39,6 +39,12 @@ pub(crate) fn volume(device: &wgpu::Device, queue: &wgpu::Queue, size: u32, data
 impl Painter<'_, '_, '_> {
     pub(crate) fn asset(&mut self, e: &EffectDraw<'_>, param: &str, kind: ParamKind) -> Option<Src> {
         let def = e.descriptor.params.iter().find(|p| p.id == param && p.kind == kind)?;
+        if kind == ParamKind::Emitters {
+            let list = e.emitters.iter().find(|(id, _)| *id == param).map_or(&[][..], |(_, l)| l);
+            let key = wprs_scene::emitter_key(list);
+            let found = self.paints.iter().find(|(owner, k, _)| owner.starts_with(EMITTERS) && *k == key);
+            return found.map(|(.., image)| &image.0).map(|image| self.ext(image));
+        }
         let bound = e.textures.iter().find(|(id, _)| *id == param).map(|(_, name)| name.as_str());
         let id = bound.or_else(|| def.named(e.effect));
         let (images, luts, paints) = (self.images, self.luts, self.paints);
@@ -58,6 +64,21 @@ impl Painter<'_, '_, '_> {
         let found = e.descriptor.params.iter().find(|p| p.kind == ParamKind::Lut);
         found.and_then(|p| self.asset(e, &p.id, ParamKind::Lut)).unwrap_or(Src::Void)
     }
+}
+
+const EMITTERS: &str = "emitters";
+const LIVE: &str = "emitters:live";
+
+fn emitted<'a>(value: Option<&'a Value<Param>>, default: &'a Param) -> &'a [wprs_scene::EffectEmitter] {
+    match (value, default) {
+        (Some(Value::Fixed(Param::Emitters(list))), _) | (None, Param::Emitters(list)) => list,
+        _ => &[],
+    }
+}
+
+fn emitters(list: &[wprs_scene::EffectEmitter]) -> Option<RgbaImage> {
+    let texels: Vec<u8> = wprs_scene::emitter_texels(list).into_iter().flatten().collect();
+    RgbaImage::from_raw((texels.len() / 4) as u32, 1, texels).filter(|_| !list.is_empty())
 }
 
 fn generic(name: &str) -> RgbaImage {
@@ -88,10 +109,55 @@ fn painted(paint: &Param) -> RgbaImage {
 }
 
 impl Renderer {
+    pub(crate) fn emitted(&self, view: &mut super::SceneView, frame: &wprs_scene::Frame<'_>) {
+        let lists = frame.effects.iter().flat_map(|e| &e.emitters).map(|(_, l)| l);
+        let lists: Vec<_> =
+            lists.filter(|l| !l.is_empty()).map(|l| (wprs_scene::emitter_key(l), l)).collect();
+        let paints = &mut view.paints;
+        let had = |paints: &[(String, String, Image)], key: &String| {
+            paints.iter().any(|(o, k, _)| o.starts_with(EMITTERS) && k == key)
+        };
+        for (key, list) in &lists {
+            if had(paints, key) {
+                continue;
+            }
+            let Some(image) = emitters(list) else { continue };
+            let free = |(o, k, i): &&mut (String, String, Image)| {
+                o == LIVE && i.0.size() == image.dimensions() && !lists.iter().any(|(w, _)| w == k)
+            };
+            if let Some(spare) = paints.iter_mut().find(|p| free(p)) {
+                self.rewrite(&spare.2.0, &image);
+                spare.1.clone_from(key);
+                continue;
+            }
+            let made = self.upload_pixels(&Pixels::new(image), true, Some(false));
+            view.pool.created += u32::from(made.is_some());
+            paints.extend(made.map(|image| (LIVE.to_owned(), key.clone(), image)));
+        }
+        paints.retain(|(o, k, _)| o != LIVE || lists.iter().any(|(w, _)| w == k));
+    }
+
+    fn rewrite(&self, gpu: &crate::texture::GpuImage, image: &RgbaImage) {
+        let (w, h) = image.dimensions();
+        let layout =
+            wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(w * 4), rows_per_image: Some(h) };
+        let extent = wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 };
+        self.queue.write_texture(gpu.texture.as_image_copy(), image.as_raw(), layout, extent);
+    }
+
     pub(crate) fn paints(&self, scene: &Scene) -> Vec<(String, String, Image)> {
         let mut out: Vec<(String, String, Image)> = Vec::new();
         for e in scene.drawable().flat_map(|l| &l.effects) {
             let Some(d) = scene.effect(&e.effect) else { continue };
+            for p in d.params.iter().filter(|p| p.kind == ParamKind::Emitters) {
+                let list = emitted(e.params.get(&p.id), &p.default);
+                let key = wprs_scene::emitter_key(list);
+                let fresh = !out.iter().any(|(o, k, _)| o == EMITTERS && *k == key);
+                let made = emitters(list)
+                    .filter(|_| fresh)
+                    .map(|i| self.upload_pixels(&Pixels::new(i), true, Some(false)));
+                out.extend(made.flatten().map(|image| (EMITTERS.to_owned(), key, image)));
+            }
             for p in d.params.iter().filter(|p| p.kind.asset() && p.kind != ParamKind::Lut) {
                 let mapped = match e.params.get(&p.id) {
                     Some(Value::Bound(b)) => b.map.iter().flat_map(|m| m.values()).collect(),

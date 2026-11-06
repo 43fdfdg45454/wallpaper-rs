@@ -20,12 +20,14 @@ Kirigami.Page {
     property bool moving
     property bool overwrite
     property var brush: null
+    property var emitterEntry: ({})
     property bool lightBoxes
     readonly property SceneMeshState mesh: SceneMeshState {
         page: page
     }
     property string notice
     property real clock: editor.time
+    property real heard: 0
     readonly property var view: JSON.parse(editor.view || "{}")
     onViewChanged: SceneWords.own = view.effect_names ?? ({})
     readonly property var fields: JSON.parse(editor.fields || "[]")
@@ -55,10 +57,7 @@ Kirigami.Page {
     title: App.tr("Scene: %1", view.title ?? "")
     padding: 0
     Component.onCompleted: {
-        if (starter)
-            editor.create(folder, starter, heading);
-        else
-            editor.open(folder, source);
+        starter ? editor.create(folder, starter, heading) : editor.open(folder, source);
         if (App.checking)
             Qt.createComponent("SceneCheck.qml").createObject(page, {
                 "page": page

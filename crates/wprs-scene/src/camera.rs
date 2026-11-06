@@ -47,8 +47,8 @@ impl Context<'_> {
         let back = self.camera.inverse();
         let pivot = back.apply([world.0[4], world.0[5]]);
         let view = (self.canvas.map(|v| v / 2.0), self.distance());
-        let own = Lean::of(self.camera).then(Lean::tilted(pivot, tilt, z, view)).then(Lean::of(back));
-        Some(outer.map_or(own, |o| o.then(own)))
+        let outer = outer.map_or(Lean::IDENTITY, |o| Lean::of(back).then(o).then(Lean::of(self.camera)));
+        Some(Lean::of(self.camera).then(outer.within(pivot, tilt, z, view)).then(Lean::of(back)))
     }
 
     pub(crate) fn distance(&self) -> f32 {

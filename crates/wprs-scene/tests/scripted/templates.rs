@@ -104,3 +104,60 @@ fn copies_of_templates_count_in_the_cost_of_the_scene() {
     rt.set_script(ScriptOutputs::default());
     assert_eq!(rt.cost(Quality::Q3), alone);
 }
+
+#[test]
+fn bloom_a_script_turns_on_counts_in_the_cost_until_it_is_turned_off() {
+    let mut rt = runtime(json!({}));
+    let alone = rt.cost(Quality::Q3);
+    let bloom = BloomSet { threshold: Some(0.5), strength: Some(2.0), radius: Some(8.0), tint: None };
+    let stage = Some(StageSet { bloom: Some(bloom), ..StageSet::default() });
+    rt.set_script(ScriptOutputs { stage, ..ScriptOutputs::default() });
+    assert!(rt.cost(Quality::Q3) > alone + 1.0, "{} {alone}", rt.cost(Quality::Q3));
+    rt.set_script(ScriptOutputs::default());
+    assert_eq!(rt.cost(Quality::Q3), alone);
+}
+
+#[test]
+fn a_script_that_may_turn_bloom_on_counts_it_in_the_cost_of_the_scene_and_its_features() {
+    let scene = |uses: serde_json::Value| {
+        let doc = json!({ "schema": SCHEMA, "canvas": { "size": [64, 32] },
+            "scripts": [{ "path": "main.js", "uses": uses }],
+            "layers": [{ "id": "fill", "type": "solid", "color": "#808080" }] });
+        Scene::from_json(&doc.to_string()).unwrap()
+    };
+    let (lit, plain) = (scene(json!(["bloom"])), scene(json!(["camera"])));
+    assert!(
+        lit.cost(Quality::Q3) > plain.cost(Quality::Q3) + 1.0,
+        "{} {}",
+        lit.cost(Quality::Q3),
+        plain.cost(Quality::Q3)
+    );
+    assert!(lit.features().contains("script_camera") && plain.features().contains("script_camera"));
+    let rt = Runtime::new(std::sync::Arc::new(lit), Default::default());
+    assert_eq!(
+        rt.cost(Quality::Q3),
+        plain.cost(Quality::Q3),
+        "the run counts the glow only once a script asks for it"
+    );
+}
+
+#[test]
+fn masks_and_layer_feeds_inside_a_template_point_at_the_layers_of_each_copy() {
+    let pic = json!({ "id": "pic", "type": "solid", "color": "#ffffff", "mask": { "layer": "shape" },
+        "effects": [{ "effect": "tint", "mask": { "layer": "shape" } },
+            { "effect": "displace", "params": { "map": { "layer": "shape" } } }] });
+    let card = json!({ "id": "card", "type": "group",
+        "layers": [{ "id": "shape", "type": "solid", "color": "#000000" }, pic] });
+    let doc = json!({ "schema": SCHEMA, "canvas": { "size": [64, 32] },
+        "scripts": [{ "path": "main.js", "uses": ["layers"] }], "layers": [], "templates": { "card": card } });
+    let scene = Scene::from_json(&doc.to_string()).unwrap();
+    assert!(scene.validate(&Default::default()).is_empty(), "{:?}", scene.validate(&Default::default()));
+    let mut rt = Runtime::new(Arc::new(scene), Default::default());
+    let spawned = vec![("c1".to_string(), "card".to_string())];
+    assert!(rt.set_script(ScriptOutputs { spawned, ..ScriptOutputs::default() }));
+    let copy = rt.spawned().flat_map(|l| l.children().iter()).find(|l| l.id == "c1.pic").unwrap();
+    assert_eq!(copy.mask.as_ref().and_then(|m| m.layer.as_deref()), Some("c1.shape"));
+    assert_eq!(copy.effects[0].mask.as_ref().and_then(|m| m.layer.as_deref()), Some("c1.shape"));
+    let fed = copy.effects[1].params["map"].binding().and_then(|b| b.layer.as_deref());
+    assert_eq!(fed, Some("c1.shape"));
+}

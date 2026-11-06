@@ -82,7 +82,7 @@ a server sync --wait >/dev/null
 [ "$(value a "['recovery']")" = stale ] || fail "the escrow was sealed again after a revocation: $(a server status)"
 if printf '%s\n' "$phrase" | a server escrow --wait 2>"$WORK/same.out"; then fail "the passphrase from before the revocation was set again"; fi
 grep -q "choose a new, different passphrase" "$WORK/same.out" || fail "reusing the passphrase: $(cat "$WORK/same.out")"
-a server status | grep -q "^recovery = stale: a device that may know the passphrase was revoked" ||
+a server status | grep "^recovery = stale: a device that may know the passphrase was revoked" >/dev/null ||
   fail "the stale escrow is not explained: $(a server status)"
 printf 'a new phrase after the revocation of the laptop\n' | a server escrow --wait >/dev/null
 [ "$(value a "['recovery']")" = current ] || fail "the new passphrase: $(a server status)"
@@ -92,7 +92,7 @@ a playlist new "After the revocation" >/dev/null
 a server sync --wait >/dev/null
 if b server sync --wait 2>"$WORK/revoked.out"; then fail "a revoked device synced after the rotation"; fi
 [ "$(value b "['state']")" = needs_key ] || fail "the revoked device: $(b server status --json)"
-if b playlist ls | grep -q "After the revocation"; then fail "a revoked device read a record after the rotation"; fi
+if b playlist ls | grep "After the revocation" >/dev/null; then fail "a revoked device read a record after the rotation"; fi
 write "DELETE FROM mailbox WHERE to_device = '$d_id'; DELETE FROM sync_records WHERE epoch > $epoch;
   UPDATE sync_heads SET epoch = $epoch, key_id = '$old_key'"
 pin() {
@@ -107,12 +107,12 @@ PIN
 restart b pin
 b server sync --wait >/dev/null || fail "the revoked device did not sync again: $(b server status)"
 b playlist new "From the revoked device" >/dev/null
-b server rotate --wait --json | jq_ "r['output']['shared']" | grep -q "$d_name" || fail "the revoked device sent no key"
+b server rotate --wait --json | jq_ "r['output']['shared']" | grep "$d_name" >/dev/null || fail "the revoked device sent no key"
 b server sync --wait >/dev/null
 d server resume
 if d server sync --wait 2>/dev/null; then fail "a device that missed the revocation took the revoked device's key"; fi
 [ "$(value d "['state']")" = needs_key ] || fail "the lagging device: $(d server status --json)"
-if d playlist ls | grep -q "From the revoked device"; then fail "the lagging device read the revoked device"; fi
+if d playlist ls | grep "From the revoked device" >/dev/null; then fail "the lagging device read the revoked device"; fi
 echo "rotation and revocation checks passed"
 
 b server reset --yes --wait >/dev/null

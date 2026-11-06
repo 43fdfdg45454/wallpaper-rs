@@ -34,3 +34,28 @@ fn scene_bloom_glows_with_its_tint_and_its_own_set_at_the_highest_levels() {
     assert_eq!(at(&at_level(&mut shot, r, Quality::Q2), 56, 25)[0], 0, "on battery Q2 keeps the plain set");
     assert_eq!(at(&at_level(&mut shot, r, Quality::Q1), 56, 25)[0], 0);
 }
+
+#[test]
+fn scripts_turn_bloom_on_in_scenes_that_declare_none_and_off_again() {
+    let Some(r) = renderer() else { return };
+    let mut shot = spot(r, json!({}));
+    let ask = |strength: Option<f32>| wprs_scene::ScriptOutputs {
+        stage: strength.map(|s| wprs_scene::StageSet {
+            bloom: Some(wprs_scene::BloomSet {
+                threshold: Some(0.5),
+                strength: Some(s),
+                radius: Some(8.0),
+                tint: None,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    assert_eq!(at(&shot.pixels(r), 56, 25), [0; 3]);
+    assert!(shot.runtime.set_script(ask(Some(2.0))));
+    let near = at(&shot.pixels(r), 56, 25);
+    assert!(near[0] > 10 && near[0] == near[1], "{near:?}");
+    assert_eq!(at(&at_level(&mut shot, r, Quality::Q0), 56, 25)[0], 0, "the lowest level drops the glow");
+    assert!(shot.runtime.set_script(ask(None)));
+    assert_eq!(at(&shot.pixels(r), 56, 25), [0; 3]);
+}

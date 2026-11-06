@@ -4,7 +4,7 @@ pages=$WORK/pages
 mkdir -p "$pages"
 from() { python3 -c "import json, sys; r = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
 uid() { ctl lib search "" --json | from "[i['uid'] for i in r['items'] if (i['package'] or {}).get('id') == '$1'][0]"; }
-pixel() { "$BIN/probe" "$1" 3 2>/dev/null | grep -q "center bgra \[$2, 255\]"; }
+pixel() { "$BIN/probe" "$1" 3 2>/dev/null | grep "center bgra \[$2, 255\]" >/dev/null; }
 seen() { wait_for 20 pixel "$@" || fail "stream $1 shows $("$BIN/probe" "$1" 3 2>&1 | tail -n 1), expected bgra $2"; }
 helpers() { pgrep -u "$(id -u)" -f "$BIN/wprs-web" | grep -c . || true; }
 alive() { ps -e -o pgid=,stat= | awk -v g="$group" '$1 == g && $2 !~ /^Z/' | grep -c . || true; }
@@ -18,7 +18,7 @@ tint=$(uid org.example.tint)
 lights=$(uid io.github.wallpaper_rs.example.lights)
 [ "$(ctl lib show "$lights" --json | from "r['item']['package']['exposes']")" = "['zone', 'language', 'gpu', 'storage']" ] ||
   fail "exposed by the example page: $(ctl lib show "$lights" --json)"
-ctl lib show "$lights" | grep -q "^privacy = This web wallpaper uses your time zone" || fail "no privacy notice in lib show"
+ctl lib show "$lights" | grep "^privacy = This web wallpaper uses your time zone" >/dev/null || fail "no privacy notice in lib show"
 read -r _ _ _ web < <(ctl stream TEST-W 320 180)
 if ! "$BIN/wprs-web" --check >/dev/null 2>&1; then
   [ "${WPRS_REQUIRE_WEB:-0}" != 1 ] || fail "WPRS_REQUIRE_WEB=1 but web wallpapers cannot run here"

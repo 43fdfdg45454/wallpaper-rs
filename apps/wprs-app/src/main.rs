@@ -29,6 +29,7 @@ mod shelf;
 mod stall;
 mod stallcheck;
 mod stallwork;
+mod strips;
 #[cfg(test)]
 mod tests;
 mod tr;

@@ -38,8 +38,16 @@ impl Puppet {
             let clip = part.and_then(|p| rig.part(p.clip_to.as_deref()?)).map(|c| c as u16);
             next.draws.push(Drawn { piece: i as u16, part: piece.part, clip });
         }
-        let key = |d: &Drawn| sorted[d.part as usize].unwrap_or(0.0);
-        next.draws.sort_unstable_by(|a, b| key(a).total_cmp(&key(b)).then(a.piece.cmp(&b.piece)));
+        let mut deep = [0.0f32; crate::rigged::MAX_RIG_PIECES];
+        for d in next.draws.iter().filter(|_| m.sort) {
+            deep[d.piece as usize % deep.len()] =
+                rig.part_depth(&next.palette, d.clip.unwrap_or(d.part).into(), shape);
+        }
+        let key = |d: &Drawn| (deep[d.piece as usize % deep.len()], sorted[d.part as usize].unwrap_or(0.0));
+        next.draws.sort_unstable_by(|a, b| {
+            let ((da, oa), (db, ob)) = (key(a), key(b));
+            da.total_cmp(&db).then(oa.total_cmp(&ob)).then(a.piece.cmp(&b.piece))
+        });
         let same = next.palette == posed.palette && next.morphs == posed.morphs && next.draws == posed.draws;
         let same = same && next.travel == posed.travel;
         if !same || posed.generation == 0 {

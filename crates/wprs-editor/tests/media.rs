@@ -145,3 +145,48 @@ fn choosing_the_cover_for_a_field_never_turns_a_plain_picture_into_one_and_undoe
     let none = json!({ "asset": "cover", "cover": "none", "field": field });
     assert!(refused(&mut p, none).contains("current or the previous cover"));
 }
+
+#[test]
+fn the_own_clock_switch_shows_only_where_named_video_files_play() {
+    let mut doc = starter("empty", "org.example.clocks", "Clocks", "en").unwrap();
+    let clock = json!({ "own_clock": false });
+    doc["scene"]["pools"] = json!({ "bars": { "type": "mesh", "max": 2, "max_vertices": 8 } });
+    doc["scene"]["layers"] = json!([
+        { "id": "film", "type": "video", "video": "clip", "playback": clock },
+        { "id": "still", "type": "image", "image": "sky", "playback": clock },
+        { "id": "bars", "type": "video", "video": "bars", "playback": clock },
+        { "id": "picked", "type": "video", "video": { "prop": "film", "map": { "x": "clip" } }, "playback": clock },
+        { "id": "own", "type": "video", "video": { "prop": "film" }, "playback": clock },
+        { "id": "chosen", "type": "video", "video": { "prop": "pick" }, "playback": clock },
+        { "id": "photo", "type": "video", "video": { "prop": "shot" }, "playback": clock },
+        { "id": "first", "type": "video", "video": { "prop": "lead" }, "playback": clock }
+    ]);
+    doc["scene"]["assets"]["clip"] = json!({ "path": "clip.webm" });
+    doc["manifest"]["properties"] = json!({ "pick": { "type": "file", "accept": ["video"] }, "shot": { "type": "file" },
+        "lead": { "type": "file", "accept": ["image"], "default_asset": "clip" } });
+    let shows =
+        |i: usize| fields(&doc, &format!("/scene/layers/{i}/playback")).iter().any(|f| f.key == "own_clock");
+    assert_eq!(
+        [0, 1, 2, 3, 4, 5, 6, 7].map(shows),
+        [true, false, false, true, false, true, false, true],
+        "a file property that may hold a video picks the sixth and the last one"
+    );
+}
+
+#[test]
+fn own_clocks_are_listed_with_their_range_speed_and_where_they_are() {
+    let mut doc = starter("empty", "org.example.clocks", "Clocks", "en").unwrap();
+    doc["scene"]["assets"]["clip"] = json!({ "path": "clip.webm" });
+    doc["scene"]["layers"] = json!([{ "id": "film", "type": "video", "video": "clip",
+        "playback": { "own_clock": true, "start": 0.5, "end": 2.5, "rate": 2 } }, { "id": "plain", "type": "video", "video": "clip" }]);
+    let found = wprs_editor::clocks::clocks(std::path::Path::new("/nonexistent"), &doc, 1.5, 0);
+    let list = found["clocks"].as_array().unwrap();
+    assert_eq!(list.len(), 1, "{found}");
+    assert_eq!(
+        (list[0]["layer"].as_str(), list[0]["pointer"].as_str()),
+        (Some("film"), Some("/scene/layers/0/playback"))
+    );
+    assert!((list[0]["at"].as_f64().unwrap() - 1.5).abs() < 1e-9 && list[0]["strip"].is_null(), "{found}");
+    assert_eq!(wprs_editor::clocks::position(1.0, 3.0, 1.0, false, 5.0), 3.0);
+    assert_eq!(wprs_editor::clocks::position(1.0, 3.0, 1.0, true, 5.0), 2.0);
+}

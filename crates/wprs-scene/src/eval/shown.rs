@@ -24,7 +24,11 @@ pub(crate) fn content<'a>(
             Content::Image { asset, size: boxed(*size), frame }
         }
         Kind::Video { video, size, .. } => {
-            let asset = set.file.as_deref().map_or_else(|| named(cx, video), Cow::Borrowed);
+            let picked = || {
+                let asset = named(cx, video);
+                crate::lanes::lane(cx.scene, layer, &asset).map_or(asset, Cow::Owned)
+            };
+            let asset = set.file.as_deref().map_or_else(picked, Cow::Borrowed);
             Content::Video { asset, size: boxed(*size) }
         }
         Kind::Text(t) => {
@@ -78,7 +82,7 @@ pub(crate) fn content<'a>(
                 .particles
                 .get(system)
                 .map_or(1.0, |s| crate::particles::tuned(cx, Some(layer), s).size);
-            Content::Particles { system, flock, size }
+            Content::Particles { system, flock, size, script: cx.script.particles.get(&layer.id) }
         }
         Kind::Mesh(m) => {
             let puppet = cx.puppets.iter().find(|p| p.layer == layer.id);

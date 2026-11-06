@@ -12,16 +12,16 @@ ctl pack new-assets "$maker" "$scene/parts" --part layer:sprout --part particles
   --title Parts --license CC-BY-4.0 --attribution "Example Maker" --part-title "layer:sprout=Sprout" \
   --part-thumbnail "layer:sprout=$ROOT/tests/fixtures/green-64x32.png" >/dev/null || fail "no assets package was made"
 ctl pack build "$scene/parts" -o "$scene/parts.wpak" >/dev/null || fail "the assets package did not build"
-ctl pack parts "$scene/parts.wpak" | grep -q 'layer:sprout "Sprout"' || fail "the parts were not listed"
-ctl pack parts "$scene/parts.wpak" | grep -q 'CC-BY-4.0 Example Maker' || fail "the license of a file was not listed"
+ctl pack parts "$scene/parts.wpak" | grep 'layer:sprout "Sprout"' >/dev/null || fail "the parts were not listed"
+ctl pack parts "$scene/parts.wpak" | grep 'CC-BY-4.0 Example Maker' >/dev/null || fail "the license of a file was not listed"
 user=$scene/user
 ctl scene new "$user" --id org.example.user >/dev/null
 if ctl scene import-assets "$user" "$scene/parts.wpak" --part layer:gone 2>/dev/null; then
   fail "a part the package does not offer was imported"
 fi
 ctl scene import-assets "$user" "$scene/parts.wpak" --part layer:sprout >/dev/null || fail "no part was imported"
-ctl scene show "$user" /manifest/credits | grep -q '"id": "org.example.parts"' || fail "the import was not credited"
-ctl scene show "$user" /manifest/origin | grep -q '"derived"' || fail "the origin does not name the parts"
+ctl scene show "$user" /manifest/credits | grep '"id": "org.example.parts"' >/dev/null || fail "the import was not credited"
+ctl scene show "$user" /manifest/origin | grep '"derived"' >/dev/null || fail "the origin does not name the parts"
 ctl scene validate "$user" >/dev/null || fail "the imported part left the scene invalid"
 ctl scene undo "$user" >/dev/null
 if ctl scene show "$user" /manifest/credits >/dev/null 2>&1; then fail "undo kept the credits of the import"; fi
