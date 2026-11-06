@@ -59,3 +59,11 @@ fn screens_that_show_a_page_choose_their_own_quality() {
     let controls = files.iter().find(|(n, _)| n == "OutputControls.qml").map(|(_, t)| t.clone()).unwrap();
     assert!(controls.contains(r#"visible: (host.scene || host.info?.kind === "web") && host.name !== """#));
 }
+
+#[test]
+fn identical_cards_are_offered_by_their_pci_bus() {
+    let files = qml_files();
+    let picker = files.iter().find(|(n, _)| n == "GpuPicker.qml").map(|(_, t)| t.clone()).unwrap();
+    assert!(picker.contains(r#"const value = twins ? "pci:" + card.bus : card.name;"#));
+    assert!(picker.contains(r#"App.tr("%1 · on PCI bus %2", label(card.name, same), card.bus)"#));
+}

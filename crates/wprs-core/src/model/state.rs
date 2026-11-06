@@ -44,7 +44,14 @@ model! {
         pub layer_shell: LayerShellState,
     }
 
-    pub struct GpuAdapter { pub name: String, pub kind: String, pub backend: String, pub used: bool }
+    pub struct GpuAdapter {
+        pub name: String,
+        pub kind: String,
+        pub backend: String,
+        pub used: bool,
+        #[serde(default)]
+        pub bus: String,
+    }
 
     pub struct OutputState {
         pub width: u32,

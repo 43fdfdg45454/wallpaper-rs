@@ -217,7 +217,10 @@ frame it gave.
 with an integrated and a dedicated card renders on the integrated one. `integrated`, `dedicated`
 and `software` take the first Vulkan adapter of that kind, and any other value the first one whose
 name contains it, without regard to case, so two cards of the same kind are told apart by their
-names; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`.
+names, and `pci:` with a PCI bus id (`pci:0000:03:00.0`) the card on that bus, which tells two
+identical cards apart (`GetState().adapters[x].bus`, empty when the driver gives none; the app offers
+it only for cards that share a name). The list of cards follows the graphics nodes of `/dev/dri`: a
+card plugged in or taken out shows up or goes away a second later, without polling; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`.
 An OpenGL ES adapter whose driver names no kind takes the kind the system gives its card in
 `/sys/class/drm` (Intel integrated, NVIDIA dedicated, AMD integrated when its own memory is at most
 2 GiB and dedicated above), matched by vendor or, with a single card, that card; with several cards
@@ -2398,9 +2401,10 @@ Clients tell a still scene from a playing one by this value, never by `quality_r
 the automatic reason (or `"slow"`) when a floor does not raise the level. `tier` is
 the class of the graphics card, `"t0"` to `"t3"`, and `tier_measured` whether a short measured
 render set it rather than the model of the card alone. `adapters` lists the graphics cards the
-daemon found when it started, each with its `name`, `kind` (`"integrated"`, `"dedicated"`,
-`"virtual"`, `"software"` or `"other"`), `backend` (`"vulkan"` or `"gl"`) and `used`, true for the
-one it renders with. `gpu_warning` says, in the language of the daemon, that no card matched
+daemon finds, at start and again a second after a card is plugged in or taken out, each with its
+`name`, `kind` (`"integrated"`, `"dedicated"`, `"virtual"`, `"software"` or `"other"`), `backend`
+(`"vulkan"` or `"gl"`), `used`, true for the one it renders with, and `bus`, its PCI bus id in lower
+case (empty when the driver gives none). `gpu_warning` says, in the language of the daemon, that no card matched
 `render.gpu`, or that the matching card could not be opened, and the automatic choice was taken, or
 is `null`; `gpu_restart` is true while `render.gpu` differs from the value the daemon started with,
 without regard to case. `qualities` maps every output that has its own `playback.quality.<output>`
@@ -2429,7 +2433,7 @@ struct State {
     qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>, layer_shell: LayerShellState,
 }
 struct LayerShellState { namespace: Option<String>, from: String, restart: bool, ignored: Option<String> }
-struct GpuAdapter { name: String, kind: String, backend: String, used: bool }
+struct GpuAdapter { name: String, kind: String, backend: String, used: bool, bus: String }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,

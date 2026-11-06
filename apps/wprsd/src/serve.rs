@@ -40,6 +40,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     remote::start(&daemon, connection.clone());
     account::start(&daemon, connection.clone());
     edits::start(&daemon);
+    gpus::watch(&daemon);
     tokio::task::spawn_blocking({
         let daemon = daemon.clone();
         move || daemon.tidy()

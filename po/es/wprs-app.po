@@ -1558,6 +1558,14 @@ msgid "Software rendering, for tests"
 msgstr "Render por software, para pruebas"
 
 #: apps/wprs-app/qml/GpuPicker.qml
+msgid "%1 · on PCI bus %2"
+msgstr "%1 · en el bus PCI %2"
+
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "The card on PCI bus %1, which is not connected now"
+msgstr "La tarjeta del bus PCI %1, que ahora no está conectada"
+
+#: apps/wprs-app/qml/GpuPicker.qml
 msgid "The first card whose name has “%1”"
 msgstr "La primera tarjeta cuyo nombre tiene «%1»"
 
@@ -2379,14 +2387,19 @@ msgstr "Lo que reciben las luces, %1 × %2:"
 msgid ""
 "The page has sent no colors to the lights yet; pages that call window.wprs."
 "rgb.setImage show them here."
-msgstr "La página todavía no mandó colores a las luces; las páginas que llaman a window.wprs.rgb.setImage los muestran aquí."
+msgstr ""
+"La página todavía no mandó colores a las luces; las páginas que llaman a "
+"window.wprs.rgb.setImage los muestran aquí."
 
 #: apps/wprs-app/qml/PageLights.qml
 msgid ""
 "Here window.wprs.rgb.setImage returns true and its colors are only shown, "
 "never sent. On the desktop it returns false and sends nothing until RGB "
 "lighting is on and you allow it for this package."
-msgstr "Aquí window.wprs.rgb.setImage devuelve true y sus colores solo se muestran, nunca se mandan. En el escritorio devuelve false y no manda nada hasta que enciendas la iluminación RGB y lo permitas para este paquete."
+msgstr ""
+"Aquí window.wprs.rgb.setImage devuelve true y sus colores solo se muestran, "
+"nunca se mandan. En el escritorio devuelve false y no manda nada hasta que "
+"enciendas la iluminación RGB y lo permitas para este paquete."
 
 #: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
 #: apps/wprs-app/qml/PresetDialog.qml apps/wprs-app/qml/ProfilesPage.qml

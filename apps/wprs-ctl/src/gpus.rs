@@ -9,7 +9,7 @@ use wprs_core::model::State;
 #[derive(Args, Debug)]
 pub struct GpuArgs {
     #[arg(
-        help = "Choose the card: auto, integrated, dedicated, software or part of its name; list the cards without it"
+        help = "Choose the card: auto, integrated, dedicated, software, part of its name or pci: and its bus id to tell identical cards apart; list the cards without it"
     )]
     pub choice: Option<String>,
     #[arg(long, help = crate::cli::JSON)]
@@ -33,9 +33,10 @@ pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
     }
     let rows = state.adapters.iter().map(|a| {
         let used = if a.used { "*" } else { "" };
-        vec![used.into(), a.name.clone(), a.kind.clone(), a.backend.clone()]
+        let bus = if a.bus.is_empty() { "-".into() } else { format!("pci:{}", a.bus) };
+        vec![used.into(), a.name.clone(), a.kind.clone(), a.backend.clone(), bus]
     });
-    print!("{}", table(&["USED", "NAME", "KIND", "BACKEND"], rows));
+    print!("{}", table(&["USED", "NAME", "KIND", "BACKEND", "BUS"], rows));
     println!("render.gpu = {}", clean(&chosen));
     if let Some(warning) = &state.gpu_warning {
         println!("warning: {}", clean(warning));

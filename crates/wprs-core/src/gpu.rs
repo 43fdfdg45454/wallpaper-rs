@@ -8,11 +8,13 @@ pub enum GpuChoice {
     Dedicated,
     Software,
     Named(String),
+    Bus(String),
 }
 
 impl GpuChoice {
     pub const WORDS: [&str; 4] = ["auto", "integrated", "dedicated", "software"];
     pub const MAX_NAME: usize = 128;
+    pub const BUS: &str = "pci:";
 
     pub fn parse(text: &str) -> Result<GpuChoice, String> {
         let text = text.trim();
@@ -23,6 +25,15 @@ impl GpuChoice {
             "integrated" => Ok(GpuChoice::Integrated),
             "dedicated" => Ok(GpuChoice::Dedicated),
             "software" => Ok(GpuChoice::Software),
+            lower if lower.starts_with(Self::BUS) => {
+                let id = &lower[Self::BUS.len()..];
+                let fine = (1..=32).contains(&id.len())
+                    && id.chars().all(|c| c.is_ascii_hexdigit() || ":.".contains(c));
+                match fine {
+                    true => Ok(GpuChoice::Bus(lower.to_owned())),
+                    false => Err("pci: takes the PCI bus id of a card, such as pci:0000:03:00.0".into()),
+                }
+            }
             _ if wrong => Err(format!(
                 "expected {} or part of the name of a graphics card, at most {} characters",
                 Self::WORDS.join(", "),
@@ -38,7 +49,14 @@ impl GpuChoice {
             GpuChoice::Integrated => "integrated",
             GpuChoice::Dedicated => "dedicated",
             GpuChoice::Software => "software",
-            GpuChoice::Named(name) => name,
+            GpuChoice::Named(name) | GpuChoice::Bus(name) => name,
+        }
+    }
+
+    pub fn bus(&self) -> Option<&str> {
+        match self {
+            GpuChoice::Bus(text) => text.strip_prefix(Self::BUS),
+            _ => None,
         }
     }
 

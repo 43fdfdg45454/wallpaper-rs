@@ -10,9 +10,21 @@ pub(crate) fn extra(own: Backend, limit: Option<Backends>) -> Option<Backends> {
 
 impl Renderer {
     pub fn adapters(&self) -> Vec<GpuAdapter> {
+        self.list(&self.instance)
+    }
+
+    pub fn plugged(&self) -> Vec<GpuAdapter> {
+        let own = match self.gpu.get_info().backend {
+            Backend::Gl => Backends::GL,
+            _ => Backends::VULKAN,
+        };
+        self.list(&instance(Backends::from_env().unwrap_or(own), None))
+    }
+
+    fn list(&self, base: &wgpu::Instance) -> Vec<GpuAdapter> {
         let own = self.gpu.get_info();
         let mut found: Vec<wgpu::AdapterInfo> =
-            listed(&self.instance, Backends::all()).iter().map(wgpu::Adapter::get_info).collect();
+            listed(base, Backends::all()).iter().map(wgpu::Adapter::get_info).collect();
         if let Some(more) = extra(own.backend, Backends::from_env()) {
             found.extend(listed(&instance(more, None), more).iter().map(wgpu::Adapter::get_info));
         }
@@ -28,6 +40,7 @@ impl Renderer {
             kind: kind(super::sysfs::kind_of(i)).into(),
             backend: backend(i.backend),
             used: same(i),
+            bus: i.device_pci_bus_id.to_lowercase(),
         };
         found.iter().map(made).collect()
     }

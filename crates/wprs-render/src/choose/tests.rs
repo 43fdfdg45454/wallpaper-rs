@@ -4,11 +4,11 @@ use crate::RenderError;
 use wgpu::{Backend, Backends, DeviceType};
 use wprs_core::GpuChoice;
 
-fn card(name: &str, t: DeviceType, b: Backend) -> (String, DeviceType, Backend) {
-    (name.into(), t, b)
+fn card(name: &str, t: DeviceType, b: Backend) -> super::Card {
+    (name.into(), t, b, String::new())
 }
 
-fn desk() -> Vec<(String, DeviceType, Backend)> {
+fn desk() -> Vec<super::Card> {
     vec![
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Gl),
         card("Example Integrated Graphics (RADV)", DeviceType::IntegratedGpu, Backend::Vulkan),
@@ -42,7 +42,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
         [None, Some(0)]
     );
     assert_eq!(pick(&GpuChoice::Dedicated, &[]), None);
-    let kinds = all.iter().map(|(_, t, _)| kind(*t)).collect::<Vec<_>>();
+    let kinds = all.iter().map(|(_, t, ..)| kind(*t)).collect::<Vec<_>>();
     assert_eq!(
         kinds,
         ["integrated", "integrated", "dedicated", "dedicated", "virtual", "software", "software", "other"]
@@ -63,4 +63,31 @@ fn a_backend_limit_keeps_other_drivers_unloaded_when_listing_cards() {
     assert_eq!(extra(Backend::Gl, None), Some(Backends::VULKAN));
     assert_eq!(extra(Backend::Vulkan, None), None);
     assert_eq!(extra(Backend::Vulkan, Some(Backends::VULKAN)), None);
+}
+
+#[test]
+fn two_identical_cards_are_told_apart_by_their_pci_bus() {
+    let twin = |bus: &str| {
+        ("Example Dedicated Graphics".to_owned(), DeviceType::DiscreteGpu, Backend::Vulkan, bus.to_owned())
+    };
+    let all = vec![
+        twin("0000:03:00.0"),
+        twin("0000:04:00.0"),
+        card("Example Soft", DeviceType::Cpu, Backend::Vulkan),
+    ];
+    let on = |bus: &str| pick(&GpuChoice::parse(&format!("pci:{bus}")).unwrap(), &all);
+    assert_eq!(
+        [on("0000:04:00.0"), on("0000:03:00.0"), on("0000:04:00.0".to_uppercase().as_str())],
+        [Some(1), Some(0), Some(1)]
+    );
+    assert_eq!(on("0000:05:00.0"), None, "a card on another bus was taken");
+    assert_eq!(
+        pick(&GpuChoice::parse("Example Dedicated").unwrap(), &all),
+        Some(0),
+        "a name takes the first twin"
+    );
+    assert_eq!(
+        pick(&GpuChoice::parse("pci:0").unwrap(), &[card("Example", DeviceType::Cpu, Backend::Gl)]),
+        None
+    );
 }

@@ -90,8 +90,9 @@ impl Daemon {
         }
         let chosen = Renderer::with_choice(display, &config.render.gpu)
             .context("cannot initialize the GPU renderer")?;
-        let (gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
+        let (mut gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
         let renderer = renderer.install();
+        gpus.renderer = Some(renderer);
         let adapter = renderer.adapter().to_owned();
         crate::streams::share_video(renderer);
         let calibrated = renderer.calibrate(wprs_core::gpu_tier().as_deref());

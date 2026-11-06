@@ -724,7 +724,11 @@ nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede 
 arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
 `gpu_warning`. Una tarjeta que solo se alcanza con OpenGL ES, cuyo controlador no dice de qué tipo
 es, toma el tipo que el sistema le da en `/sys/class/drm` (Intel integrada, NVIDIA dedicada, AMD
-integrada con 2 GiB de memoria propia o menos), así que `integrated` también la elige. Con
+integrada con 2 GiB de memoria propia o menos), así que `integrated` también la elige. Si hay dos
+tarjetas idénticas, la app las distingue por su bus PCI y `wprs-ctl gpu pci:0000:03:00.0` elige la
+de ese bus (la columna `BUS` de `wprs-ctl gpu`); la lista sigue los nodos de `/dev/dri`, así que una
+tarjeta que conectas o quitas aparece o se va al segundo, sin reiniciar ni consultar nada mientras
+tanto. Con
 `WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
 al listar las tarjetas. La clase de cada
 tarjeta se mide y se guarda aparte, así que volver a una no la mide otra vez. La dedicada dibuja
