@@ -21,6 +21,13 @@ impl SceneEditor {
         }
     }
 
+    pub fn rig(&self, id: &QString, query: &QString) -> QString {
+        let q = serde_json::from_str(&query.to_string()).unwrap_or_default();
+        let found =
+            self.project.as_ref().map(|p| wprs_editor::rigs::query(&p.dir, &p.seen(), &id.to_string(), &q));
+        QString::from(&found.unwrap_or_default().to_string())
+    }
+
     pub fn attach(mut self: Pin<&mut Self>) {
         let Some(project) = self.project.as_ref() else { return };
         let size = &project.doc["scene"]["canvas"]["size"];

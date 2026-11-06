@@ -86,3 +86,9 @@ pub fn ops(ops: Vec<Op>, scope: Option<&str>) -> Result<Vec<Op>> {
     });
     mapped.collect()
 }
+
+impl crate::project::Project {
+    pub fn seen(&self) -> Cow<'_, Value> {
+        seen(&self.doc, self.scope.as_deref()).unwrap_or(Cow::Borrowed(&self.doc))
+    }
+}

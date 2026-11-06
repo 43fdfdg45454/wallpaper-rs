@@ -139,10 +139,6 @@ impl Project {
         self.commit(&action.name(), ops, gesture, at)
     }
 
-    pub fn seen(&self) -> std::borrow::Cow<'_, Value> {
-        crate::scope::seen(&self.doc, self.scope.as_deref()).unwrap_or(std::borrow::Cow::Borrowed(&self.doc))
-    }
-
     pub fn effects(&self) -> crate::inspect::Own {
         let Ok(mut scene) = serde_json::from_value::<wprs_scene::Scene>(self.doc["scene"].clone()) else {
             return Default::default();
