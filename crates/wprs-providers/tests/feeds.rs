@@ -106,8 +106,8 @@ async fn wallhaven_searches_with_filters_and_sends_the_key_as_a_header() {
 
     let mut wallhaven = Wallhaven::new().unwrap();
     wallhaven.base = format!("{}/api/v1", server.uri());
-    (wallhaven.categories, wallhaven.purity) = ("010".into(), "110".into());
-    (wallhaven.query, wallhaven.atleast) = (Some("mountains".into()), Some("2560x1440".into()));
+    (wallhaven.search.categories, wallhaven.search.purity) = ("010".into(), "110".into());
+    (wallhaven.search.query, wallhaven.search.atleast) = (Some("mountains".into()), Some("2560x1440".into()));
     wallhaven.api_key = Some("secret".into());
     let items = wallhaven.list().await.unwrap();
     assert_eq!(items.len(), 2);

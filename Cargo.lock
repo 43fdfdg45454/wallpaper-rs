@@ -6983,6 +6983,7 @@ version = "0.3.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "getrandom 0.4.3",
  "percent-encoding",
  "reqwest",
  "roxmltree 0.21.1",

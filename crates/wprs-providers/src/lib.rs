@@ -4,7 +4,7 @@ mod fetch;
 mod immich;
 mod local;
 mod stream;
-mod wallhaven;
+pub mod wallhaven;
 mod webdav;
 mod wikimedia;
 
@@ -40,6 +40,8 @@ pub enum Error {
     Xml(#[from] roxmltree::Error),
     #[error("invalid response: {0}")]
     Invalid(String),
+    #[error("{0}")]
+    Setting(String),
     #[error("the file is larger than the space left in the cache")]
     TooLarge,
 }

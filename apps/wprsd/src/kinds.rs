@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::net::IpAddr;
 use std::str::FromStr;
 use wprs_core::model::{FieldKind, ProviderKind};
+use wprs_providers::wallhaven::Search;
 use wprs_providers::{Apod, Bing, Immich, Provider, Secret, Wallhaven, WebDav, WikimediaPotd, client};
 
 mod fields;
@@ -97,7 +98,6 @@ fn number<T: FromStr + Default>(options: &Options, key: &str) -> T {
 
 pub fn build(kind: &str, o: &Options, secret: Option<&str>) -> wprs_providers::Result<Box<dyn Provider>> {
     let text = |key: &str| o.get(key).cloned().unwrap_or_default();
-    let some = |key: &str| Some(text(key)).filter(|value| !value.is_empty());
     let (plain, key) = (text("allow_plain_http") == "true", secret.unwrap_or_default());
     Ok(match kind {
         "bing" => Box::new(Bing {
@@ -114,11 +114,7 @@ pub fn build(kind: &str, o: &Options, secret: Option<&str>) -> wprs_providers::R
             ..WikimediaPotd::new(client()?)
         }),
         "wallhaven" => Box::new(Wallhaven {
-            query: some("query"),
-            categories: text("categories"),
-            purity: text("purity"),
-            sorting: text("sorting"),
-            atleast: some("atleast"),
+            search: Search::from_options(text),
             api_key: secret.map(Secret::from),
             ..Wallhaven::new()?
         }),
