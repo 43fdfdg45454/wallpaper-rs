@@ -47,10 +47,10 @@ fn tiny_jpegs_that_claim_huge_sizes_are_refused_at_once() {
 fn large_baseline_photos_are_decoded_at_a_reduced_scale() {
     let dir = tempfile::tempdir().unwrap();
     let photo = huge_jpeg(dir.path(), "photo.jpg", false, (16320, 12240));
-    let start = std::time::Instant::now();
+    let (mut decoder, _, size) = super::reduced(&photo, 2040).expect("a reduced decoder");
+    assert_eq!(size, (2040, 1530), "the decoder works at an eighth of the size");
+    assert_eq!(decoder.decode().unwrap().len(), 2040 * 1530 * 3, "only the reduced pixels are decoded");
     let (reduced, full) = decode_reduced(&photo, 2040).expect("a reduced decode");
-    let bound = std::time::Duration::from_secs(if cfg!(debug_assertions) { 20 } else { 2 });
-    assert!(start.elapsed() < bound, "it took {:?}", start.elapsed());
     assert_eq!(((reduced.width(), reduced.height()), full), ((2040, 1530), (16320, 12240)));
     assert_eq!(decode_image(&photo, 3840).unwrap().width(), 3840);
 }

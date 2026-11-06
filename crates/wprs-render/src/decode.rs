@@ -59,7 +59,9 @@ pub fn decode_limited<R: BufRead + Seek>(
     Ok(image)
 }
 
-pub fn decode_reduced(path: &Path, max_edge: u32) -> Option<(DynamicImage, (u32, u32))> {
+type Jpeg = jpeg_decoder::Decoder<BufReader<std::fs::File>>;
+
+pub(crate) fn reduced(path: &Path, max_edge: u32) -> Option<(Jpeg, jpeg_decoder::ImageInfo, (u16, u16))> {
     let mut decoder = jpeg_decoder::Decoder::new(BufReader::new(std::fs::File::open(path).ok()?));
     decoder.read_info().ok()?;
     let info = decoder.info()?;
@@ -75,7 +77,13 @@ pub fn decode_reduced(path: &Path, max_edge: u32) -> Option<(DynamicImage, (u32,
     }
     decoder.set_max_decoding_buffer_size(BUDGET as usize);
     let wanted = |v: u16| ((f64::from(v) * scale).ceil() as u16).max(1);
-    let (w, h) = decoder.scale(wanted(info.width), wanted(info.height)).ok()?;
+    let size = decoder.scale(wanted(info.width), wanted(info.height)).ok()?;
+    Some((decoder, info, size))
+}
+
+pub fn decode_reduced(path: &Path, max_edge: u32) -> Option<(DynamicImage, (u32, u32))> {
+    let (mut decoder, info, (w, h)) = reduced(path, max_edge)?;
+    let (width, height) = (u32::from(info.width), u32::from(info.height));
     let (pixels, (w, h)) = (decoder.decode().ok()?, (u32::from(w), u32::from(h)));
     let image = match info.pixel_format {
         PixelFormat::L8 => DynamicImage::from(GrayImage::from_raw(w, h, pixels)?),
