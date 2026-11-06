@@ -53,6 +53,8 @@ WPRS_DMABUF=emulate-flaky RUST_LOG=$log "$BIN/wprsd" >"$WORK/flaky.log" 2>&1 & d
 wait_for 30 ctl state || fail "the daemon with failing GPU stream buffers did not start"
 read -r _ _ _ gpu < <(ctl stream TEST-1 320 180)
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit && expect "${output}['kind']" image
+retry 10 sh -c "'$BIN/probe' $gpu 3 --dmabuf | grep -q 'type MemFd $green'" ||
+  fail "the picture never reached the stream after a failed GPU allocation: $("$BIN/probe" "$gpu" 3 --dmabuf 2>&1)"
 "$BIN/probe" "$gpu" 4 --dmabuf --hold >"$WORK/flaky.out" 2>&1 & held=$!
 expect "${output}['buffers']" memfd
 wait "$held" || fail "no frame after a failed GPU allocation: $(cat "$WORK/flaky.out")"
