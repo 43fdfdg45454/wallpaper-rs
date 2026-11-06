@@ -17,6 +17,9 @@ fn mix(a: &Value, b: &Value, f: f32) -> Value {
         (Value::Array(x), Value::Array(y)) if x.len() == y.len() => {
             x.iter().zip(y).map(|(x, y)| mix(x, y, f)).collect()
         }
+        (Value::Object(x), Value::Object(y)) if x.keys().eq(y.keys()) => {
+            Value::Object(x.iter().zip(y.values()).map(|((k, x), y)| (k.clone(), mix(x, y, f))).collect())
+        }
         (Value::String(x), Value::String(y)) => match (Color::parse(x), Color::parse(y)) {
             (Some(x), Some(y)) => {
                 let c: [f32; 4] = std::array::from_fn(|i| x.0[i] + (y.0[i] - x.0[i]) * f);

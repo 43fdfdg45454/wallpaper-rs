@@ -1,6 +1,6 @@
 use crate::validate::{Check, Issue};
-use crate::value::{Param, Value};
-use crate::{Layer, MAX_EFFECTS, ParamKind};
+use crate::value::{Binding, Param, Value};
+use crate::{Layer, MAX_EFFECTS, ParamDef, ParamKind};
 
 impl Check<'_> {
     pub(super) fn effects(&mut self, p: &str, layer: &Layer) {
@@ -39,7 +39,7 @@ impl Check<'_> {
                         self.range(&path, *n, def.min.unwrap_or(f32::MIN), def.max.unwrap_or(f32::MAX))
                     }
                     Value::Fixed(Param::Text(id)) if def.kind.asset() => self.texture(&path, id, lut),
-                    Value::Bound(_) if def.kind == ParamKind::Emitters => self.issues.push(Issue::Type(path)),
+                    Value::Bound(b) if def.kind == ParamKind::Emitters => self.emitted(&path, def, b),
                     Value::Bound(b) if b.layer.is_some() => self.fed(&path, def, b),
                     Value::Bound(b) if def.kind.asset() => {
                         match (&b.map, b.prop.as_ref().and_then(|p| self.props.get(p))) {
@@ -53,6 +53,22 @@ impl Check<'_> {
                     }
                     _ => {}
                 }
+            }
+        }
+    }
+
+    fn emitted(&mut self, path: &str, def: &ParamDef, b: &Binding<Param>) {
+        let listed = b.keys.is_some() || (b.prop.is_some() && b.map.is_some());
+        let shaped = [b.scale, b.offset, b.exponent].iter().any(Option::is_some) || b.invert;
+        let more = b.clamp.is_some() || b.bounds.is_some() || b.smooth.is_some() || b.base.is_some();
+        if !listed || shaped || more || b.tracked() {
+            self.issues.push(Issue::Type(path.into()));
+        }
+        let keys = b.keys.iter().flatten().enumerate().map(|(i, k)| (format!("{path}/keys/{i}/1"), &k.v));
+        let map = b.map.iter().flatten().map(|(k, v)| (format!("{path}/map/{k}"), v));
+        for (at, value) in keys.chain(map) {
+            if !def.accepts(value) {
+                self.issues.push(Issue::Type(at));
             }
         }
     }

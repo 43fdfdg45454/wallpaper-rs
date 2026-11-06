@@ -130,6 +130,9 @@ impl Animate for Param {
             (Param::Number(a), Param::Number(b)) => Param::Number(a.lerp(b, f)),
             (Param::Vec2(a), Param::Vec2(b)) => Param::Vec2(Vec2(*a).lerp(&Vec2(*b), f).0),
             (Param::Color(a), Param::Color(b)) => Param::Color(a.lerp(b, f)),
+            (Param::Emitters(a), Param::Emitters(b)) if a.len() == b.len() => {
+                Param::Emitters(a.iter().zip(b).map(|(a, b)| a.lerp(b, f)).collect())
+            }
             _ if f < 1.0 => self.clone(),
             _ => to.clone(),
         }

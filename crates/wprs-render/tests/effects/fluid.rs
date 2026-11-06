@@ -72,3 +72,13 @@ fn fluid_draws_from_every_point_and_line_emitter_it_lists() {
     let Some(none) = emitted(json!([])) else { return };
     assert!(none.at(32, 26)[0] < 30, "{:?}", none.at(32, 26));
 }
+
+#[test]
+fn fluid_draws_keyframed_emitters_as_they_are_at_each_time() {
+    let quiet = json!([{ "from": [0.85, 0.9], "strength": 0 }]);
+    let keys = json!({ "keys": [[0, quiet], [0.1, [{ "from": [0.85, 0.9], "strength": 40 }]]] });
+    let Some(keyed) = emitted(keys) else { return };
+    assert!(keyed.at(54, 26)[0] > 60 && keyed.at(10, 26)[0] < 30, "{:?} {:?}", keyed.at(54, 26), keyed.at(10, 26));
+    let Some(still) = emitted(quiet) else { return };
+    assert!(still.at(54, 26)[0] < 30, "{:?}", still.at(54, 26));
+}

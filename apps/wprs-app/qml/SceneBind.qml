@@ -9,11 +9,26 @@ QQC2.ToolButton {
     required property var field
     readonly property var keys: field.source === "keys" ? field.value.keys ?? [] : []
     readonly property bool here: keys.some(key => Math.abs(key[0] - page.editor.time) < 0.001)
+    readonly property bool listed: field.widget === "emitters"
 
     function bound(source) {
         page.run("set", {
             "pointer": field.pointer,
             "value": source
+        });
+    }
+
+    function follow(prop) {
+        if (!listed)
+            return bound({
+                "prop": prop.id
+            });
+        const now = JSON.parse(page.editor.value(prop.pointer + "/default") || "null");
+        const map = {};
+        map[now === null ? "null" : String(now)] = field.shown ?? field.default;
+        bound({
+            "prop": prop.id,
+            "map": map
         });
     }
 
@@ -68,15 +83,14 @@ QQC2.ToolButton {
                     required property var modelData
 
                     text: modelData.label
-                    onTriggered: bind.bound({
-                        "prop": modelData.id
-                    })
+                    onTriggered: bind.follow(modelData)
                 }
             }
         }
 
         QQC2.Menu {
             title: App.tr("Follow the sound")
+            enabled: !bind.listed
 
             Repeater {
                 model: [["bass", App.tr("Bass")], ["mid", App.tr("Mids")], ["treble", App.tr("Treble")], ["level", App.tr("Level")], ["beat", App.tr("Beat")]]
@@ -94,7 +108,7 @@ QQC2.ToolButton {
 
         QQC2.Menu {
             title: App.tr("Follow the media player")
-            enabled: media.count > 0
+            enabled: media.count > 0 && !bind.listed
 
             Repeater {
                 id: media
@@ -114,6 +128,7 @@ QQC2.ToolButton {
 
         QQC2.Menu {
             title: App.tr("Follow the pointer")
+            enabled: !bind.listed
 
             Repeater {
                 model: [["x", App.tr("Horizontal position")], ["y", App.tr("Vertical position")], ["inside", App.tr("Over the screen")], ["speed", App.tr("Speed")]]

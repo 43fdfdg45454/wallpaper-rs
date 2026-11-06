@@ -39,6 +39,7 @@ impl Renderer {
         let mut scratch = std::mem::take(&mut view.scratch);
         scratch.reset(frame.draws.len(), runtime);
         self.rasters(view, frame, screen, &mut scratch.texts);
+        self.emitted(&mut view.paints, frame);
         let v = &mut *view;
         let (srgb, format, state_format) = (v.srgb, v.format, v.state_format);
         let full = Rect { x: 0.0, y: 0.0, w: size.0 as f32, h: size.1 as f32 };

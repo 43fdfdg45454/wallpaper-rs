@@ -40,8 +40,9 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn asset(&mut self, e: &EffectDraw<'_>, param: &str, kind: ParamKind) -> Option<Src> {
         let def = e.descriptor.params.iter().find(|p| p.id == param && p.kind == kind)?;
         if kind == ParamKind::Emitters {
-            let key = wprs_scene::emitter_key(emitted(e.effect.params.get(param), &def.default));
-            let found = self.paints.iter().find(|(owner, k, _)| owner == EMITTERS && *k == key);
+            let list = e.emitters.iter().find(|(id, _)| *id == param).map_or(&[][..], |(_, l)| l);
+            let key = wprs_scene::emitter_key(list);
+            let found = self.paints.iter().find(|(owner, k, _)| owner.starts_with(EMITTERS) && *k == key);
             return found.map(|(.., image)| &image.0).map(|image| self.ext(image));
         }
         let bound = e.textures.iter().find(|(id, _)| *id == param).map(|(_, name)| name.as_str());
@@ -66,6 +67,7 @@ impl Painter<'_, '_, '_> {
 }
 
 const EMITTERS: &str = "emitters";
+const LIVE: &str = "emitters:live";
 
 fn emitted<'a>(value: Option<&'a Value<Param>>, default: &'a Param) -> &'a [wprs_scene::EffectEmitter] {
     match (value, default) {
@@ -107,6 +109,21 @@ fn painted(paint: &Param) -> RgbaImage {
 }
 
 impl Renderer {
+    pub(crate) fn emitted(&self, paints: &mut Vec<(String, String, Image)>, frame: &wprs_scene::Frame<'_>) {
+        let lists = frame.effects.iter().flat_map(|e| &e.emitters).map(|(_, l)| l);
+        let mut used = Vec::new();
+        for list in lists.filter(|l| !l.is_empty()) {
+            let key = wprs_scene::emitter_key(list);
+            if !paints.iter().any(|(o, k, _)| o.starts_with(EMITTERS) && *k == key) {
+                let made =
+                    emitters(list).and_then(|i| self.upload_pixels(&Pixels::new(i), true, Some(false)));
+                paints.extend(made.map(|image| (LIVE.to_owned(), key.clone(), image)));
+            }
+            used.push(key);
+        }
+        paints.retain(|(o, k, _)| o != LIVE || used.contains(k));
+    }
+
     pub(crate) fn paints(&self, scene: &Scene) -> Vec<(String, String, Image)> {
         let mut out: Vec<(String, String, Image)> = Vec::new();
         for e in scene.drawable().flat_map(|l| &l.effects) {

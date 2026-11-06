@@ -49,6 +49,10 @@ fn finite<const N: usize>(v: Option<[f32; N]>, lo: f32, hi: f32) -> Option<[f32;
 }
 
 fn one(v: Option<f32>, lo: f32, hi: f32) -> Option<f32> {
+fn listed(p: &Param) -> bool {
+    !matches!(p, Param::Emitters(l) if l.len() > crate::MAX_EFFECT_EMITTERS || !l.iter().all(crate::EffectEmitter::fits))
+}
+
     finite(v.map(|v| [v]), lo, hi).map(|[v]| v)
 }
 
@@ -126,6 +130,7 @@ impl ScriptOutputs {
         self.effects.retain(|_, list| {
             list.retain(|c| c.at < MAX_EFFECTS && c.params.len() <= MAX_PARAMS);
             list.truncate(MAX_EFFECTS);
+            list.iter_mut().for_each(|c| c.params.retain(|_, p| listed(p)));
             !list.is_empty()
         });
         let sounds = std::mem::take(&mut self.sounds).into_iter().filter(|(id, _)| id.len() <= 64);

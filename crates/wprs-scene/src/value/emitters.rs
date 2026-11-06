@@ -36,6 +36,21 @@ impl EffectEmitter {
             && (0.0..=64.0).contains(&self.strength)
     }
 
+    pub fn lerp(&self, to: &EffectEmitter, f: f32) -> EffectEmitter {
+        let mix = |a: f32, b: f32| a + (b - a) * f;
+        let pair = |a: [f32; 2], b: [f32; 2]| [mix(a[0], b[0]), mix(a[1], b[1])];
+        match (self.to, to.to) {
+            (None, None) | (Some(_), Some(_)) => EffectEmitter {
+                from: pair(self.from, to.from),
+                to: self.to.zip(to.to).map(|(a, b)| pair(a, b)),
+                angle: mix(self.angle, to.angle),
+                strength: mix(self.strength, to.strength),
+            },
+            _ if f < 1.0 => *self,
+            _ => *to,
+        }
+    }
+
     fn texels(&self) -> [[u8; 4]; EMITTER_TEXELS] {
         let pair = |[x, y]: [f32; 2]| {
             let ([a, b], [c, d]) = (word(x, -2.0, 4.0), word(y, -2.0, 4.0));

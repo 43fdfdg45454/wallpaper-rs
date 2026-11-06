@@ -38,7 +38,10 @@ ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with solid lay
 ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "glitter", "params": {"speed": 0}}, {"effect": "fluid", "params": {"emitters": [{"from": [0.3, 0.9], "strength": 8}, {"from": [0.2, 1], "to": [0.8, 1], "strength": 4}]}}, {"effect": "god_rays", "params": {"mode": 2}}]'
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with glitter, fluid and a star of rays was not previewed"
-ctl scene undo "$draft"
+ctl scene keyframe "$draft" /scene/layers/0/effects/1/params/emitters 0 && ctl scene keyframe "$draft" /scene/layers/0/effects/1/params/emitters 3 '[{"from": [0.7, 0.5], "angle": 0, "strength": 2}, {"from": [0.2, 0.9], "to": [0.8, 0.9], "strength": 6}]'
+grep -q '"keys"' "$draft/scene.json" || fail "fluid emitters were not keyframed"
+ctl scene preview "$draft" -o preview:1 --time 1.5 || fail "a scene with keyframed fluid emitters was not previewed"
+ctl scene undo "$draft" && ctl scene undo "$draft" && ctl scene undo "$draft"
 ctl scene set "$draft" /scene/layers/0/effects '[{"effect": "blend_gradient"}]'
 ctl scene paint-mask "$draft" /scene/layers/0/effects/0/params/map '0.4,0.5;0.6,0.5' --channel g || fail "a mask was not painted"
 ctl scene preview "$draft" -o preview:1 --time 2 || fail "a scene with a painted mask was not previewed"

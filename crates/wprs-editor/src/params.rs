@@ -56,7 +56,7 @@ pub(crate) fn param(doc: &Value, p: &ParamDef, value: &Value, base: &str, depth:
         set: current.is_some(),
         options,
         range: p.min.zip(p.max).map_or(Value::Null, |(a, b)| json!([a, b])),
-        bindable: reference.is_none() && p.kind != ParamKind::Emitters,
+        bindable: reference.is_none(),
         source: source(current),
         depth,
         names,

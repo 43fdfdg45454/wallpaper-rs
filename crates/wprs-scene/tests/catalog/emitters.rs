@@ -67,3 +67,63 @@ fn fluid_takes_any_number_of_point_and_line_emitters_up_to_the_cap() {
             || unknown.unwrap().validate(&BTreeMap::new()).iter().any(|i| i.to_string().contains("emitters"))
     );
 }
+
+#[test]
+fn emitter_lists_may_be_keyframed_or_follow_a_property_through_a_map() {
+    let a = json!([{ "from": [0.2, 0.9], "angle": -90, "strength": 2 }]);
+    let b = json!([{ "from": [0.6, 0.5], "angle": 0, "strength": 6 }]);
+    let keyed = json!({ "emitters": { "keys": [[0, a], [2, b]] } });
+    let mut doc = effect(json!({ "effect": "fluid", "params": keyed }));
+    assert_eq!(issues(doc.clone()), Vec::<String>::new());
+    let mapped = json!({ "emitters": { "prop": "flow", "map": { "true": a, "false": [] } } });
+    doc["layers"][0]["effects"][0]["params"] = mapped;
+    let props = flow();
+    let found: Vec<String> = scene(doc).validate(&props).iter().map(ToString::to_string).collect();
+    assert!(!found.iter().any(|f| f.contains("/params/emitters")), "{found:?}");
+    let runtime = Runtime::new(
+        std::sync::Arc::new(scene(effect(json!({ "effect": "fluid", "params": keyed })))),
+        Default::default(),
+    );
+    let mut runtime = runtime;
+    runtime.advance(1.0);
+    let frame = runtime.frame([0.0, 0.0, 64.0, 32.0], Quality::Q3);
+    let (id, list) = &frame.effects[0].emitters[0];
+    assert_eq!(*id, "emitters");
+    let m = list[0];
+    assert!(
+        (m.from[0] - 0.4).abs() < 1e-4 && (m.angle + 45.0).abs() < 1e-3 && (m.strength - 4.0).abs() < 1e-4
+    );
+}
+
+#[test]
+fn emitter_lists_follow_no_number_and_refuse_keys_outside_their_ranges() {
+    let a = json!([{ "from": [0.2, 0.9], "strength": 2 }]);
+    let cases = [
+        json!({ "audio": "bass" }),
+        json!({ "cursor": "x" }),
+        json!({ "keys": [[0, a], [1, [{ "from": [9, 0.5], "strength": 1 }]]] }),
+        json!({ "keys": [[0, a], [1, 3]] }),
+        json!({ "keys": [[0, a]], "scale": 2 }),
+        json!({ "prop": "flow", "map": { "true": [{ "from": [0.5, 0.5], "strength": 99 }] } }),
+    ];
+    for bound in cases {
+        let doc = effect(json!({ "effect": "fluid", "params": { "emitters": bound.clone() } }));
+        let found: Vec<String> = scene(doc).validate(&flow()).iter().map(ToString::to_string).collect();
+        assert!(found.iter().any(|f| f.contains("/params/emitters")), "{bound}: {found:?}");
+    }
+}
+
+#[test]
+fn emitters_blend_between_keys_of_the_same_shape_and_jump_otherwise() {
+    let line = EffectEmitter { from: [0.0, 1.0], to: Some([1.0, 1.0]), angle: 0.0, strength: 0.0 };
+    let wide = EffectEmitter { from: [1.0, 0.0], to: Some([0.0, 0.0]), angle: 90.0, strength: 8.0 };
+    let half = line.lerp(&wide, 0.5);
+    assert_eq!((half.from, half.to, half.angle, half.strength), ([0.5, 0.5], Some([0.5, 0.5]), 45.0, 4.0));
+    let point = spot([0.5, 0.5], 1.0);
+    assert_eq!(point.lerp(&line, 0.5), point);
+    assert_eq!(point.lerp(&line, 1.0), line);
+}
+
+fn flow() -> BTreeMap<String, Property> {
+    serde_json::from_value(json!({ "flow": { "type": "bool", "label": "Flow", "default": true } })).unwrap()
+}

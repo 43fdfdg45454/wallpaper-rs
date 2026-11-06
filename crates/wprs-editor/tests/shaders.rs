@@ -128,7 +128,7 @@ fn shine_styles_are_picked_from_drawn_choices() {
 }
 
 #[test]
-fn fluid_emitters_are_a_list_placed_on_the_canvas_and_never_bound() {
+fn fluid_emitters_are_a_list_placed_on_the_canvas_that_may_be_keyframed() {
     let root = tempfile::tempdir().unwrap();
     unsafe { std::env::set_var("XDG_STATE_HOME", root.path().join("state")) };
     let dir = root.path().join("fluid");
@@ -144,7 +144,7 @@ fn fluid_emitters_are_a_list_placed_on_the_canvas_and_never_bound() {
     let emitters = fields.iter().find(|f| f.key == "emitters").unwrap();
     assert_eq!(
         (emitters.widget.as_str(), emitters.bindable, &emitters.default),
-        ("emitters", false, &json!([]))
+        ("emitters", true, &json!([]))
     );
     assert!(fields.iter().find(|f| f.key == "strength").unwrap().bindable);
     let list = json!([{ "from": [0.2, 0.9], "strength": 4 }, { "from": [0.1, 1], "to": [0.9, 1], "angle": -80, "strength": 6 }]);

@@ -100,15 +100,8 @@ fn emit<'a>(
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
         let chain = crate::chain::runs(&layer.effects).find(|r| r.start == i).map_or(1, |r| r.len());
-        let textures = d.params.iter().filter(|p| p.kind.asset());
-        let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
-            (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {
-                crate::Param::Text(name) => Some((id, name)),
-                _ => None,
-            },
-            _ => None,
-        });
-        let (textures, mask_texture) = (textures.collect(), masked(cx, mask));
+        let (textures, emitters) = drawn::inputs(cx, d, effect, &found);
+        let mask_texture = masked(cx, mask);
         let mask_strength = strength(cx, mask);
         let follows = d.velocity.as_ref().and_then(|v| d.param(v)).is_some_and(|i| slots[i][0] != 0.0);
         let velocity =
@@ -131,6 +124,7 @@ fn emit<'a>(
             reach,
             chain,
             textures,
+            emitters,
             velocity,
         };
         frame.effects.push(draw);
