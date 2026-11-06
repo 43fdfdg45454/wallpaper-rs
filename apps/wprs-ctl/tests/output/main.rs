@@ -1,7 +1,7 @@
 use serde_json::{Value, json};
 use wprs_client::parse;
 use wprs_core::model::Job;
-use wprs_ctl::{items, pkg, playlists, profiles, providers, remote, show};
+use wprs_ctl::{items, pkg, playlists, presets, profiles, providers, remote, show};
 
 mod entries;
 mod jobs;

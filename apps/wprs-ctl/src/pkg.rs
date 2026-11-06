@@ -18,7 +18,7 @@ const SPEC: &str = "[REPO/]ID[@VERSION]: a package id, optionally with a reposit
 pub enum Pkg {
     #[command(about = "Search the packages of the added repositories")]
     Search {
-        #[arg(default_value = "")]
+        #[arg(default_value = "", help = "Search words and keys; every package when empty")]
         query: String,
         #[command(flatten)]
         page: Page,
@@ -57,8 +57,13 @@ pub enum Pkg {
     },
     #[command(about = "Uninstall every version of a package, or one version")]
     Uninstall {
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(long, default_value = "")]
+        #[arg(
+            long,
+            default_value = "",
+            help = "Version to uninstall; every installed version when left out"
+        )]
         version: String,
     },
     #[command(about = "List the installed packages")]

@@ -77,9 +77,8 @@ fn every_editor_action_edits_the_file_beside_the_image() {
     assert_eq!(show().get("fit"), None);
     let mode = std::fs::metadata(dir.join("hills.png.wprs.json")).unwrap().permissions().mode();
     assert_eq!(mode & 0o777, 0o600);
-    assert!(
-        fails(dir, &["edit", "set", "hills.png", "ev=9"], 1).contains("ops[1].ev: 9 is out of range -5 to 5")
-    );
+    let refused = fails(dir, &["edit", "set", "hills.png", "ev=9"], 1);
+    assert!(refused.contains("ops[1].ev: 9 is out of range -5 to 5"), "{refused}");
     assert!(fails(dir, &["edit", "set", "hills.png", "ev"], 2).contains("ev is not KEY=VALUE"));
     assert!(fails(dir, &["edit", "order", "hills.png", "nope"], 1).contains("no operation is named nope"));
     assert!(fails(dir, &["edit", "mask", "hills.png", "m", "square:1"], 2).contains("square is not linear"));

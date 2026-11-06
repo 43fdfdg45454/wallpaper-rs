@@ -109,7 +109,8 @@ pub fn export(path: &Path, out: &Path, before: bool, quality: u8, size: Option<&
 fn action(command: Edits) -> Option<(PathBuf, Action)> {
     Some(match command {
         Edits::Set { path, changes } => (path, Action::Set { changes }),
-        Edits::Crop { path, rect, aspect, rotate, straighten, flip, output } => {
+        Edits::Crop(crop) => {
+            let crate::cropping::CropArgs { path, rect, aspect, rotate, straighten, flip, output } = *crop;
             (path, Action::Crop { rect, aspect, rotate, straighten, flip, output })
         }
         Edits::Curve { path, points, channel, id } => (path, Action::Curve { points, channel, id }),

@@ -6,6 +6,7 @@ use clap::Subcommand;
 pub enum Server {
     #[command(about = "Add the server this computer syncs with, by its https:// address")]
     Add {
+        #[arg(help = "Address of the server")]
         url: String,
         #[arg(long, help = "SHA-256 of the server's own certificate, as wprs-server fingerprint prints it")]
         fingerprint: Option<String>,
@@ -33,6 +34,7 @@ pub enum Server {
                       of the server instead."
     )]
     Approve {
+        #[arg(help = "Code shown by the device that asks to link")]
         code: String,
         #[arg(long, help = "Approve without asking; only for a code shown on your own screen")]
         yes: bool,
@@ -96,6 +98,7 @@ pub enum Server {
     },
     #[command(about = "Sync the secret of a provider with the other devices, end-to-end encrypted")]
     Secret {
+        #[arg(help = "Id of the provider whose secret the server keeps")]
         provider: String,
         #[arg(long, help = "Stop syncing it; the copies other devices hold stay")]
         stop: bool,
@@ -123,6 +126,7 @@ pub enum Server {
     Files(Files),
     #[command(about = "Upload a .wpak package to the repository of the server")]
     Upload {
+        #[arg(help = "File to upload")]
         file: String,
         #[arg(
             long,
@@ -140,10 +144,14 @@ pub enum Server {
     },
     #[command(about = "Make a package, or one version, public or unlisted")]
     Visibility {
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(value_parser = ["public", "unlisted"])]
+        #[arg(
+            value_parser = ["public", "unlisted"],
+            help = "Public shows the package in browsing and search; unlisted only by its id or link"
+        )]
         visibility: String,
-        #[arg(long)]
+        #[arg(long, help = "Version to change; every version when left out")]
         version: Option<String>,
     },
     #[command(about = "Forget the server and delete the token and sync key of this computer")]

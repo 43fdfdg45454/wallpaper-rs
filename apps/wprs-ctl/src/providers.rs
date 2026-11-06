@@ -37,23 +37,36 @@ pub enum Provider {
         secret_stdin: bool,
     },
     #[command(about = "Change one option of a provider")]
-    Set { id: String, key: String, value: String },
+    Set {
+        #[arg(help = "Id of the provider")]
+        id: String,
+        #[arg(help = "Option to change")]
+        key: String,
+        #[arg(help = "New value of the option")]
+        value: String,
+    },
     #[command(about = "Store the password or API key of a provider in the keyring")]
     Secret {
+        #[arg(help = "Id of the provider")]
         id: String,
         #[arg(long, help = SECRET_STDIN)]
         secret_stdin: bool,
     },
     #[command(about = "Delete the stored password or API key of a provider")]
-    ForgetSecret { id: String },
+    ForgetSecret {
+        #[arg(help = "Id of the provider")]
+        id: String,
+    },
     #[command(about = "Download new wallpapers of a provider, or of every provider when omitted")]
     Sync {
+        #[arg(help = "Id of the provider; every provider when left out")]
         id: Option<String>,
         #[command(flatten)]
         wait: Wait,
     },
     #[command(about = "Remove a provider and its items")]
     Rm {
+        #[arg(help = "Id of the provider")]
         id: String,
         #[arg(long, help = "Also delete the downloaded files")]
         purge: bool,

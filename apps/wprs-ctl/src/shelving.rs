@@ -19,7 +19,7 @@ pub struct Making {
     parts: Vec<String>,
     #[arg(long, help = "Package id, such as org.example.parts")]
     id: String,
-    #[arg(long)]
+    #[arg(long, help = "Title of the assets package")]
     title: String,
     #[arg(long, help = "SPDX license of the parts, such as CC-BY-4.0")]
     license: String,
@@ -41,6 +41,7 @@ pub enum Shelving {
     NewAssets(Box<Making>),
     #[command(about = "List the parts of an assets package with the license and credit of each file")]
     Parts {
+        #[arg(help = "Assets package file")]
         file: PathBuf,
         #[arg(long, help = "Print the result as JSON")]
         json: bool,

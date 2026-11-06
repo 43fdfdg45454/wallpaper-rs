@@ -22,12 +22,16 @@ pub enum Action {
         about = "Take a package out of the catalog and search; whoever installed it keeps it and its updates"
     )]
     Hide {
+        #[arg(help = "Package id")]
         id: String,
         #[arg(long, help = "Reason the author sees, at least 10 characters")]
         reason: String,
     },
     #[command(about = "Show a hidden package in the catalog and search again")]
-    Unhide { id: String },
+    Unhide {
+        #[arg(help = "Package id")]
+        id: String,
+    },
     #[command(about = "List the hidden packages and why")]
     Hidden {
         #[arg(long, help = JSON)]

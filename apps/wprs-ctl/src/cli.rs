@@ -4,7 +4,8 @@ use crate::edit::Edits;
 use crate::inputs::Inputs;
 use crate::library::Lib;
 use crate::models::Models;
-use crate::profiles::{Preset, Profile};
+use crate::presets::Preset;
+use crate::profiles::Profile;
 use crate::{pack::Pack, pkg::Pkg, playlists::Playlist, props::Prop, providers::Provider};
 use crate::{remote::Remote, repo::Repo, server::Server};
 use clap::{Parser, Subcommand};
@@ -77,7 +78,7 @@ pub enum Command {
         about = "Show a pattern of lines and circles over the screens to check where they are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one by hand"
     )]
     Calibrate {
-        #[arg(value_parser = ["on", "off"])]
+        #[arg(value_parser = ["on", "off"], help = "Show the pattern or hide it")]
         state: String,
     },
     #[command(about = "Pause animated wallpapers")]
@@ -88,7 +89,7 @@ pub enum Command {
     Toggle,
     #[command(about = "Set the volume of videos and scenes with sound, 0 to 100, and unmute them")]
     Volume {
-        #[arg(value_parser = clap::value_parser!(u8).range(0..=100))]
+        #[arg(value_parser = clap::value_parser!(u8).range(0..=100), help = "Volume in percent")]
         percent: u8,
     },
     #[command(about = "Mute videos and scenes with sound")]
@@ -96,23 +97,16 @@ pub enum Command {
     #[command(about = "Unmute videos and scenes with sound")]
     Unmute,
     #[command(about = "Create the stream of an output and print its node id and serial")]
-    Stream {
-        output: String,
-        width: u32,
-        height: u32,
-        #[arg(long, help = "Keep the stream only until this command is interrupted, like a desktop client")]
-        wait: bool,
-    },
+    Stream(crate::args::Streaming),
     #[command(about = "Release a stream created with the stream command")]
-    Release { output: String },
+    Release {
+        #[arg(help = "Name of the output of the stream")]
+        output: String,
+    },
     #[command(about = "Tell the daemon where a screen sits, for wallpapers that span screens")]
     Screen(crate::args::Placement),
     #[command(about = "Report whether a window covers an output")]
-    Covered {
-        output: String,
-        #[arg(action = clap::ArgAction::Set)]
-        covered: bool,
-    },
+    Covered(crate::args::Cover),
     #[command(about = "Describe the settings, rules, provider kinds and search keys of the daemon")]
     Schema {
         #[arg(long, help = JSON)]
@@ -139,12 +133,16 @@ pub enum Command {
     },
     #[command(about = "Show a job")]
     Job {
+        #[arg(help = "Id of the job")]
         id: u64,
         #[arg(long, help = JSON)]
         json: bool,
     },
     #[command(about = "Cancel a queued or running job")]
-    Cancel { id: u64 },
+    Cancel {
+        #[arg(help = "Id of the job")]
+        id: u64,
+    },
     #[command(subcommand, about = "Settings of the scene or video package shown on an output")]
     Prop(Prop),
     #[command(

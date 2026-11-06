@@ -13,6 +13,7 @@ use wprs_format::{
 pub enum Pack {
     #[command(about = "Build a .wpak package from a folder that holds manifest.json")]
     Build {
+        #[arg(help = "Package folder")]
         dir: PathBuf,
         #[arg(short, long, help = "Package file; <id>-<version>.wpak in the current folder when omitted")]
         out: Option<PathBuf>,
@@ -21,6 +22,7 @@ pub enum Pack {
     },
     #[command(about = "Sign the manifest of a package folder; run it before pack build")]
     Sign {
+        #[arg(help = "Package folder")]
         dir: PathBuf,
         #[arg(long, help = "Secret key file of the author")]
         key: PathBuf,
@@ -39,12 +41,14 @@ pub enum Pack {
     #[command(about = "Explain what a package folder or file needs, uses and declares, and whether the \
         desktop and the phone play it, play it without some features or refuse it")]
     Check {
+        #[arg(help = "Package file or folder")]
         path: PathBuf,
         #[arg(long, help = "Print the result as JSON")]
         json: bool,
     },
     #[command(about = "Turn a wallpaper-rs.wpak/1 package folder into wallpaper-rs.wpak/2")]
     Upgrade {
+        #[arg(help = "Package folder")]
         dir: PathBuf,
         #[arg(long, value_parser = ["general", "mature"], help = "Who the package suits")]
         rating: String,
@@ -57,7 +61,7 @@ pub enum Pack {
     },
     #[command(about = "Check packages and, with --key, their author signature")]
     Validate {
-        #[arg(required = true, value_name = "FILE")]
+        #[arg(required = true, value_name = "FILE", help = "Package file to validate")]
         files: Vec<PathBuf>,
         #[arg(long = "key", value_name = "PUB", help = "Public key file or text of an accepted author")]
         keys: Vec<String>,

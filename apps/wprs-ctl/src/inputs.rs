@@ -22,6 +22,7 @@ pub enum Inputs {
     Grant {
         #[arg(help = "Package id of the scene")]
         scene: String,
+        #[arg(help = "Input to let the scene read")]
         input: Kind,
         #[arg(
             short,
@@ -36,6 +37,7 @@ pub enum Inputs {
     Revoke {
         #[arg(help = "Package id of the scene")]
         scene: String,
+        #[arg(help = "Input to take back from the scene")]
         input: Kind,
     },
     #[command(
@@ -49,15 +51,16 @@ pub enum Inputs {
         about = "Let clicks and taps on a screen reach its wallpaper, for packages allowed the clicks input; off by default"
     )]
     Clicks {
+        #[arg(help = "Pass clicks on the desktop to scenes or not")]
         state: Switch,
         #[arg(short, long, help = "The screen; every screen when left out")]
         output: Option<String>,
     },
     #[command(about = "Report the pointer position in logical desktop coordinates")]
     Pointer {
-        #[arg(allow_hyphen_values = true)]
+        #[arg(allow_hyphen_values = true, help = "Horizontal position in logical pixels")]
         x: i32,
-        #[arg(allow_hyphen_values = true)]
+        #[arg(allow_hyphen_values = true, help = "Vertical position in logical pixels")]
         y: i32,
     },
 }

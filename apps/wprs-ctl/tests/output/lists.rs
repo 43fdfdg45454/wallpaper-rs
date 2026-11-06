@@ -57,7 +57,7 @@ fn profiles_and_presets_show_their_sections() {
     let preset = json!({"uid": "01J9Z0X9Z6Q7X4F3K5E1V0P002", "item": null, "name": "night",
         "value": {"fit": null, "background": "#101010"}});
     assert_eq!(
-        profiles::presets(parse(&reply(json!({"item": null, "presets": [preset]}))).unwrap()),
+        presets::presets(parse(&reply(json!({"item": null, "presets": [preset]}))).unwrap()),
         "PRESET    ITEM  NAME   FIT  BACKGROUND\nE1V0P002  -     night  -    #101010\n"
     );
 }

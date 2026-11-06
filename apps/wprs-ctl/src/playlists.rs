@@ -30,6 +30,7 @@ pub enum Playlist {
     },
     #[command(about = "Create a playlist and print its uid")]
     New {
+        #[arg(help = "Name of the new playlist")]
         name: String,
         #[arg(long, default_value = "", help = "Search query of a smart playlist; manual when omitted")]
         query: String,
@@ -38,12 +39,14 @@ pub enum Playlist {
     Rename {
         #[arg(value_name = "PL", help = PL)]
         playlist: String,
+        #[arg(help = "New name")]
         name: String,
     },
     #[command(about = "Change the query of a smart playlist; \"\" makes it manual")]
     Query {
         #[arg(value_name = "PL", help = PL)]
         playlist: String,
+        #[arg(help = "Search that fills the playlist, such as kind:scene tag:sky")]
         query: String,
     },
     #[command(about = "Delete a playlist")]
@@ -69,21 +72,25 @@ pub enum Playlist {
     RemoveAt {
         #[arg(value_name = "PL", help = PL)]
         playlist: String,
-        #[arg(required = true, value_name = "INDEX")]
+        #[arg(required = true, value_name = "INDEX", help = "Position in the playlist, from 0")]
         indexes: Vec<u32>,
     },
     #[command(about = "Move an entry of a manual playlist from one 0-based position to another")]
     Move {
         #[arg(value_name = "PL", help = PL)]
         playlist: String,
+        #[arg(help = "Position of the entry to move, from 0")]
         from: u32,
+        #[arg(help = "Position it moves to, from 0")]
         to: u32,
     },
     #[command(about = "Print the rotation rules, one rule, or change a rule")]
     Rule {
         #[arg(value_name = "PL", help = PL)]
         playlist: String,
+        #[arg(help = "Rule to print or change; every rule when left out")]
         key: Option<String>,
+        #[arg(help = "New value of the rule; the rule is printed when left out")]
         value: Option<String>,
         #[arg(long, help = JSON)]
         json: bool,
@@ -101,7 +108,7 @@ pub enum Playlist {
     History {
         #[arg(short, long, help = "Output name such as DP-1")]
         output: String,
-        #[arg(long, default_value_t = 20)]
+        #[arg(long, default_value_t = 20, help = "Number of entries to print")]
         limit: u32,
         #[arg(long, help = JSON)]
         json: bool,

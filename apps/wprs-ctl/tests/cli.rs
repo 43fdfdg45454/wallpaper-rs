@@ -23,8 +23,11 @@ fn daemon_commands_keep_their_syntax_and_gain_json() {
         ),
         ("state --json", "State { json: true }"),
         ("volume 40", "Volume { percent: 40 }"),
-        ("stream DP-1 320 180 --wait", r#"Stream { output: "DP-1", width: 320, height: 180, wait: true }"#),
-        ("covered DP-1 true", r#"Covered { output: "DP-1", covered: true }"#),
+        (
+            "stream DP-1 320 180 --wait",
+            r#"Stream(Streaming { output: "DP-1", width: 320, height: 180, wait: true })"#,
+        ),
+        ("covered DP-1 true", r#"Covered(Cover { output: "DP-1", covered: true })"#),
         ("schema --json", "Schema { json: true }"),
         ("watch", "Watch { json: false }"),
         ("wait", "Wait { serial: None, timeout: 20000, json: false }"),
@@ -86,12 +89,12 @@ fn library_and_preset_commands_parse() {
         ("lib thumb R1AB2C", r#"Lib(Thumb { item: "R1AB2C", size: "512" })"#.into()),
         (
             "lib apply R1AB2C -o DP-1 -f center -p dark",
-            r#"Lib(Apply { item: "R1AB2C", output: "DP-1", fit: Some(Center), span: false, preset: "dark" })"#
+            r#"Lib(Apply(Applying { item: "R1AB2C", output: "DP-1", fit: Some(Center), span: false, preset: "dark" }))"#
                 .into(),
         ),
         (
             "lib apply R1AB2C --span",
-            r#"Lib(Apply { item: "R1AB2C", output: "", fit: None, span: true, preset: "" })"#.into(),
+            r#"Lib(Apply(Applying { item: "R1AB2C", output: "", fit: None, span: true, preset: "" }))"#.into(),
         ),
         ("preset ls", "Preset(Ls { item: None, json: false })".into()),
         ("preset ls R1AB2C --json", r#"Preset(Ls { item: Some("R1AB2C"), json: true })"#.into()),

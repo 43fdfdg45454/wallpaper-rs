@@ -12,14 +12,16 @@ const REASONS: [&str; 5] = ["malware", "license", "takedown", "broken", "other"]
 pub enum Repo {
     #[command(about = "Create a key pair NAME.key and NAME.pub and print its fingerprint")]
     Keygen {
+        #[arg(help = "Name of the key files")]
         name: String,
         #[arg(long, help = "Leave the secret key unencrypted, for online keys used by automation")]
         no_password: bool,
     },
     #[command(about = "Create a repository in a folder; sign its root next")]
     Init {
+        #[arg(help = "Empty folder for the repository")]
         dir: PathBuf,
-        #[arg(long)]
+        #[arg(long, help = "Name of the repository")]
         name: String,
         #[arg(long = "root-key", value_name = "PUB", required = true, help = "Public key file or text")]
         root_keys: Vec<String>,
@@ -32,6 +34,7 @@ pub enum Repo {
     },
     #[command(about = "Sign the newest root with a root key")]
     SignRoot {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
         #[arg(long, help = "Secret key file")]
         key: PathBuf,
@@ -40,14 +43,16 @@ pub enum Repo {
     },
     #[command(about = "Print the signing state of the root and the query that anchors the repository")]
     Status {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
         #[arg(long, help = "Print the result as JSON")]
         json: bool,
     },
     #[command(about = "Add packages to the catalog; publish them next")]
     Add {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
-        #[arg(required = true, value_name = "WPAK")]
+        #[arg(required = true, value_name = "WPAK", help = "Package file to add")]
         files: Vec<PathBuf>,
         #[arg(long, help = "Author id the packages must be signed by")]
         author: Option<String>,
@@ -63,52 +68,69 @@ pub enum Repo {
         about = "Unlist a package or one version: out of browsing and search, still installable by id; publish next"
     )]
     Unlist {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(long)]
+        #[arg(long, help = "Version to unlist; every version when left out")]
         version: Option<String>,
     },
     #[command(
         about = "Feature a package of the repository, signed into it, with an optional note; publish next"
     )]
     Feature {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(long)]
+        #[arg(long, help = "Short note shown with the package")]
         note: Option<String>,
     },
     #[command(about = "Stop featuring a package; publish next")]
-    Unfeature { dir: PathBuf, id: String },
+    Unfeature {
+        #[arg(help = "Repository folder")]
+        dir: PathBuf,
+        #[arg(help = "Package id")]
+        id: String,
+    },
     #[command(about = "List an unlisted package or version again; publish next")]
     ListAgain {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(long)]
+        #[arg(long, help = "Version to list again; every version when left out")]
         version: Option<String>,
     },
     #[command(about = "Revoke a package or one of its versions; publish next")]
     Revoke {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Package id")]
         id: String,
-        #[arg(long)]
+        #[arg(long, help = "Version to revoke; every version when left out")]
         version: Option<String>,
-        #[arg(long, value_parser = REASONS)]
+        #[arg(long, value_parser = REASONS, help = "Why the package is revoked")]
         reason: String,
-        #[arg(long, default_value = "")]
+        #[arg(long, default_value = "", help = "Message shown to whoever installed it")]
         message: String,
     },
     #[command(about = "Withdraw the revocation of a package or of one version; publish next")]
     Unrevoke {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Package id")]
         id: String,
         #[arg(long, help = "The version revoked on its own; without it, the revocation of every version")]
         version: Option<String>,
     },
     #[command(about = "Revoke an author key; publish next")]
     RevokeKey {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
+        #[arg(help = "Fingerprint of the author key")]
         fingerprint: String,
-        #[arg(long, value_parser = REASONS)]
+        #[arg(long, value_parser = REASONS, help = "Why the key is revoked")]
         reason: String,
     },
     #[command(about = "Sign and write the index after add or revoke")]
@@ -117,6 +139,7 @@ pub enum Repo {
     Refresh(Publish),
     #[command(about = "Write a new root from the current one and the given changes")]
     RotateRoot {
+        #[arg(help = "Repository folder")]
         dir: PathBuf,
         #[arg(
             long = "root-key",
@@ -130,7 +153,7 @@ pub enum Repo {
             help = "Public key file or text; replaces the online keys"
         )]
         online_keys: Vec<String>,
-        #[arg(long = "remove-author", value_name = "ID")]
+        #[arg(long = "remove-author", value_name = "ID", help = "Author to remove; repeat for several")]
         removed: Vec<String>,
         #[command(flatten)]
         policy: Policy,
@@ -139,7 +162,7 @@ pub enum Repo {
     },
     #[command(about = "Verify a published repository as a client would, installing nothing")]
     Verify {
-        #[arg(value_name = "URL|DIR")]
+        #[arg(value_name = "URL|DIR", help = "URL of the repository with its anchor query, or its folder")]
         url: String,
         #[arg(long, help = "Print the result as JSON")]
         json: bool,
@@ -148,6 +171,7 @@ pub enum Repo {
 
 #[derive(Args, Debug)]
 pub struct Publish {
+    #[arg(help = "Repository folder")]
     dir: PathBuf,
     #[arg(long, help = "Secret file of an online key")]
     key: PathBuf,

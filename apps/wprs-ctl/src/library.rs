@@ -1,4 +1,4 @@
-use crate::cli::{FIT, ITEM, JSON, OUTPUT, Page, Wait};
+use crate::cli::{ITEM, JSON, Page, Wait};
 use crate::daemon::job;
 use crate::input::{one, path_arg, resolve, strs};
 use crate::items::{details, search, sources, tags};
@@ -7,7 +7,6 @@ use anyhow::Result;
 use clap::{ArgGroup, Subcommand};
 use futures_util::TryFutureExt;
 use wprs_client::Client;
-use wprs_core::Fit;
 
 const DECISIONS: [&str; 7] =
     ["mature", "photosensitive", "motion", "hide_zone", "hide_language", "hide_gpu", "hide_storage"];
@@ -16,6 +15,7 @@ const DECISIONS: [&str; 7] =
 pub enum Lib {
     #[command(about = "Add a folder and scan it; prints the source uid, then the job id")]
     Add {
+        #[arg(help = "Folder to add as a library source")]
         dir: String,
         #[arg(long, help = "Leave out subfolders")]
         no_recursive: bool,
@@ -29,15 +29,19 @@ pub enum Lib {
     },
     #[command(about = "Scan one folder, or every folder when omitted")]
     Scan {
+        #[arg(help = "Source folder to scan; every source when left out")]
         source: Option<String>,
         #[command(flatten)]
         wait: Wait,
     },
     #[command(about = "Remove a folder and its items from the library")]
-    Unsource { source: String },
+    Unsource {
+        #[arg(help = "Source folder to stop watching")]
+        source: String,
+    },
     #[command(about = "Import image, video or package files")]
     Import {
-        #[arg(required = true, value_name = "FILE")]
+        #[arg(required = true, value_name = "FILE", help = "Files to copy into the library")]
         files: Vec<String>,
         #[arg(long, help = "Copy the files into the library first")]
         copy: bool,
@@ -53,7 +57,7 @@ pub enum Lib {
     },
     #[command(about = "Search the library; see wprs-ctl schema for the query keys")]
     Search {
-        #[arg(default_value = "")]
+        #[arg(default_value = "", help = "Search words and keys such as kind:scene; everything when empty")]
         query: String,
         #[command(flatten)]
         page: Page,
@@ -71,11 +75,12 @@ pub enum Lib {
     Title {
         #[arg(value_name = "ITEM", help = ITEM)]
         item: String,
+        #[arg(help = "New title")]
         title: String,
     },
     #[command(about = "Rate items from 0 to 5")]
     Rate {
-        #[arg(value_parser = clap::value_parser!(u32).range(0..=5))]
+        #[arg(value_parser = clap::value_parser!(u32).range(0..=5), help = "Rating from 0 to 5")]
         rating: u32,
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
@@ -91,9 +96,9 @@ pub enum Lib {
     Tag {
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
-        #[arg(long, value_name = "TAG", group = "change")]
+        #[arg(long, value_name = "TAG", group = "change", help = "Tag to add; repeat for several")]
         add: Vec<String>,
-        #[arg(long, value_name = "TAG", group = "change")]
+        #[arg(long, value_name = "TAG", group = "change", help = "Tag to remove; repeat for several")]
         remove: Vec<String>,
     },
     #[command(about = "List the tags with their item counts")]
@@ -102,26 +107,34 @@ pub enum Lib {
         json: bool,
     },
     #[command(about = "Rename a tag, merging it into an existing one")]
-    Retag { from: String, to: String },
+    Retag {
+        #[arg(help = "Tag to rename")]
+        from: String,
+        #[arg(help = "New name of the tag")]
+        to: String,
+    },
     #[command(about = "Print the path of the thumbnail of an item, creating it when needed")]
     Thumb {
         #[arg(value_name = "ITEM", help = ITEM)]
         item: String,
-        #[arg(long, default_value = "512", value_parser = ["256", "512", "1024"])]
+        #[arg(
+            long, default_value = "512", value_parser = ["256", "512", "1024"],
+            help = "Edge of the thumbnail in pixels"
+        )]
         size: String,
     },
     #[command(
         about = "Show mature thumbnails of packages, allow photosensitive packages to be shown, let scenes keep moving when the desktop asks for reduced motion, or hide the time zone, the language, the graphics card or storage from a web page"
     )]
     Confirm {
-        #[arg(value_parser = DECISIONS)]
+        #[arg(value_parser = DECISIONS, help = "What to allow")]
         what: String,
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
     },
     #[command(about = "Withdraw a decision made with lib confirm")]
     Unconfirm {
-        #[arg(value_parser = DECISIONS)]
+        #[arg(value_parser = DECISIONS, help = "What to ask again before allowing")]
         what: String,
         #[arg(required = true, value_name = "ITEM", help = ITEM)]
         items: Vec<String>,
@@ -132,18 +145,7 @@ pub enum Lib {
         items: Vec<String>,
     },
     #[command(about = "Show an item on the outputs")]
-    Apply {
-        #[arg(value_name = "ITEM", help = ITEM)]
-        item: String,
-        #[arg(short, long, default_value = "", help = OUTPUT)]
-        output: String,
-        #[arg(short, long, help = FIT)]
-        fit: Option<Fit>,
-        #[arg(long, conflicts_with = "fit", help = "Spread it over every screen, as --fit span")]
-        span: bool,
-        #[arg(short, long, default_value = "", help = "Preset uid or name")]
-        preset: String,
-    },
+    Apply(crate::applying::Applying),
 }
 
 pub async fn run(client: &Client, command: Lib) -> Result<()> {
@@ -188,10 +190,7 @@ pub async fn run(client: &Client, command: Lib) -> Result<()> {
             lib.unconfirm(&strs(&resolve(client, &items).await?), &what).await?
         }
         Lib::ClearData { items } => lib.clear_data(&strs(&resolve(client, &items).await?)).await?,
-        Lib::Apply { item, output, fit, span, preset } => {
-            let (uid, fit) = (one(client, &item).await?, if span { Some(Fit::Span) } else { fit });
-            crate::caution::apply(client, &uid, &output, fit.map_or("", Fit::as_str), &preset).await?
-        }
+        Lib::Apply(applying) => applying.run(client).await?,
     }
     Ok(())
 }
