@@ -83,6 +83,6 @@ fn fs_fluid(in: VertexOut) -> @location(0) vec4<f32> {
     let opaque = param(14u).x > 0.5;
     let a = select(max(c.a, dye), 1.0, opaque);
     let base = select(tone, straight(c).rgb, c.a > 1e-4 || opaque);
-    let rgb = clamp(blend_mode(u32(param(12u).x + 0.5), base, tone, dye), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb = max(blend_mode(u32(param(12u).x + 0.5), base, tone, dye), vec3<f32>(0.0));
     return vec4<f32>(rgb * a, a);
 }

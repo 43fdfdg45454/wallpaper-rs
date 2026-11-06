@@ -17,32 +17,61 @@ fn blend_set_lum(c: vec3<f32>, l: f32) -> vec3<f32> {
     return r;
 }
 
-fn blend_sat(c: vec3<f32>) -> f32 {
-    return max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+fn blend_hsl(c: vec3<f32>) -> vec3<f32> {
+    let hi = max(c.r, max(c.g, c.b));
+    let lo = min(c.r, min(c.g, c.b));
+    let d = hi - lo;
+    let l = (hi + lo) * 0.5;
+    if d <= 1e-6 {
+        return vec3<f32>(0.0, 0.0, l);
+    }
+    let s = select(d / max(2.0 - hi - lo, 1e-6), d / max(hi + lo, 1e-6), l < 0.5);
+    var h = 4.0 + (c.r - c.g) / d;
+    if c.r >= hi {
+        h = (c.g - c.b) / d;
+    } else if c.g >= hi {
+        h = 2.0 + (c.b - c.r) / d;
+    }
+    return vec3<f32>(fract(h / 6.0), s, l);
 }
 
-fn blend_set_sat(c: vec3<f32>, s: f32) -> vec3<f32> {
-    let range = blend_sat(c);
-    return select(vec3<f32>(0.0), (c - min(c.r, min(c.g, c.b))) * s / range, range > 1e-5);
+fn blend_rgb(hsl: vec3<f32>) -> vec3<f32> {
+    let l = hsl.z;
+    if hsl.y <= 0.0 {
+        return vec3<f32>(l);
+    }
+    let q = select(l + hsl.y - l * hsl.y, l * (1.0 + hsl.y), l < 0.5);
+    let p = 2.0 * l - q;
+    let t = fract(hsl.x + vec3<f32>(1.0 / 3.0, 0.0, -1.0 / 3.0));
+    let rise = p + (q - p) * 6.0 * t;
+    let fall = p + (q - p) * (2.0 / 3.0 - t) * 6.0;
+    let late = select(vec3<f32>(p), fall, 3.0 * t < vec3<f32>(2.0));
+    return select(select(late, vec3<f32>(q), 2.0 * t < vec3<f32>(1.0)), rise, 6.0 * t < vec3<f32>(1.0));
+}
+
+fn blend_hsl_mode(mode: u32, hb: vec3<f32>, hs: vec3<f32>) -> vec3<f32> {
+    let pick = vec3<bool>(mode == 13u || mode == 15u, mode == 14u || mode == 15u, mode == 16u);
+    return blend_rgb(select(hb, hs, pick));
 }
 
 fn blend_dodge(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
     let d = min(vec3<f32>(1.0), b / max(1.0 - s, vec3<f32>(1e-5)));
-    return select(d, vec3<f32>(1.0), (s >= vec3<f32>(1.0)) & (b > vec3<f32>(0.0)));
+    return select(d, vec3<f32>(1.0), s >= vec3<f32>(1.0));
 }
 
 fn blend_burn(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    let d = 1.0 - min(vec3<f32>(1.0), (1.0 - b) / max(s, vec3<f32>(1e-5)));
-    return select(d, vec3<f32>(0.0), (s <= vec3<f32>(0.0)) & (b < vec3<f32>(1.0)));
+    let d = max(vec3<f32>(0.0), 1.0 - (1.0 - b) / max(s, vec3<f32>(1e-5)));
+    return select(d, vec3<f32>(0.0), s <= vec3<f32>(0.0));
 }
 
 fn blend_hard(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    return select(1.0 - 2.0 * (1.0 - s) * (1.0 - b), 2.0 * s * b, s <= vec3<f32>(0.5));
+    return select(1.0 - 2.0 * (1.0 - s) * (1.0 - b), 2.0 * s * b, s < vec3<f32>(0.5));
 }
 
 fn blend_soft(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    let d = select(sqrt(b), ((16.0 * b - 12.0) * b + 4.0) * b, b <= vec3<f32>(0.25));
-    return select(b + (2.0 * s - 1.0) * (d - b), b - (1.0 - 2.0 * s) * b * (1.0 - b), s <= vec3<f32>(0.5));
+    let dark = 2.0 * b * s + b * b * (1.0 - 2.0 * s);
+    let light = sqrt(max(b, vec3<f32>(0.0))) * (2.0 * s - 1.0) + 2.0 * b * (1.0 - s);
+    return select(light, dark, s < vec3<f32>(0.5));
 }
 
 fn blend_reflect(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
@@ -51,7 +80,7 @@ fn blend_reflect(b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
 }
 
 fn blend_pick(mode: u32, b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
-    let low = s <= vec3<f32>(0.5);
+    let low = s < vec3<f32>(0.5);
     switch mode {
         case 0u: { return s; }
         case 1u: { return b + s; }
@@ -66,10 +95,7 @@ fn blend_pick(mode: u32, b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
         case 10u: { return b + s - 2.0 * b * s; }
         case 11u: { return blend_dodge(b, s); }
         case 12u: { return blend_burn(b, s); }
-        case 13u: { return blend_set_lum(blend_set_sat(s, blend_sat(b)), blend_lum(b)); }
-        case 14u: { return blend_set_lum(blend_set_sat(b, blend_sat(s)), blend_lum(b)); }
-        case 15u: { return blend_set_lum(s, blend_lum(b)); }
-        case 16u: { return blend_set_lum(b, blend_lum(s)); }
+        case 13u, 14u, 15u, 16u: { return blend_hsl_mode(mode, blend_hsl(b), blend_hsl(s)); }
         case 17u: { return max(b + s - 1.0, vec3<f32>(0.0)); }
         case 18u: { return min(b + s, vec3<f32>(1.0)); }
         case 19u: { return select(b, s, blend_lum(s) < blend_lum(b)); }
@@ -85,8 +111,8 @@ fn blend_pick(mode: u32, b: vec3<f32>, s: vec3<f32>) -> vec3<f32> {
         case 29u: { return min(b, s) - max(b, s) + 1.0; }
         case 30u: { return (b + s) * 0.5; }
         case 31u: { return 1.0 - abs(1.0 - b - s); }
-        case 32u: { return min(b * s / max(blend_lum(s), 1e-3), vec3<f32>(1.0)); }
-        default: { return min(2.0 * b * s, vec3<f32>(1.0)); }
+        case 32u: { return max(b.r, max(b.g, b.b)) * s; }
+        default: { return b + b * s; }
     }
 }
 

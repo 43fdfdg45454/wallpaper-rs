@@ -13,6 +13,6 @@ fn color_electric(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     let c = straight(color);
     let mode = u32(param(7u).x + 0.5);
     let k = line * mix(param(0u).a, param(1u).a, line) * mask_at(uv);
-    let rgb = clamp(blend_mode(mode, c.rgb, tone, k), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb = max(blend_mode(mode, c.rgb, tone, k), vec3<f32>(0.0));
     return vec4<f32>(rgb * c.a, c.a);
 }

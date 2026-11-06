@@ -12,7 +12,7 @@ fn color_film_grain(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
     if mode != 6u {
         let plain = from_linear(max(from_oklab(lab), vec3<f32>(0.0)));
         let s = vec3<f32>(clamp(0.5 + noise * 0.5, 0.0, 1.0));
-        rgb = clamp(blend_mode(mode, plain, s, param(0u).x * weight * mask_at(uv)), vec3<f32>(0.0), vec3<f32>(1.0));
+        rgb = max(blend_mode(mode, plain, s, param(0u).x * weight * mask_at(uv)), vec3<f32>(0.0));
     }
     return vec4<f32>(rgb * c.a, c.a);
 }

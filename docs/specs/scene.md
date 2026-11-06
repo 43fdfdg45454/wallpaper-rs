@@ -334,11 +334,12 @@ lower or higher luminance), `vivid_light` (color burn with 2S below one half, co
 2S − 1) above), `hard_mix` (1 where B + S ≥ 1, else 0), `subtract` max(0, B − S), `divide` (1 where S
 is 0, else min(1, B / S)), `reflect` (1 where S is 1, else min(1, B² / (1 − S))), `glow` (reflect with
 B and S swapped), `phoenix` min(B, S) − max(B, S) + 1, `average` (B + S) / 2, `negation`
-1 − |1 − B − S|, `tint` min(1, B × S / lum(S)), where lum is 0.3 R + 0.59 G + 0.11 B, so that the
-layer colors the backdrop without darkening it, and `diffuse_light` min(1, 2 B × S), the layer as a
-light falling on the backdrop, neutral at one half. `tint` and `diffuse_light` are approximations
-of these looks: their formulas may still change to match reference pictures, and scenes that need
-an exact result should use the other modes.
+1 − |1 − B − S|, `tint` max(B.r, B.g, B.b) × S, the layer color at the brightness of the backdrop,
+and `diffuse_light` B + B × S, the layer as a light falling on the backdrop. `hue`, `saturation`,
+`color` and `luminosity` swap the hue, saturation or lightness of B in HSL. Results are not clipped
+at 1 while mixing, so `add` and `diffuse_light` keep light above white for later layers and for
+`canvas.hdr`; only the final picture is clipped. `darker_color` and `lighter_color` ignore the
+layer `opacity`.
 
 | Layer field | Meaning | Feature |
 |-------------|---------|---------|
