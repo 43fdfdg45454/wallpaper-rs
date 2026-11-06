@@ -1,4 +1,5 @@
 use crate::bus::{self, Event};
+use crate::landing::{Landed, Settled};
 use crate::scene::qobject::SceneEditor;
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
@@ -45,23 +46,28 @@ impl SceneEditor {
         let (dir, doc) = (project.dir.clone(), project.doc.clone());
         let label = action.name();
         let job = move || crate::landing::land(&dir, doc, action);
-        self.work(
-            job,
-            Box::new(move |mut editor, landed| {
-                let recorded = {
-                    let mut this = editor.as_mut().rust_mut();
-                    let Some(project) = this.project.as_mut() else { return };
-                    crate::landing::settle(project, landed, &label)
-                };
-                match recorded {
-                    Ok(_) => {
-                        editor.as_mut().rescan();
-                        editor.changed();
-                    }
-                    Err(e) => editor.fail(e),
-                }
-            }),
-        );
+        self.work(job, Box::new(move |editor, landed| editor.landed(landed, label)));
+    }
+
+    fn landed(mut self: Pin<&mut Self>, landed: Landed, label: String) {
+        let recorded = {
+            let mut this = self.as_mut().rust_mut();
+            let Some(project) = this.project.as_mut() else { return };
+            crate::landing::settle(project, landed, &label)
+        };
+        match recorded {
+            Ok(Settled::Recorded) => {
+                self.as_mut().rescan();
+                self.changed();
+            }
+            Ok(Settled::Stale(landed)) => {
+                let Some(project) = self.project.as_ref() else { return };
+                let (dir, doc) = (project.dir.clone(), project.doc.clone());
+                let job = move || crate::landing::redo(&dir, doc, landed);
+                self.work(job, Box::new(move |editor, landed| editor.landed(landed, label)));
+            }
+            Err(e) => self.fail(e),
+        }
     }
 
     pub fn import(mut self: Pin<&mut Self>, action: Action) {

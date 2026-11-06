@@ -55,13 +55,27 @@ pub fn land(dir: &Path, doc: Value, action: Action) -> anyhow::Result<Landed> {
     Ok(Landed { placed, path, doc, ops, fresh })
 }
 
-pub fn settle(project: &mut Project, landed: Landed, label: &str) -> anyhow::Result<Vec<Op>> {
+pub enum Settled {
+    Recorded,
+    Stale(Landed),
+}
+
+pub fn redo(dir: &Path, doc: Value, landed: Landed) -> anyhow::Result<Landed> {
+    let Landed { placed, path, fresh, .. } = landed;
+    let ops = Some(assets::undone(dir, (&path, fresh), ops(dir, &doc, &placed, &path))?);
+    Ok(Landed { placed, path, doc, ops, fresh })
+}
+
+pub fn settle(project: &mut Project, landed: Landed, label: &str) -> anyhow::Result<Settled> {
+    let same = |key: &str| project.doc[key] == landed.doc[key];
+    let current = same("scene") && same("manifest");
     let Landed { placed, path, doc, ops: ready, fresh } = landed;
-    let same = |key: &str| project.doc[key] == doc[key];
-    let ops = match ready.filter(|_| same("scene") && same("manifest")) {
-        Some(ready) => Ok(ready),
-        None => ops(&project.dir, &project.doc, &placed, &path),
+    let ops = match (ready, current) {
+        (Some(ready), true) => Ok(ready),
+        (Some(_), false) => return Ok(Settled::Stale(Landed { placed, path, doc, ops: None, fresh })),
+        (None, _) => ops(&project.dir, &project.doc, &placed, &path),
     };
     let dir = project.dir.clone();
-    assets::undone(&dir, (&path, fresh), ops.and_then(|ops| project.record(label, ops)))
+    assets::undone(&dir, (&path, fresh), ops.and_then(|ops| project.record(label, ops)))?;
+    Ok(Settled::Recorded)
 }
