@@ -26,3 +26,16 @@ fn a_page_may_light_only_in_previews_or_with_the_permission_the_grant_and_lights
     let mut plain = slot(false);
     assert!(feed::lights(&mut plain).iter().all(|m| matches!(m, ToWeb::Lights { on: false, .. })));
 }
+
+#[test]
+fn a_page_takes_the_quality_its_output_chose_and_shares_a_helper_only_with_the_same_choice() {
+    let power = super::super::power::Power::new(wprs_scene::Tier::T3, false, 0);
+    let mut own = page(true, json!({}));
+    own.quality = Some(wprs_core::QualityChoice::Fixed(0));
+    let general = page(true, json!({}));
+    assert_eq!(level(power, &own), wprs_scene::Quality::Q0, "the quality of the output was ignored");
+    assert_eq!(level(power, &general), power.steady());
+    assert_ne!(own.key(), general.key(), "outputs with their own quality shared one page");
+    assert_eq!(general.key(), page(false, json!({})).key());
+    assert!(own != general, "a change of quality did not reach the page");
+}

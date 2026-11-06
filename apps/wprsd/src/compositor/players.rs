@@ -83,7 +83,7 @@ impl State {
         let status = |name: &str, o: &Output| {
             let slot = o.shown.content.video().and_then(|p| self.players.get(p));
             let scene_error = o.shown.scene.as_ref().and_then(|s| s.error.as_ref());
-            let page = o.shown.content.page().and_then(|p| self.pages.get(&p.pack.path));
+            let page = o.shown.content.page().and_then(|p| self.pages.get(&p.key()));
             let page_error = page.and_then(|p| p.error.as_ref());
             let error = slot.and_then(|s| s.error.as_ref()).or(scene_error).or(page_error).cloned();
             let stops = error.is_some();

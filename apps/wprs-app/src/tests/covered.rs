@@ -52,3 +52,10 @@ fn a_page_preview_shows_its_lights_and_gives_its_stream_back() {
     assert!(lights.contains("running: trial.opened"), "the strip was read while closed");
     assert!(text("ItemDrawer.qml").contains("lights.start(drawer.uid)"));
 }
+
+#[test]
+fn screens_that_show_a_page_choose_their_own_quality() {
+    let files = qml_files();
+    let controls = files.iter().find(|(n, _)| n == "OutputControls.qml").map(|(_, t)| t.clone()).unwrap();
+    assert!(controls.contains(r#"visible: (host.scene || host.info?.kind === "web") && host.name !== """#));
+}

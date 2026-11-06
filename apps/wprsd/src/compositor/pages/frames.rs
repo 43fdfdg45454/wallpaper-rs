@@ -12,7 +12,7 @@ use wprs_web::{FromWeb, ToWeb};
 impl State {
     pub(super) fn sync_link(&self, slot: &mut PageSlot, now: Instant) {
         let (mut out, mut files) = (Vec::new(), Vec::new());
-        let quality = self.power.steady();
+        let quality = super::level(self.power, &slot.spec);
         for view in slot.views.values_mut() {
             let (values, own) = values(view.spec.as_ref().unwrap_or(&slot.spec), &slot.salt, quality);
             files.extend(own);
@@ -76,7 +76,7 @@ impl State {
             }
         }
         for (name, output) in &mut self.outputs {
-            let Some(path) = output.shown.content.page().map(|p| p.pack.path.clone()) else { continue };
+            let Some(path) = output.shown.content.page().map(crate::pages::PageSpec::key) else { continue };
             let view = self.pages.get_mut(&path).and_then(|s| s.views.get_mut(name));
             if let Some(view) = view.filter(|v| v.fresh) {
                 view.fresh = false;

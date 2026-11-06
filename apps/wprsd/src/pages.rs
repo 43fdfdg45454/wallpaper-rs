@@ -52,12 +52,22 @@ pub struct PageSpec {
     pub files: Vec<(String, PathBuf)>,
     pub folders: Vec<(String, PathBuf, bool)>,
     pub storage: Option<PathBuf>,
+    pub quality: Option<wprs_core::QualityChoice>,
+}
+
+pub type PageKey = (PathBuf, Option<wprs_core::QualityChoice>);
+
+impl PageSpec {
+    pub fn key(&self) -> PageKey {
+        (self.pack.path.clone(), self.quality)
+    }
 }
 
 impl PartialEq for PageSpec {
     fn eq(&self, other: &PageSpec) -> bool {
-        let same = (&self.values, self.privacy, &self.files, &self.folders, &self.storage);
-        let theirs = (&other.values, other.privacy, &other.files, &other.folders, &other.storage);
+        let same = (&self.values, self.privacy, &self.files, &self.folders, &self.storage, self.quality);
+        let theirs =
+            (&other.values, other.privacy, &other.files, &other.folders, &other.storage, other.quality);
         self.pack.path == other.pack.path && same == theirs
     }
 }
@@ -133,13 +143,14 @@ impl Daemon {
         let privacy = self.privacy(&pack);
         let storage = (privacy.storage && pack.storage_kib > 0).then(|| self.page_storage(&pack.props.id));
         let storage = storage.filter(|dir| crate::store::private_dir(dir).is_ok());
-        PageSpec { pack, values, privacy, files, folders, storage }
+        PageSpec { pack, values, privacy, files, folders, storage, quality: None }
     }
 
     pub fn page_on(&self, output: &str, pack: Arc<WebPack>, shown: &mut Option<Arc<Props>>) -> PageSpec {
         let values = pack.props.values(&self.state().config.scene_values(output, &pack.props.id));
         *shown = Some(pack.props.clone());
-        self.page_spec(pack, values)
+        let quality = self.state().config.own_quality(output);
+        PageSpec { quality, ..self.page_spec(pack, values) }
     }
 
     pub fn exposes(&self, item: &wprs_library::Item) -> Vec<String> {

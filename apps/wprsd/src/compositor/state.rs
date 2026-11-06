@@ -22,7 +22,7 @@ pub(super) struct State {
     pub(super) settings: Settings,
     pub(super) outputs: BTreeMap<String, Output>,
     pub(super) players: HashMap<Reel, PlayerSlot>,
-    pub(super) pages: HashMap<PathBuf, super::pages::PageSlot>,
+    pub(super) pages: HashMap<crate::pages::PageKey, super::pages::PageSlot>,
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) status: Arc<Mutex<BTreeMap<String, OutputStatus>>>,
     pub(super) on_status: Box<dyn Fn(Vec<String>) + Send>,

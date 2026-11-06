@@ -659,8 +659,9 @@ cualquier elección los límites que protegen la memoria y el controlador: los d
 modelos que puede cargar una escena, el tamaño de las texturas y los efectos que quedan fuera por
 el presupuesto fijo o porque detuvieron la GPU, que el aviso cuenta. Las bajadas
 automáticas solo valen en `auto` o por encima del mínimo elegido, y el motivo es `user`. La app lo ofrece en *Ajustes* → *Calidad de las escenas* y en cada pantalla con
-escena, con su propio valor (*Como todas las pantallas* vuelve al general); el teléfono, en sus
-ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
+escena o página web, con su propio valor (*Como todas las pantallas* vuelve al general; una página
+toma el nivel de la pantalla que la muestra, y las pantallas con niveles distintos la ejecutan por
+separado); el teléfono, en sus ajustes. `wprs-ctl quality q3`, `wprs-ctl quality min-q1 -o DP-1`, `wprs-ctl quality none -o DP-1`
 o `wprs-ctl config playback.quality q2` y `wprs-ctl config playback.quality.DP-1 q1` lo cambian, y
 `wprs-ctl quality` muestra la elección, el nivel y el motivo de cada pantalla;
 `wprs-ctl config playback.quality.DP-1` lee el valor propio de una pantalla aunque no esté
