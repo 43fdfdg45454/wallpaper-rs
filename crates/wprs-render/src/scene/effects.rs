@@ -29,7 +29,7 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn effects(&mut self, i: usize, input: Src, rect: Rect, layer_uv: Affine) -> Src {
         let frame = self.frame;
         let list = &frame.effects[frame.draws[i].effects.clone()];
-        let (mut current, mut k, mut spare) = (input, 0, None);
+        let (mut current, mut k) = (input, 0);
         while k < list.len() {
             let n = list[k].chain.clamp(1, list.len() - k);
             let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
@@ -41,21 +41,15 @@ impl Painter<'_, '_, '_> {
             }
             let from = self.ops.len();
             let mut next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
-            let gone = match region {
-                Region::Part(r) if next != current => {
-                    next = self.narrow(from, (current, next), spare, r).unwrap_or(next);
-                    let old = std::mem::replace(&mut spare, (current != input).then_some((current, r)));
-                    [old.map(|(s, _)| s), None]
-                }
-                _ => [std::mem::take(&mut spare).map(|(s, _)| s), Some(current)],
-            };
-            for old in gone.into_iter().flatten().filter(|old| *old != input && *old != next) {
-                self.release(old);
+            if let Region::Part(r) = region
+                && next != current
+            {
+                next = self.in_place(from, (input, current, next), r).unwrap_or(next);
+            }
+            if current != input && current != next {
+                self.release(current);
             }
             (current, k) = (next, k + n);
-        }
-        if let Some((s, _)) = spare.filter(|(s, _)| *s != input && *s != current) {
-            self.release(s);
         }
         current
     }

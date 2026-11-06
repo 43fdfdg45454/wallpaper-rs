@@ -1,7 +1,7 @@
 use super::inked::Inked;
 use super::item::{channel, invert, scale_of};
 use super::paint::Painter;
-use super::{Op, Src};
+use super::{Fill, Op, Src};
 use wprs_scene::{Affine, EffectDraw, MaskMode, Wrapping};
 
 const MOST: f32 = 0.7;
@@ -74,26 +74,31 @@ impl Painter<'_, '_, '_> {
         Region::Part([a as u32, b as u32, (c - a) as u32, (d - b) as u32])
     }
 
-    pub(crate) fn narrow(
+    pub(crate) fn in_place(
         &mut self,
         from: usize,
-        (current, next): (Src, Src),
-        spare: Option<(Src, [u32; 4])>,
-        r: [u32; 4],
+        (input, current, next): (Src, Src, Src),
+        [x, y, w, h]: [u32; 4],
     ) -> Option<Src> {
-        let same = |a: Src, b: Src| self.size_of(a) == self.size_of(b);
-        let (s, [x, y, w, h]) = spare.filter(|(s, _)| same(*s, next) && same(current, next))?;
+        let size = self.size_of(current);
+        if current == input || !matches!(current, Src::Pool(_)) || size != self.size_of(next) {
+            return None;
+        }
         let mut drawn = self.ops[from..]
             .iter()
             .enumerate()
             .filter(|(_, op)| matches!(op, Op::Effect(f) if f.target == next));
         let (at, _) = drawn.next().filter(|_| drawn.next().is_none())?;
         let at = from + at;
-        let Op::Effect(f) = &mut self.ops[at] else { return None };
-        (f.target, f.load, f.scissor) = (s, true, Some(r));
-        let copy = Op::Copy { from: current, to: s, origin: [x, y], size: (w, h), at: [x, y] };
-        self.ops.insert(at, copy);
+        let Op::Effect(f) = self.ops[at] else { return None };
+        let copy = self.acquire(size)?;
+        let mut tex = self.sets[f.tex as usize];
+        tex.iter_mut().filter(|t| **t == current).for_each(|t| *t = copy);
+        let tex = self.set(tex);
+        self.ops[at] = Op::Effect(Fill { target: current, load: true, scissor: Some([x, y, w, h]), tex, ..f });
+        self.ops.insert(at, Op::Copy { from: current, to: copy, origin: [x, y], size: (w, h), at: [x, y] });
         self.release(next);
-        Some(s)
+        self.release(copy);
+        Some(current)
     }
 }
