@@ -48,3 +48,13 @@ pub(super) fn within(points: &[[f32; 2]], target: [f32; 2]) -> bool {
     let total: f32 = points.windows(2).map(|w| length(gap(w[0], w[1]))).sum();
     length(gap(points[0], target)) < total - 0.01
 }
+
+pub(super) fn allows(t: f32, room: Option<[f32; 2]>, side: f32) -> bool {
+    let Some([lo, hi]) = room else { return true };
+    let (a, b) = (t + lo, t + hi);
+    (-2..=2).any(|k| {
+        let base = k as f32 * TAU;
+        let (from, to) = if side > 0.0 { (base - PI, base) } else { (base, base + PI) };
+        b.min(to) - a.max(from) > 1e-3
+    })
+}

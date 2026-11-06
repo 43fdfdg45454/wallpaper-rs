@@ -11,6 +11,8 @@ mod far;
 mod fig;
 mod finish;
 mod heads;
+#[cfg(test)]
+mod held;
 pub(crate) mod limb;
 pub(crate) mod mount;
 mod pose;

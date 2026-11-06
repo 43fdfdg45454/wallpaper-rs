@@ -132,3 +132,22 @@ fn a_longer_chain_holds_the_same_reach_from_one_frame_to_the_next() {
         assert!(first.iter().zip(&now).all(|(a, b)| close(*a, *b, 0.01)), "{first:?} {now:?}");
     }
 }
+
+#[test]
+fn limits_of_a_longer_chain_may_bend_it_against_its_side() {
+    let cases = [
+        (json!([-150, -5]), Some("clockwise")),
+        (json!([-150, -5]), None),
+        (json!([5, 150]), Some("counterclockwise")),
+    ];
+    for (limits, bend) in cases {
+        for target in [[0.0, 30.0], [0.0, -30.0], [10.0, 20.0], [10.0, -20.0]] {
+            let mut more = json!({ "limits": { "arm": limits, "hand": limits } });
+            if let Some(bend) = bend {
+                more["bend"] = json!(bend);
+            }
+            let p = reached(target, more);
+            assert!(close(p[3], target, 0.05), "{limits} {bend:?} {target:?}: {p:?}");
+        }
+    }
+}

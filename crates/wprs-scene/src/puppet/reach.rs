@@ -24,6 +24,17 @@ pub(crate) struct Chain {
     pub limits: Vec<Option<[f32; 2]>>,
     pub points: Vec<[f32; 2]>,
     pub turns: Vec<f32>,
+    pub kept: Option<Box<Kept>>,
+    pub ran: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Kept {
+    from: Vec<[f32; 2]>,
+    states: [(f32, f32); crate::MAX_CHAIN],
+    target: [f32; 2],
+    side: f32,
+    turns: Vec<f32>,
 }
 
 pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
@@ -47,7 +58,7 @@ pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
         let n = nodes.len();
         let end = tip(rig, *nodes.last()? as usize);
         let (points, turns) = (vec![[0.0; 2]; n + 1], vec![0.0; n]);
-        Some(Chain { entry, nodes, end, goal, limits, points, turns })
+        Some(Chain { entry, nodes, end, goal, limits, points, turns, kept: None, ran: 0 })
     };
     m.rig.ik.iter().enumerate().filter_map(resolve).take(crate::MAX_CHAINS).collect()
 }
@@ -109,15 +120,38 @@ impl Puppet {
             c.turns[i] += delta;
         };
         let side = if bend == Bend::Clockwise { 1.0 } else { -1.0 };
+        if let Some(k) = c.kept.as_deref().filter(|k| {
+            k.from == c.points && k.states[..n] == states[..n] && k.target == target && k.side == side
+        }) {
+            c.turns.copy_from_slice(&k.turns);
+            c.ran = 0;
+            return;
+        }
+        let from = c.points.clone();
+        let sided: [bool; crate::MAX_CHAIN] = std::array::from_fn(|i| {
+            (1..n).contains(&i) && {
+                let t =
+                    wrap(angle(gap(c.points[i], c.points[i + 1])) - angle(gap(c.points[i - 1], c.points[i])));
+                let (now, sign) = states[i];
+                let room = c.limits[i].map(|[lo, hi]| {
+                    let (a, b) = ((lo - now) * sign, (hi - now) * sign);
+                    [a.min(b), a.max(b)]
+                });
+                super::arc::allows(t, room, side)
+            }
+        });
+        let arced = n > 2 && (1..n).all(|i| sided[i]);
+        c.ran = 0;
         let curl = |c: &mut Chain| {
             for (i, want) in super::arc::directions(&c.points, target, side).into_iter().enumerate() {
                 rotate(c, i, wrap(want - angle(gap(c.points[i], c.points[i + 1]))));
             }
         };
-        let seeded = n > 2 && !super::arc::kept(&c.points, side);
+        let seeded = arced && !super::arc::kept(&c.points, side);
         if seeded {
             curl(c);
         }
+        let mut two = false;
         if n == 2 {
             let (l1, l2) = (length(gap(c.points[0], c.points[1])), length(gap(c.points[1], c.points[2])));
             let d = length(gap(c.points[0], target));
@@ -128,18 +162,16 @@ impl Puppet {
                 rotate(c, 0, wrap(want - angle(gap(c.points[0], c.points[1]))));
                 let swing = angle(gap(c.points[1], target)) - angle(gap(c.points[1], c.points[2]));
                 rotate(c, 1, wrap(swing));
-                if c.limits.iter().all(Option::is_none) {
-                    return;
-                }
+                two = c.limits.iter().all(Option::is_none);
             }
         }
         let rounds = |c: &mut Chain| {
             for _ in 0..IK_ROUNDS {
+                c.ran += 1;
                 for i in (0..n).rev() {
                     let swing = wrap(angle(gap(c.points[i], target)) - angle(gap(c.points[i], c.points[n])));
                     let swing = match i {
-                        0 => swing,
-                        _ if n == 2 => swing,
+                        _ if !sided[i] || n == 2 => swing,
                         _ => {
                             let before = gap(c.points[i - 1], c.points[i]);
                             super::arc::sided(gap(c.points[i], c.points[i + 1]), before, swing, side)
@@ -156,11 +188,13 @@ impl Puppet {
         let (mut points, mut turns) = ([[0.0; 2]; crate::MAX_CHAIN + 1], [0.0; crate::MAX_CHAIN]);
         points[..=n].copy_from_slice(&c.points);
         turns[..n].copy_from_slice(&c.turns);
-        if !rounds(c) && n > 2 && !seeded && super::arc::within(&points[..=n], target) {
+        if !two && !rounds(c) && arced && !seeded && super::arc::within(&points[..=n], target) {
             c.points.copy_from_slice(&points[..=n]);
             c.turns.copy_from_slice(&turns[..n]);
             curl(c);
             rounds(c);
         }
+        let turns = c.turns.clone();
+        c.kept = Some(Box::new(Kept { from, states, target, side, turns }));
     }
 }
