@@ -32,7 +32,7 @@ pub(crate) fn shot(r: &Renderer, image: &GpuImage, (w, h): (u32, u32), file: &Pa
         grade: None,
     };
     r.render_layers(&mut target, &[layer], &mut pixels)?;
-    pixels.chunks_exact_mut(4).for_each(|p| p.swap(0, 2));
+    pixels.as_chunks_mut::<4>().0.iter_mut().for_each(|p| p.swap(0, 2));
     image::RgbaImage::from_raw(w, h, pixels)
         .context("the frame has the wrong size")?
         .save(file)
