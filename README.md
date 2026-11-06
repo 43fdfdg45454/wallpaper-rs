@@ -1881,6 +1881,7 @@ wprs-ctl prop preset export Noche -f noche.json -o DP-1
 wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon, en la tarjeta de render.gpu
 wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memoria con dos pantallas
+wprs-ctl scene bench escena.wpak --size 1440x3040 --quality q3 --passes --shot q3.png   # cada pasada y la imagen del último fotograma
 ```
 
 En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada

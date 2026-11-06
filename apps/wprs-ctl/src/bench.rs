@@ -1,15 +1,14 @@
 use crate::editing::dimensions;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Subcommand;
 use serde_json::json;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use wprs_format::{Limits, open};
-use wprs_render::{Renderer, SceneAssets};
-use wprs_scene::{Quality, Runtime, Spare, Wake, effective};
+use wprs_render::Renderer;
+use wprs_scene::{Quality, Runtime, Spare, Wake};
 
-use crate::benching::{ms_of, spread};
+use crate::benching::{load, ms_of, shot, spread};
 
 const WARMUP: usize = 10;
 
@@ -34,30 +33,17 @@ pub enum SceneCommand {
         tier: Option<String>,
         #[arg(long, help = "Time each render pass with GPU timestamps, where the GPU has them")]
         passes: bool,
+        #[arg(long, value_name = "FILE.png", help = "Save the last frame as a PNG image")]
+        shot: Option<PathBuf>,
     },
     #[command(flatten)]
     Author(Box<crate::author::Author>),
 }
 
-fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAssets)> {
-    let mut package =
-        open(path, &Limits::default()).with_context(|| format!("cannot open {}", path.display()))?;
-    let scene = package.scene()?;
-    let mut assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
-        .map_err(anyhow::Error::msg)?;
-    let file = path.to_owned();
-    assets.reloadable(&scene, move || {
-        let mut package = open(&file, &Limits::default()).ok()?;
-        Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
-    });
-    let values = effective(&package.manifest.properties, &[]);
-    Ok((scene, values, assets))
-}
-
 pub fn run(command: SceneCommand) -> Result<()> {
-    let (path, frames, size, fps, quality, screens, json, forced, passes) = match command {
-        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier, passes } => {
-            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier, passes)
+    let (path, frames, size, fps, quality, screens, json, forced, passes, out) = match command {
+        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier, passes, shot } => {
+            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier, passes, shot)
         }
         SceneCommand::Author(command) => return crate::authoring::run(*command),
     };
@@ -116,7 +102,10 @@ pub fn run(command: SceneCommand) -> Result<()> {
         for other in &mut others {
             r.render_scene(other, &runtime, &frame, inner, quality, &[])?;
         }
-        r.render_scene(&mut view, &runtime, &frame, inner, quality, &[])?;
+        let image = r.render_scene(&mut view, &runtime, &frame, inner, quality, &[])?;
+        if let Some(file) = out.as_deref().filter(|_| i + 1 == frames.max(1)) {
+            shot(&r, image, size, file)?;
+        }
         r.finish()?;
         render.push(start.elapsed().as_secs_f64() * 1e3);
         wake = frame.wake;

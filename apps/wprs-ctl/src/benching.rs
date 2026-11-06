@@ -1,4 +1,43 @@
+use anyhow::{Context, Result};
 use serde_json::json;
+use std::path::Path;
+use wprs_format::{Limits, open};
+use wprs_render::{GpuImage, Layer, Renderer, SceneAssets};
+
+pub(crate) fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAssets)> {
+    let mut package =
+        open(path, &Limits::default()).with_context(|| format!("cannot open {}", path.display()))?;
+    let scene = package.scene()?;
+    let mut assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
+        .map_err(anyhow::Error::msg)?;
+    let file = path.to_owned();
+    assets.reloadable(&scene, move || {
+        let mut package = open(&file, &Limits::default()).ok()?;
+        Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
+    });
+    let values = wprs_scene::effective(&package.manifest.properties, &[]);
+    Ok((scene, values, assets))
+}
+
+pub(crate) fn shot(r: &Renderer, image: &GpuImage, (w, h): (u32, u32), file: &Path) -> Result<()> {
+    let (mut target, mut pixels) = (r.create_target(w, h)?, Vec::new());
+    let layer = Layer {
+        image: Some(image),
+        fit: wprs_core::Fit::Stretch,
+        background: [0; 3],
+        opacity: 1.0,
+        uv: None,
+        relief: None,
+        flip: [false; 2],
+        grade: None,
+    };
+    r.render_layers(&mut target, &[layer], &mut pixels)?;
+    pixels.chunks_exact_mut(4).for_each(|p| p.swap(0, 2));
+    image::RgbaImage::from_raw(w, h, pixels)
+        .context("the frame has the wrong size")?
+        .save(file)
+        .with_context(|| format!("cannot write {}", file.display()))
+}
 
 pub(crate) fn spread(mut samples: Vec<f64>) -> serde_json::Value {
     samples.sort_by(f64::total_cmp);

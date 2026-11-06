@@ -10,7 +10,8 @@ with the JSON path of the field, such as `/layers/2/effects/0/params/radius is 3
 what each frame costs, how long the scene takes to load and draw its first frame, and the GPU and
 main memory it holds (`--screens 2` shows it on two screens at once; `--passes` times each render
 pass with GPU timestamps, where the GPU has them inside command encoders, every 15th frame, and lists
-the passes from the dearest, as the performance report of the phone does).
+the passes from the dearest, as the performance report of the phone does; `--shot frame.png` saves
+the last frame, so two builds can be compared picture by picture).
 
 ```json
 {
