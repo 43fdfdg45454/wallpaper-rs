@@ -16,6 +16,7 @@ Item {
         "rotation": 0,
         "tilt": [0, 0],
         "z": 0,
+        "corners": null,
         "locked": true
     }
     readonly property bool chosen: page.editor.selected === modelData.pointer
@@ -59,7 +60,7 @@ Item {
         color: "transparent"
         border.color: gizmo.chosen ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
         border.width: gizmo.chosen ? 2 : 1
-        opacity: gizmo.chosen ? 1 : 0.5
+        opacity: (gizmo.chosen ? 1 : 0.5) * (gizmo.modelData.corners ? 0.4 : 1)
 
         HoverHandler {
             id: hover
@@ -120,6 +121,10 @@ Item {
 
     SceneGizmoKnobs {
         anchors.fill: parent
+        gizmo: gizmo
+    }
+
+    SceneGizmoLean {
         gizmo: gizmo
     }
 

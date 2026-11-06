@@ -1977,7 +1977,9 @@ otra página no cierra un editor con cambios sin guardar.
   amplían, la rueda o un arrastre con el botón central o el derecho desplazan. Una capa sin
   bloquear se arrastra directamente, y la elegida gira, escala, se inclina en profundidad (asa
   redonda del borde izquierdo, `transform.tilt`) y se acerca o aleja (rombo de abajo,
-  `transform.z`) con sus asas, que escriben con la acción `layer` como `wprs-ctl scene layer`; en
+  `transform.z`) con sus asas, y una capa inclinada o alejada muestra en línea discontinua el
+  contorno con la misma perspectiva con que la dibuja la escena; las asas escriben con la acción
+  `layer` como `wprs-ctl scene layer`; en
   un valor animado ponen una clave en el cabezal, y con *Escribir sobre las claves* de la barra
   dejan un valor fijo encima de las claves o enlaces (`--replace`); un arrastre que
   empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas

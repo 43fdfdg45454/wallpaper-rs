@@ -653,7 +653,10 @@ range, and never reads the media players or needs the `media` grant.
 
 The canvas draws the outline of each layer with handles to turn, scale, tilt in depth
 (`transform.tilt`, a round handle on the left edge: up and down tilt around the width, sideways
-around the height) and lift (`transform.z`, a diamond below) the selected one, and
+around the height) and lift (`transform.z`, a diamond below) the selected one, a dashed outline of
+a tilted or lifted layer where the scene draws it (`Gizmo.corners`, the four corners of its box
+through the same perspective as the scene: `canvas.perspective`, or the distance that shows the
+canvas at the field of view of `camera3d`, 45° by default), and
 guides for 16:9, 21:9, 32:9, 4:3, 16:10 and 9:16 screens. *Screens* previews the scene spread over
 several screens: two or three side by side, two stacked, or the user's own layout as the daemon
 reports it (`GetState().outputs[x].mm`). It frames the part of the canvas that each screen shows

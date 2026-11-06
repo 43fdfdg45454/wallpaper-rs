@@ -3,6 +3,7 @@ use crate::keys::value_at;
 use serde::Serialize;
 use serde_json::Value;
 use std::path::Path;
+use wprs_scene::Lean;
 
 static NULL: Value = Value::Null;
 
@@ -17,6 +18,7 @@ pub struct Gizmo {
     pub scale: [f64; 2],
     pub tilt: [f64; 2],
     pub z: f64,
+    pub corners: Option<[[f64; 2]; 4]>,
     pub locked: bool,
     pub kind: String,
 }
@@ -61,9 +63,32 @@ fn size(dir: &Path, doc: &Value, layer: &Value, canvas: [f64; 2], t: f64) -> [f6
     }
 }
 
+fn distance(doc: &Value, canvas: [f64; 2], t: f64) -> f64 {
+    let fov = value_at(doc.pointer("/scene/camera3d/fov").unwrap_or(&NULL), t).as_f64().unwrap_or(45.0);
+    let found = doc.pointer("/scene/canvas/perspective").and_then(Value::as_f64);
+    found.unwrap_or_else(|| canvas[1] / 2.0 / (fov.clamp(1.0, 179.0).to_radians() / 2.0).tan()).max(100.0)
+}
+
+fn leaned(g: &Gizmo, canvas: [f64; 2], distance: f64) -> Option<[[f64; 2]; 4]> {
+    if g.tilt == [0.0; 2] && g.z == 0.0 {
+        return None;
+    }
+    let center = [g.offset[0] + g.position[0], g.offset[1] + g.position[1]];
+    let half = [g.size[0] * g.scale[0] / 2.0, g.size[1] * g.scale[1] / 2.0];
+    let (s, c) = g.rotation.to_radians().sin_cos();
+    let tilt = g.tilt.map(|a| a.clamp(-89.0, 89.0) as f32);
+    let view = ([canvas[0] as f32 / 2.0, canvas[1] as f32 / 2.0], distance as f32);
+    let lean = Lean::tilted(center.map(|v| v as f32), tilt, g.z.clamp(-1e5, 1e5) as f32, view);
+    Some([[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0], [-1.0, 1.0]].map(|[u, v]| {
+        let (x, y) = (u * half[0], v * half[1]);
+        let at = [center[0] + x * c - y * s, center[1] + x * s + y * c].map(|v| v as f32);
+        lean.apply(at).map(f64::from)
+    }))
+}
+
 pub fn gizmos(dir: &Path, doc: &Value, t: f64) -> Vec<Gizmo> {
     let canvas = pair(&doc.pointer("/scene/canvas/size").cloned().unwrap_or_default(), [1920.0, 1080.0]);
-    let locked = locked(doc);
+    let (locked, far) = (locked(doc), distance(doc, canvas, t));
     let mut out = Vec::new();
     let mut stack: Vec<(String, [f64; 2])> = vec![("/scene/layers".into(), [0.0; 2])];
     while let Some((list, parent)) = stack.pop() {
@@ -98,19 +123,22 @@ pub fn gizmos(dir: &Path, doc: &Value, t: f64) -> Vec<Gizmo> {
             if kind == "group" {
                 stack.push((format!("{pointer}/layers"), [offset[0] + position[0], offset[1] + position[1]]));
             }
-            out.push(Gizmo {
+            let mut gizmo = Gizmo {
                 locked: locked.contains(&id),
                 size: size(dir, doc, layer, canvas, t),
                 rotation: value_at(&transform["rotation"], t).as_f64().unwrap_or(0.0),
                 scale: pair(&value_at(&transform["scale"], t), [1.0; 2]),
                 tilt: pair(&value_at(&transform["tilt"], t), [0.0; 2]),
                 z: value_at(&transform["z"], t).as_f64().unwrap_or(0.0),
+                corners: None,
                 id,
                 pointer,
                 offset,
                 position,
                 kind,
-            });
+            };
+            gizmo.corners = leaned(&gizmo, canvas, far);
+            out.push(gizmo);
         }
     }
     out
