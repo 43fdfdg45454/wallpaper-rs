@@ -64,7 +64,7 @@ output HEADLESS-2 mode --custom 640x360@60Hz scale 1.5 pos 640 0
 output HEADLESS-3 mode --custom 480x270@120Hz
 for_window [app_id="foot"] fullscreen enable
 EOF
-sway -d -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
+sway --unsupported-gpu -d -c "$WORK/sway.conf" >"$WORK/sway.log" 2>&1 & sway=$!; pids+=("$sway")
 wait_for 10 compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock" || fail "sway did not start"
 SWAYSOCK=$(compgen -G "$XDG_RUNTIME_DIR/sway-ipc.*.sock")
 WAYLAND_DISPLAY=$(basename "$(compgen -G "$XDG_RUNTIME_DIR/wayland-[0-9]")")
