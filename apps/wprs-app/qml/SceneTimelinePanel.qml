@@ -104,7 +104,7 @@ Kirigami.Dialog {
 
         QQC2.CheckBox {
             text: App.tr("Blend the end into the start")
-            enabled: (panel.line?.loop ?? "once") !== "once"
+            enabled: panel.line?.loop === "repeat"
             checked: panel.line?.wrap === true
             onToggled: panel.put({
                     "wrap": checked

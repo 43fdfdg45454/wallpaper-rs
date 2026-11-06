@@ -28,11 +28,15 @@ fn timelines_are_added_timed_renamed_and_removed_with_the_values_they_drive() {
         json!({"timeline": {"id": "opening", "fps": 500}}),
         json!({"timeline": {"id": "opening", "duration": 2, "frames": 10}}),
         json!({"timeline": {"id": "opening", "speed": 900}}),
-        json!({"timeline": {"id": "opening", "loop": "once"}}),
+        json!({"timeline": {"id": "opening", "loop": "once", "wrap": true}}),
+        json!({"timeline": {"id": "opening", "loop": "pingpong", "wrap": true}}),
         json!({"timeline": {"id": "opening", "trigger": "never_heard_of"}}),
     ] {
         refused(&mut p, bad);
     }
+    act(&mut p, json!({"timeline": {"id": "opening", "loop": "pingpong"}})).unwrap();
+    let line = at(&p, "/scene/timelines/0");
+    assert_eq!((&line["loop"], line.get("wrap")), (&json!("pingpong"), None), "leaving repeat drops wrap");
     act(&mut p, json!({"timeline": {"id": "opening", "remove": true}})).unwrap();
     assert_eq!(at(&p, "/scene/timelines"), json!([]));
     assert!(at(&p, "/scene/layers/0/opacity").get("timeline").is_none());

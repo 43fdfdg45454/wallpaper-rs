@@ -75,6 +75,9 @@ fn fields(line: &mut Map<String, Value>, e: &TimelineEdit) -> Result<()> {
     }
     if let Some(r) = e.repeat {
         line.insert("loop".into(), json!(r));
+        if line["loop"] != "repeat" && e.wrap != Some(true) {
+            line.remove("wrap");
+        }
     }
     if let Some(on) = e.autoplay {
         line.insert("autoplay".into(), json!(on));
