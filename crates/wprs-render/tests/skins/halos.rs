@@ -41,3 +41,16 @@ fn a_see_through_part_in_front_shows_the_part_behind_it_without_a_halo_in_any_or
         render(r, scene(layer(json!({ "scale": 0, "sort": false })), colored(4.0, solid)), 0.0, Quality::Q3);
     assert!(rgb(&near, 32, 32)[0] > 200 && rgb(&near, 32, 32)[1] < 20, "{:?}", rgb(&near, 32, 32));
 }
+
+#[test]
+fn at_one_depth_the_part_drawn_later_covers_the_soft_pixels_of_the_one_before() {
+    let Some(r) = renderer() else { return };
+    let draw =
+        |colors| render(r, scene(layer(json!({ "scale": 0 })), colored(0.0, colors)), 0.0, Quality::Q3);
+    let covered = draw(SEE_THROUGH);
+    let [red, green, _] = rgb(&covered, 32, 32);
+    assert!(red < 20 && green > 200, "the soft back part stays under the front one: {:?}", [red, green]);
+    let over = draw([[0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 0.0, 0.5]]);
+    let [red, green, _] = rgb(&over, 32, 32);
+    assert!(red > 60 && green > 60, "a soft front part still shows what lies under it: {:?}", [red, green]);
+}

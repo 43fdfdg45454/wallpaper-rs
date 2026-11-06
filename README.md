@@ -1303,7 +1303,8 @@ perspectiva de `canvas.perspective` (también bajo la inclinación de la capa y 
 que la contienen, siempre a lo largo de la cara de la capa tal como la giran) y las caras vistas por
 detrás se ocultan si se pide; primero se dibujan los píxeles opacos de todas las piezas, que marcan
 la profundidad, y después los suaves, que solo la consultan, así los bordes suaves de una pieza
-cercana dejan ver lo de atrás sin halo en cualquier orden, aunque las piezas se crucen; además las
+cercana dejan ver lo de atrás sin halo en cualquier orden, aunque las piezas se crucen, y entre
+piezas a la misma profundidad la que va después tapa los bordes suaves de la anterior; además las
 piezas se ordenan solas de atrás hacia adelante según la profundidad media de sus vértices en la
 pose, formas mezcladas incluidas (se puede apagar por capa con `depth.sort: false`), para que lo
 suave sobre lo suave se mezcle en orden. El panel de la malla en el

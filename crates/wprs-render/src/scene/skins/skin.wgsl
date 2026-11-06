@@ -2,6 +2,7 @@ struct Bones { m: array<vec4<f32>, 768> };
 struct Pieces { box_size: vec4<f32>, lift: vec4<f32>, data: array<vec4<f32>, 384> };
 struct In {
     @builtin(vertex_index) index: u32,
+    @builtin(instance_index) order: u32,
     @location(0) pos: vec3<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) joints: vec4<f32>,
@@ -10,6 +11,8 @@ struct In {
 };
 struct Out { @builtin(position) position: vec4<f32>, @location(0) uv: vec2<f32>, @location(1) color: vec4<f32> };
 struct Solid { @location(0) color: vec4<f32>, @builtin(frag_depth) depth: f32 };
+
+const ORDER: f32 = 2.384185791e-7;
 
 @group(0) @binding(0) var<uniform> bones: Bones;
 @group(0) @binding(1) var<uniform> pieces: Pieces;
@@ -43,7 +46,7 @@ fn vs_skin(v: In) -> Out {
     }
     let lift = pieces.lift.xyz * moved.z;
     let ndc = (moved.xy + lift.xy) / max(1.0 + lift.z, 0.05) / (pieces.box_size.xy * 0.5);
-    let depth = clamp(0.5 - moved.z * pieces.box_size.z, 0.0, 1.0);
+    let depth = clamp(0.5 - moved.z * pieces.box_size.z - f32(v.order) * ORDER, 0.0, 1.0);
     return Out(vec4<f32>(ndc, depth, 1.0), v.uv, pieces.data[k + 5u]);
 }
 
