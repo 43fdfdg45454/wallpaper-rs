@@ -40,7 +40,7 @@ fn fades_never_outrun_a_known_display_or_the_battery_cap() {
     };
     let every = |fps: u32| Duration::from_secs(1) / fps;
     let fades = [fade(20, false), fade(0, false), fade(144, false), fade(144, true)];
-    assert_eq!(fades, [every(20), every(60), every(144), every(30)]);
+    assert_eq!(fades, [every(20), every(60), every(144), every(60)]);
 }
 
 #[test]
@@ -114,7 +114,8 @@ fn a_scene_that_follows_the_display_asks_for_120_fps_on_a_120_hz_stream() {
     let every = |fps: u32| Some(Duration::from_secs(1) / fps);
     let mains = Power::new(Tier::T3, false, 0);
     assert_eq!(cadence(mains), (every(120), every(120)));
-    assert_eq!(cadence(Power { on_battery: true, ..mains }), (every(30), every(30)));
+    assert_eq!(cadence(Power { on_battery: true, ..mains }), (every(60), every(60)));
+    assert_eq!(cadence(Power { on_battery: true, max_fps: 30, ..mains }), (every(30), every(30)));
     assert_eq!(cadence(Power { max_fps: 60, ..mains }), (every(60), every(60)));
 }
 

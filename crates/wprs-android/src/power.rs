@@ -3,7 +3,7 @@ use wprs_core::QualityChoice;
 use wprs_scene::{Quality, Tier};
 
 const CHARGING_FPS: u32 = 60;
-pub(crate) const BATTERY_FPS: u32 = 30;
+pub(crate) const BATTERY_FPS: u32 = 60;
 const MAX_FPS: u32 = 60;
 const PREVIEW_FPS: u32 = 30;
 const HOT_FPS: u32 = 10;

@@ -2,7 +2,9 @@ use crate::{Quality, Runtime, Tier};
 use wprs_core::QualityChoice;
 use wprs_core::settings::fps::DISPLAY;
 
-const BATTERY: u32 = 30;
+const BATTERY: u32 = 60;
+const SAVER: u32 = 30;
+const SLOW_VIDEO: u32 = 30;
 const UNKNOWN: u32 = 60;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
@@ -42,17 +44,14 @@ impl Budget {
         Budget { tier, on_battery, max_fps, saver: false, heat: Heat::Cool, choice: QualityChoice::Auto }
     }
 
-    fn strained(&self) -> bool {
-        self.on_battery || self.saver
-    }
-
     pub fn quality(&self, runtime: &Runtime) -> Quality {
         self.level(runtime).0
     }
 
     fn chosen(&self, refresh: u32) -> u32 {
         match self.max_fps {
-            DISPLAY if self.strained() => BATTERY,
+            DISPLAY if self.saver => SAVER,
+            DISPLAY if self.on_battery => display(refresh).min(BATTERY),
             DISPLAY => display(refresh),
             fps => fps,
         }
@@ -69,7 +68,7 @@ impl Budget {
 
     pub fn video(&self, refresh: u32) -> u32 {
         let chosen = match self.max_fps {
-            DISPLAY if self.tier == Tier::T0 => BATTERY,
+            DISPLAY if self.tier == Tier::T0 => SLOW_VIDEO,
             _ => self.chosen(refresh),
         };
         known(refresh, chosen).max(1)
@@ -117,7 +116,8 @@ mod tests {
             [(Tier::T0, light), (Tier::T2, light), (Tier::T2, heavy), (Tier::T2, None), (Tier::T3, heavy)];
         assert_eq!(mains.map(|(tier, cost)| rate(tier, false, display, 170, cost)), [24, 170, 60, 60, 170]);
         let tiers = [Tier::T0, Tier::T2, Tier::T3];
-        assert_eq!(tiers.map(|tier| rate(tier, true, display, 170, light)), [15, 30, 30]);
+        assert_eq!(tiers.map(|tier| rate(tier, true, display, 170, light)), [24, 60, 60]);
+        assert_eq!([50, 0].map(|hz| rate(Tier::T3, true, display, hz, None)), [50, 60]);
         assert_eq!(tiers.map(|tier| rate(tier, true, 144, 170, light)), [24, 144, 144]);
         assert_eq!([300, 0, 60].map(|hz| rate(Tier::T3, false, display, hz, None)), [240, 60, 60]);
         assert_eq!(
@@ -136,7 +136,7 @@ mod tests {
         let video =
             |tier, on_battery, max_fps, refresh| Budget::new(tier, on_battery, max_fps).video(refresh);
         assert_eq!([Tier::T0, Tier::T2, Tier::T3].map(|tier| video(tier, false, 0, 144)), [30, 144, 144]);
-        assert_eq!([Tier::T0, Tier::T3].map(|tier| video(tier, true, 0, 144)), [30, 30]);
+        assert_eq!([Tier::T0, Tier::T3].map(|tier| video(tier, true, 0, 144)), [30, 60]);
         assert_eq!(
             [(25, 0), (60, 0), (60, 24), (0, 0)].map(|(fps, hz)| video(Tier::T0, false, fps, hz)),
             [25, 60, 24, 30]
@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn phones_on_battery_get_a_lower_level_and_rate() {
+    fn phones_on_battery_get_a_lower_level_and_keep_sixty() {
         let light = runtime(0);
         let budget = |on_battery| Budget::new(Tier::T1, on_battery, 60);
         assert_eq!((budget(false).quality(&light), budget(true).quality(&light)), (Quality::Q2, Quality::Q1));
@@ -166,7 +166,7 @@ mod tests {
             (60, 60)
         );
         let dear = Budget { max_fps: wprs_core::settings::fps::DISPLAY, ..budget(true) };
-        assert_eq!(dear.fps(&light, Quality::Q1, 0), 30);
+        assert_eq!(dear.fps(&light, Quality::Q1, 0), 60);
         let capped = Budget { max_fps: 10, ..budget(true) };
         assert_eq!(capped.fps(&light, Quality::Q0, 0), 10);
     }

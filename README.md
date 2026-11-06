@@ -353,7 +353,7 @@ mismo modelo y la misma lógica de rotación que el escritorio.
 
 La pestaña *Ajustes* elige cómo se ajustan las imágenes que no tienen ajuste propio y los vídeos
 (rellenar, imagen completa, estirar o centrar), el fundido entre fondos, el sonido de los vídeos,
-los fotogramas por segundo con batería (30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
+los fotogramas por segundo con batería (60, 30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
 colores del sistema y los gráficos (automático, Vulkan u OpenGL ES). Debajo, el diagnóstico muestra
 la GPU, los fotogramas dibujados y por segundo, el límite que se aplica en ese momento, el estado de
 carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono (y si se midió en su
@@ -553,7 +553,7 @@ con ese permiso; sin él, tocar la vista previa no le llega a la escena.
 
 Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
 ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
-mucho a los fotogramas por segundo elegidos (30 con batería y 60 con el cargador si no se cambian, y
+mucho a los fotogramas por segundo elegidos (60 con batería y con el cargador si no se cambian, y
 30 en la vista previa), se detienen con el ahorro de energía o con poca batería y bajan cuando el
 teléfono se calienta. Los vídeos se pausan con el ahorro de energía, con poca batería o con el
 teléfono muy caliente. Los colores del sistema (Material You) salen de la imagen o del primer
@@ -602,11 +602,11 @@ bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes 
 `playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app):
 con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la que da el
 compositor al presentar cada superficie o la del modo de `wl_output`, la de RandR en X11 o, en
-Plasma, la que da KWin) y con batería a 30 fotogramas por
-segundo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
-GPU pone su propio límite: el render por software se queda en 24 (15 con batería), una GPU
-integrada en 60 (30 con batería) salvo escenas ligeras con corriente, y una dedicada sigue a la
-pantalla hasta 240 (60 con batería). Los vídeos se quedan en 30 con `display` y render por
+Plasma, la que da KWin) y con batería a esa frecuencia hasta 60 fotogramas por
+segundo, porque la batería baja la calidad (resolución y efectos) y no el ritmo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
+GPU pone su propio límite: el render por software se queda en 24, una GPU
+integrada en 60 salvo escenas ligeras, y una dedicada sigue a la pantalla hasta 240 (60 con
+batería). Los vídeos se quedan en 30 con `display` y render por
 software y nunca pasan de sus propios fotogramas, nada se dibuja si nada cambia y `wprs-ctl state`
 muestra la frecuencia (`refresh`) y el tope (`fps`) de cada pantalla.
 

@@ -136,7 +136,7 @@ fn the_library_imports_rotates_and_keeps_settings() {
     assert!(settings::setting("volume", None).is_err());
     assert_eq!(settings::setting("transition.kind", Some("none")).unwrap(), "none");
     assert!(settings::look(false).fade.is_zero());
-    assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "30");
+    assert_eq!(settings::setting("playback.max_fps", None).unwrap(), "60");
     graded::each_screen_has_its_own_filter();
     reeled::video_settings_play_on_the_phone();
     variants::presets_set_the_values_of_their_base();
