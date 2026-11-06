@@ -87,9 +87,9 @@ impl Engine {
     }
 
     pub(crate) fn visible(&mut self, shown: bool) {
-        self.hidden = !shown;
-        if !self.preview {
-            crate::perf::split(self.lock);
+        let was = !std::mem::replace(&mut self.hidden, !shown);
+        if !self.preview && was != shown {
+            crate::perf::spans::show(self.lock, shown);
         }
         if !shown {
             self.forget_old_gpu();

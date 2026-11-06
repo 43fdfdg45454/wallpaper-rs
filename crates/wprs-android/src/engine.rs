@@ -73,8 +73,8 @@ impl Engine {
     pub(crate) fn open(window: NativeWindow, preview: bool, lock: bool, visible: bool) -> Self {
         let size = size(window.width(), window.height());
         let kept = parked::take(preview, lock);
-        if !preview {
-            crate::perf::split(lock);
+        if !preview && visible {
+            crate::perf::spans::show(lock, true);
         }
         let (stage, image, raised, epoch) =
             kept.map_or((None, None, None, 0), |k| (k.stage, k.image, k.raised, k.epoch));
@@ -122,8 +122,9 @@ impl Engine {
 
     pub(crate) fn screen(&mut self, lock: bool) {
         if self.lock != lock {
-            if !self.preview {
-                crate::perf::split(lock);
+            if !self.preview && !self.hidden {
+                crate::perf::spans::show(self.lock, false);
+                crate::perf::spans::show(lock, true);
             }
             (self.lock, self.checked, self.dirty, self.tilted) =
                 (lock, (0, 0, (0, 0)), true, Tilted::default());

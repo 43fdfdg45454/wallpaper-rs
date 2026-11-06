@@ -43,37 +43,45 @@ fn spread(mut values: Vec<f32>) -> String {
     )
 }
 
-fn latest(now: i64) -> Option<(usize, Vec<Frame>, Shown)> {
+fn latest(now: i64) -> Option<(usize, Vec<Frame>, Shown, f64)> {
     log(|log| {
-        let recent = |s: &super::Screen| s.frames.back().map(|f| f.at).filter(|at| now - at <= WINDOW_NS);
-        let tag =
-            (0..2).filter(|&t| recent(&log.screens[t]).is_some()).max_by_key(|&t| recent(&log.screens[t]))?;
+        let recent = |s: &super::Screen| {
+            s.frames.back().map(|f| f.at).max(s.spans.last(now)).filter(|at| now - at <= WINDOW_NS)
+        };
+        let tag = (0..2).filter_map(|t| recent(&log.screens[t]).map(|at| (at, t))).max()?.1;
         let screen = &log.screens[tag];
         let frames = screen.frames.iter().filter(|f| now - f.at <= WINDOW_NS).copied().collect();
-        Some((tag, frames, screen.shown))
+        Some((tag, frames, screen.shown, screen.spans.seconds(now)))
     })
 }
 
+fn rate(count: usize, seconds: f64) -> f64 {
+    if seconds > 0.0 { count as f64 / seconds } else { 0.0 }
+}
+
 pub(super) fn written(now: i64) -> String {
-    let Some((tag, frames, shown)) = latest(now) else {
+    let Some((tag, frames, shown, seen)) = latest(now) else {
         return "frames       none of a shown wallpaper in the last 30 s\n".into();
     };
     let mut text = String::new();
     let gaps: Vec<f32> =
         frames.windows(2).filter(|w| !w[1].fresh).map(|w| (w[1].at - w[0].at) as f32 / 1e6).collect();
-    let span = gaps.iter().map(|&g| f64::from(g)).sum::<f64>() / 1e3;
-    let fps = if span > 0.0 { gaps.len() as f64 / span } else { 0.0 };
+    let animating = gaps.iter().map(|&g| f64::from(g)).sum::<f64>() / 1e3;
+    let seen = seen.max(animating);
     let runs = frames.iter().enumerate().filter(|(i, f)| *i == 0 || f.fresh).count();
     let of = |pick: fn(&Frame) -> f32| spread(frames.iter().map(pick).collect());
     let mean = |pick: fn(&Frame) -> u32| {
         frames.iter().map(|f| pick(f) as f32).sum::<f32>() / frames.len().max(1) as f32
     };
     let _ = writeln!(text, "screen       {}, the one shown last", SCREENS[tag]);
-    let _ = writeln!(
-        text,
-        "frames       {} presented in {span:.1} s shown of the last 30 s ({runs} runs), {fps:.1} per second",
-        frames.len()
-    );
+    let _ = writeln!(text, "frames       {} presented in the last 30 s ({runs} runs)", frames.len());
+    let _ = writeln!(text, "time         {seen:.1} s shown, {animating:.1} s animating");
+    let (per_shown, per_moving) = (rate(frames.len(), seen), rate(gaps.len(), animating));
+    let _ =
+        writeln!(text, "rate         {per_shown:.1} per second shown, {per_moving:.1} per second animating");
+    if frames.is_empty() {
+        return text;
+    }
     let (mode, latency) = shown.present;
     let _ = writeln!(
         text,

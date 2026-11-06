@@ -192,8 +192,11 @@ or the lock screen presents while it is visible (never a preview) keeps its time
 callback after the vsync, the time of the whole frame loop, the processor time of the scene, of
 encoding and of presenting, its GPU time, passes, draws, allocations and the refresh rate of the
 display, and every 15th frame times each pass, as `wprs-ctl scene bench --passes` does. A button
-copies a report of the last 30 seconds for the screen shown last: hiding the wallpaper starts a new
-run, and the rate and the intervals count only the time it was shown. It also gives the level, its
+copies a report of the last 30 seconds for the screen shown last: it gives the frames presented,
+the seconds the screen was shown (from the moment it became visible to the moment it was hidden,
+while any engine showed it) and the seconds it was animating (between frames of the same run,
+since hiding the wallpaper starts a new run), and the rate both per second shown and per second
+animating, so a wallpaper that stays still while shown lowers the first one. It also gives the level, its
 reason, the render and screen sizes, the rate, its cap and the present mode. With the switch off a
 frame costs one atomic read and nothing is measured.
 

@@ -5,6 +5,7 @@ use std::time::Instant;
 use wprs_scene::{Quality, Tier, Why};
 
 pub(crate) mod report;
+pub(crate) mod spans;
 
 const WINDOW_NS: i64 = 30_000_000_000;
 const MOST: usize = 8_192;
@@ -46,6 +47,7 @@ struct Screen {
     frames: VecDeque<Frame>,
     shown: Shown,
     split: bool,
+    spans: spans::Spans,
 }
 
 #[derive(Default)]
@@ -69,17 +71,14 @@ pub(crate) fn record(on: bool) {
     if ON.swap(on, Relaxed) != on {
         log(|log| *log = Log::default());
         wprs_render::reset_profiled_passes();
+        if on {
+            spans::reopen(monotonic());
+        }
     }
 }
 
 pub(crate) fn measures(asked: bool, preview: bool, hidden: bool) -> bool {
     asked && !preview && !hidden
-}
-
-pub(crate) fn split(lock: bool) {
-    if on() {
-        log(|log| log.screens[usize::from(lock)].split = true);
-    }
 }
 
 pub(crate) fn staged(

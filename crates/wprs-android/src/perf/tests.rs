@@ -1,4 +1,5 @@
 use super::report::{report, written};
+use super::spans::{mark, show};
 use super::*;
 use std::sync::MutexGuard;
 
@@ -14,6 +15,7 @@ fn fresh() -> MutexGuard<'static, ()> {
 
 fn shown(lock: bool, from: i64, seconds: i64, fps: i64, hz: f32) -> i64 {
     let stats = wprs_render::SceneStats { passes: 8, draws: 12, gpu_us: 2_500, ..Default::default() };
+    mark(usize::from(lock), true, from);
     let mut at = from;
     for i in 0..=seconds * fps {
         at = from + i * SECOND / fps;
@@ -30,8 +32,9 @@ fn the_report_counts_the_frames_of_the_last_thirty_seconds_and_says_how_long_eac
     let end = shown(false, 0, 40, 60, 60.0);
     let text = written(end);
     record(false);
+    assert!(text.contains("1801 presented in the last 30 s (1 runs)"), "{text}");
     assert!(
-        text.contains("1801 presented in 30.0 s shown of the last 30 s (1 runs), 60.0 per second"),
+        text.contains("30.0 s shown, 30.0 s animating") && text.contains("60.0 per second shown"),
         "{text}"
     );
     assert!(text.contains("T2 Q2, full") && text.contains("fifo with latency 1"), "{text}");
@@ -44,25 +47,27 @@ fn the_report_counts_the_frames_of_the_last_thirty_seconds_and_says_how_long_eac
 fn time_the_wallpaper_was_hidden_does_not_lower_the_rate() {
     let _serial = fresh();
     let before = shown(false, 0, 10, 60, 60.0);
-    split(false);
+    mark(0, false, before);
     let end = shown(false, before + 12 * SECOND, 8, 60, 60.0);
     let text = written(end);
     record(false);
-    assert!(
-        text.contains("1082 presented in 18.0 s shown of the last 30 s (2 runs), 60.0 per second"),
-        "{text}"
-    );
+    assert!(text.contains("1082 presented in the last 30 s (2 runs)"), "{text}");
+    assert!(text.contains("18.0 s shown, 18.0 s animating"), "{text}");
+    assert!(text.contains("60.1 per second shown, 60.0 per second animating"), "{text}");
     assert!(text.contains("interval     mean 16.67") && text.contains("max 16.67 ms"), "{text}");
 }
 
 #[test]
-fn the_window_ends_now_and_not_at_the_last_frame() {
+fn the_window_ends_now_and_a_still_wallpaper_still_counts_as_shown() {
     let _serial = fresh();
     let end = shown(false, 0, 10, 60, 60.0);
-    let text = written(end + 25 * SECOND);
-    let gone = written(end + 31 * SECOND);
+    let still = written(end + 25 * SECOND);
+    mark(0, false, end + 25 * SECOND);
+    let gone = written(end + 56 * SECOND);
     record(false);
-    assert!(text.contains("301 presented in 5.0 s shown of the last 30 s"), "{text}");
+    assert!(still.contains("301 presented in the last 30 s"), "{still}");
+    assert!(still.contains("30.0 s shown, 5.0 s animating"), "{still}");
+    assert!(still.contains("10.0 per second shown, 60.0 per second animating"), "{still}");
     assert!(gone.contains("none of a shown wallpaper in the last 30 s"), "{gone}");
 }
 
@@ -70,16 +75,21 @@ fn the_window_ends_now_and_not_at_the_last_frame() {
 fn the_report_is_for_the_screen_shown_last_and_keeps_home_and_lock_apart() {
     let _serial = fresh();
     let lock = shown(true, 0, 5, 30, 120.0);
+    mark(1, false, lock);
     let home = shown(false, lock + SECOND, 5, 60, 60.0);
     let text = written(home);
-    split(true);
+    mark(0, false, home);
     let end = shown(true, home + SECOND, 5, 30, 120.0);
     let again = written(end);
     record(false);
     assert!(text.contains("screen       home, the one shown last"), "{text}");
-    assert!(text.contains("301 presented in 5.0 s") && text.contains("60.0 to 60.0 Hz"), "{text}");
-    assert!(again.contains("screen       lock") && again.contains("302 presented in 10.0 s"), "{again}");
-    assert!(again.contains("(2 runs), 30.0 per second") && again.contains("120.0 to 120.0 Hz"), "{again}");
+    assert!(
+        text.contains("301 presented") && text.contains("5.0 s shown") && text.contains("60.0 to 60.0 Hz"),
+        "{text}"
+    );
+    assert!(again.contains("screen       lock") && again.contains("302 presented"), "{again}");
+    assert!(again.contains("(2 runs)") && again.contains("10.0 s shown, 10.0 s animating"), "{again}");
+    assert!(again.contains("30.0 per second animating") && again.contains("120.0 to 120.0 Hz"), "{again}");
 }
 
 #[test]
@@ -104,4 +114,21 @@ fn nothing_is_kept_for_previews_hidden_wallpapers_or_with_the_switch_off() {
     let text = written(2 * SECOND);
     record(false);
     assert!(text.contains("none of a shown wallpaper"), "{text}");
+}
+
+#[test]
+fn a_screen_stays_shown_while_any_engine_shows_it_and_recording_starts_with_it_shown() {
+    let _serial = fresh();
+    let open = || log(|log| log.screens[0].spans.last(i64::MAX) == Some(i64::MAX));
+    show(false, true);
+    show(false, true);
+    show(false, false);
+    let kept = open();
+    record(false);
+    record(true);
+    let reopened = open();
+    show(false, false);
+    let closed = !open();
+    record(false);
+    assert!(kept && reopened && closed, "{kept} {reopened} {closed}");
 }
