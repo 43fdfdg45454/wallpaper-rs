@@ -6,5 +6,9 @@ model! {
         pub restart: bool,
         #[serde(default)]
         pub ignored: Option<String>,
+        #[serde(default)]
+        pub ignored_from: Option<String>,
+        #[serde(default)]
+        pub ignored_empty: bool,
     }
 }

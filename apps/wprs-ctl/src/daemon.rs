@@ -192,5 +192,8 @@ fn options(state: &str, filter: Option<&str>, json: bool) -> Result<()> {
         true => println!("{}", Value::Object(shown.map(|(k, v)| (k.clone(), v.clone())).collect())),
         false => shown.for_each(|(key, value)| println!("{key} = {value}")),
     }
+    if filter == Some(wprs_core::LayerNamespace::KEY) && !json {
+        crate::gpus::in_use(&serde_json::from_value(state["layer_shell"].clone()).unwrap_or_default());
+    }
     Ok(())
 }

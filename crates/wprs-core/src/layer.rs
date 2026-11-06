@@ -19,6 +19,13 @@ pub struct Chosen {
     pub name: String,
     pub from: Source,
     pub ignored: Option<String>,
+    pub refused: Option<Refused>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Refused {
+    pub from: Source,
+    pub empty: bool,
 }
 
 impl Source {
@@ -78,11 +85,12 @@ impl LayerNamespace {
         config: Option<&LayerNamespace>,
         desktop: &str,
     ) -> Chosen {
-        let mut ignored = None;
+        let (mut ignored, mut refused) = (None, None);
         let mut given = |text: Option<&str>, from: Source| match LayerNamespace::given(text?) {
             Ok(found) => found.map(|n| (n.0, from)),
             Err(e) => {
                 ignored = Some(format!("the {} value is ignored: {e}", from.as_str()));
+                refused = Some(Refused { from, empty: text.is_some_and(|t| t.trim().is_empty()) });
                 None
             }
         };
@@ -91,7 +99,7 @@ impl LayerNamespace {
             .or_else(|| config.map(|n| (n.0.clone(), Source::Config)))
             .or_else(|| Self::automatic(desktop).map(|n| (n.to_owned(), Source::Automatic)))
             .unwrap_or_else(|| (Self::DEFAULT.to_owned(), Source::Default));
-        Chosen { name, from, ignored }
+        Chosen { name, from, ignored, refused }
     }
 }
 

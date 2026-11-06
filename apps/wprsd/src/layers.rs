@@ -50,6 +50,8 @@ pub(crate) fn state(config: &Config) -> LayerShellState {
         from: s.chosen.from.as_str().into(),
         restart: now.name != s.chosen.name,
         ignored: s.chosen.ignored.clone(),
+        ignored_from: s.chosen.refused.map(|r| r.from.as_str().into()),
+        ignored_empty: s.chosen.refused.is_some_and(|r| r.empty),
     }
 }
 

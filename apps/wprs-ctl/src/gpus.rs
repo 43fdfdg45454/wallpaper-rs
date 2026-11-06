@@ -4,7 +4,7 @@ use clap::Args;
 use serde_json::json;
 use wprs_client::Client;
 use wprs_core::LayerNamespace;
-use wprs_core::model::State;
+use wprs_core::model::{LayerShellState, State};
 
 #[derive(Args, Debug)]
 pub struct GpuArgs {
@@ -51,15 +51,23 @@ pub async fn notice(client: &Client, key: &str) -> Result<()> {
         return Ok(());
     }
     let state: State = serde_json::from_str(&client.daemon.get_state().await?)?;
-    let layer = &state.layer_shell;
-    if (key == "render.gpu" && state.gpu_restart) || (key == LayerNamespace::KEY && layer.restart) {
+    if key == "render.gpu" && state.gpu_restart {
         println!("{LATER}");
     }
-    if let Some(namespace) = layer.namespace.as_deref().filter(|_| key == LayerNamespace::KEY) {
+    if key == LayerNamespace::KEY {
+        in_use(&state.layer_shell);
+    }
+    Ok(())
+}
+
+pub fn in_use(layer: &LayerShellState) {
+    if layer.restart {
+        println!("{LATER}");
+    }
+    if let Some(namespace) = layer.namespace.as_deref() {
         println!("in use: {} (from {})", clean(namespace), clean(&layer.from));
         if let Some(ignored) = &layer.ignored {
             println!("warning: {}", clean(ignored));
         }
     }
-    Ok(())
 }
