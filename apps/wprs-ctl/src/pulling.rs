@@ -66,6 +66,23 @@ pub enum Pull {
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
+    #[command(about = "Slow the particles down near a point, a control point or the pointer")]
+    SlowNear {
+        #[arg(allow_hyphen_values = true, help = "X,Y in pixels of the layer, p0 to p7, or cursor")]
+        target: String,
+        #[arg(long, allow_negative_numbers = true, help = "Pixels within which the slowing is whole")]
+        inner: f64,
+        #[arg(long, allow_negative_numbers = true, help = "Pixels beyond which it does not slow them")]
+        outer: f64,
+        #[arg(
+            long,
+            allow_negative_numbers = true,
+            help = "Share of the speed kept every sixtieth of a second, from 0 to 1"
+        )]
+        factor: f64,
+        #[arg(long, help = REPLACE)]
+        index: Option<usize>,
+    },
     #[command(about = "Move the particles in circles around a point, a control point or the pointer")]
     Orbit {
         #[arg(allow_hyphen_values = true, help = "X,Y in pixels of the layer, p0 to p7, or cursor")]
@@ -99,6 +116,10 @@ pub(crate) fn pull(what: Pull) -> (Option<usize>, Option<Value>) {
             outer.iter().for_each(|o| v["outer"] = json!(o));
             ring.iter().for_each(|[r, w, p]| v["ring"] = json!({ "radius": r, "width": w, "pull": p }));
             (index, Some(json!({ "vortex": v })))
+        }
+        Pull::SlowNear { target, inner, outer, factor, index } => {
+            let near = json!({ "target": place(&target), "inner": inner, "outer": outer, "factor": factor });
+            (index, Some(json!({ "slow_near": near })))
         }
         Pull::Orbit { center, strength, radius, falloff, index } => {
             let mut o = json!({ "center": place(&center), "strength": strength });
