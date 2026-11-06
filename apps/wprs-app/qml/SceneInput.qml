@@ -11,7 +11,7 @@ ColumnLayout {
     required property var field
     readonly property var value: field.shown
     readonly property bool bound: field.source !== "" && field.source !== "keys"
-    readonly property var both: Array.isArray(value) ? value : [Number(value ?? 0), Number(value ?? 0)]
+    readonly property var both: typeof value === "object" && value !== null && value.length >= 2 ? [Number(value[0]), Number(value[1])] : [Number(value ?? 0), Number(value ?? 0)]
 
     function commit(value, gesture) {
         page.change(field.pointer, value, gesture);

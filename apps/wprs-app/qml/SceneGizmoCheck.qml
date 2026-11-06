@@ -8,6 +8,25 @@ QtObject {
         return JSON.parse(page.editor.value(pointer) || "null");
     }
 
+    function inputs(item, out) {
+        for (const child of item?.children ?? []) {
+            if (child.field !== undefined && child.both !== undefined)
+                out.push(child);
+            inputs(child, out);
+        }
+        return out;
+    }
+
+    function shown(pointer) {
+        page.editor.select("/scene/layers/0");
+        const found = inputs(page, []).find(input => input.field.pointer === pointer);
+        if (!found)
+            throw new Error("gizmo: the inspector shows no field " + pointer);
+        if (!Array.isArray(found.field.shown))
+            throw new Error("gizmo: the inspector field " + pointer + " lost its list: " + typeof found.field.shown);
+        return found.both;
+    }
+
     function exercise() {
         const steps = page.view.history.done.length;
         const index = (page.view.gizmos ?? []).findIndex(g => g.pointer === "/scene/layers/0");
@@ -22,6 +41,10 @@ QtObject {
         gizmo.commit("z", 30);
         if (JSON.stringify(read(base + "position")) !== "[10,20]" || JSON.stringify(read(base + "tilt")) !== "[12,-4]" || read(base + "z") !== 30)
             throw new Error("gizmo: the handles did not place, tilt and lift the layer: " + page.editor.error);
+        if ((gizmo.modelData.corners ?? []).length !== 4)
+            throw new Error("gizmo: a tilted layer has no projected outline");
+        if (JSON.stringify(shown(base + "position")) !== "[10,20]" || JSON.stringify(shown(base + "tilt")) !== "[12,-4]")
+            throw new Error("gizmo: the inspector shows the position and tilt as " + JSON.stringify([shown(base + "position"), shown(base + "tilt")]));
         for (const t of [0, 1])
             page.run("keyframe", {
                     "pointer": base + "rotation",

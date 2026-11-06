@@ -184,11 +184,11 @@ ColumnLayout {
                 model: inspector.page.fields
 
                 delegate: SceneInput {
-                    required property var modelData
+                    required property int index
 
                     Layout.fillWidth: true
                     page: inspector.page
-                    field: modelData
+                    field: inspector.page.fields[index] ?? {}
                 }
             }
         }
