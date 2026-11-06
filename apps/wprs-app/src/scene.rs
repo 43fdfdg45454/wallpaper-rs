@@ -72,6 +72,8 @@ pub mod qobject {
         fn folder_for(self: &SceneEditor, name: &QString) -> QString;
         #[qinvokable]
         fn projects(self: &SceneEditor) -> QString;
+        #[qinvokable]
+        fn kind_of(self: &SceneEditor, folder: &QString, package: &QString) -> QString;
         #[qsignal]
         fn finished(self: Pin<&mut SceneEditor>, message: QString);
     }
@@ -174,9 +176,8 @@ impl SceneEditor {
     }
 
     pub fn count(&self, pointer: &QString) -> i32 {
-        let list =
-            self.project.as_ref().and_then(|p| p.doc.pointer(&pointer.to_string())?.as_array().map(Vec::len));
-        list.map_or(-1, |n| n as i32)
+        let list = self.project.as_ref().and_then(|p| p.doc.pointer(&pointer.to_string())?.as_array());
+        list.map_or(-1, |n| n.len() as i32)
     }
 
     pub fn show_fields(mut self: Pin<&mut Self>) {

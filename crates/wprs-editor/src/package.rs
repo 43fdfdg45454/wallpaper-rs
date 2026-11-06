@@ -6,9 +6,7 @@ use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use wprs_core::message::said;
-use wprs_format::{
-    Ancestor, Kind, Limits, MANIFEST, Manifest, Origin, OriginKind, SIGNATURE, Signer, sign_source,
-};
+use wprs_format::{Ancestor, Limits, MANIFEST, Manifest, Origin, OriginKind, SIGNATURE, Signer, sign_source};
 
 pub fn problems(dir: &Path, doc: &Value) -> Vec<crate::Problem> {
     let mut all = review(doc, Some(dir));
@@ -60,10 +58,6 @@ pub fn extract(file: &Path, dir: &Path) -> Result<String> {
     let empty = !dir.exists() || fs::read_dir(dir)?.next().is_none();
     ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
     let mut package = wprs_format::open(file, &Limits::default())?;
-    ensure!(
-        matches!(package.manifest.kind, Kind::Scene | Kind::Assets),
-        said("editor.not_scene_package", "%1 is not a scene package", &[&(file.display())])
-    );
     wprs_format::extract(&mut package, dir)?;
     unsign(dir)?;
     let path = dir.join(MANIFEST);

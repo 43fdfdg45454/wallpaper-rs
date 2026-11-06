@@ -36,6 +36,7 @@ pub mod ops;
 pub mod outline;
 pub mod package;
 pub mod packing;
+pub mod pages;
 pub mod paint;
 mod params;
 pub mod pictures;

@@ -99,7 +99,8 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
         "history": {"done": done, "undone": undone, "undo": undo, "redo": redo}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
         "kinds": KINDS, "starters": STARTERS, "easings": wprs_scene::easings(),
         "effects": wprs_scene::builtin().iter().map(|d| d.id.as_str()).chain(own(doc)).collect::<Vec<_>>(),
-        "effect_names": names(project)})
+        "effect_names": names(project), "kind": crate::pages::kind(doc), "page_starters": crate::pages::PAGE_STARTERS,
+        "files": if crate::pages::scened(doc) { Vec::new() } else { crate::pages::files(&project.dir, doc) }})
 }
 
 fn names(project: &Project) -> serde_json::Map<String, Value> {

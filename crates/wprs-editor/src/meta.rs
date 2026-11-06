@@ -72,6 +72,12 @@ pub fn read(doc: &Value, dir: Option<&Path>) -> wprs_format::Result<Manifest> {
 }
 
 fn found(doc: &Value, manifest: &Manifest, json: &Value, dir: Option<&Path>) -> Option<Facts> {
+    if !crate::pages::scened(doc) {
+        let mut found = facts(manifest, None, None);
+        let newer = newer_names(&doc["manifest"], || false, &found.features);
+        found.features.extend(newer);
+        return Some(found);
+    }
     let mut scene = Scene::deserialize(json).ok()?;
     if let Some(dir) = dir {
         crate::cache::read_files(&mut scene, dir);

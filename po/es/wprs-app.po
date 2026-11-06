@@ -797,20 +797,23 @@ msgstr ""
 "Las descargas están desactivadas en los ajustes. Instala archivos obtenidos "
 "por otra vía."
 
-#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/PackagePage.qml
+#: apps/wprs-app/qml/ScenePage.qml
 msgid "Back"
 msgstr "Volver"
 
-#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/SceneEntry.qml
-#: apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/PackagePage.qml
+#: apps/wprs-app/qml/SceneEntry.qml apps/wprs-app/qml/ScenePage.qml
 msgid "Save"
 msgstr "Guardar"
 
-#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/PackagePage.qml
+#: apps/wprs-app/qml/ScenePage.qml
 msgid "Undo"
 msgstr "Deshacer"
 
-#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/PackagePage.qml
+#: apps/wprs-app/qml/ScenePage.qml
 msgid "Redo"
 msgstr "Rehacer"
 
@@ -1369,15 +1372,15 @@ msgstr "Subir"
 msgid "Move down"
 msgstr "Bajar"
 
-#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PlaylistItems.qml
-#: apps/wprs-app/qml/SceneAssets.qml apps/wprs-app/qml/SceneBoneRow.qml
-#: apps/wprs-app/qml/SceneEmitterList.qml apps/wprs-app/qml/SceneInput.qml
-#: apps/wprs-app/qml/SceneInspector.qml apps/wprs-app/qml/SceneLayerTools.qml
-#: apps/wprs-app/qml/SceneModelSwing.qml apps/wprs-app/qml/ScenePairs.qml
-#: apps/wprs-app/qml/SceneProperties.qml apps/wprs-app/qml/SceneRigIk.qml
-#: apps/wprs-app/qml/SceneRigPhysics.qml apps/wprs-app/qml/SceneRigRow.qml
-#: apps/wprs-app/qml/SceneSettingMenu.qml apps/wprs-app/qml/SceneShapes.qml
-#: apps/wprs-app/qml/SceneSwarmPoints.qml
+#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/PackageInspector.qml
+#: apps/wprs-app/qml/PlaylistItems.qml apps/wprs-app/qml/SceneAssets.qml
+#: apps/wprs-app/qml/SceneBoneRow.qml apps/wprs-app/qml/SceneEmitterList.qml
+#: apps/wprs-app/qml/SceneInput.qml apps/wprs-app/qml/SceneInspector.qml
+#: apps/wprs-app/qml/SceneLayerTools.qml apps/wprs-app/qml/SceneModelSwing.qml
+#: apps/wprs-app/qml/ScenePairs.qml apps/wprs-app/qml/SceneProperties.qml
+#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/SceneRigPhysics.qml
+#: apps/wprs-app/qml/SceneRigRow.qml apps/wprs-app/qml/SceneSettingMenu.qml
+#: apps/wprs-app/qml/SceneShapes.qml apps/wprs-app/qml/SceneSwarmPoints.qml
 #: apps/wprs-app/qml/SceneTimelineEvents.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
@@ -1809,7 +1812,8 @@ msgstr "Eliminar"
 msgid "New preset…"
 msgstr "Nuevo preajuste…"
 
-#: apps/wprs-app/qml/ItemFacts.qml apps/wprs-app/qml/ProviderDialog.qml
+#: apps/wprs-app/qml/ItemFacts.qml apps/wprs-app/qml/PackageSections.qml
+#: apps/wprs-app/qml/ProviderDialog.qml
 msgid "Kind:"
 msgstr "Tipo:"
 
@@ -1833,7 +1837,7 @@ msgstr "Este paquete está hecho solo para %1"
 msgid "This package needs a newer version of wallpaper-rs: it %1"
 msgstr "Este paquete necesita una versión más nueva de wallpaper-rs: %1"
 
-#: apps/wprs-app/qml/ItemFacts.qml
+#: apps/wprs-app/qml/ItemFacts.qml apps/wprs-app/qml/PackageSections.qml
 msgid "Package:"
 msgstr "Paquete:"
 
@@ -2380,6 +2384,95 @@ msgstr ""
 #: apps/wprs-app/qml/PackageAbout.qml
 msgid "Open this address in the browser?"
 msgstr "¿Abrir esta dirección en el navegador?"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "entry page"
+msgstr "página de entrada"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "runs before the page"
+msgstr "corre antes de la página"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "preview"
+msgstr "vista previa"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "manifest"
+msgstr "manifiesto"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "texts of a language"
+msgstr "textos de un idioma"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "signature"
+msgstr "firma"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "%1 B"
+msgstr "%1 B"
+
+#: apps/wprs-app/qml/PackageFiles.qml apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 KiB"
+msgstr "%1 KiB"
+
+#: apps/wprs-app/qml/PackageFiles.qml apps/wprs-app/qml/SceneModelCost.qml
+#: apps/wprs-app/qml/SceneModelInfo.qml
+msgid "%1 MiB"
+msgstr "%1 MiB"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "%1 files, %2 in all"
+msgstr "%1 archivos, %2 en total"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "Add files…"
+msgstr "Añadir archivos…"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "Open the folder"
+msgstr "Abrir la carpeta"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "Use as the entry page"
+msgstr "Usar como página de entrada"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "Run before the page"
+msgstr "Correr antes de la página"
+
+#: apps/wprs-app/qml/PackageFiles.qml
+msgid "Use as the thumbnail"
+msgstr "Usar como miniatura"
+
+#: apps/wprs-app/qml/PackageFiles.qml apps/wprs-app/qml/ScenesPage.qml
+msgid "Open"
+msgstr "Abrir"
+
+#: apps/wprs-app/qml/PackageInspector.qml apps/wprs-app/qml/SceneInspector.qml
+msgid "Up"
+msgstr "Subir un nivel"
+
+#: apps/wprs-app/qml/PackagePage.qml
+msgid "Package: %1"
+msgstr "Paquete: %1"
+
+#: apps/wprs-app/qml/PackagePage.qml apps/wprs-app/qml/ScenePage.qml
+msgid "Build and apply…"
+msgstr "Compilar y aplicar…"
+
+#: apps/wprs-app/qml/PackagePage.qml apps/wprs-app/qml/facade/ManifestWords.qml
+msgid "Files"
+msgstr "Archivos"
+
+#: apps/wprs-app/qml/PackageSections.qml
+msgid "Entry page:"
+msgstr "Página de entrada:"
+
+#: apps/wprs-app/qml/PackageSections.qml
+msgid "Title, license, origin and more…"
+msgstr "Título, licencia, origen y más…"
 
 #: apps/wprs-app/qml/PageLights.qml
 msgid "The page and its lights"
@@ -4189,10 +4282,6 @@ msgid "Default"
 msgstr "Valor por defecto"
 
 #: apps/wprs-app/qml/SceneInspector.qml
-msgid "Up"
-msgstr "Subir un nivel"
-
-#: apps/wprs-app/qml/SceneInspector.qml
 msgid "Add effect"
 msgstr "Añadir un efecto"
 
@@ -5057,10 +5146,6 @@ msgstr "%1 vértices con piel y huesos que se balancean"
 msgid "%1 skinned vertices, bones keep their animation"
 msgstr "%1 vértices con piel, los huesos mantienen su animación"
 
-#: apps/wprs-app/qml/SceneModelCost.qml apps/wprs-app/qml/SceneModelInfo.qml
-msgid "%1 MiB"
-msgstr "%1 MiB"
-
 #: apps/wprs-app/qml/SceneModelCost.qml
 msgid "3D models"
 msgstr "Modelos 3D"
@@ -5124,10 +5209,6 @@ msgstr ""
 #: apps/wprs-app/qml/SceneModelImport.qml
 msgid "Binary glTF models"
 msgstr "Modelos glTF binarios"
-
-#: apps/wprs-app/qml/SceneModelInfo.qml
-msgid "%1 KiB"
-msgstr "%1 KiB"
 
 #: apps/wprs-app/qml/SceneModelInfo.qml
 msgid "%1 triangles, %2 materials, %3 textures, %4 bones, %5 clips"
@@ -5386,10 +5467,6 @@ msgstr "Deshacer: %1"
 #: apps/wprs-app/qml/ScenePage.qml
 msgid "Redo: %1"
 msgstr "Rehacer: %1"
-
-#: apps/wprs-app/qml/ScenePage.qml
-msgid "Build and apply…"
-msgstr "Compilar y aplicar…"
 
 #: apps/wprs-app/qml/SceneParts.qml
 msgid "Parts, from back to front"
@@ -7416,16 +7493,12 @@ msgid "My scene"
 msgstr "Mi escena"
 
 #: apps/wprs-app/qml/ScenesPage.qml
-msgid "Open"
-msgstr "Abrir"
+msgid "Open a scene or package folder…"
+msgstr "Abrir una carpeta de escena o paquete…"
 
 #: apps/wprs-app/qml/ScenesPage.qml
-msgid "Open a scene folder…"
-msgstr "Abrir una carpeta de escena…"
-
-#: apps/wprs-app/qml/ScenesPage.qml
-msgid "Edit a copy of a scene from the library"
-msgstr "Editar una copia de una escena de la biblioteca"
+msgid "Edit a copy of a scene or web page from the library"
+msgstr "Editar una copia de una escena o página web de la biblioteca"
 
 #: apps/wprs-app/qml/SelectionDialogs.qml
 msgid "Allow these wallpapers?"
@@ -7988,6 +8061,7 @@ msgstr "Android"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml
+#: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Web page"
 msgstr "Página web"
 
@@ -8938,10 +9012,6 @@ msgstr "Empieza en silencio"
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Needed packages"
 msgstr "Paquetes necesarios"
-
-#: apps/wprs-app/qml/facade/ManifestWords.qml
-msgid "Files"
-msgstr "Archivos"
 
 #: apps/wprs-app/qml/facade/ManifestWords.qml
 msgid "Permissions"

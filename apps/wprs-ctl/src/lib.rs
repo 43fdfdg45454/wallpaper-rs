@@ -48,6 +48,7 @@ mod modeling;
 pub mod models;
 pub mod moderate;
 pub mod pack;
+mod paging;
 pub mod pkg;
 pub mod playlists;
 mod posing;

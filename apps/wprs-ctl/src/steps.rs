@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use wprs_editor::actions::{Action, MaskStroke, ParticleEdit, ScriptFile, SowEdit, UpgradeEdit};
 use wprs_editor::{Op, Project, references};
 
+pub(crate) const NEW: &str = "Create a package folder from a starting point: the scenes empty, particles, parallax or clock, or web for a web page";
 pub(crate) const OPEN: &str = "Describe a scene folder, or first extract a .wpak scene package into it as an unsigned copy with the id <id>.copy";
 pub(crate) const SCRIPT: &str = "Copy a JavaScript module into the scripts, or make it from a template, and declare the events and parts it uses";
 pub(crate) const TEMPLATE: &str = "Make the module from a template instead of copying FILE: empty, or media (handles every media player event and exports nowPlaying, accentColor, shown and progress for values to follow)";

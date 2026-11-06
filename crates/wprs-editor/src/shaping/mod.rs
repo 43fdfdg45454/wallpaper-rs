@@ -4,6 +4,7 @@ mod keyed;
 pub(crate) mod layers;
 pub(crate) mod marks;
 mod masks;
+mod page;
 
 use crate::check::review;
 use crate::ops::{Op, apply};

@@ -35,7 +35,9 @@ impl SceneEditor {
     }
 
     pub fn attach(mut self: Pin<&mut Self>) {
-        let Some(project) = self.project.as_ref() else { return };
+        let Some(project) = self.project.as_ref().filter(|p| wprs_editor::pages::scened(&p.doc)) else {
+            return;
+        };
         let size = &project.doc["scene"]["canvas"]["size"];
         let (w, h) =
             (size[0].as_f64().unwrap_or(1920.0).max(1.0), size[1].as_f64().unwrap_or(1080.0).max(1.0));
@@ -90,7 +92,9 @@ impl SceneEditor {
     }
 
     pub fn send(mut self: Pin<&mut Self>) {
-        let Some(project) = self.project.as_ref() else { return };
+        let Some(project) = self.project.as_ref().filter(|p| wprs_editor::pages::scened(&p.doc)) else {
+            return;
+        };
         let streamed = !self.output.is_empty() && self.serial > 0.0;
         if !streamed && !self.live && !self.shown {
             return;

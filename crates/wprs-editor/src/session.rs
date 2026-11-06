@@ -1,10 +1,11 @@
 use crate::history::History;
-use crate::project::{Project, write};
+use crate::project::Project;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
-use std::os::unix::fs::DirBuilderExt;
+use std::io::Write;
+use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use wprs_core::message::said;
@@ -101,4 +102,13 @@ impl Project {
         );
         Ok(())
     }
+}
+
+pub(crate) fn write(path: &Path, text: &str, mode: u32) -> Result<()> {
+    let dir = path.parent().ok_or_else(|| said("editor.needs_folder", "a file needs a folder", &[]))?;
+    let tmp = dir.join(format!(".{}.tmp", path.file_name().unwrap_or_default().to_string_lossy()));
+    let mut file = fs::OpenOptions::new().write(true).create(true).truncate(true).mode(mode).open(&tmp)?;
+    file.write_all(text.as_bytes())?;
+    file.sync_all()?;
+    Ok(fs::rename(tmp, path)?)
 }

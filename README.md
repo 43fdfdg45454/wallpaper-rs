@@ -2549,7 +2549,7 @@ historial de deshacer, donde cada orden es un paso (todas en
 [`docs/specs/editor.md`](docs/specs/editor.md)):
 
 ```sh
-wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, particles, parallax o clock
+wprs-ctl scene new mar --from parallax --title Sea --locale en   # empty, particles, parallax, clock o web
 wprs-ctl scene open copia --from escena.wpak            # una copia sin firma, derivada, con el id <id>.copy
 wprs-ctl scene import mar ola.ogg                       # copiar un recurso a assets/
 wprs-ctl scene import mar espuma.png --atlas 4,4         # hoja de sprites; --linear para mapas de datos
@@ -2589,6 +2589,23 @@ wprs-ctl scene preview mar --layout dual --out dual.png --time 4   # el segundo 
 wprs-ctl scene build mar --key autor.key                # firmar y crear el .wpak
 wprs-ctl scene apply mar -o DP-1                        # añadirla a la biblioteca y mostrarla
 wprs-ctl scene apply mar --span                         # mostrarla extendida sobre todas las pantallas
+```
+
+### Fondos web y otros paquetes en el editor
+
+El editor también abre y crea paquetes que no son escenas. En *Escenas*, el punto de partida
+*Página web* crea una carpeta con `index.html`, `app.js` (una hora que toma el color de su propiedad
+y se detiene con la página oculta) y un manifiesto `web` válido; *Abrir una carpeta de escena o
+paquete…* y las copias de la biblioteca abren también páginas web, imágenes, vídeos y presets. La
+página del paquete muestra la lista de archivos con su papel (la página de entrada, el script que
+corre antes, la vista previa), su tamaño y el total; *Añadir archivos…* los copia a la carpeta y
+cada archivo ofrece usarlo como página de entrada o como miniatura. Los problemas, deshacer,
+guardar y *Compilar y aplicar…* funcionan como en las escenas.
+
+```sh
+wprs-ctl scene new reloj --from web --title Reloj   # index.html, app.js y el manifiesto
+wprs-ctl scene open reloj                           # los archivos con su papel y tamaño
+wprs-ctl scene manifest reloj add-file fondo.png --to img   # copia un archivo a la carpeta
 ```
 
 ### Guía para autores de scripts

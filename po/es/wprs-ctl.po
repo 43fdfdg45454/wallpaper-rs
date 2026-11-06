@@ -115,14 +115,6 @@ msgid "Layer id"
 msgstr "Id de la capa"
 
 #: apps/wprs-ctl/src/author.rs
-msgid ""
-"Create a scene folder from a starting point: empty, particles, parallax or "
-"clock"
-msgstr ""
-"Crear una carpeta de escena desde un punto de partida: empty, particles, "
-"parallax o clock"
-
-#: apps/wprs-ctl/src/author.rs
 msgid "Starting point"
 msgstr "Punto de partida"
 
@@ -240,15 +232,20 @@ msgid "Value painted, from 0 (erases) to 1"
 msgstr "Valor que se pinta, de 0 (borra) a 1"
 
 #: apps/wprs-ctl/src/author.rs
+#, fuzzy
 msgid ""
-"Set the text of a title, description, change notes, label or option in one "
-"language; an empty language sets the plain text"
+"Set the text of a title, description, change notes, label, option or the "
+"text a media value shows while nothing plays in one language; an empty "
+"language sets the plain text"
 msgstr ""
 "Fijar el texto de un título, una descripción, unas notas de cambios, una "
 "etiqueta o una opción en un idioma; un idioma vacío fija el texto simple"
 
 #: apps/wprs-ctl/src/author.rs
-msgid "JSON Pointer to the text, such as /manifest/title"
+#, fuzzy
+msgid ""
+"JSON Pointer to the text, such as /manifest/title or /scene/layers/0/text/"
+"placeholder"
 msgstr "JSON Pointer al texto, como /manifest/title"
 
 #: apps/wprs-ctl/src/author.rs
@@ -339,6 +336,7 @@ msgstr "Píxeles de 0 a 128"
 
 #: apps/wprs-ctl/src/backdrop.rs apps/wprs-ctl/src/cli.rs
 #: apps/wprs-ctl/src/edit.rs apps/wprs-ctl/src/manifesting.rs
+#: apps/wprs-ctl/src/paging.rs
 msgid "Color as #rrggbb"
 msgstr "Color como #rrggbb"
 
@@ -1884,10 +1882,6 @@ msgid "Start the particle systems and the scene again"
 msgstr "Volver a empezar los sistemas de partículas y la escena"
 
 #: apps/wprs-ctl/src/folder.rs
-msgid "Picture file of --layout: .png, .jpg, .webp or .avif"
-msgstr "Archivo de imagen de --layout: .png, .jpg, .webp o .avif"
-
-#: apps/wprs-ctl/src/folder.rs
 msgid "Build the scene into the library and show it on an output"
 msgstr "Construir la escena en la biblioteca y mostrarla en una salida"
 
@@ -1910,14 +1904,6 @@ msgstr "Imprimir el esquema de las propiedades de usuario"
 #: apps/wprs-ctl/src/folder.rs
 msgid "Print the schema of manifests"
 msgstr "Imprimir el esquema de los manifiestos"
-
-#: apps/wprs-ctl/src/folder.rs
-msgid ""
-"Write the scene over two or three screens side by side, two stacked or "
-"yours, without a desktop"
-msgstr ""
-"Escribir la escena sobre dos o tres pantallas una al lado de otra, dos "
-"apiladas o las tuyas, sin escritorio"
 
 #: apps/wprs-ctl/src/forcing.rs apps/wprs-ctl/src/pulling.rs
 msgid ""
@@ -3274,7 +3260,7 @@ msgstr "Reflejar una imagen o un vídeo"
 msgid "Color as #rrggbb, or prop:ID to take it from a property"
 msgstr "Color como #rrggbb, o prop:ID para tomarlo de una propiedad"
 
-#: apps/wprs-ctl/src/manifesting.rs
+#: apps/wprs-ctl/src/manifesting.rs apps/wprs-ctl/src/paging.rs
 msgid "Remove a setting"
 msgstr "Quitar un ajuste"
 
@@ -3725,6 +3711,107 @@ msgstr "Archivo o texto de clave pública de un autor aceptado"
 #: apps/wprs-ctl/src/pack.rs
 msgid "Print one JSON object per file"
 msgstr "Imprimir un objeto JSON por archivo"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid ""
+"Set how the package plays by default: frame rate, volume and muting for "
+"videos, web pages and scenes, speed, part and loop for videos"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Highest frame rate, 1 to 240, or display to follow the screen"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Volume from 0 to 1"
+msgstr "Gris de 0 a 1"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "true to start without sound"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Speed of a video, from 0.1 to 4"
+msgstr "Zoom de una imagen, de 1 a 8"
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Second where a video starts, 0 to 3600"
+msgstr "Segundos para desaparecer, de 0 a 10"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Second where a video ends, after the start"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "false plays a video once and keeps its last frame"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid ""
+"Set the script run before the page, the color shown while it loads and the "
+"storage it keeps"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "A .js or .mjs file of the package"
+msgstr "Título del paquete de recursos"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Local storage of the page, 0 to 5120 KiB"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid ""
+"Replace the https origins a web page may reach, or add or remove some; "
+"network follows them in the inputs"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid ""
+"Origins such as https://api.example.org, at most 8; none removes them all"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Add the origins to the ones there are"
+msgstr "Añadir las etiquetas a las que hay"
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Remove the origins from the ones there are"
+msgstr "Quitar las etiquetas de las que hay"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid ""
+"Replace the declared inputs, or add or remove some: audio, pointer, clicks, "
+"media, network"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Inputs; none declares none"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Add the inputs to the ones there are"
+msgstr "Añadir las etiquetas a las que hay"
+
+#: apps/wprs-ctl/src/paging.rs
+#, fuzzy
+msgid "Remove the inputs from the ones there are"
+msgstr "Quitar las etiquetas de las que hay"
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Copy a file into a web, picture or video package folder"
+msgstr ""
+
+#: apps/wprs-ctl/src/paging.rs
+msgid "Folder of the package to copy it into"
+msgstr ""
 
 #: apps/wprs-ctl/src/pkg.rs
 msgid ""
@@ -5833,6 +5920,30 @@ msgid "Which particles are drawn on top"
 msgstr "Qué partículas se dibujan encima"
 
 #: apps/wprs-ctl/src/spanning.rs
+msgid ""
+"Write the scene over two or three screens side by side, two stacked or "
+"yours, without a desktop"
+msgstr ""
+"Escribir la escena sobre dos o tres pantallas una al lado de otra, dos "
+"apiladas o las tuyas, sin escritorio"
+
+#: apps/wprs-ctl/src/spanning.rs
+msgid "Picture file of --layout: .png, .jpg, .webp or .avif"
+msgstr "Archivo de imagen de --layout: .png, .jpg, .webp o .avif"
+
+#: apps/wprs-ctl/src/spanning.rs
+msgid ""
+"Frame of each simulated screen in millimetres, 0 to 100; the layout.bezel_mm "
+"setting without it"
+msgstr ""
+
+#: apps/wprs-ctl/src/spanning.rs
+msgid ""
+"Size of each simulated screen: WIDTHxHEIGHT in millimetres, or a diagonal "
+"such as 24in or 34in@21:9 (16:9 without a ratio); 527x296 without it"
+msgstr ""
+
+#: apps/wprs-ctl/src/spanning.rs
 msgid "the time is a finite number of seconds up to %1, not %2"
 msgstr "el tiempo es un número finito de segundos hasta %1, no %2"
 
@@ -5968,6 +6079,15 @@ msgstr "Volver a dibujar este valor como lo hace el sistema"
 #: apps/wprs-ctl/src/staging.rs
 msgid "Draw the layer as the system does in every value"
 msgstr "Dibujar la capa como lo hace el sistema en todos los valores"
+
+#: apps/wprs-ctl/src/steps.rs
+#, fuzzy
+msgid ""
+"Create a package folder from a starting point: the scenes empty, particles, "
+"parallax or clock, or web for a web page"
+msgstr ""
+"Crear una carpeta de escena desde un punto de partida: empty, particles, "
+"parallax o clock"
 
 #: apps/wprs-ctl/src/steps.rs
 msgid ""

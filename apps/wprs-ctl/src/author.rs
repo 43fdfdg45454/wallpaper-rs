@@ -9,7 +9,7 @@ pub(crate) const ID: &str = "Layer id";
 
 #[derive(Subcommand, Debug)]
 pub enum Author {
-    #[command(about = "Create a scene folder from a starting point: empty, particles, parallax or clock")]
+    #[command(about = crate::steps::NEW)]
     New {
         #[arg(help = DIR)]
         dir: PathBuf,

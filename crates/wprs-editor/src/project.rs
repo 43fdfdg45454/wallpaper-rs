@@ -2,11 +2,10 @@ use crate::actions::{Action, plan};
 use crate::history::History;
 use crate::meta::{cancels, detected, sync};
 use crate::ops::Op;
+use crate::session::write;
 use anyhow::{Result, bail, ensure};
 use serde_json::{Value, json};
 use std::fs;
-use std::io::Write;
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use wprs_core::message::said;
@@ -48,17 +47,11 @@ pub fn read(dir: &Path) -> Result<Value> {
             .map_err(|e| said("editor.not_json", "%1 is not valid JSON: %2", &[&name, &e]).into())
     };
     let manifest = load(MANIFEST)?;
+    if !crate::pages::scened(&json!({"manifest": manifest})) {
+        return Ok(json!({"manifest": manifest}));
+    }
     let scene = load(&entry(&json!({"manifest": manifest}))?)?;
     Ok(json!({"manifest": manifest, "scene": scene}))
-}
-
-pub(crate) fn write(path: &Path, text: &str, mode: u32) -> Result<()> {
-    let dir = path.parent().ok_or_else(|| said("editor.needs_folder", "a file needs a folder", &[]))?;
-    let tmp = dir.join(format!(".{}.tmp", path.file_name().unwrap_or_default().to_string_lossy()));
-    let mut file = fs::OpenOptions::new().write(true).create(true).truncate(true).mode(mode).open(&tmp)?;
-    file.write_all(text.as_bytes())?;
-    file.sync_all()?;
-    Ok(fs::rename(tmp, path)?)
 }
 
 impl Project {
@@ -82,11 +75,12 @@ impl Project {
     pub fn create(dir: &Path, doc: Value) -> Result<Project> {
         let empty = !dir.exists() || fs::read_dir(dir)?.next().is_none();
         ensure!(empty, said("editor.not_empty_folder", "%1 is not an empty folder", &[&(dir.display())]));
-        fs::create_dir_all(dir.join("assets"))?;
+        fs::create_dir_all(if crate::pages::scened(&doc) { dir.join("assets") } else { dir.to_owned() })?;
         let (history, base) = (History::default(), String::new());
         let mut project =
             Project { dir: dir.to_owned(), doc, history, base, pending: None, scope: None, recorded: None };
         project.write_files()?;
+        crate::pages::seed(dir, &project.doc)?;
         project.history.mark_saved();
         project.persist()?;
         Ok(project)
@@ -95,7 +89,9 @@ impl Project {
     fn write_files(&mut self) -> Result<()> {
         let pretty = |v: &Value| serde_json::to_string_pretty(v).map(|t| t + "\n");
         write(&self.dir.join(MANIFEST), &pretty(&self.doc["manifest"])?, 0o644)?;
-        write(&self.dir.join(entry(&self.doc)?), &pretty(&self.doc["scene"])?, 0o644)?;
+        if crate::pages::scened(&self.doc) {
+            write(&self.dir.join(entry(&self.doc)?), &pretty(&self.doc["scene"])?, 0o644)?;
+        }
         self.base = stamp(&self.doc);
         Ok(())
     }

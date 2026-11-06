@@ -51,7 +51,7 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
     let mut out = Vec::new();
     let props: BTreeMap<String, Property> = match crate::meta::read(doc, dir) {
         Ok(manifest) => {
-            if !matches!(manifest.kind, wprs_format::Kind::Scene | wprs_format::Kind::Assets) {
+            if !crate::pages::scened(doc) && doc.get("scene").is_some() {
                 out.push(problem(
                     "/manifest/kind",
                     said("editor.kind", "the kind of a scene package is scene", &[]),
@@ -70,6 +70,11 @@ pub fn review(doc: &Value, dir: Option<&Path>) -> Vec<Problem> {
             BTreeMap::new()
         }
     };
+    if !crate::pages::scened(doc) {
+        out.extend(crate::pages::review(doc, dir));
+        out.extend(crate::findings::problems(doc, dir));
+        return out;
+    }
     match serde_json::from_value::<Scene>(doc["scene"].clone()) {
         Err(e) => out.push(problem(locate(&doc["scene"]), said("editor.scene", "%1", &[&e]))),
         Ok(mut scene) => {
@@ -137,6 +142,9 @@ pub fn check_files(dir: &Path, doc: &Value) -> Vec<Problem> {
     if found.iter().any(|(p, _)| p == SIGNATURE) {
         let text = "%1 signs an earlier version; a build without a key removes it";
         out.push(warning("/manifest", said("editor.signature", text, &[&SIGNATURE])));
+    }
+    if !crate::pages::scened(doc) {
+        return out;
     }
     let scene = serde_json::from_value::<Scene>(doc["scene"].clone()).ok();
     let read = |path: &str| std::fs::read_to_string(dir.join(path)).ok();

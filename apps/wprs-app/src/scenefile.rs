@@ -120,9 +120,22 @@ impl SceneEditor {
         let found = std::fs::read_dir(projects_dir()).into_iter().flatten().flatten().filter_map(|entry| {
             let doc = project::read(&entry.path()).ok()?;
             let title = wprs_editor::meta::title(&doc, &wprs_core::locale::languages());
-            Some(json!({"folder": entry.path(), "title": title}))
+            Some(json!({"folder": entry.path(), "title": title, "kind": wprs_editor::pages::kind(&doc)}))
         });
         QString::from(&serde_json::to_string(&found.collect::<Vec<_>>()).unwrap_or_default())
+    }
+
+    pub fn kind_of(&self, folder: &QString, package_file: &QString) -> QString {
+        let file = package_file.to_string();
+        let kind = match file.is_empty() {
+            true => project::read(Path::new(&folder.to_string()))
+                .ok()
+                .map(|d| wprs_editor::pages::kind(&d).to_owned()),
+            false => wprs_format::open(Path::new(&file), &Default::default())
+                .ok()
+                .map(|p| p.manifest.kind.name().to_owned()),
+        };
+        QString::from(kind.as_deref().unwrap_or("scene"))
     }
 }
 

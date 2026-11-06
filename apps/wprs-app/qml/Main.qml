@@ -157,7 +157,8 @@ Kirigami.ApplicationWindow {
 
         function onCompose(folder, starter, text) {
             root.current = -1;
-            root.open(composer, {
+            const kind = starter ? (starter === "web" ? "web" : "scene") : probe.kindOf(folder, text);
+            root.open(["scene", "assets"].includes(kind) ? composer : packager, {
                 "folder": folder,
                 "starter": starter,
                 "heading": starter ? text : "",
@@ -176,6 +177,16 @@ Kirigami.ApplicationWindow {
         id: composer
 
         ScenePage {}
+    }
+
+    Component {
+        id: packager
+
+        PackagePage {}
+    }
+
+    SceneEditor {
+        id: probe
     }
 
     Tour {

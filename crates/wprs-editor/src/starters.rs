@@ -58,7 +58,15 @@ fn layers(starter: &str) -> Result<(Value, Value, Value)> {
         _ => bail!(said(
             "editor.not_starting_point",
             "%1 is not a starting point; use one of %2",
-            &[&starter, &(STARTERS.join(", "))]
+            &[
+                &starter,
+                &(STARTERS
+                    .iter()
+                    .chain(&crate::pages::PAGE_STARTERS)
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .join(", "))
+            ]
         )),
     })
 }
@@ -74,16 +82,23 @@ pub fn starter(name: &str, id: &str, title: &str, locale: &str) -> Result<Value>
         valid_tag(locale),
         said("editor.not_language_such", "%1 is not a language such as en or pt-BR", &[&locale])
     );
+    let base = json!({"schema": wprs_format::SCHEMA, "id": id, "version": "0.1.0", "title": title,
+        "default_locale": locale, "license": "CC0-1.0", "origin": {"kind": "original"},
+        "content": {"rating": "general"}, "photosensitive": false});
+    if let Some(mut doc) = crate::pages::manifest(name, base.clone()) {
+        let ops = sync(&doc, &Default::default(), None);
+        apply(&mut doc, &ops)?;
+        return Ok(doc);
+    }
     let (layers, particles, mut properties) = layers(name)?;
     let labels = properties.as_object_mut().into_iter().flat_map(|p| p.values_mut());
     for label in labels.filter_map(|p| p["label"].as_object_mut()).filter(|l| !l.contains_key(locale)) {
         let english = label["en"].clone();
         label.insert(locale.to_owned(), english);
     }
-    let manifest = json!({"schema": wprs_format::SCHEMA, "id": id, "version": "0.1.0", "title": title,
-        "default_locale": locale, "license": "CC0-1.0", "origin": {"kind": "original"},
-        "content": {"rating": "general"}, "photosensitive": false, "kind": "scene", "entry": "scene.json",
-        "properties": properties});
+    let mut manifest = base;
+    (manifest["kind"], manifest["entry"], manifest["properties"]) =
+        (json!("scene"), json!("scene.json"), properties);
     let mut scene = json!({"schema": wprs_scene::SCHEMA,
         "canvas": {"size": [1920, 1080], "fit": "fill", "background": "#000000"},
         "clock": {"max_fps": "display"}, "layers": layers});
