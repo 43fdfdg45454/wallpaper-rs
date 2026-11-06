@@ -12,12 +12,15 @@ pub(super) struct Asked {
 
 pub(super) type Arrival = (Asked, Option<Arc<Cover>>);
 
+const KEPT: usize = 8;
+
 pub(super) struct Pictures {
     asked: Asked,
     loading: Option<JoinHandle<()>>,
     pub(super) cover: Option<Arc<Cover>>,
     pub(super) previous: Option<Arc<Cover>>,
     fetched: [bool; 2],
+    kept: Vec<(String, Arc<Cover>)>,
     sender: UnboundedSender<Arrival>,
 }
 
@@ -28,7 +31,8 @@ fn remote(address: &str) -> bool {
 impl Pictures {
     pub(super) fn new(sender: UnboundedSender<Arrival>) -> Pictures {
         let (asked, cover, previous) = Default::default();
-        Pictures { asked, loading: None, cover, previous, fetched: [false; 2], sender }
+        let kept = Vec::new();
+        Pictures { asked, loading: None, cover, previous, fetched: [false; 2], kept, sender }
     }
 
     pub(super) fn ask(&mut self, track: u64, address: &str, remote_on: bool) {
@@ -47,6 +51,9 @@ impl Pictures {
         if address.is_empty() || (remote(address) && !allowed) {
             return self.shift(None, false);
         }
+        if let Some((_, cover)) = self.kept.iter().find(|(a, _)| a == address).filter(|_| allowed) {
+            return self.shift(Some(cover.clone()), true);
+        }
         let sender = self.sender.clone();
         self.loading = Some(tokio::spawn(async move {
             let cover = fetch(&asked.address, asked.allowed).await;
@@ -57,6 +64,12 @@ impl Pictures {
     pub(super) fn arrived(&mut self, (asked, cover): Arrival) {
         if self.asked == asked {
             self.loading = None;
+            if let Some(c) = cover.as_ref().filter(|_| asked.allowed) {
+                self.kept.retain(|(a, _)| *a != asked.address);
+                self.kept.push((asked.address.clone(), c.clone()));
+                let over = self.kept.len().saturating_sub(KEPT);
+                self.kept.drain(..over);
+            }
             self.shift(cover, asked.allowed);
         }
     }
@@ -69,6 +82,7 @@ impl Pictures {
             self.previous = None;
         }
         self.fetched = [false; 2];
+        self.kept.clear();
     }
 
     fn shift(&mut self, cover: Option<Arc<Cover>>, fetched: bool) {

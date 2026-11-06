@@ -1,8 +1,9 @@
 use super::pictures::{Arrival, Pictures};
 use super::track::number;
-use super::{Frame, Player, Status, Track, chosen};
+use super::{Frame, Listener, Player, Status, Track, chosen};
 use futures_util::StreamExt;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::watch::Receiver;
 use wprs_core::model::MediaStatus;
@@ -16,11 +17,11 @@ const PATH: &str = "/org/mpris/MediaPlayer2";
 const PLAYER: &str = "org.mpris.MediaPlayer2.Player";
 const PROPERTIES: &str = "org.freedesktop.DBus.Properties";
 const PATIENCE: Duration = Duration::from_secs(2);
-const RETRY: Duration = Duration::from_secs(10);
 
 type Props = HashMap<String, OwnedVariant>;
 
 pub(super) struct Reading {
+    to: Option<Arc<Listener>>,
     pub(super) players: HashMap<String, Player>,
     names: HashMap<String, String>,
     track: u64,
@@ -28,16 +29,16 @@ pub(super) struct Reading {
     pictures: Pictures,
 }
 
-pub(super) async fn listen(id: u64, bus: Connection, remote: Receiver<bool>) {
-    if let Err(e) = run(&bus, remote).await {
+pub(super) async fn listen(to: Arc<Listener>, id: u64, bus: Connection, remote: Receiver<bool>) {
+    if let Err(e) = run(&to, &bus, remote).await {
         tracing::warn!("cannot follow the media players: {e}");
     }
-    super::publish(None, MediaStatus::default());
-    tokio::time::sleep(RETRY).await;
-    super::ended(id);
+    to.publish(None, MediaStatus::default());
+    tokio::time::sleep(to.retry).await;
+    to.ended(id);
 }
 
-async fn run(bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
+async fn run(to: &Arc<Listener>, bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
     let owners = MatchRule::builder().msg_type(Type::Signal).sender("org.freedesktop.DBus");
     let owners = owners.interface("org.freedesktop.DBus").member("NameOwnerChanged").arg0ns(SPACE).build()?;
     let changes =
@@ -51,6 +52,7 @@ async fn run(bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
     let dbus = DBusProxy::new(bus).await?;
     let (sender, mut arrivals) = tokio::sync::mpsc::unbounded_channel::<Arrival>();
     let mut r = Reading::new(Pictures::new(sender));
+    r.to = Some(to.clone());
     for name in dbus.list_names().await? {
         let name = name.to_string();
         if name.strip_prefix(SPACE).is_some_and(|rest| rest.starts_with('.'))
@@ -62,7 +64,8 @@ async fn run(bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
     r.publish();
     loop {
         tokio::select! {
-            Some(Ok(m)) = owners.next() => {
+            m = owners.next() => {
+                let Some(Ok(m)) = m else { return Ok(()) };
                 let Ok((name, old, new)) = m.body().deserialize::<(String, String, String)>() else { continue };
                 if !old.is_empty() {
                     r.players.remove(&old);
@@ -72,7 +75,8 @@ async fn run(bus: &Connection, mut remote: Receiver<bool>) -> zbus::Result<()> {
                     r.add(bus, name, new).await;
                 }
             }
-            Some(Ok(m)) = changes.next() => {
+            m = changes.next() => {
+                let Some(Ok(m)) = m else { return Ok(()) };
                 let Some(sender) = m.header().sender().map(|s| s.to_string()) else { continue };
                 let Ok((_, props, gone)) = m.body().deserialize::<(String, Props, Vec<String>)>() else { continue };
                 r.change(bus, &sender, &props, !gone.is_empty()).await;
@@ -109,7 +113,7 @@ async fn all(bus: &Connection, owner: &str) -> Option<Props> {
 impl Reading {
     pub(super) fn new(pictures: Pictures) -> Reading {
         let (players, names, last) = Default::default();
-        Reading { players, names, track: 0, last, pictures }
+        Reading { to: None, players, names, track: 0, last, pictures }
     }
 
     async fn add(&mut self, bus: &Connection, name: String, owner: String) {
@@ -149,7 +153,8 @@ impl Reading {
                 (p.status == Status::Playing, p.now(now) as f32, p.rate as f32);
         }
         let art = active.as_ref().map_or("", |p| p.track.art.as_str());
-        self.pictures.ask(self.track, art, super::remote_on());
+        let remote = self.to.as_ref().is_some_and(|l| *l.remote.borrow());
+        self.pictures.ask(self.track, art, remote);
         state.cover = self.pictures.serial();
         state.colors = self.pictures.cover.as_ref().map(|c| c.colors);
         let (playing, cover) = (state.playing, state.cover != 0);
@@ -162,6 +167,9 @@ impl Reading {
             ..MediaStatus::default()
         };
         let (cover, previous) = (self.pictures.cover.clone(), self.pictures.previous.clone());
-        super::publish(Some(Frame { read: now, cover, previous, ..Frame::new(state) }), status);
+        let frame = Frame { read: now, cover, previous, ..Frame::new(state) };
+        if let Some(l) = &self.to {
+            l.publish(Some(frame), status);
+        }
     }
 }
