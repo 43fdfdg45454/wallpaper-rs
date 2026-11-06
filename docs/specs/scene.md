@@ -567,10 +567,12 @@ chains in their order, what scripts set (see "Bones, blend shapes and attachment
 A chain turns its bones so that its end (where the first child of its last bone starts, leaving
 out nodes marked `extras.point`, or as far again along the last bone when it has none) reaches the
 target; bodies of `physics` take the end of their bone, and ropes their links, the same way. Chains of two bones are solved
-exactly, bending at their middle joint the way `bend` says. A longer chain first curls into an even
-arc, every joint turning the way `bend` says by the same angle, that reaches the target, and then,
-like a chain whose `limits` stop a bone, takes at most 10 rounds that turn each bone towards the
-target from the end back without letting any joint bend the other way. A target out of reach
+exactly, bending at their middle joint the way `bend` says. A longer chain, like a chain whose
+`limits` stop a bone, takes at most 10 rounds that turn each bone towards the target from the end
+back without letting any joint bend the other way, starting from its pose, so the curl of its clips
+stays while it reaches. When that pose is straight or already bends a joint the other way, or when
+the rounds from it miss a target within reach, the chain first curls into an even arc, every joint
+turning the way `bend` says by the same angle, that reaches the target. A target out of reach
 stretches the chain towards it. `limits` keep each listed bone within `[min,
 max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cursor"` follows the
 pointer only while the scene may read it (the pointer input, told to the user like any other use of

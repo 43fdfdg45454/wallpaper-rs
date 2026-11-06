@@ -33,3 +33,18 @@ pub(super) fn sided(bone: [f32; 2], before: [f32; 2], swing: f32, side: f32) -> 
     let next = if side > 0.0 { next.clamp(-PI, 0.0) } else { next.clamp(0.0, PI) };
     next - now
 }
+
+pub(super) fn kept(points: &[[f32; 2]], side: f32) -> bool {
+    let bends = points.windows(3).map(|w| wrap(angle(gap(w[1], w[2])) - angle(gap(w[0], w[1]))));
+    let (mut right, mut wrong) = (false, false);
+    for t in bends {
+        right |= -t * side > 1e-3;
+        wrong |= t * side > 1e-3;
+    }
+    right && !wrong
+}
+
+pub(super) fn within(points: &[[f32; 2]], target: [f32; 2]) -> bool {
+    let total: f32 = points.windows(2).map(|w| length(gap(w[0], w[1]))).sum();
+    length(gap(points[0], target)) < total - 0.01
+}

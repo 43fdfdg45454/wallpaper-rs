@@ -108,10 +108,14 @@ impl Puppet {
             c.turns[i] += delta;
         };
         let side = if bend == Bend::Clockwise { 1.0 } else { -1.0 };
-        if n > 2 {
+        let curl = |c: &mut Chain| {
             for (i, want) in super::arc::directions(&c.points, target, side).into_iter().enumerate() {
                 rotate(c, i, wrap(want - angle(gap(c.points[i], c.points[i + 1]))));
             }
+        };
+        let seeded = n > 2 && !super::arc::kept(&c.points, side);
+        if seeded {
+            curl(c);
         }
         if n == 2 {
             let (l1, l2) = (length(gap(c.points[0], c.points[1])), length(gap(c.points[1], c.points[2])));
@@ -128,21 +132,33 @@ impl Puppet {
                 }
             }
         }
-        for _ in 0..IK_ROUNDS {
-            for i in (0..n).rev() {
-                let swing = wrap(angle(gap(c.points[i], target)) - angle(gap(c.points[i], c.points[n])));
-                let swing = match i {
-                    0 => swing,
-                    _ => {
-                        let before = gap(c.points[i - 1], c.points[i]);
-                        super::arc::sided(gap(c.points[i], c.points[i + 1]), before, swing, side)
-                    }
-                };
-                rotate(c, i, swing);
+        let rounds = |c: &mut Chain| {
+            for _ in 0..IK_ROUNDS {
+                for i in (0..n).rev() {
+                    let swing = wrap(angle(gap(c.points[i], target)) - angle(gap(c.points[i], c.points[n])));
+                    let swing = match i {
+                        0 => swing,
+                        _ => {
+                            let before = gap(c.points[i - 1], c.points[i]);
+                            super::arc::sided(gap(c.points[i], c.points[i + 1]), before, swing, side)
+                        }
+                    };
+                    rotate(c, i, swing);
+                }
+                if length(gap(c.points[n], target)) < 0.01 {
+                    return true;
+                }
             }
-            if length(gap(c.points[n], target)) < 0.01 {
-                break;
-            }
+            false
+        };
+        let (mut points, mut turns) = ([[0.0; 2]; crate::MAX_CHAIN + 1], [0.0; crate::MAX_CHAIN]);
+        points[..=n].copy_from_slice(&c.points);
+        turns[..n].copy_from_slice(&c.turns);
+        if !rounds(c) && n > 2 && !seeded && super::arc::within(&points[..=n], target) {
+            c.points.copy_from_slice(&points[..=n]);
+            c.turns.copy_from_slice(&turns[..n]);
+            curl(c);
+            rounds(c);
         }
     }
 }

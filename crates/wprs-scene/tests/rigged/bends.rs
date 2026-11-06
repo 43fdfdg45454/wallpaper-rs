@@ -51,3 +51,37 @@ fn a_target_out_of_reach_stretches_a_longer_chain_straight_at_it() {
     let p = reached([0.0, 100.0], json!({ "limits": { "arm": [-10, 10] } }));
     assert!(turns(&p)[0].abs() <= 10.01 && turns(&p).iter().all(|t| *t <= 0.01), "{:?}", turns(&p));
 }
+
+fn curled(ik: Option<Value>) -> [[f32; 2]; 4] {
+    let bones = json!({ "arm": { "rotation": [[0, 20]] }, "hand": { "rotation": [[0, 50]] } });
+    let mut extra =
+        json!({ "clips": [{ "id": "curl", "bones": bones }], "animations": [{ "clip": "curl" }] });
+    if let Some(ik) = ik {
+        extra["ik"] = json!([ik]);
+    }
+    let mut rt = runtime(extra);
+    rt.advance(1.0 / 60.0);
+    let p = rt.puppet("fox").unwrap();
+    let f = p.bone_frames([64.0, 64.0])[p.rig.joint("hand").unwrap()];
+    let tip = [f[0] * 24.0 + f[4] - 32.0, 32.0 - (f[1] * 24.0 + f[5])];
+    [at(&rt, "root"), at(&rt, "arm"), at(&rt, "hand"), tip]
+}
+
+#[test]
+fn a_longer_chain_keeps_the_curl_of_its_clip_while_it_reaches() {
+    let pose = curled(None);
+    let bent = turns(&pose);
+    assert!(bent[0] * bent[1] > 0.0 && (bent[0] - bent[1]).abs() > 10.0, "an uneven curl: {bent:?}");
+    let bend = if bent[0] < 0.0 { "clockwise" } else { "counterclockwise" };
+    let goal = |to: [f32; 2]| json!({ "chain": ["root", "arm", "hand"], "target": [to[0] + 32.0, 32.0 - to[1]], "bend": bend });
+    let held = curled(Some(goal(pose[3])));
+    for (got, want) in held.iter().zip(pose) {
+        assert!(close(*got, want, 0.05), "a target on the tip leaves the pose: {held:?} {pose:?}");
+    }
+    let near = [pose[3][0] - 3.0, pose[3][1] + 2.0];
+    let reached = curled(Some(goal(near)));
+    assert!(close(reached[3], near, 0.05), "{reached:?}");
+    let kept = turns(&reached);
+    assert!(kept.iter().zip(&bent).all(|(k, b)| (k - b).abs() < 20.0), "{kept:?} keeps {bent:?}");
+    assert!((kept[0] - kept[1]).abs() > 5.0, "no even arc: {kept:?}");
+}
