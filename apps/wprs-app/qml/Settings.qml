@@ -77,9 +77,9 @@ Repeater {
         QQC2.ComboBox {
             visible: row.modelData.kind === "enum"
             model: row.modelData.values.map(value => ({
-                        "value": value,
-                        "text": form.daemon.value(value)
-                    }))
+                            "value": value,
+                            "text": form.daemon.value(value)
+                        }))
             textRole: "text"
             valueRole: "value"
             currentIndex: Math.max(0, row.modelData.values.indexOf(row.text || row.modelData.default))
@@ -100,8 +100,29 @@ Repeater {
             }
         }
 
+        ChoiceFlags {
+            visible: row.modelData.kind === "flags"
+            field: row.modelData
+            current: row.text || String(row.modelData.default ?? "")
+            onPicked: value => form.edited(row.modelData.key, value)
+        }
+
+        ChoiceChips {
+            visible: row.modelData.kind === "list" && row.modelData.values.length > 0
+            field: row.modelData
+            current: row.text
+            onPicked: value => form.edited(row.modelData.key, value)
+        }
+
+        ChoicePalette {
+            visible: row.modelData.kind === "palette"
+            field: row.modelData
+            current: row.text
+            onPicked: value => form.edited(row.modelData.key, value)
+        }
+
         QQC2.TextField {
-            visible: !["bool", "int", "enum", "color"].includes(row.modelData.kind)
+            visible: !["bool", "int", "enum", "color", "flags", "palette"].includes(row.modelData.kind) && !(row.modelData.kind === "list" && row.modelData.values.length > 0)
             text: row.text
             placeholderText: form.hint(row.modelData)
             Layout.preferredWidth: Kirigami.Units.gridUnit * 14

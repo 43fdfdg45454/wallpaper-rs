@@ -65,7 +65,9 @@ Kirigami.Dialog {
             daemon: App
             model: dialog.fields
             values: dialog.values
-            onEdited: (key, value) => dialog.values[key] = value
+            onEdited: (key, value) => dialog.values = Object.assign({}, dialog.values, {
+                        [key]: value
+                    })
         }
 
         Kirigami.PasswordField {

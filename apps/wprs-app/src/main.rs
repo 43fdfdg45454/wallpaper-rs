@@ -4,6 +4,7 @@ mod args;
 mod backend;
 mod bus;
 mod calls;
+mod choices;
 mod depth;
 mod depthproc;
 mod depthwork;

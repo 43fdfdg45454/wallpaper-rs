@@ -1,3 +1,4 @@
+mod choices;
 mod covered;
 mod depth;
 mod editor;
@@ -126,6 +127,7 @@ fn package_texts_render_as_plain_text() {
             "History",
             "RepoList",
             "Thumbnail",
+            "WallhavenDialog",
         ])
         .map(|name| dir.join(name));
     let tray = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/plasma-tray/contents/ui");
@@ -187,6 +189,7 @@ fn fixtures_follow_the_data_model() {
     check::<ProfileReply>("Profiles1.Get");
     check::<PresetsReply>("Profiles1.ListPresets");
     check::<ProvidersReply>("Providers1.List");
+    check::<CollectionsReply>("Providers1.Collections");
     check::<ReposReply>("Repos1.List");
     check::<BrowsePage>("Repos1.Browse");
     check::<InstalledReply>("Repos1.ListInstalled");

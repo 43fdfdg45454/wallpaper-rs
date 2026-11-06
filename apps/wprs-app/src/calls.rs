@@ -120,8 +120,11 @@ calls! {
         List list() json;
         Add add(id: str, kind: str, options: map, secret: str);
         Set set(id: str, key: str, value: str);
+        Update update(id: str, options: map);
         Remove remove(id: str, purge: bool);
         Sync sync(id: str);
+        Collections collections(id: str, owner: str) json;
+        Reseed reseed(id: str);
         SetSecret set_secret(id: str, secret: str);
         ForgetSecret forget_secret(id: str);
     }

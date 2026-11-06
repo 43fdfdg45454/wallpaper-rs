@@ -63,6 +63,10 @@ pub mod qobject {
         fn markup(self: &Backend, text: &QString) -> QString;
         #[qinvokable]
         fn plain(self: &Backend, text: &QString) -> QString;
+        #[qinvokable]
+        fn toggle(self: &Backend, list: &QString, item: &QString, order: &QString) -> QString;
+        #[qinvokable]
+        fn flip(self: &Backend, bits: &QString, index: i32) -> QString;
         #[qsignal]
         fn replied(self: Pin<&mut Backend>, tag: QString, json: QString);
         #[qsignal]
@@ -87,7 +91,7 @@ pub mod qobject {
 
 use crate::args::{carries_secret, invalid};
 use crate::bus;
-use crate::{app, tr};
+use crate::{app, choices, tr};
 use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use qobject::Backend;
@@ -168,5 +172,13 @@ impl Backend {
 
     pub fn plain(&self, text: &QString) -> QString {
         QString::from(&wprs_core::markup::plain(&text.to_string()))
+    }
+
+    pub fn toggle(&self, list: &QString, item: &QString, order: &QString) -> QString {
+        QString::from(&choices::toggled(&list.to_string(), &item.to_string(), &order.to_string()))
+    }
+
+    pub fn flip(&self, bits: &QString, index: i32) -> QString {
+        QString::from(&choices::flipped(&bits.to_string(), usize::try_from(index).unwrap_or_default()))
     }
 }

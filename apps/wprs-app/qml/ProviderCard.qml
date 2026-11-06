@@ -36,6 +36,12 @@ Kirigami.Card {
             onTriggered: dialogs.option.open()
         },
         Kirigami.Action {
+            text: App.tr("Search options…")
+            icon.name: "edit-find"
+            visible: card.provider.kind === "wallhaven"
+            onTriggered: dialogs.wallhaven.open()
+        },
+        Kirigami.Action {
             text: App.tr("Create playlist")
             icon.name: "view-media-playlist"
             enabled: !!card.provider.source

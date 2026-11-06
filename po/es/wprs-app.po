@@ -663,6 +663,10 @@ msgstr ""
 "Los votos van a tu servidor con tu cuenta; guarda solo los recuentos y tu "
 "propio voto."
 
+#: apps/wprs-app/qml/ChoiceChips.qml
+msgid "Add another…"
+msgstr "Añadir otro…"
+
 #: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
 msgid "Follow the sound that plays"
 msgstr "Seguir el sonido que se reproduce"
@@ -1926,6 +1930,7 @@ msgid "Automatic"
 msgstr "Automático"
 
 #: apps/wprs-app/qml/LayerNamespaceField.qml
+#: apps/wprs-app/qml/WallhavenDialog.qml
 msgid "Apply"
 msgstr "Aplicar"
 
@@ -2660,6 +2665,10 @@ msgstr "Olvidar el secreto"
 #: apps/wprs-app/qml/ProviderCard.qml
 msgid "Change option…"
 msgstr "Cambiar una opción…"
+
+#: apps/wprs-app/qml/ProviderCard.qml
+msgid "Search options…"
+msgstr "Opciones de búsqueda…"
 
 #: apps/wprs-app/qml/ProviderCard.qml
 msgid "Create playlist"
@@ -6047,7 +6056,7 @@ msgstr "Sesgo"
 msgid "%1 px, %2 px on phones, %3 px at Q0"
 msgstr "%1 px, %2 px en teléfonos, %3 px en Q0"
 
-#: apps/wprs-app/qml/SceneShadows3d.qml
+#: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/WallhavenDialog.qml
 msgid "none"
 msgstr "ninguna"
 
@@ -6561,6 +6570,7 @@ msgstr "Girar las direcciones de salida con un ruido"
 #: apps/wprs-app/qml/SceneSwarmFields.qml apps/wprs-app/qml/SceneSwarmStart.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
 msgid "Direction"
 msgstr "Dirección"
 
@@ -7680,6 +7690,7 @@ msgid "Reload configuration"
 msgstr "Recargar la configuración"
 
 #: apps/wprs-app/qml/SettingsPage.qml
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
 msgid "General"
 msgstr "General"
 
@@ -7903,6 +7914,38 @@ msgstr ""
 "cualquiera puede leer, así que no es privado; guarda los fondos privados en "
 "la sincronización o en un repositorio propio. Puedes cambiarlo después en la "
 "página de tu cuenta."
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "Wallhaven search of %1"
+msgstr "Búsqueda en Wallhaven de %1"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "New random order"
+msgstr "Nuevo orden aleatorio"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "Collections of:"
+msgstr "Colecciones de:"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "Wallhaven user name"
+msgstr "Nombre de usuario de Wallhaven"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "List"
+msgstr "Listar"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "Search instead"
+msgstr "Buscar en su lugar"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "%1 (%2 pictures)"
+msgstr "%1 (%2 imágenes)"
+
+#: apps/wprs-app/qml/WallhavenDialog.qml
+msgid "private"
+msgstr "privada"
 
 #: apps/wprs-app/qml/WebPrivacy.qml
 msgid "Let it see the time zone"
@@ -10834,6 +10877,7 @@ msgid "Main color"
 msgstr "Color principal"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
 msgid "Random"
 msgstr "Al azar"
 
@@ -11247,6 +11291,7 @@ msgid "Color over life"
 msgstr "Color a lo largo de la vida"
 
 #: apps/wprs-app/qml/facade/SceneWords.qml
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
 msgid "Colors"
 msgstr "Colores"
 
@@ -11405,3 +11450,131 @@ msgstr "Salida suave (%1)"
 #: apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Ease in and out (%1)"
 msgstr "Entrada y salida suaves (%1)"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Top list of"
+msgstr "Lo más votado de"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Exact resolutions"
+msgstr "Resoluciones exactas"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Aspect ratios"
+msgstr "Proporciones"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Similar to wallpaper"
+msgstr "Parecidos al fondo"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Tag number"
+msgstr "Número de etiqueta"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Uploaded by"
+msgstr "Subidos por"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Collection"
+msgstr "Colección"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "First page"
+msgstr "Primera página"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Pages per sync"
+msgstr "Páginas por sincronización"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Most pictures"
+msgstr "Máximo de imágenes"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Anime"
+msgstr "Anime"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "People"
+msgstr "Personas"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Safe"
+msgstr "Seguro"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Sketchy"
+msgstr "Dudoso"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Adult"
+msgstr "Adulto"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Newest"
+msgstr "Más nuevos"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Relevance"
+msgstr "Relevancia"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Most viewed"
+msgstr "Más vistos"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Most favorited"
+msgstr "Más favoritos"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Top list"
+msgstr "Más votados"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Hot"
+msgstr "Populares"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Descending"
+msgstr "Descendente"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Ascending"
+msgstr "Ascendente"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last day"
+msgstr "Último día"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last 3 days"
+msgstr "Últimos 3 días"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last week"
+msgstr "Última semana"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last month"
+msgstr "Último mes"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last 3 months"
+msgstr "Últimos 3 meses"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last 6 months"
+msgstr "Últimos 6 meses"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Last year"
+msgstr "Último año"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Any landscape"
+msgstr "Cualquier horizontal"
+
+#: apps/wprs-app/qml/facade/WallhavenWords.qml
+msgid "Any portrait"
+msgstr "Cualquier vertical"

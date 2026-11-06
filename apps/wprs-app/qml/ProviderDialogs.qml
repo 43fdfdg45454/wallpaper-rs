@@ -11,6 +11,7 @@ Item {
     required property var kind
     readonly property alias secret: secret
     readonly property alias option: option
+    readonly property alias wallhaven: wallhaven
     readonly property alias remover: remover
 
     Kirigami.Dialog {
@@ -63,6 +64,13 @@ Item {
                 color: Kirigami.Theme.neutralTextColor
             }
         }
+    }
+
+    WallhavenDialog {
+        id: wallhaven
+
+        provider: dialogs.provider
+        kind: dialogs.kind
     }
 
     Kirigami.Dialog {

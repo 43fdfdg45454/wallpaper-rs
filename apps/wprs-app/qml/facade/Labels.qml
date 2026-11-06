@@ -187,10 +187,10 @@ QtObject {
     }
 
     function field(key) {
-        return fields[key] ?? key;
+        return fields[key] ?? WallhavenWords.fields[key] ?? key;
     }
 
     function value(text) {
-        return LabelWords.values[text] ?? String(text ?? "");
+        return LabelWords.values[text] ?? WallhavenWords.values[text] ?? String(text ?? "");
     }
 }
