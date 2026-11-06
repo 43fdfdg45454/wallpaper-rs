@@ -20,7 +20,7 @@ use wprs_core::message::said;
 
 pub use crate::curves::{Curve, plot};
 pub use budget::budget;
-pub use handles::handles;
+pub use handles::{handles, heard};
 pub use looks::{controls, sources};
 pub use salt::{pin_seed, preview_seed};
 pub use walls::response;

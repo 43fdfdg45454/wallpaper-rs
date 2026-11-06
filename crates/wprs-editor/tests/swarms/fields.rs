@@ -148,3 +148,23 @@ fn systems_whose_id_needs_escaping_are_edited_through_their_layer() {
     act(&mut p, cut).unwrap();
     assert_eq!(p.doc["scene"]["layers"][1]["render"]["cutout"], json!([0.2, 0.8, 1.0]));
 }
+
+#[test]
+fn rays_that_follow_a_band_turn_with_the_sound_level_the_preview_is_told() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let gust = json!({ "forward": 0, "scale": 0.5, "noise_speed": 0, "offset": 4, "speed": [10, 80], "phase": 3, "audio": "bass" });
+    edit(&mut p, "turbulent", json!({ "turbulent": gust.clone() })).unwrap();
+    let rays = |sound: f32| {
+        let h = wprs_editor::swarms::heard(&p.dir, &p.doc, "flakes", None, (0.0, sound));
+        (h["sound"].clone(), h["fields"]["turbulent"]["samples"].clone(), h["seed"].as_u64().unwrap())
+    };
+    let ((quiet_level, quiet, seed), (loud_level, loud, _)) = (rays(0.0), rays(1.0));
+    assert_eq!((quiet_level, loud_level), (json!(0.0), json!(1.0)));
+    assert_ne!(quiet, loud, "the band moves the phase of the rays");
+    let mut t: wprs_scene::Turbulent = serde_json::from_value(gust).unwrap();
+    let salt = wprs_scene::particle_salt(system(&p)["seed"].as_u64().unwrap_or(0), seed, 0, 0);
+    t.phase = 0.0;
+    let want = f64::from(wprs_scene::turbulent_ray(&t, salt, 0, 0.0));
+    assert!((quiet[0].as_f64().unwrap() - want).abs() < 0.01, "{quiet} {want}");
+}

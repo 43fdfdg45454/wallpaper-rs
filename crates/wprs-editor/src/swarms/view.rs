@@ -32,7 +32,10 @@ fn round(v: f64) -> f64 {
     (v * 100.0).round() / 100.0
 }
 
-fn turbulent(t: Turbulent, f: &Frame, at: [f64; 2], (time, salt): (f64, u32)) -> Value {
+fn turbulent(mut t: Turbulent, f: &Frame, at: [f64; 2], (time, salt, sound): (f64, u32, f32)) -> Value {
+    if t.audio.is_some() {
+        t.phase *= sound.clamp(0.0, 1.0);
+    }
     let turn = f.turn();
     let forward = f64::from(t.forward) + turn;
     let spread = f64::from(t.scale) * 180.0;
@@ -63,10 +66,15 @@ fn offset(o: OffsetNoise, f: &Frame, at: [f64; 2], time: f64) -> Value {
     json!({ "offset": o, "at": at, "radius": ring, "knob": [round(at[0] + ring), round(at[1])], "arrows": arrows })
 }
 
-pub(super) fn fields(s: &Value, f: &Frame, emitters: &[Value], (time, salt): (f64, u32)) -> Value {
+pub(super) fn fields(
+    s: &Value,
+    f: &Frame,
+    emitters: &[Value],
+    (time, salt, sound): (f64, u32, f32),
+) -> Value {
     let at = emitters.iter().find_map(middle).unwrap_or_else(|| f.round(f.apply([0.0; 2])));
     let init = &s["init"];
     let t = serde_json::from_value::<Turbulent>(init["turbulent"].clone()).ok();
     let o = serde_json::from_value::<OffsetNoise>(init["offset_noise"].clone()).ok();
-    json!({ "turbulent": t.map(|t| turbulent(t, f, at, (time, salt))), "offset": o.map(|o| offset(o, f, at, time)) })
+    json!({ "turbulent": t.map(|t| turbulent(t, f, at, (time, salt, sound))), "offset": o.map(|o| offset(o, f, at, time)) })
 }

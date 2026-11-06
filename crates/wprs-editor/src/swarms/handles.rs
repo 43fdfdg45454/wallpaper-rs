@@ -45,6 +45,10 @@ pub(super) fn drawn_by<'a>(doc: &'a Value, system: &str) -> Option<&'a str> {
 }
 
 pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f64) -> Value {
+    heard(dir, doc, system, layer, (t, 0.0))
+}
+
+pub fn heard(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, (t, sound): (f64, f32)) -> Value {
     let Some(s) = doc.pointer(&format!("/scene/particles/{}", escape(system))) else { return Value::Null };
     let layer = layer.or_else(|| drawn_by(doc, system));
     let own = layer.and_then(|id| crate::actions::layer(doc, id).ok()).map(|(_, l)| &l["render"]);
@@ -92,7 +96,8 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "boids": super::steers::boids(s, &f),
         "operators": super::steers::operators(s),
         "strands": super::steers::strands(doc, s, render),
-        "fields": super::view::fields(s, &f, &emitters, (t, salt)),
+        "fields": super::view::fields(s, &f, &emitters, (t, salt, sound)),
+        "sound": sound,
         "seed": seed,
         "outputs": ["size", "alpha", "color", "speed", "life", "rotation", "spin", "frame"],
         "domains": looks::domains(),

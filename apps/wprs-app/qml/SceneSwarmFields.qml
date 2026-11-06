@@ -55,6 +55,41 @@ ColumnLayout {
     RowLayout {
         visible: fields.gust !== null
 
+        QQC2.Button {
+            visible: fields.tools.page.editor.value("/scene/clock/seed") === "null"
+            text: App.tr("Keep this seed")
+            icon.name: "object-locked"
+            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.text: App.tr("Every start of the scene then draws the particles the preview shows")
+            onClicked: fields.tools.page.run("set", {
+                    "pointer": "/scene/clock/seed",
+                    "value": fields.tools.info?.seed ?? 1
+                })
+        }
+
+        QQC2.Label {
+            visible: fields.gust?.audio !== undefined && fields.gust?.audio !== null
+            text: App.tr("Sound on the rays")
+        }
+
+        QQC2.Slider {
+            Layout.fillWidth: true
+            visible: fields.gust?.audio !== undefined && fields.gust?.audio !== null
+            from: 0
+            to: 1
+            value: fields.tools.page.heard
+            onMoved: {
+                fields.tools.page.heard = value;
+                fields.tools.load();
+            }
+            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.text: App.tr("How loud the band is for the rays drawn on the preview: %1%", Math.round(value * 100))
+        }
+    }
+
+    RowLayout {
+        visible: fields.gust !== null
+
         QQC2.Label {
             text: App.tr("Speed")
         }

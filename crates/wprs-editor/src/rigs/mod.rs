@@ -87,7 +87,8 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
         _ if q.get("handles").is_some() => handles(dir, doc, id),
         _ if q.get("particles").is_some() => {
             let p = &q["particles"];
-            crate::swarms::handles(dir, doc, id, p["layer"].as_str(), p["time"].as_f64().unwrap_or(0.0))
+            let (t, sound) = (p["time"].as_f64().unwrap_or(0.0), p["sound"].as_f64().unwrap_or(0.0) as f32);
+            crate::swarms::heard(dir, doc, id, p["layer"].as_str(), (t, sound))
         }
         _ if q.get("budget").is_some() => {
             let b = &q["budget"];

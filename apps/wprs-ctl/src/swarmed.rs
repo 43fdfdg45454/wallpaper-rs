@@ -98,8 +98,13 @@ pub(crate) fn run(command: Swarming) -> Result<()> {
     let Swarming::Particles { dir, system, what } = command;
     let project = Project::open(&dir)?;
     let found = match what {
-        Particle::Handles { layer, time } => {
-            wprs_editor::swarms::handles(&project.dir, &project.doc, &system, layer.as_deref(), time)
+        Particle::Handles { layer, time, seed, sound } => {
+            let mut doc = project.doc.clone();
+            if let Some(seed) = seed {
+                doc["scene"]["clock"]["seed"] = seed.into();
+            }
+            anyhow::ensure!((0.0..=1.0).contains(&sound), "the sound level goes from 0 to 1");
+            wprs_editor::swarms::heard(&project.dir, &doc, &system, layer.as_deref(), (time, sound))
         }
         Particle::Budget { time, quality, layer } => {
             let quality = quality.as_deref().and_then(parsed).unwrap_or_default();

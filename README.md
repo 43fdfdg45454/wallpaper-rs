@@ -2150,7 +2150,10 @@ pasan el umbral), los puntos de control `p0` a `p7` como marcadores que se arras
 un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja el abanico de
 direcciones que puede dar el ruido, las exactas de las primeras partículas que nacen ahora con la
 semilla con que corre la vista previa (`clock.seed` o, si es `null`, una que el editor elige para la
-sesión y le pasa a la vista previa) y una flecha con un asa
+sesión y le pasa a la vista previa; *Conservar esta semilla* la escribe en `clock.seed`, y si el
+arranque sigue una banda de sonido un control fija cuánto suena para los rayos, que giran con ella
+como en el motor; `wprs-ctl scene particles DIR SISTEMA handles --seed N --sound S` dibuja lo mismo)
+y una flecha con un asa
 que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
 de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
 un asa para la distancia. El inspector del sistema ofrece el tipo de cada

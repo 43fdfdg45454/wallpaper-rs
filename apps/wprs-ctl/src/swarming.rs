@@ -140,6 +140,17 @@ pub enum Particle {
         layer: Option<String>,
         #[arg(long, default_value_t = 0.0)]
         time: f64,
+        #[arg(
+            long,
+            help = "Seed of the run to draw the rays with, as the editor shows it; the scene seed by default"
+        )]
+        seed: Option<u64>,
+        #[arg(
+            long,
+            default_value_t = 0.0,
+            help = "Sound level from 0 to 1 that moves the phase of rays that follow a band"
+        )]
+        sound: f32,
     },
 }
 
