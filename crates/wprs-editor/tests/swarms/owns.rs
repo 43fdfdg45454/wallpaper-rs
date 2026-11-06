@@ -47,3 +47,18 @@ fn a_point_of_a_layer_takes_a_known_index_and_a_pair() {
     assert!(own(&mut p, &id, json!({ "1": [1, 2, 3] })).is_err());
     assert_eq!(instance(&p, &id), Value::Null);
 }
+
+#[test]
+fn a_layer_copy_of_a_world_point_is_drawn_where_the_particles_feel_it() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let id = layered(&mut p);
+    act(&mut p, json!({ "set": { "pointer": "/scene/particles/flakes/points/1/space", "value": "world" } }))
+        .unwrap();
+    let placed = json!({ "layer": { "transform": { "layer": id, "position": [700, 400], "rotation": 30 } } });
+    act(&mut p, placed).unwrap();
+    own(&mut p, &id, json!({ "1": [500, 300] })).unwrap();
+    let h = wprs_editor::swarms::handles(&p.dir, &p.doc, "flakes", Some(&id), 0.0);
+    assert_eq!(h["points"][1]["at"], json!([500.0, 300.0]), "{}", h["points"][1]);
+    assert_ne!(h["points"][0]["at"], h["points"][0]["local"], "a local point moves with the layer");
+}

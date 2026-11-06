@@ -45,7 +45,7 @@ fn tuned(mut spots: Vec<Value>, own: &Value, f: &Frame, t: f64) -> Vec<Value> {
         if k >= spots.len() {
             spots.push(json!({ "name": format!("p{k}"), "angle": f.turn(), "follow": false, "world": false, "bound": false }));
         }
-        let at = f.round(f.apply(local));
+        let at = f.round(if spots[k]["world"] == true { local } else { f.apply(local) });
         (spots[k]["local"], spots[k]["at"], spots[k]["own"]) = (json!(local), json!(at), json!(true));
     }
     spots
