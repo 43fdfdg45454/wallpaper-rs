@@ -19,7 +19,8 @@ pub(super) fn pulse_shows_what_plays(pulse: &str, path: &str) {
     playing::allow(true);
     playing::heard(Some(TRACK), Some(&[0xffff_0000_u32 as i32; 16]), 4);
     assert!(!stage.hears_media());
-    assert_eq!(shown(&mut stage), (String::new(), 0), "nothing of the track without the grant");
+    let waiting = || ("Nothing is playing".to_owned(), 0);
+    assert_eq!(shown(&mut stage), waiting(), "only the placeholder without the grant");
     assert_eq!(ask(json!({ "op": "grant", "uid": pulse, "input": "media", "on": true })), Value::Null);
     stage.refresh();
     assert!(stage.hears_media());
@@ -35,7 +36,7 @@ pub(super) fn pulse_shows_what_plays(pulse: &str, path: &str) {
     assert_eq!(previous, Some(first), "the cover before stays the previous one");
     playing::allow(false);
     playing::heard(Some(TRACK), None, 0);
-    assert_eq!(shown(&mut stage), (String::new(), 0), "without notification access nothing is read");
+    assert_eq!(shown(&mut stage), waiting(), "without notification access nothing is read");
     assert!(
         ask(json!({ "op": "grant", "uid": pulse, "input": "media_network", "on": true }))["error"]
             .is_string()

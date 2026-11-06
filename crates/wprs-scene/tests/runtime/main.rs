@@ -8,6 +8,7 @@ mod media;
 mod motion;
 mod sight;
 mod values;
+mod waiting;
 
 fn props() -> BTreeMap<String, Property> {
     serde_json::from_str(include_str!("../props.json")).unwrap()

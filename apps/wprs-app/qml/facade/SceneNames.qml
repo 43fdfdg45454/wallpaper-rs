@@ -24,6 +24,7 @@ QtObject {
             "pick": App.tr("Pick the files"),
             "pitch": App.tr("Dot pitch"),
             "pivot": App.tr("Pivot"),
+            "placeholder": App.tr("While nothing plays"),
             "plane": App.tr("Plane"),
             "play": App.tr("Play"),
             "play_on": App.tr("Play on"),

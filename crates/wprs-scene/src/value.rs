@@ -83,6 +83,8 @@ pub struct Binding<T> {
     pub a: Option<Track>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub media: Option<crate::Media>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placeholder: Option<crate::props::Text>,
     #[serde(default, rename = "fn", skip_serializing_if = "Option::is_none")]
     pub call: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

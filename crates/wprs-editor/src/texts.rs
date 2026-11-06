@@ -59,10 +59,12 @@ pub fn translate(
 ) -> Result<Vec<Op>> {
     let named = language.len() <= 35 && language.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
     ensure!(
-        named && pointer.starts_with("/manifest/") && textual(doc, pointer),
+        named
+            && (pointer.starts_with("/manifest/") || pointer.starts_with("/scene/"))
+            && textual(doc, pointer),
         said(
             "editor.name_language_such",
-            "name a language such as en or pt-BR and a text of the manifest",
+            "name a language such as en or pt-BR and a text of the manifest or the scene",
             &[]
         )
     );

@@ -53,6 +53,20 @@ QQC2.ToolButton {
         }
 
         QQC2.MenuItem {
+            text: App.tr("Text while nothing plays…")
+            visible: bind.field.source === "media" && SceneMediaWords.words.some(word => word[0] === bind.field.value?.media)
+            height: visible ? implicitHeight : 0
+            onTriggered: {
+                if (bind.field.value.placeholder === undefined)
+                    bind.page.run("set", {
+                        "pointer": bind.field.pointer + "/placeholder",
+                        "value": ""
+                    });
+                bind.page.editor.select(bind.field.pointer);
+            }
+        }
+
+        QQC2.MenuItem {
             text: App.tr("Fixed value")
             enabled: bind.field.source !== ""
             onTriggered: bind.bound(bind.field.source === "keys" ? bind.field.shown : bind.field.default)

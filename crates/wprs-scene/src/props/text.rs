@@ -17,6 +17,19 @@ impl Text {
         found.or_else(|| map.values().next().cloned()).unwrap_or_default()
     }
 
+    pub fn chosen(&self, lang: &str) -> &str {
+        let map = match self {
+            Text::Plain(text) => return text,
+            Text::Localized(map) => map,
+        };
+        let base = |s: &str| s.split(['-', '_']).next().unwrap_or_default().to_owned();
+        let exact = map.iter().find(|(k, _)| k.eq_ignore_ascii_case(lang));
+        let near = || map.iter().find(|(k, _)| !lang.is_empty() && base(k).eq_ignore_ascii_case(&base(lang)));
+        let english = || map.iter().find(|(k, _)| k.eq_ignore_ascii_case("en"));
+        let found = exact.or_else(near).or_else(english).or_else(|| map.iter().next());
+        found.map_or("", |(_, v)| v.as_str())
+    }
+
     pub fn is_empty(&self) -> bool {
         match self {
             Text::Plain(text) => text.is_empty(),

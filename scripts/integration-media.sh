@@ -110,9 +110,16 @@ if ctl scene asset "$tuning" other --cover current 2>/dev/null; then fail "a cov
 ctl scene add "$tuning" /scene/layers/- '{"id": "art", "type": "image", "image": "cover", "size": [1920, 1080], "transform": {"position": [960, 540]}}'
 ctl scene add "$tuning" /scene/layers/- '{"id": "title", "type": "text", "text": {"media": "title"}, "size": 40, "transform": {"position": [40, 40]}}'
 ctl scene add "$tuning" /scene/layers/- '{"id": "before", "type": "image", "image": "red", "size": [8, 8], "visible": false}'
+ctl scene set "$tuning" /scene/layers/1/text/placeholder '"Nothing plays"'
+ctl scene translate "$tuning" /scene/layers/1/text/placeholder es "No suena nada"
+ctl scene set "$tuning" /scene/layers/1/text/placeholder "\"$(printf 'x%.0s' $(seq 600))\""
+if ctl pack check "$tuning" >/dev/null 2>&1; then fail "a placeholder of 600 characters passed the check"; fi
+ctl scene undo "$tuning"
 ctl scene import "$tuning" "$WORK/tune/red.png" --id previous_cover >/dev/null
 ctl scene asset "$tuning" previous_cover --cover previous --placeholder red --field /scene/layers/2/image
 doc() { python3 -c "import json, sys; d = json.load(open(sys.argv[2])); print(eval(sys.argv[1]))" "$1" "$tuning/scene.json"; }
+[ "$(doc "d['layers'][1]['text']['placeholder']")" = "{'en': 'Nothing plays', 'es': 'No suena nada'}" ] ||
+  fail "the text while nothing plays: $(doc "d['layers'][1]['text']")"
 [ "$(doc "'media' in d['assets']['previous_cover'], d['assets'][d['layers'][2]['image']]['media']")" = "(False, 'previous')" ] ||
   fail "choosing the previous cover for a field: $(doc "d['assets'], d['layers'][2]")"
 if ctl scene asset "$tuning" cover --cover none --field /scene/layers/2/image 2>/dev/null; then fail "a field took no cover"; fi

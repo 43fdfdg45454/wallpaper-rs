@@ -146,6 +146,7 @@ impl Check<'_> {
                 self.issues.push(Issue::Type(format!("{path}/media")));
             }
         }
+        self.placeholder(path, b);
         if b.call.is_none() && b.params.is_none() {
             return;
         }
