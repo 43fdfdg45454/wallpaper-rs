@@ -113,4 +113,10 @@ ColumnLayout {
         tools: row.tools
         emitter: row.emitter
     }
+
+    SceneSwarmEmission {
+        Layout.fillWidth: true
+        tools: row.tools
+        index: row.emitter.index
+    }
 }

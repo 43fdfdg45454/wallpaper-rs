@@ -113,6 +113,11 @@ ColumnLayout {
         tools: tools
     }
 
+    SceneSwarmStack {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
     SceneSwarmLook {
         Layout.fillWidth: true
         tools: tools

@@ -2189,7 +2189,17 @@ selector por extremo que lo enlaza a un ajuste del paquete. Los colores iniciale
 colores, de tonos con su saturación y su brillo (con pasos), de una paleta con su ruido o de una
 barra de degradado donde un clic añade una parada y arrastrarla la mueve. Cada fuerza puede actuar
 solo en parte de la vida de la partícula, con una forma de cuatro asas que dice dónde aparece, actúa
-y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
+y se desvanece. Cada emisor tiene su ritmo (un deslizador en vivo, con *Ritmo fijo* si sigue claves o
+un enlace) y una franja de tiempo que muestra cuándo emite: el retraso, el final de la duración, los
+tramos de emisión y de pausa y las ráfagas, con asas que arrastran el retraso, la duración, el largo
+de los tramos y la separación entre ráfagas, y debajo el tamaño de la ráfaga y si sale con el tiempo,
+el ritmo o un clic, seguir el puntero, emitir solo con sonido y la velocidad que toma del emisor. La
+sección *Orden de dibujo y lo que pueden cambiar las capas* elige qué partículas quedan encima y cuántas veces se repiten los fotogramas
+en una vida, y qué valores pueden cambiar las capas de partículas (lo demás queda bloqueado). Al
+elegir una capa de partículas, el inspector ofrece sus propios valores sobre los del sistema
+(opacidad, tamaño, parte de las partículas, velocidad, vida, ritmo del tiempo, brillo y tinte, cada
+uno con su vuelta al del sistema) y los puntos de control que se arrastran en el lienzo pasan a ser
+solo de esa capa. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
 `--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
 `--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
 `render --cycles --order`, `settings --lock`, `force turbulence --time-scale --mask` y las fuerzas

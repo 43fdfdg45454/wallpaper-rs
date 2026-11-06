@@ -59,3 +59,21 @@ fn layer_sources_list_only_layers_that_may_feed_the_system_and_show_their_pixels
     );
     assert!(edit(&mut p, "layer", json!({ "emitter": 0, "id": "pack" })).is_err());
 }
+
+#[test]
+fn a_particles_layer_shows_its_own_control_points() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    edit(&mut p, "point", json!({ "point": 0, "at": [100, 50] })).unwrap();
+    let layer = wprs_editor::swarms::handles(&p.dir, &p.doc, "flakes", None, 0.0)["layer"].clone();
+    let id = layer.as_str().unwrap().to_owned();
+    let own =
+        json!({ "layer": { "instance": { "layer": id, "values": { "points": [[10, 20], [30, 40]] } } } });
+    act(&mut p, own).unwrap();
+    let h = wprs_editor::swarms::handles(&p.dir, &p.doc, "flakes", Some(&id), 0.0);
+    let points = h["points"].as_array().unwrap();
+    assert_eq!(points.len(), 2, "{points:?}");
+    assert_eq!((&points[0]["local"], &points[0]["own"]), (&json!([10.0, 20.0]), &json!(true)));
+    assert_eq!(points[1]["local"], json!([30.0, 40.0]));
+    assert_eq!(handles(&p)["points"][0]["local"], json!([100.0, 50.0]), "the system keeps its own point");
+}

@@ -479,6 +479,19 @@ The Add layer menu offers Light with its four types. Every light shows over the 
 to drag, and the selected one draws its handles, in pixels of the canvas through its parents: a ring
 at its radius with a handle on it, a square above it whose distance sets the height `z` (half a pixel
 of the preview for each pixel of height), for spot lights a handle that turns it and the edges of the
+
+Each emitter of the inspector has its rate (a live slider through `settings` with the `emitter`; a
+rate that follows keyframes or a link shows it and offers *Fixed rate*, which replaces it) and an
+emission lane, from 0 to at least 10 s: the delay, the end of the `duration`, the on and off spans
+of `periodic` (their means) and the bursts every `every` seconds, with handles that drag the delay,
+the duration, the length of the on and off spans (keeping the width of their ranges) and the spacing
+of bursts, each drag one gesture; below it the burst size and whether it fires on time, the beat or a
+click, following the pointer, `audio_gate` and `inherit`, all through `emit`. *Drawing order and what layers may change* picks
+the render `order` and `cycles` and ticks the values particle layers may change (the rest is `lock`).
+A selected particles layer shows its `instance`: a slider for each number, a tint and a reset for
+each to the value of the system, and *Draw everything as the system does* (`clear`); with a layer
+selected, the control points of the canvas are those of the layer (`particles` with `layer`
+answers them with `own`) and dragging one writes the `points` of its `instance`.
 outer and inner cone with a handle on each, for tube lights a handle on each end that moves, turns and
 stretches it, and for directional lights an arrow with a handle that turns it. A check box draws the
 box a moving light redraws. These handles change the fields of the light with `set`, so a light whose

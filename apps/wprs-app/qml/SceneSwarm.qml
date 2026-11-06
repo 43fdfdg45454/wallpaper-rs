@@ -41,6 +41,24 @@ Item {
             }, true);
     }
 
+    function move(k, at) {
+        if (!own)
+            return edit("point", {
+                    "point": k,
+                    "at": at
+                });
+        const points = (info?.points ?? []).map(p => p.local ?? [0, 0]);
+        points[k] = at;
+        page.run("layer", {
+                "instance": {
+                    "layer": own,
+                    "values": {
+                        "points": points
+                    }
+                }
+            }, true);
+    }
+
     function forceOf(i) {
         return JSON.parse(page.editor.value(SceneSwarmKnobs.pointer(system, "/forces/" + i)) || "null");
     }
@@ -85,11 +103,8 @@ Item {
             square: true
             label: modelData.name
             tint: Kirigami.Theme.neutralTextColor
-            tip: modelData.bound ? App.tr("This control point follows a value; moving it replaces the value") : App.tr("Drag to move the control point")
-            onMoved: (to, done) => swarm.edit("point", {
-                        "point": Number(modelData.name.slice(1)),
-                        "at": modelData.world ? to : swarm.local(to)
-                    })
+            tip: swarm.own ? App.tr("Drag to move this control point for this layer only") : modelData.bound ? App.tr("This control point follows a value; moving it replaces the value") : App.tr("Drag to move the control point")
+            onMoved: (to, done) => swarm.move(Number(modelData.name.slice(1)), modelData.world ? to : swarm.local(to))
         }
     }
 
