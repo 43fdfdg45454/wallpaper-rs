@@ -76,9 +76,13 @@ pub fn rule(dir: &Path, doc: &Value, r: &crate::actions::RuleEdit) -> Result<Vec
     let body = serde_json::to_string_pretty(&json)?;
     Descriptor::packaged(&r.effect, &body, &text(&wgsl)?)
         .map_err(|e| anyhow!(said("editor.effect", "the effect %1 %2", &[&r.effect, &e])))?;
-    fs::write(&descriptor, body)
-        .map_err(|e| said("editor.cannot_write", "cannot write %1: %2", &[&descriptor.display(), &e]))?;
-    Ok(vec![Op::Replace { path, value: entry }])
+    let free = |n: usize| format!("effects/{}-{n}.json", r.effect);
+    let written =
+        (2..).map(free).take(10_000).find(|p| !dir.join(p).exists() && !crate::revisions::kept(dir, p));
+    let written = written.ok_or_else(|| anyhow!("effects/{}", r.effect))?;
+    fs::write(dir.join(&written), body)
+        .map_err(|e| said("editor.cannot_write", "cannot write %1: %2", &[&written, &e]))?;
+    Ok(vec![Op::Replace { path: format!("{path}/descriptor"), value: json!(written) }])
 }
 
 pub fn rules(dir: &Path, doc: &Value, id: &str) -> Value {

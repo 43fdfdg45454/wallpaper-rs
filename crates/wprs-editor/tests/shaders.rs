@@ -171,13 +171,16 @@ fn the_wake_rules_of_package_effects_are_shown_and_changed_in_their_descriptor()
     let rule = |p: &mut Project, rule: Value| {
         p.act(&serde_json::from_value(json!({ "effect_rule": rule })).unwrap())
     };
+    let at = |p: &Project| p.dir.join(p.doc["scene"]["effects"]["glow"]["descriptor"].as_str().unwrap());
+    let read = |p: &Project| -> Value { serde_json::from_str(&fs::read_to_string(at(p)).unwrap()).unwrap() };
     rule(&mut p, json!({ "effect": "glow", "param": "gain", "uses": "time", "waits_for": "style" })).unwrap();
-    let written: Value =
-        serde_json::from_str(&fs::read_to_string(dir.join("effects/glow.json")).unwrap()).unwrap();
-    assert_eq!(
-        (&written["params"][0]["uses"], &written["params"][0]["waits_for"]),
-        (&json!("time"), &json!("style"))
-    );
+    let written = read(&p)["params"][0].clone();
+    assert_eq!((&written["uses"], &written["waits_for"]), (&json!("time"), &json!("style")));
+    assert!(p.dirty(), "a changed rule is a change of the project");
+    p.act(&Action::Undo {}).unwrap();
+    assert!(read(&p)["params"][0].get("waits_for").is_none(), "undo puts the old rule back");
+    p.act(&Action::Redo {}).unwrap();
+    assert_eq!(read(&p)["params"][0]["waits_for"], json!("style"), "redo brings the new rule again");
     let shown = wprs_editor::rigs::query(&p.dir, &p.doc, "", &json!({ "rules": { "effect": "glow" } }));
     assert_eq!((&shown["own"], &shown["params"][0]["waits_for"]), (&json!(true), &json!("style")), "{shown}");
     assert!(rule(&mut p, json!({ "effect": "glow", "param": "gain", "waits_for": "nothing" })).is_err());
@@ -186,8 +189,7 @@ fn the_wake_rules_of_package_effects_are_shown_and_changed_in_their_descriptor()
         "built-in rules stay"
     );
     rule(&mut p, json!({ "effect": "glow", "param": "gain", "uses": "", "waits_for": "" })).unwrap();
-    let cleared: Value =
-        serde_json::from_str(&fs::read_to_string(dir.join("effects/glow.json")).unwrap()).unwrap();
+    let cleared = read(&p);
     assert!(cleared["params"][0].get("uses").is_none() && cleared["params"][0].get("waits_for").is_none());
     let fluid = wprs_editor::rigs::query(&p.dir, &p.doc, "", &json!({ "rules": { "effect": "fluid" } }));
     assert_eq!(fluid["own"], json!(false));

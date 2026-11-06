@@ -8,10 +8,19 @@ use std::fs;
 use std::path::Path;
 
 const MESHES: &str = "meshes/";
+const EFFECTS: &str = "effects/";
+
+fn revised(p: &str) -> bool {
+    (p.starts_with(MESHES) && p.ends_with(".glb")) || (p.starts_with(EFFECTS) && p.ends_with(".json"))
+}
+
+pub(crate) fn kept(dir: &Path, p: &str) -> bool {
+    crate::session::stash(dir).is_ok_and(|s| s.join(p).exists())
+}
 
 fn strings(v: &Value, out: &mut BTreeSet<String>) {
     match v {
-        Value::String(s) if s.starts_with(MESHES) => drop(out.insert(s.clone())),
+        Value::String(s) if revised(s) => drop(out.insert(s.clone())),
         Value::Array(list) => list.iter().for_each(|x| strings(x, out)),
         Value::Object(map) => map.values().for_each(|x| strings(x, out)),
         _ => {}
@@ -32,7 +41,7 @@ pub(crate) fn named(history: &History) -> BTreeSet<String> {
 pub(crate) fn spare(dir: &Path, doc: &Value) -> Vec<String> {
     let used = used(doc);
     let list = files(dir).into_iter().map(|(p, _)| p);
-    list.filter(|p| p.starts_with(MESHES) && p.ends_with(".glb") && !used.contains(p)).collect()
+    list.filter(|p| revised(p) && !used.contains(p)).collect()
 }
 
 fn shift(from: &Path, to: &Path) -> std::io::Result<()> {
@@ -56,7 +65,7 @@ impl Project {
 
     pub(crate) fn bring_back(&self) {
         let Ok(stash) = crate::session::stash(&self.dir) else { return };
-        for p in used(&self.doc).into_iter().filter(|p| p.starts_with(MESHES)) {
+        for p in used(&self.doc).into_iter().filter(|p| revised(p)) {
             if !self.dir.join(&p).exists() && stash.join(&p).is_file() {
                 shift(&stash.join(&p), &self.dir.join(&p)).ok();
             }
