@@ -12,7 +12,7 @@ fn video(id: &str, playback: serde_json::Value) -> serde_json::Value {
     json!({ "id": id, "type": "video", "video": "clip", "size": [20, 20], "playback": playback })
 }
 
-fn shown(rt: &Runtime) -> Vec<String> {
+pub(super) fn shown(rt: &Runtime) -> Vec<String> {
     let frame = rt.frame(VIEW, Quality::Q3);
     let assets = frame.draws.iter().filter_map(|d| match &d.content {
         Content::Video { asset, .. } => Some(asset.to_string()),

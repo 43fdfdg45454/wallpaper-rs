@@ -55,19 +55,6 @@ pub(crate) fn owned<'a>(scene: &Scene, kind: &'a Kind) -> Vec<&'a String> {
     names
 }
 
-pub fn lane(scene: &Scene, layer: &Layer, asset: &str) -> Option<String> {
-    let picked = matches!(&layer.kind, Kind::Video { video: Value::Bound(b), .. } if b.map.is_none());
-    let own = owned(scene, &layer.kind).into_iter().find(|id| picked || *id == asset)?;
-    Some(format!("{own}@{}", layer.id))
-}
-
-impl Scene {
-    pub fn lanes(&self) -> Vec<(String, String)> {
-        let own = self.layers().flat_map(|l| owned(self, &l.kind).into_iter().map(move |a| (l, a)));
-        own.map(|(l, asset)| (format!("{asset}@{}", l.id), asset.clone())).collect()
-    }
-}
-
 fn fresh(id: &str, owner: Option<(&Layer, Option<&Playback>)>) -> Tape {
     let p = owner.and_then(|(_, p)| p).cloned().unwrap_or_default();
     let (start, end) = (f64::from(p.start), p.end.map(f64::from));

@@ -54,6 +54,7 @@ mod issue;
 mod kept;
 mod kin;
 mod kinds;
+mod lanes;
 mod layer;
 mod lean;
 mod ledger;

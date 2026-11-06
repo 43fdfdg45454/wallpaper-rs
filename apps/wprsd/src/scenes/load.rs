@@ -55,7 +55,6 @@ impl Daemon {
                 }
             }
         }
-        crate::scenes::lanes(&scene, &mut videos);
         assets.luts.extend(package.luts(&scene)?);
         let file = wpak.to_owned();
         assets.reloadable(&scene, move || {
@@ -83,6 +82,7 @@ impl Daemon {
         let properties = scene.properties(&m.properties, &crate::words::volume(), loudness);
         let labels = wprs_scene::labels(&properties, &languages);
         let (clips, mut lengths) = bank(&scene, &sounds);
+        crate::scenes::lanes(&scene, &properties, &mut videos);
         crate::scenes::filmed(&mut lengths, &videos);
         let (id, version, title, presets) =
             (m.id.clone(), m.version.clone(), m.title.pick(&languages), m.presets);

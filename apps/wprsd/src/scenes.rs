@@ -9,7 +9,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use wprs_render::{Pixels, SceneAssets};
-use wprs_scene::{Control, Scene, Uses, Values};
+use wprs_scene::{Control, Property, Scene, Uses, Values};
 use wprs_video::Bank;
 
 pub(crate) mod films;
@@ -84,8 +84,12 @@ pub(crate) fn bank(scene: &Scene, sounds: &[(String, PathBuf)]) -> (Bank, BTreeM
     (Bank::new(files), probed.collect())
 }
 
-pub(crate) fn lanes(scene: &Scene, videos: &mut Vec<(String, Reel)>) {
-    for (key, asset) in scene.lanes() {
+pub(crate) fn lanes(
+    scene: &Scene,
+    properties: &BTreeMap<String, Property>,
+    videos: &mut Vec<(String, Reel)>,
+) {
+    for (key, asset) in scene.played_lanes(properties) {
         let found = videos.iter().find(|(id, _)| *id == asset).map(|(_, reel)| reel.clone());
         videos.extend(found.map(|reel| (key.clone(), Reel { lane: key, ..reel })));
     }

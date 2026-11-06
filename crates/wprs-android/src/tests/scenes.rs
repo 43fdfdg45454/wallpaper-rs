@@ -120,10 +120,12 @@ pub(super) fn scenes() {
     let source = tempfile::tempdir().unwrap();
     fs::copy(&videos, source.path().join("clip.webm")).unwrap();
     let layers = json!([{ "id": "clip", "type": "video", "video": "clip" },
-        { "id": "own", "type": "video", "video": "clip", "playback": { "own_clock": true } }]);
+        { "id": "own", "type": "video", "video": "clip", "playback": { "own_clock": true } },
+        { "id": "picked", "type": "video", "video": { "prop": "pick" }, "playback": { "own_clock": true } }]);
     let text = json!({ "schema": wprs_scene::SCHEMA, "canvas": { "size": [64, 32] }, "assets": { "clip": { "path": "clip.webm" } }, "layers": layers });
     fs::write(source.path().join("scene.json"), text.to_string()).unwrap();
-    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.clip", "version": "1.0.0", "title": "Clip", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "content": { "rating": "general" }, "photosensitive": false, "origin": { "kind": "original" } });
+    let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.clip", "version": "1.0.0", "title": "Clip", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json", "content": { "rating": "general" }, "photosensitive": false, "origin": { "kind": "original" },
+        "properties": { "pick": { "type": "file", "accept": ["video"], "default_asset": "clip" } } });
     fs::write(source.path().join("manifest.json"), manifest.to_string()).unwrap();
     let built = source.path().join("clip.wpak");
     wprs_format::build(source.path(), &built, &wprs_format::Limits::default()).unwrap();
@@ -144,6 +146,12 @@ pub(super) fn scenes() {
     let lane = loaded.videos.iter().find(|(id, _)| id == "clip@own").map(|(_, f)| f.clone()).unwrap();
     assert!(lane != *extracted && fs::read(&lane).unwrap() == fs::read(extracted).unwrap(), "{lane:?}");
     assert!(fs::symlink_metadata(&lane).unwrap().file_type().is_symlink(), "the own clock links the file");
+    let picked = loaded.videos.iter().find(|(id, _)| id == "pick@picked").map(|(_, f)| f.clone());
+    assert!(
+        picked.is_some_and(|f| fs::read(f).unwrap() == fs::read(extracted).unwrap()),
+        "{:?}",
+        loaded.videos
+    );
     ask(json!({ "op": "pick", "choice": { "item": clip } }));
     assert!(choice::shown(true).is_some_and(|s| s.scene && !s.video));
     ask(json!({ "op": "pick", "choice": null }));
