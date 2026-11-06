@@ -6844,6 +6844,7 @@ dependencies = [
  "wprs-format",
  "wprs-ktx2",
  "wprs-scene",
+ "wprs-video",
 ]
 
 [[package]]

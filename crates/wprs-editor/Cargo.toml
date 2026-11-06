@@ -12,6 +12,7 @@ wprs-scene.workspace = true
 wprs-depth.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wprs-ktx2 = { workspace = true, features = ["encode"] }
+wprs-video.workspace = true
 anyhow.workspace = true
 base64.workspace = true
 dirs.workspace = true

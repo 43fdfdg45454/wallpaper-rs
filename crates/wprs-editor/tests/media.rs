@@ -175,14 +175,14 @@ fn own_clocks_are_listed_with_their_range_speed_and_where_they_are() {
     doc["scene"]["assets"]["clip"] = json!({ "path": "clip.webm" });
     doc["scene"]["layers"] = json!([{ "id": "film", "type": "video", "video": "clip",
         "playback": { "own_clock": true, "start": 0.5, "end": 2.5, "rate": 2 } }, { "id": "plain", "type": "video", "video": "clip" }]);
-    let found = wprs_editor::clocks::clocks(std::path::Path::new("/nonexistent"), &doc, 1.5);
+    let found = wprs_editor::clocks::clocks(std::path::Path::new("/nonexistent"), &doc, 1.5, 0);
     let list = found["clocks"].as_array().unwrap();
     assert_eq!(list.len(), 1, "{found}");
     assert_eq!(
         (list[0]["layer"].as_str(), list[0]["pointer"].as_str()),
         (Some("film"), Some("/scene/layers/0/playback"))
     );
-    assert!((list[0]["at"].as_f64().unwrap() - 1.5).abs() < 1e-9, "{found}");
+    assert!((list[0]["at"].as_f64().unwrap() - 1.5).abs() < 1e-9 && list[0]["strip"].is_null(), "{found}");
     assert_eq!(wprs_editor::clocks::position(1.0, 3.0, 1.0, false, 5.0), 3.0);
     assert_eq!(wprs_editor::clocks::position(1.0, 3.0, 1.0, true, 5.0), 2.0);
 }

@@ -1476,9 +1476,9 @@ vídeo de la lista y los saltos de los scripts los mueven a todos, y un vídeo q
 archivo elige al vuelo lleva el suyo para el archivo que el usuario elija; en una capa de imagen, en
 un vídeo atado sin `map` a una propiedad que no es de archivo o en una capa que muestra geometría de
 scripts se rechaza), que el inspector del editor ofrece como *Reloj propio*; la línea de tiempo del editor
-muestra cada reloj propio con el tramo del vídeo como una barra cuyos extremos se arrastran, su
-velocidad, bucle y reproducción y dónde está en el instante elegido (`wprs-ctl scene clocks DIR
---time T` lo imprime), y `wprs-ctl scene set DIR
+muestra cada reloj propio con una tira de fotogramas del vídeo, el tramo como una barra cuyos
+extremos se arrastran, su velocidad, bucle y reproducción y dónde está en el instante elegido
+(`wprs-ctl scene clocks DIR --time T --strip N` lo imprime, con N fotogramas), y `wprs-ctl scene set DIR
 /scene/layers/N/playback/own_clock true` también. Un paquete con un vídeo HDR
 (PQ o HLG) recibe la faceta `hdr` y `wprs-ctl pack check` lo dice: en el ordenador se decodifica con
 10 bits y la gráfica adapta sus tonos a colores normales (BT.2020 a sRGB, el blanco de la pantalla

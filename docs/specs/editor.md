@@ -118,9 +118,12 @@ layers of the scene that name the same asset change together, as any two layers 
 chains, attachments, parts and depth live in the layer and stay its own. `wprs-ctl scene --inside TEMPLATE …` does the same for every scene
 command, and `wprs-ctl scene open DIR --json --inside TEMPLATE` prints what the editor shows.
 
-The timeline shows a lane for each own video clock (`playback.own_clock`): the range of the video as
-a bar whose grips trim `start` and `end`, its speed, loop and play switches and a mark where the clock
-is at the playhead; `wprs-ctl scene clocks DIR [--time T]` prints the same lanes as JSON.
+The timeline shows a lane for each own video clock (`playback.own_clock`): a strip of eight frames
+taken evenly over the video (decoded once off the interface thread and kept in the cache of the
+user, `$XDG_CACHE_HOME/wallpaper-rs/strips`, at most 512 files), the range of the video as a bar whose
+grips trim `start` and `end`, its speed, loop and play switches and a mark where the clock is at the
+playhead; `wprs-ctl scene clocks DIR [--time T] [--strip N]` prints the same lanes as JSON, with the
+files of N frames (at most 16) of each with `--strip`.
 
 `import` copies pictures, videos, sounds, fonts and `.cube` tables. It refuses a file over the
 limits of the format (256 assets, 1 GiB per file, 512 MiB of pictures once decoded, sounds of 32

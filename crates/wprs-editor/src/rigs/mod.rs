@@ -114,7 +114,8 @@ pub fn query(dir: &Path, doc: &Value, id: &str, q: &Value) -> Value {
             crate::shaders::rules(dir, doc, q["rules"]["effect"].as_str().unwrap_or(id))
         }
         _ if q.get("clocks").is_some() => {
-            crate::clocks::clocks(dir, doc, q["clocks"]["time"].as_f64().unwrap_or(0.0))
+            let strip = q["clocks"]["strip"].as_u64().unwrap_or(0) as usize;
+            crate::clocks::clocks(dir, doc, q["clocks"]["time"].as_f64().unwrap_or(0.0), strip)
         }
         _ if q.get("spread").is_some() => crate::spread::spread(doc, &q["spread"]),
         _ => rig(dir, doc, id),

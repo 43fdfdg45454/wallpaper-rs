@@ -11,6 +11,13 @@ ColumnLayout {
     readonly property var page: timeline.page
     property var info: null
     readonly property var clocks: info?.clocks ?? []
+    readonly property var frames: JSON.parse(strips.frames || "{}")
+
+    function film(clock) {
+        const asset = (clock.videos ?? [])[0];
+        const path = asset ? JSON.parse(page.editor.value("/scene/assets/" + asset + "/path") || "null") : null;
+        return path ? page.editor.folder + "/" + path : "";
+    }
 
     function load() {
         info = JSON.parse(page.editor.rig("", JSON.stringify({
@@ -32,6 +39,11 @@ ColumnLayout {
     spacing: 0
     visible: clocks.length > 0
     Component.onCompleted: load()
+    onClocksChanged: clocks.forEach(clock => strips.ask(film(clock), 8))
+
+    Strips {
+        id: strips
+    }
 
     Connections {
         function onViewChanged() {
@@ -75,6 +87,24 @@ ColumnLayout {
                     height: Kirigami.Units.gridUnit * 0.5
                     radius: height / 2
                     color: Kirigami.Theme.alternateBackgroundColor
+                }
+
+                Repeater {
+                    model: lanes.frames[lanes.film(row.modelData)] ?? []
+
+                    delegate: Image {
+                        required property var modelData
+                        required property int index
+                        readonly property int count: (lanes.frames[lanes.film(row.modelData)] ?? []).length
+
+                        x: index * bar.width / Math.max(1, count) * Math.min(1, (row.modelData.length ?? row.total) / row.total)
+                        width: bar.width / Math.max(1, count) * Math.min(1, (row.modelData.length ?? row.total) / row.total)
+                        height: bar.height
+                        source: App.url(modelData.file)
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        opacity: 0.5
+                    }
                 }
 
                 Rectangle {

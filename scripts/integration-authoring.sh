@@ -29,3 +29,4 @@ ctl scene show "$made" /scene/templates/fill_template/layers/1/id | grep '"dot"'
 if ctl scene --inside fill_template add-layer "$made" solid --id loose 2>/dev/null; then fail "a second root was added to a template"; fi
 ctl scene open "$made" --json --inside fill_template | grep -F '"pointer":"/scene/templates/fill_template/layers/1"' >/dev/null ||
   fail "the outline of the template did not list its layers"
+ctl scene clocks "$made" --strip 3 | grep -c '"file":' | grep -x 3 >/dev/null || fail "the own clock did not get a strip of three frames"

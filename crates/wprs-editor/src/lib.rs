@@ -61,6 +61,7 @@ pub mod spread;
 pub mod stage3d;
 pub mod starters;
 pub mod stock;
+pub mod strips;
 pub mod swarms;
 pub mod texts;
 mod tidy;

@@ -146,7 +146,7 @@ pub(crate) fn run(command: Flying) -> Result<()> {
         }
         Flying::NewMaterial { dir, name, .. } => (dir, json!({ "material_check": { "name": name } })),
         Flying::EffectRule { dir, effect, .. } => (dir, json!({ "rules": { "effect": effect } })),
-        Flying::Clocks { dir, time } => (dir, json!({ "clocks": { "time": time } })),
+        Flying::Clocks { dir, time, strip } => (dir, json!({ "clocks": { "time": time, "strip": strip } })),
         other => anyhow::bail!("{other:?} changes the scene"),
     };
     let p = Project::open(&dir)?;

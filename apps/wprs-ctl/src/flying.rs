@@ -62,6 +62,13 @@ pub enum Flying {
         dir: PathBuf,
         #[arg(long, default_value_t = 0.0, help = "Seconds on the scene clock")]
         time: f64,
+        #[arg(
+            long,
+            default_value_t = 0,
+            value_name = "N",
+            help = "Also take N frames of each video, at most 16, for the strip the timeline shows"
+        )]
+        strip: usize,
     },
     #[command(
         about = "Print the wake rules of an effect, or change what a parameter of a package effect asks for, waits for or yields to"

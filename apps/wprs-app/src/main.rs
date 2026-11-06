@@ -25,6 +25,7 @@ mod scenelive;
 mod scenework;
 mod secret;
 mod shelf;
+mod strips;
 #[cfg(test)]
 mod tests;
 mod tr;
