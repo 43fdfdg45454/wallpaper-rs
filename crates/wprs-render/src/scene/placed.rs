@@ -18,7 +18,17 @@ impl Painter<'_, '_, '_> {
         let mut all = [Src::Clear; 11];
         all[..7].copy_from_slice(&tex);
         let (more, mode, load, vertices, tex) = (None, Mode::Replace, false, 3, self.set(all));
-        self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
+        self.ops.push(Op::Effect(Fill {
+            target,
+            shader,
+            slot,
+            tex,
+            more,
+            mode,
+            load,
+            vertices,
+            scissor: None,
+        }));
         target
     }
 

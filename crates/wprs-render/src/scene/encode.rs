@@ -83,6 +83,9 @@ impl Renderer {
                             Some(more) => pass.set_bind_group(1, &group, &[f.slot, more]),
                             None => pass.set_bind_group(1, &group, &[f.slot]),
                         }
+                        if let Some([x, y, w, h]) = f.scissor {
+                            pass.set_scissor_rect(x, y, w, h);
+                        }
                         pass.draw(0..f.vertices, 0..1);
                     }
                     (stats.passes, stats.draws, k) = (stats.passes + 1, stats.draws + 1, k + 1);

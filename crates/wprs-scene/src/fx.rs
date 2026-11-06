@@ -115,6 +115,8 @@ impl Descriptor {
             }
         }
         fail(self.reach.as_deref().is_none_or(|r| kind(r, ParamKind::Float)), "reach is no float".into());
+        let pictured = |b: &String| kind(b, ParamKind::Texture) || kind(b, ParamKind::Mask);
+        fail(self.bounded.iter().all(pictured), "bounded names no texture or mask".into());
         fail(self.min_fps.is_none_or(|f| (1..=240).contains(&f)), "min_fps is outside 1..=240".into());
         fail(
             self.velocity.as_deref().is_none_or(|v| kind(v, ParamKind::Bool)),

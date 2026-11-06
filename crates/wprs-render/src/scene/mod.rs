@@ -13,6 +13,7 @@ mod flight;
 mod fonts;
 mod held;
 mod hits;
+mod inked;
 mod item;
 mod lamps;
 mod limit;
@@ -31,6 +32,7 @@ mod poster;
 mod profile;
 mod rasters;
 mod ready;
+mod region;
 mod render;
 mod sampling;
 mod sized;
@@ -110,6 +112,7 @@ pub(crate) struct Fill {
     pub(crate) mode: Mode,
     pub(crate) load: bool,
     pub(crate) vertices: u32,
+    pub(crate) scissor: Option<[u32; 4]>,
 }
 
 pub(crate) struct Cached {

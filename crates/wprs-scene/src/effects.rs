@@ -49,6 +49,8 @@ pub struct Descriptor {
     pub fuse: Option<Fuse>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bounded: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_fps: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

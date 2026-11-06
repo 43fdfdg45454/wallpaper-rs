@@ -65,6 +65,7 @@ impl Renderer {
                 }
             }
             view.samplings = super::sampling::samplings(scene, assets);
+            super::inked::ink(scene, assets, &mut view.samplings);
             self.mipmap(&mut view.images, &view.samplings, &view.sources);
             let pool = &mut view.pool;
             view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
@@ -123,7 +124,8 @@ impl Renderer {
             let size = std::mem::size_of::<FrameData>() as u64;
             let mut pool = Pool::new(&self.device, &self.queue, format);
             pool.ledger = ledger;
-            let samplings = super::sampling::samplings(scene, assets);
+            let mut samplings = super::sampling::samplings(scene, assets);
+            super::inked::ink(scene, assets, &mut samplings);
             let sources = assets.images.clone();
             self.mipmap(&mut images, &samplings, &sources);
             let swarms =

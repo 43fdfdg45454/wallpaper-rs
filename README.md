@@ -1198,7 +1198,10 @@ efectos integrados, de eso se encarga el nivel de calidad. Los destinos de los e
 limpian en su primera pasada y las capas de ajuste leen lo que tienen debajo sin copiarlo: una pila
 de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos. El paralaje de profundidad
 (`depth_parallax`) no dibuja nada mientras no movería la imagen (sin órbita ni `overscan` y con el
-puntero fuera, en el centro o sin seguirlo), que en el teléfono es casi siempre.
+puntero fuera, en el centro o sin seguirlo), que en el teléfono es casi siempre. Un efecto de una
+pasada con una máscara de imagen en modo `strength` solo se dibuja sobre el recuadro donde su máscara
+no es cero, y nada mientras ese recuadro queda fuera de la pantalla; un efecto de paquete puede
+declarar con `bounded` qué texturas limitan dónde cambia la imagen.
 Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
 aunque el descriptor diga menos, y
 `wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en

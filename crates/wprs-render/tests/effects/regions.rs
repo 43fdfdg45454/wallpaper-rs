@@ -1,0 +1,27 @@
+use super::*;
+
+fn corner(x0: u32, x1: u32) -> RgbaImage {
+    RgbaImage::from_fn(W, H, |x, y| Rgba(if (x0..x1).contains(&x) && y < H / 2 { [255, 0, 0, 255] } else { [0, 0, 0, 255] }))
+}
+
+fn waves(mask: &str, strength: f32) -> Value {
+    let params = json!({ "amplitude": 6, "frequency": 2, "speed": 0, "direction": 90 });
+    json!({ "effect": "waves", "params": params, "mask": { "texture": mask, "channel": "r", "strength": strength } })
+}
+
+fn chain(strength: f32) -> Option<Shot> {
+    let list = json!([waves("left", strength), waves("right", strength), waves("left", strength), waves("none", strength)]);
+    let fx = Fx::chain(list).input(ramp()).image("left", corner(4, 20), true).image("right", corner(40, 60), true);
+    fx.image("none", corner(0, 0), true).shot()
+}
+
+#[test]
+fn masked_effects_draw_only_where_their_mask_can_change_the_picture() {
+    let (Some(narrow), Some(whole)) = (chain(1.0), chain(0.9999)) else { return };
+    let most = narrow.0.pixels().zip(whole.0.pixels()).map(|(a, b)| (0..3).map(|c| a.0[c].abs_diff(b.0[c])).max().unwrap_or(0)).max();
+    assert!(most.unwrap_or(0) <= 2, "{most:?}");
+    let Some(plain) = Fx::chain(json!([])).input(ramp()).shot() else { return };
+    let moved = |x: u32, y: u32| narrow.at(x, y) != plain.at(x, y);
+    assert!(moved(10, 8) && moved(50, 8), "{:?} {:?}", narrow.at(10, 8), plain.at(10, 8));
+    assert!(!moved(30, 8) && !moved(10, 24) && !moved(62, 28));
+}

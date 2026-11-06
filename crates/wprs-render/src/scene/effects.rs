@@ -3,6 +3,7 @@ use super::fed::Fed;
 use super::item::{Fx, Rect};
 use super::paint::Painter;
 use super::pipes::Shader;
+use super::region::Region;
 use wprs_scene::{Affine, CHAIN_ENTRY, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
 
 pub(crate) const EMPTY: [Src; 7] =
@@ -28,19 +29,33 @@ impl Painter<'_, '_, '_> {
     pub(crate) fn effects(&mut self, i: usize, input: Src, rect: Rect, layer_uv: Affine) -> Src {
         let frame = self.frame;
         let list = &frame.effects[frame.draws[i].effects.clone()];
-        let (mut current, mut k) = (input, 0);
+        let (mut current, mut k, mut spare) = (input, 0, None);
         while k < list.len() {
             let n = list[k].chain.clamp(1, list.len() - k);
             let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
-            if self.cut(i, &list[k]) {
+            let region =
+                if n == 1 { self.region(&list[k], layer_uv, self.size_of(current)) } else { Region::Whole };
+            if self.cut(i, &list[k]) || region == Region::Empty {
                 k += 1;
                 continue;
             }
-            let next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
-            if current != input && current != next {
-                self.release(current);
+            let from = self.ops.len();
+            let mut next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
+            let gone = match region {
+                Region::Part(r) if next != current => {
+                    next = self.narrow(from, (current, next), spare, r).unwrap_or(next);
+                    let old = std::mem::replace(&mut spare, (current != input).then_some((current, r)));
+                    [old.map(|(s, _)| s), None]
+                }
+                _ => [std::mem::take(&mut spare).map(|(s, _)| s), Some(current)],
+            };
+            for old in gone.into_iter().flatten().filter(|old| *old != input && *old != next) {
+                self.release(old);
             }
             (current, k) = (next, k + n);
+        }
+        if let Some((s, _)) = spare.filter(|(s, _)| *s != input && *s != current) {
+            self.release(s);
         }
         current
     }

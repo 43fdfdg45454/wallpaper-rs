@@ -9,7 +9,11 @@ const WHOLE: f32 = 0.995;
 impl Painter<'_, '_, '_> {
     fn texels(&self, i: usize) -> Option<[f32; 2]> {
         let d = &self.frame.draws[i];
-        if d.effects.is_empty() || self.backdrop.is_some() || self.lean(i).is_some() || self.flat.get().is_some() {
+        if d.effects.is_empty()
+            || self.backdrop.is_some()
+            || self.lean(i).is_some()
+            || self.flat.get().is_some()
+        {
             return None;
         }
         match &d.content {

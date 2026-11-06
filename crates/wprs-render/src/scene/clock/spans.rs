@@ -7,7 +7,17 @@ use wprs_scene::Tier;
 
 fn fill(shader: Shader) -> Op {
     let (target, mode) = (Src::Canvas, Mode::Replace);
-    Op::Effect(Fill { target, shader, slot: 0, tex: 0, more: None, mode, load: false, vertices: 3 })
+    Op::Effect(Fill {
+        target,
+        shader,
+        slot: 0,
+        tex: 0,
+        more: None,
+        mode,
+        load: false,
+        vertices: 3,
+        scissor: None,
+    })
 }
 
 #[test]

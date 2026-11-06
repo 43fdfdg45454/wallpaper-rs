@@ -60,7 +60,17 @@ impl Painter<'_, '_, '_> {
         let vertices = grid.map_or(3, |[x, y]| x * y * 6);
         let more = pass.copy.is_none().then(|| self.pool.push(&*more));
         let tex = self.set(tex);
-        self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
+        self.ops.push(Op::Effect(Fill {
+            target,
+            shader,
+            slot,
+            tex,
+            more,
+            mode,
+            load,
+            vertices,
+            scissor: None,
+        }));
         target
     }
 
