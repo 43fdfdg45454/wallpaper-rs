@@ -24,7 +24,7 @@ wait_for 20 grows 10 || fail "the pulsing scene did not keep the lights moving: 
 held pause False || fail "wprs-ctl rgb covered: $(ctl rgb covered --json)"
 ctl covered TEST-RGB true && expect "s['outputs']['TEST-RGB']['active']" False
 wait_for 10 held pause True || fail "the lights did not pause with the screen covered: $(ctl rgb status)"
-ctl rgb status | grep -q "^while covered (rgb.when_covered): pause, paused now" || fail "wprs-ctl rgb status: $(ctl rgb status)"
+ctl rgb status | grep "^while covered (rgb.when_covered): pause, paused now" >/dev/null || fail "wprs-ctl rgb status: $(ctl rgb status)"
 sleep 0.5
 before=$(painted) frames=$(drawn)
 sleep 2

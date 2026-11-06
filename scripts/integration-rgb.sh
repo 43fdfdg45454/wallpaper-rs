@@ -11,7 +11,7 @@ ctl config rgb.server "127.0.0.1:$openrgb"
 ctl config rgb.enabled true
 ctl rgb devices | grep -q "Example keyboard" || fail "no devices: $(ctl rgb status)"
 [ "$(ctl rgb devices --json | js "[d['leds'] for d in r]")" = "[4, 1]" ] || fail "devices: $(ctl rgb devices --json)"
-ctl rgb devices | grep -q "own mode Rainbow" || fail "the own mode was not shown: $(ctl rgb devices)"
+ctl rgb devices | grep "own mode Rainbow" >/dev/null || fail "the own mode was not shown: $(ctl rgb devices)"
 ctl rgb test 1
 if ctl rgb test 7 2>/dev/null; then fail "a device that does not exist was tested"; fi
 wait_for 10 grep -q '"device": 1' "$rgbs/painted" || fail "the test pattern did not reach the mouse"

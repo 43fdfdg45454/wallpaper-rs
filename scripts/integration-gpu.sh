@@ -15,7 +15,8 @@ ctl gpu auto >/dev/null
 if ctl config render.gpu "" 2>/dev/null; then fail "an empty card name was accepted"; fi
 if ctl gpu "pci:zz" 2>/dev/null; then fail "a bad PCI bus id was accepted"; fi
 [ "$(gpu "all('bus' in a for a in g['adapters'])")" = True ] || fail "the cards carry no bus: $(ctl gpu --json)"
-ctl gpu | head -n 1 | grep -q "BUS" || fail "wprs-ctl gpu shows no bus: $(ctl gpu)"
+ctl gpu >"$WORK/cards.txt"
+head -n 1 "$WORK/cards.txt" | grep -q "BUS" || fail "wprs-ctl gpu shows no bus: $(cat "$WORK/cards.txt")"
 bus=$(gpu "[a['bus'] for a in g['adapters'] if a['used']][0]")
 if [ -n "$bus" ]; then
   ctl gpu "pci:$bus" >/dev/null
