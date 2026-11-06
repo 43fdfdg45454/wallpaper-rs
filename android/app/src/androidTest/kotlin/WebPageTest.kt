@@ -5,90 +5,16 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import java.io.File
-import java.net.ServerSocket
-import java.net.SocketTimeoutException
 import java.util.TimeZone
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
-import org.json.JSONTokener
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class WebPageTest {
-    private val instrumentation = InstrumentationRegistry.getInstrumentation()
-    private val context = instrumentation.targetContext
-    private val pixel = AtomicInteger()
-    private val readers = Readers("page")
-    private val reader = readers.make(SIDE)
-    private val pages = Pages(context)
-    private val painter = Painter(false, Videos(context), Tilt(context), Hearing(context), pages)
-    private val server = ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1")).apply { soTimeout = 100 }
-    private val reached = AtomicInteger()
-    private lateinit var uid: String
-
-    @Before
-    fun prepare() = runBlocking {
-        val dir = File(storage(), "web/probe").apply { deleteRecursively(); mkdirs() }
-        File(dir, "manifest.json").writeText(PROBE_MANIFEST)
-        File(dir, "index.html").writeText(PROBE_PAGE)
-        File(dir, "probe.js").writeText(PROBE_SCRIPT)
-        File(dir, "early.js").writeText("window.early = \"preloaded\";")
-        File(dir, "manifest.json").writeText(PROBE_MANIFEST.replace("org.example.probe", "org.example.probe${System.nanoTime()}"))
-        uid = (ask("examples", "dir" to dir.parent) as org.json.JSONArray).getString(0)
-        ask("property", "uid" to uid, "key" to "port", "value" to server.localPort)
-        readers.listen(reader) { source ->
-            source.acquireLatestImage()?.use { image ->
-                val plane = image.planes[0]
-                val at = SIDE / 2 * plane.rowStride + SIDE / 2 * plane.pixelStride
-                pixel.set((0..2).fold(0) { argb, i -> argb shl 8 or (plane.buffer.get(at + i).toInt() and 0xff) })
-            }
-        }
-        Thread { while (!server.isClosed) runCatching { server.accept().close(); reached.incrementAndGet() }.exceptionOrNull()?.takeIf { it !is SocketTimeoutException && !server.isClosed }?.let { throw it } }.start()
-        Native.library(JSONObject(mapOf("op" to "pick", "choice" to choice("item", uid))).toString())
-        Render.call {
-            Native.commit(BOTH)
-            painter.attach(reader.surface)
-            painter.resize(SIDE, SIDE, 0)
-            painter.show(true)
-        }
-    }
-
-    @After
-    fun detach() {
-        instrumentation.runOnMainSync { pages.drop(painter) }
-        Render.call { painter.detach() }
-        runBlocking { ask("remove", "uids" to listOf(uid)) }
-        server.close()
-        readers.close()
-    }
-
-    private fun probe(): JSONObject? {
-        var result: String? = null
-        val done = java.util.concurrent.CountDownLatch(1)
-        instrumentation.runOnMainSync {
-            val web = pages.page(painter)?.web
-            if (web == null) done.countDown() else web.evaluateJavascript("JSON.stringify(window.probe || null)") { result = it; done.countDown() }
-        }
-        done.await(5, java.util.concurrent.TimeUnit.SECONDS)
-        val text = result?.let { JSONTokener(it).nextValue() as? String } ?: return null
-        return runCatching { JSONObject(text) }.getOrNull()
-    }
-
-    private fun until(what: String, check: (JSONObject) -> Boolean): JSONObject {
-        assertTrue("$what: ${probe()} at ${pages.page(painter)?.key}", waitFor { probe()?.let(check) == true })
-        return probe()!!
-    }
-
-    private fun reload() = Render.call { painter.refresh() }
-
+class WebPageTest : PageBase() {
     @Test
     fun pagesSeeTheirValuesAndNothingElse() {
         val seen = until("the probe answers") { probe -> listOf("own", "manifest", "escape", "other", "file", "wpak", "local").all(probe::has) }
@@ -180,7 +106,6 @@ class WebPageTest {
     }
 
     private companion object {
-        const val SIDE = 256
         val UTC = setOf("UTC", "GMT", "Etc/UTC", "Etc/GMT")
         const val ZONE = "Asia/Tokyo"
         const val TOKYO = 9 * 3_600_000

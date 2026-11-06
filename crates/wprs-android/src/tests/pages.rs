@@ -57,6 +57,7 @@ pub(super) fn pages_are_served_from_their_package_only() {
     assert!(html.starts_with("<!DOCTYPE html><script src=\"/:wprs/api.js\"></script>\n<html>"), "{html}");
     let csp = index["csp"].as_str().unwrap();
     assert!(csp.contains("connect-src 'self' data: blob:;") && csp.contains("frame-src 'self'"), "{csp}");
+    assert!(csp.ends_with("; webrtc 'block'"), "{csp}");
     assert!(served(&format!("{url}a%20b.js"))["path"].is_string());
     for blocked in ["manifest.json", "../manifest.json", "missing.js", ":user/photos/0000000000000000.png"] {
         assert_eq!(served(&format!("{url}{blocked}")), json!({}), "{blocked}");
@@ -144,6 +145,10 @@ fn privacy_is_chosen_per_package(uid: &str, path: &Path, url: &str) {
             .unwrap()
             .contains("connect-src 'self' data: blob: https://api.example.org;")
     );
+    for file in ["", ":wprs/api.js", ":wprs/guard.js", "early.js"] {
+        let csp = served(&format!("{url}{file}"))["csp"].as_str().unwrap().to_owned();
+        assert!(csp.ends_with("; webrtc 'block'"), "{file}: {csp}");
+    }
     assert_eq!(ask(json!({ "op": "clear_data", "uid": uid })), Value::Null);
     let origin = spec["origin"].clone();
     assert_eq!(ask(json!({ "op": "cleared" })), json!([origin]));

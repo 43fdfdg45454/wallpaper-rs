@@ -11,6 +11,7 @@ const GUARD: &str = ":wprs/guard.js";
 const WORKER: &str = ":wprs/worker.js";
 const TAG: &str = "<script src=\"/:wprs/api.js\"></script>";
 const OWN: &str = "'self' data: blob:";
+const NO_PEERS: &str = "webrtc 'block'";
 
 pub(super) fn inject(html: &str) -> String {
     let start = html.trim_start_matches(['\u{feff}', ' ', '\t', '\r', '\n']);
@@ -50,7 +51,8 @@ pub(crate) fn serve(handle: i64, url: &str) -> Result<Value, Error> {
     let pack = view.pack.clone();
     let Some(web) = pack.web.as_ref() else { return Ok(json!({})) };
     let network = if view.privacy.network { web.network.clone() } else { Vec::new() };
-    let reply = |kind: &str, key: &str, value: Value| json!({"mime": kind, "csp": csp(OWN, "'self'", &network), key: value});
+    let policy = format!("{}; {NO_PEERS}", csp(OWN, "'self'", &network));
+    let reply = |kind: &str, key: &str, value: Value| json!({"mime": kind, "csp": policy, key: value});
     let own = format!("https://{}/", view.host);
     let Some(rest) = url.strip_prefix(&own) else {
         let allowed = network.iter().any(|o| o == origin(url));

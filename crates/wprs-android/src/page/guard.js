@@ -107,6 +107,38 @@
       }
     }
     new g.MutationObserver(sweep).observe(g.document, { childList: true, subtree: true });
+    const watch = (root) => new g.MutationObserver((records) => {
+      for (const { addedNodes } of records) {
+        for (const node of addedNodes) {
+          if (node.nodeType !== 1) continue;
+          for (const frame of [node, ...node.querySelectorAll("iframe,frame")]) {
+            if (frame.localName === "iframe" || frame.localName === "frame") void frame.contentWindow;
+          }
+        }
+      }
+    }).observe(root, { childList: true, subtree: true });
+    replace(g.Element.prototype, "attachShadow", (real) => function (init) {
+      const root = real.call(this, init);
+      try {
+        watch(root);
+      } catch (e) {}
+      return root;
+    });
+    replace(g, "open", (real) => function (...args) {
+      const opened = real.apply(this, args);
+      try {
+        if (opened) guard(opened);
+      } catch (e) {}
+      return opened;
+    });
+    replace(g.Document.prototype, "open", (real) => function (...args) {
+      const opened = real.apply(this, args);
+      try {
+        const win = args.length > 1 ? opened : this.defaultView;
+        if (win) for (const name of peers) delete win[name];
+      } catch (e) {}
+      return opened;
+    });
     g.document.addEventListener("load", sweep, true);
     for (const element of [g.HTMLIFrameElement, g.HTMLFrameElement].filter(Boolean)) {
       for (const name of ["contentWindow", "contentDocument"]) {

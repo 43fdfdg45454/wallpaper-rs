@@ -13,6 +13,56 @@ const val PROBE_MANIFEST = """{ "schema": "wallpaper-rs.wpak/2", "id": "org.exam
 const val PROBE_PAGE = """<!doctype html>
 <html><body style="margin:0;height:100vh"><script src="probe.js"></script></body></html>"""
 
+const val PEERS_PAGE = """<!doctype html>
+<html><body><script>
+window.peers = {};
+window.trial = async (g) => {
+  if (!g) return "missing";
+  try {
+    const c = new g.RTCPeerConnection();
+    c.createDataChannel("x");
+    await c.setLocalDescription(await c.createOffer());
+    return "open";
+  } catch (e) {
+    return "blocked";
+  }
+};
+const report = (name, g) => trial(g).then((r) => { peers[name] = r; });
+const make = () => document.createElement("iframe");
+const born = (add) => {
+  const at = window.length;
+  add();
+  return window[at];
+};
+report("top", window);
+report("plain", born(() => document.body.append(make())));
+const call = "parent.trial(window).then((r) => parent.peers.shadowdoc = r)";
+document.body.appendChild(document.createElement("div")).attachShadow({ mode: "open" }).innerHTML = "<iframe srcdoc='<scr" + "ipt>" + call + "</scr" + "ipt>'></iframe>";
+report("fragment", born(() => {
+  const part = document.createDocumentFragment();
+  part.append(make());
+  document.body.append(part);
+}));
+report("reopen", born(() => {
+  const frame = document.body.appendChild(make());
+  frame.contentDocument.open();
+  frame.contentDocument.write("<p>");
+  frame.contentDocument.close();
+}));
+const moved = make();
+document.body.append(moved);
+const at = window.length - 1;
+moved.addEventListener("load", () => report("moved", window[at]), { once: true });
+setTimeout(() => { moved.src = "about:blank"; }, 50);
+document.body.append(Object.assign(make(), {
+  srcdoc: "<scr" + "ipt>parent.trial(window).then((r) => parent.peers.srcdoc = r)</scr" + "ipt>",
+}));
+report("nested", born(() => {
+  const outer = document.body.appendChild(make()).contentWindow;
+  outer.document.body.append(outer.document.createElement("iframe"));
+}));
+</script></body></html>"""
+
 const val PROBE_SCRIPT = """
 const probe = (window.probe = { frames: 0, rates: [], paused: [], clicks: [], moves: 0, props: {} });
 probe.early = window.early;
