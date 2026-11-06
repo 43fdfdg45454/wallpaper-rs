@@ -115,8 +115,9 @@ impl Painter<'_, '_, '_> {
         fed
     }
 
-    pub(crate) fn drawn(&mut self, id: &str, m: Affine, (w, h): (u32, u32)) -> Option<Src> {
+    pub(crate) fn drawn(&mut self, id: &str, m: Affine, size: (u32, u32)) -> Option<Src> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
+        let (w, h) = self.sharp(j, m, size);
         let key = projection(j, m, (w, h));
         if let Some((_, Some((out, _)))) = self.isolated.iter().find(|(k, _)| *k == key) {
             return Some(*out);

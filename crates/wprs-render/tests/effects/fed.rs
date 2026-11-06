@@ -4,8 +4,10 @@ use super::*;
 fn effects_take_masks_from_layers_and_shapes() {
     let half = json!({ "id": "half", "type": "solid", "color": "#ffffff", "size": [32, 32], "visible": false,
         "transform": { "position": [48, 16] } });
-    let gray = |mask: Value| json!([{ "effect": "color_adjust", "params": { "saturation": 0 }, "mask": mask }]);
-    let Some(layered) = Fx::chain(gray(json!({ "layer": "half" }))).input(solid(RED)).layer(half.clone()).shot()
+    let gray =
+        |mask: Value| json!([{ "effect": "color_adjust", "params": { "saturation": 0 }, "mask": mask }]);
+    let Some(layered) =
+        Fx::chain(gray(json!({ "layer": "half" }))).input(solid(RED)).layer(half.clone()).shot()
     else {
         return;
     };
@@ -28,8 +30,13 @@ fn effects_take_masks_from_layers_and_shapes() {
 #[test]
 fn built_in_effects_read_the_backdrop() {
     let json = json!({ "id": "under_probe", "passes": [{ "entry": "fs_under_probe", "inputs": ["previous", "backdrop"] }] });
-    probe(json, "@fragment\nfn fs_under_probe(in: VertexOut) -> @location(0) vec4<f32> {\n    return sample(aux0, in.uv);\n}\n");
-    let Some(out) = Fx::new("under_probe", json!({})).input(solid(RED)).background("#00ff00").shot() else { return };
+    probe(
+        json,
+        "@fragment\nfn fs_under_probe(in: VertexOut) -> @location(0) vec4<f32> {\n    return sample(aux0, in.uv);\n}\n",
+    );
+    let Some(out) = Fx::new("under_probe", json!({})).input(solid(RED)).background("#00ff00").shot() else {
+        return;
+    };
     out.check(&[((32, 16), [0, 255, 0]), ((4, 4), [0, 255, 0])]);
 }
 
@@ -67,7 +74,11 @@ fn effects_follow_hidden_moving_layers_they_read() {
             extra.clone().into_iter().fold(fx, Fx::layer)
         };
         let Some((last, fresh, damage)) = played(fx) else { return };
-        assert!(damage > 0 && last.diff(&fresh) < 0.5, "{effects}: {} apart, damage {damage}", last.diff(&fresh));
+        assert!(
+            damage > 0 && last.diff(&fresh) < 0.5,
+            "{effects}: {} apart, damage {damage}",
+            last.diff(&fresh)
+        );
     }
 }
 
@@ -147,7 +158,10 @@ fn groups_with_masked_children_that_feed_each_other_through_effects_draw_once_a_
     };
     let (Some(four), Some(eight), Some(twelve)) = (passes(4), passes(8), passes(12)) else { return };
     let grown = twelve - eight;
-    assert!(grown <= eight - four + 2 && twelve < 4 * four, "{four}, {eight} and {twelve} passes at depth 4, 8 and 12");
+    assert!(
+        grown <= eight - four + 2 && twelve < 4 * four,
+        "{four}, {eight} and {twelve} passes at depth 4, 8 and 12"
+    );
 }
 
 #[test]
@@ -162,9 +176,24 @@ fn moving_image_masks_draw_like_still_ones() {
         run.runtime.advance(1.0);
         Some(run.shot())
     };
-    let (Some(moving), Some(still)) = (shot(json!({ "keys": [[0, [8, 8]], [2, [72, 32]]] })), shot(json!([40, 20])))
+    let (Some(moving), Some(still)) =
+        (shot(json!({ "keys": [[0, [8, 8]], [2, [72, 32]]] })), shot(json!([40, 20])))
     else {
         return;
     };
     assert!(moving.diff(&still) < 0.5 && still.at(40, 20) != BLUE, "{} apart", moving.diff(&still));
+}
+
+#[test]
+fn small_mask_pictures_keep_their_place_when_drawn_at_their_own_size() {
+    let halves = RgbaImage::from_fn(4, 2, |x, _| Rgba(if x < 2 { [255; 4] } else { [0; 4] }));
+    let mask = json!([{ "effect": "tint", "params": { "color": "#ff0000" }, "mask": { "layer": "fed" } }]);
+    let fed = json!({ "id": "fed", "type": "image", "image": "halves", "size": [W, H], "visible": false,
+        "transform": { "position": { "keys": [[0, [32, 16]], [9, [32, 16.5]]] } } });
+    let fx = Fx::chain(mask).input(solid(BLUE)).image("halves", halves, true).layer(fed);
+    let Some(mut run) = fx.run() else { return };
+    run.shot();
+    run.runtime.advance(0.1);
+    let out = run.shot();
+    assert!(out.at(8, 16) != BLUE && out.at(56, 16) == BLUE, "{:?} {:?}", out.at(8, 16), out.at(56, 16));
 }
