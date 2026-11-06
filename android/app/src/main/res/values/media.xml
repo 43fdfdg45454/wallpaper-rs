@@ -8,6 +8,12 @@
     <string name="media_access_why">Android lets an app see what other players play only through notification access. This app uses it only to read the title, artist, album, cover and progress of the track while a wallpaper you allowed shows them; it never reads your notifications and keeps, logs or sends nothing. Turn on wallpaper-rs in the list that opens.</string>
     <string name="show_media_network">Show what plays even though it can reach the network</string>
     <string name="media_network_note">This web wallpaper may also reach the sites it names, so the title, artist and cover of what plays could leave the phone.</string>
+    <string name="media_network_why">This web wallpaper may also reach the sites it names, so the title, artist and cover of what plays could leave the phone. Allow it only if you trust it with them; you can take it back here at any time.</string>
+    <string name="media_network_allow">Allow</string>
+    <string name="media_status_off">No wallpaper reads what plays now; it starts while an allowed one is shown.</string>
+    <string name="media_status">Read now. Players found: %1$d. Track: %2$s, playing: %3$s, cover: %4$s.</string>
+    <string name="media_yes">yes</string>
+    <string name="media_no">no</string>
     <string name="video_speed">Speed</string>
     <string name="video_start">Start</string>
     <string name="video_end">Stop at</string>
