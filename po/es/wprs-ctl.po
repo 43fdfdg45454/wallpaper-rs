@@ -232,21 +232,22 @@ msgid "Value painted, from 0 (erases) to 1"
 msgstr "Valor que se pinta, de 0 (borra) a 1"
 
 #: apps/wprs-ctl/src/author.rs
-#, fuzzy
 msgid ""
 "Set the text of a title, description, change notes, label, option or the "
 "text a media value shows while nothing plays in one language; an empty "
 "language sets the plain text"
 msgstr ""
-"Fijar el texto de un título, una descripción, unas notas de cambios, una "
-"etiqueta o una opción en un idioma; un idioma vacío fija el texto simple"
+"Fijar en un idioma el texto de un título, una descripción, unas notas de "
+"cambios, una etiqueta, una opción o el texto que muestra un valor de medios "
+"mientras nada suena; un idioma vacío fija el texto simple"
 
 #: apps/wprs-ctl/src/author.rs
-#, fuzzy
 msgid ""
 "JSON Pointer to the text, such as /manifest/title or /scene/layers/0/text/"
 "placeholder"
-msgstr "JSON Pointer al texto, como /manifest/title"
+msgstr ""
+"JSON Pointer al texto, como /manifest/title o /scene/layers/0/text/"
+"placeholder"
 
 #: apps/wprs-ctl/src/author.rs
 msgid "Language such as en or pt-BR"
@@ -400,11 +401,12 @@ msgid "Frames per second of the simulated clock"
 msgstr "Cuadros por segundo del reloj simulado"
 
 #: apps/wprs-ctl/src/bench.rs
-#, fuzzy
 msgid ""
 "Quality level; picked like the daemon when omitted, steered by GPU time like "
 "the phone with auto"
-msgstr "Nivel de calidad; se elige como el daemon si se omite"
+msgstr ""
+"Nivel de calidad; se elige como el daemon si se omite, y con auto se ajusta "
+"por el tiempo de GPU como en el teléfono"
 
 #: apps/wprs-ctl/src/bench.rs
 msgid "Number of screens that show the scene at once"
@@ -421,14 +423,18 @@ msgstr "Aplicar los límites de esta categoría de dispositivo"
 #: apps/wprs-ctl/src/bench.rs
 msgid "Time each render pass with GPU timestamps, where the GPU has them"
 msgstr ""
+"Medir cada pasada de dibujo con marcas de tiempo de la GPU, donde la GPU las "
+"tenga"
 
 #: apps/wprs-ctl/src/bench.rs
 msgid "Save the last frame as a PNG image"
-msgstr ""
+msgstr "Guardar el último fotograma como imagen PNG"
 
 #: apps/wprs-ctl/src/bench.rs
 msgid "Render in real time at --fps for this long instead of frame after frame"
 msgstr ""
+"Dibujar en tiempo real a --fps durante este tiempo en lugar de fotograma "
+"tras fotograma"
 
 #: apps/wprs-ctl/src/cli.rs
 msgid "Output name such as DP-1; every output when omitted"
@@ -497,13 +503,12 @@ msgstr ""
 "daemon"
 
 #: apps/wprs-ctl/src/cli.rs
-#, fuzzy
 msgid ""
 "Show the quality of each screen and why, or keep it automatic, fixed or "
 "floored"
 msgstr ""
-"Mostrar el nivel de calidad de cada pantalla y por qué, o dejarlo "
-"automático, fijo o por encima de un mínimo"
+"Mostrar la calidad de cada pantalla y por qué, o dejarla automática, fija o "
+"por encima de un mínimo"
 
 #: apps/wprs-ctl/src/cli.rs
 msgid "Re-read the configuration file"
@@ -514,6 +519,8 @@ msgid ""
 "Start the daemon again, through systemd if it runs it, for a new card or "
 "surface"
 msgstr ""
+"Volver a iniciar el daemon, a través de systemd si lo ejecuta, para una "
+"tarjeta o superficie nueva"
 
 #: apps/wprs-ctl/src/cli.rs
 msgid ""
@@ -532,7 +539,6 @@ msgid "Accepted for symmetry: the state is always JSON"
 msgstr "Aceptado por simetría: el estado siempre es JSON"
 
 #: apps/wprs-ctl/src/cli.rs
-#, fuzzy
 msgid ""
 "Show a pattern of lines and circles over the screens to check where they "
 "are; setting layout.monitors.<screen> to X,Y,W,H in millimetres places one "
@@ -540,7 +546,8 @@ msgid ""
 msgstr ""
 "Mostrar un patrón de líneas y círculos sobre las pantallas para comprobar "
 "dónde están; fijar layout.monitors.<pantalla> en X,Y,W,H en milímetros ubica "
-"una a mano"
+"una a mano y fijar layout.follow.<salida> en otra salida muestra la misma "
+"parte"
 
 #: apps/wprs-ctl/src/cli.rs
 msgid "Show the pattern or hide it"
@@ -1763,44 +1770,48 @@ msgid ""
 "Print the video layers that play on a clock of their own: range, speed, loop "
 "and where each clock is"
 msgstr ""
+"Imprimir las capas de vídeo que se reproducen con un reloj propio: tramo, "
+"velocidad, bucle y dónde está cada reloj"
 
 #: apps/wprs-ctl/src/flying.rs
-#, fuzzy
 msgid "Seconds on the scene clock"
-msgstr "Segundos desde el inicio de la escena"
+msgstr "Segundos en el reloj de la escena"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid ""
 "Also take N frames of each video, at most 16, for the strip the timeline "
 "shows"
 msgstr ""
+"Tomar también N fotogramas de cada vídeo, como mucho 16, para la tira que "
+"muestra la línea de tiempo"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid ""
 "Print the wake rules of an effect, or change what a parameter of a package "
 "effect asks for, waits for or yields to"
 msgstr ""
+"Imprimir las reglas de activación de un efecto, o cambiar qué pide, qué "
+"espera o a qué cede un parámetro de un efecto del paquete"
 
 #: apps/wprs-ctl/src/flying.rs
-#, fuzzy
 msgid "Id of the effect"
-msgstr "Id del recurso nuevo"
+msgstr "Id del efecto"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid "Parameter to change; without it the rules are printed"
-msgstr ""
+msgstr "Parámetro a cambiar; sin él se imprimen las reglas"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid "time, cursor, audio or clicks, or an empty value for nothing"
-msgstr ""
+msgstr "time, cursor, audio o clicks, o un valor vacío para nada"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid "A parameter that must not be zero, or an empty value"
-msgstr ""
+msgstr "Un parámetro que no debe ser cero, o un valor vacío"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid "A parameter that takes over while not zero, or an empty value"
-msgstr ""
+msgstr "Un parámetro que toma el control mientras no es cero, o un valor vacío"
 
 #: apps/wprs-ctl/src/flying.rs
 msgid ""
@@ -2130,13 +2141,13 @@ msgstr ""
 "Mostrar el desplazamiento y lo que conserva cada nivel de calidad en su lugar"
 
 #: apps/wprs-ctl/src/gpus.rs
-#, fuzzy
 msgid ""
 "Choose the card: auto, integrated, dedicated, software, part of its name or "
 "pci: and its bus id to tell identical cards apart; list the cards without it"
 msgstr ""
-"Elegir la tarjeta: auto, integrated, dedicated, software o parte de su "
-"nombre; sin ella lista las tarjetas"
+"Elegir la tarjeta: auto, integrated, dedicated, software, parte de su nombre "
+"o pci: y su id de bus para distinguir tarjetas idénticas; sin ella lista las "
+"tarjetas"
 
 #: apps/wprs-ctl/src/inputs.rs
 msgid ""
@@ -2736,16 +2747,18 @@ msgid "Remove a layer"
 msgstr "Quitar una capa"
 
 #: apps/wprs-ctl/src/layering.rs
-#, fuzzy
 msgid ""
 "Copy a layer, with new ids, just above it, or with --template to a new "
 "template scripts spawn"
-msgstr "Copiar una capa, con ids nuevos, justo encima"
+msgstr ""
+"Copiar una capa, con ids nuevos, justo encima, o con --template a una "
+"plantilla nueva que crean los scripts"
 
 #: apps/wprs-ctl/src/layering.rs
 msgid ""
 "Copy it to the templates under a free name, <id>_template or the next one"
 msgstr ""
+"Copiarla a las plantillas con un nombre libre, <id>_template o el siguiente"
 
 #: apps/wprs-ctl/src/layering.rs
 msgid ""
@@ -3077,20 +3090,24 @@ msgstr "Volver a mostrar una parte sobre todo"
 msgid ""
 "How far the depth of the vertices pushes them, from 0 to 10; turns depth on"
 msgstr ""
+"Cuánto desplaza a los vértices su profundidad, de 0 a 10; activa la "
+"profundidad"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid "Hide the triangles seen from behind; turns depth on"
-msgstr ""
+msgstr "Ocultar los triángulos vistos por detrás; activa la profundidad"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid ""
 "Draw the parts from back to front by their depth (on by default); turns "
 "depth on"
 msgstr ""
+"Dibujar las piezas de atrás hacia adelante según su profundidad (activado "
+"por defecto); activa la profundidad"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid "Turn depth off"
-msgstr ""
+msgstr "Desactivar la profundidad"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid ""
@@ -3109,9 +3126,8 @@ msgid "Let a bone turn freely again"
 msgstr "Dejar que un hueso gire libre otra vez"
 
 #: apps/wprs-ctl/src/limbing.rs
-#, fuzzy
 msgid "Which way the joints of the chain bend"
-msgstr "Hacia qué lado se dobla una cadena de dos huesos"
+msgstr "Hacia qué lado se doblan las articulaciones de la cadena"
 
 #: apps/wprs-ctl/src/limbing.rs
 msgid "How much it moves the pose, from 0 to 1"
@@ -3717,101 +3733,104 @@ msgid ""
 "Set how the package plays by default: frame rate, volume and muting for "
 "videos, web pages and scenes, speed, part and loop for videos"
 msgstr ""
+"Fijar cómo se reproduce el paquete por defecto: tasa de fotogramas, volumen "
+"y silencio para vídeos, páginas web y escenas, y velocidad, tramo y bucle "
+"para vídeos"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Highest frame rate, 1 to 240, or display to follow the screen"
 msgstr ""
+"Tasa de fotogramas más alta, de 1 a 240, o display para seguir a la pantalla"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Volume from 0 to 1"
-msgstr "Gris de 0 a 1"
+msgstr "Volumen de 0 a 1"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "true to start without sound"
-msgstr ""
+msgstr "true para empezar sin sonido"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Speed of a video, from 0.1 to 4"
-msgstr "Zoom de una imagen, de 1 a 8"
+msgstr "Velocidad de un vídeo, de 0.1 a 4"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Second where a video starts, 0 to 3600"
-msgstr "Segundos para desaparecer, de 0 a 10"
+msgstr "Segundo en que empieza un vídeo, de 0 a 3600"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Second where a video ends, after the start"
-msgstr ""
+msgstr "Segundo en que termina un vídeo, después del inicio"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "false plays a video once and keeps its last frame"
-msgstr ""
+msgstr "false reproduce un vídeo una vez y deja su último fotograma"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid ""
 "Set the script run before the page, the color shown while it loads and the "
 "storage it keeps"
 msgstr ""
+"Fijar el script que corre antes de la página, el color que se muestra "
+"mientras carga y el almacenamiento que guarda"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "A .js or .mjs file of the package"
-msgstr "Título del paquete de recursos"
+msgstr "Un archivo .js o .mjs del paquete"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Local storage of the page, 0 to 5120 KiB"
-msgstr ""
+msgstr "Almacenamiento local de la página, de 0 a 5120 KiB"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid ""
 "Replace the https origins a web page may reach, or add or remove some; "
 "network follows them in the inputs"
 msgstr ""
+"Reemplazar los orígenes https a los que puede llegar una página web, o "
+"añadir o quitar algunos; network los sigue en las entradas"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid ""
 "Origins such as https://api.example.org, at most 8; none removes them all"
 msgstr ""
+"Orígenes como https://api.example.org, como mucho 8; none los quita todos"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Add the origins to the ones there are"
-msgstr "Añadir las etiquetas a las que hay"
+msgstr "Añadir los orígenes a los que hay"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Remove the origins from the ones there are"
-msgstr "Quitar las etiquetas de las que hay"
+msgstr "Quitar los orígenes de los que hay"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid ""
 "Replace the declared inputs, or add or remove some: audio, pointer, clicks, "
 "media, network"
 msgstr ""
+"Reemplazar las entradas declaradas, o añadir o quitar algunas: audio, "
+"pointer, clicks, media, network"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Inputs; none declares none"
-msgstr ""
+msgstr "Entradas; none no declara ninguna"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Add the inputs to the ones there are"
-msgstr "Añadir las etiquetas a las que hay"
+msgstr "Añadir las entradas a las que hay"
 
 #: apps/wprs-ctl/src/paging.rs
-#, fuzzy
 msgid "Remove the inputs from the ones there are"
-msgstr "Quitar las etiquetas de las que hay"
+msgstr "Quitar las entradas de las que hay"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Copy a file into a web, picture or video package folder"
-msgstr ""
+msgstr "Copiar un archivo a la carpeta de un paquete web, de imagen o de vídeo"
 
 #: apps/wprs-ctl/src/paging.rs
 msgid "Folder of the package to copy it into"
-msgstr ""
+msgstr "Carpeta del paquete a la que copiarlo"
 
 #: apps/wprs-ctl/src/pkg.rs
 msgid ""
@@ -4974,6 +4993,9 @@ msgid ""
 "for the way a line of lights runs; off leaves the device alone (a zone stays "
 "dark); none takes the whole picture again"
 msgstr ""
+"x y w h como partes de la imagen de 0 a 1, luego right, left, down o up "
+"según hacia dónde corre una línea de luces; off deja el dispositivo en paz "
+"(una zona queda apagada); none vuelve a tomar la imagen entera"
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid ""
@@ -5011,17 +5033,23 @@ msgid ""
 "Show or choose the part of the picture each device or zone takes; list every "
 "place without a device"
 msgstr ""
+"Mostrar o elegir la parte de la imagen que toma cada dispositivo o zona; sin "
+"dispositivo lista todas las ubicaciones"
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid ""
 "The device name as wprs-ctl rgb devices shows it, with its serial or number "
 "when two share a name"
 msgstr ""
+"El nombre del dispositivo como lo muestra wprs-ctl rgb devices, con su "
+"número de serie o su número cuando dos comparten nombre"
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid ""
 "Place one zone of the device, counted from 0 in wprs-ctl rgb devices --json"
 msgstr ""
+"Ubicar una zona del dispositivo, contada desde 0 en wprs-ctl rgb devices --"
+"json"
 
 #: apps/wprs-ctl/src/rgb.rs
 msgid "Print the colors a screen sends to RGB lighting, at most 64 by 16"
@@ -5156,6 +5184,8 @@ msgid ""
 "Print the outline of every part of a mesh layer as JSON, as the editor draws "
 "it, on any mesh"
 msgstr ""
+"Imprimir el contorno de cada pieza de una capa de malla como JSON, tal como "
+"lo dibuja el editor, en cualquier malla"
 
 #: apps/wprs-ctl/src/rigging.rs
 msgid ""
@@ -5170,6 +5200,8 @@ msgid ""
 "Edit and show the layers of this script template instead of the layers of "
 "the scene; its own layer ids name them"
 msgstr ""
+"Editar y mostrar las capas de esta plantilla de script en lugar de las capas "
+"de la escena; las nombran sus propios ids de capa"
 
 #: apps/wprs-ctl/src/seeding.rs
 msgid "%1 is not none or FADE_IN,FULL,FADE_OUT,GONE"
@@ -5936,12 +5968,16 @@ msgid ""
 "Frame of each simulated screen in millimetres, 0 to 100; the layout.bezel_mm "
 "setting without it"
 msgstr ""
+"Marco de cada pantalla simulada en milímetros, de 0 a 100; sin él, el ajuste "
+"layout.bezel_mm"
 
 #: apps/wprs-ctl/src/spanning.rs
 msgid ""
 "Size of each simulated screen: WIDTHxHEIGHT in millimetres, or a diagonal "
 "such as 24in or 34in@21:9 (16:9 without a ratio); 527x296 without it"
 msgstr ""
+"Tamaño de cada pantalla simulada: ANCHOxALTO en milímetros, o una diagonal "
+"como 24in o 34in@21:9 (16:9 sin proporción); sin él, 527x296"
 
 #: apps/wprs-ctl/src/spanning.rs
 msgid "the time is a finite number of seconds up to %1, not %2"
@@ -6081,13 +6117,12 @@ msgid "Draw the layer as the system does in every value"
 msgstr "Dibujar la capa como lo hace el sistema en todos los valores"
 
 #: apps/wprs-ctl/src/steps.rs
-#, fuzzy
 msgid ""
 "Create a package folder from a starting point: the scenes empty, particles, "
 "parallax or clock, or web for a web page"
 msgstr ""
-"Crear una carpeta de escena desde un punto de partida: empty, particles, "
-"parallax o clock"
+"Crear una carpeta de paquete desde un punto de partida: las escenas empty, "
+"particles, parallax o clock, o web para una página web"
 
 #: apps/wprs-ctl/src/steps.rs
 msgid ""
@@ -6242,13 +6277,12 @@ msgid "Read the layer once (static) or each time it changes (on_change)"
 msgstr "Leer la capa una vez (static) o cada vez que cambia (on_change)"
 
 #: apps/wprs-ctl/src/swarming.rs
-#, fuzzy
 msgid ""
 "Choose what a child system takes from its parent particle: color, size, "
 "alpha, velocity (with its speed in depth when both have perspective)"
 msgstr ""
 "Elegir qué toma un sistema hijo de su partícula padre: color, size, alpha, "
-"velocity"
+"velocity (con su velocidad en profundidad cuando ambos tienen perspectiva)"
 
 #: apps/wprs-ctl/src/swarming.rs
 msgid "The child system, 0 first"
@@ -6368,10 +6402,13 @@ msgid ""
 "Seed of the run to draw the rays with, as the editor shows it; the scene "
 "seed by default"
 msgstr ""
+"Semilla de la ejecución con la que dibujar los rayos, como la muestra el "
+"editor; por defecto la semilla de la escena"
 
 #: apps/wprs-ctl/src/swarming.rs
 msgid "Sound level from 0 to 1 that moves the phase of rays that follow a band"
 msgstr ""
+"Nivel de sonido de 0 a 1 que mueve la fase de los rayos que siguen una banda"
 
 #: apps/wprs-ctl/src/swarming.rs
 msgid ""
@@ -6623,11 +6660,15 @@ msgid ""
 "Make a cube map of this panorama, an equirectangular picture twice as wide "
 "as tall"
 msgstr ""
+"Hacer un mapa cúbico con este panorama, una imagen equirrectangular el doble "
+"de ancha que de alta"
 
 #: apps/wprs-ctl/src/texturing.rs
 msgid ""
 "Make a cube map of six square picture assets of one size, given in this order"
 msgstr ""
+"Hacer un mapa cúbico con seis recursos de imagen cuadrados de un mismo "
+"tamaño, dados en este orden"
 
 #: apps/wprs-ctl/src/texturing.rs
 msgid ""
