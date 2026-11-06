@@ -1688,6 +1688,10 @@ msgid "add or remove a timeline, not both"
 msgstr "añade o quita una línea de tiempo, no ambas cosas"
 
 #: crates/wprs-format/src/admin.rs
+msgid "no folder was given for the repository"
+msgstr "no se indicó la carpeta del repositorio"
+
+#: crates/wprs-format/src/admin.rs
 msgid "already holds a repository"
 msgstr "ya contiene un repositorio"
 

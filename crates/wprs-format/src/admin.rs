@@ -17,6 +17,7 @@ pub struct RootStatus {
 }
 
 pub fn init(dir: &Path, settings: &Settings, now: i64) -> Result<RootStatus> {
+    require(!dir.as_os_str().is_empty(), "dir", "no folder was given for the repository")?;
     require(!root_path(dir, 1).exists(), "dir", "already holds a repository")?;
     write(&root_path(dir, 1), &serde_json::to_vec(&settings.root(1, None, now)?)?, false)?;
     Catalog { shard_bits: settings.shard_bits, root_days: Some(settings.root_days), ..Catalog::default() }

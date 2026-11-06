@@ -15,6 +15,7 @@ Kirigami.Dialog {
     property alias named: name.text
     property alias roots: roots
     property alias onlines: onlines
+    readonly property bool ready: !fresh || (folder !== "" && roots.keys.length > 0 && onlines.keys.length > 0)
 
     signal made(string folder, string charter)
 
@@ -53,6 +54,7 @@ Kirigami.Dialog {
     standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
     padding: Kirigami.Units.largeSpacing
     onAccepted: made(folder, written())
+    onOpened: standardButton(Kirigami.Dialog.Ok).enabled = Qt.binding(() => charter.ready)
 
     Kirigami.FormLayout {
         RowLayout {

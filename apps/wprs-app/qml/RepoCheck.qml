@@ -14,10 +14,14 @@ Timer {
                 sample = JSON.parse(stall.backend.sample());
                 const charter = stall.admin.charter;
                 charter.start(null);
-                charter.folder = sample.repo;
-                charter.named = "Check";
                 charter.roots.keys = [sample.root_pub];
                 charter.onlines.keys = [sample.online_pub];
+                if (charter.ready)
+                    throw new Error("static repository: a new repository could be made without a folder");
+                charter.folder = sample.repo;
+                charter.named = "Check";
+                if (!charter.ready)
+                    throw new Error("static repository: a chosen folder did not enable the new repository");
                 charter.accept();
             }, () => stall.shown?.root?.version === 1 && stall.shown.root.complete === false], [() => {
                 const rooting = stall.admin.rooting;

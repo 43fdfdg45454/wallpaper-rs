@@ -82,3 +82,18 @@ fn mirrors_are_kept_replaced_or_dropped_and_the_root_keeps_its_lifetime() {
     assert_eq!(charter.mirrors, Some(vec![]));
     assert_eq!(serde_json::from_str::<Charter>("{}").unwrap().mirrors, None);
 }
+
+#[test]
+fn a_repository_is_made_only_in_a_named_folder() {
+    let root = keygen(None).unwrap();
+    let mut first = Settings::default();
+    let keys = Charter {
+        root_keys: vec![root.public],
+        online_keys: vec![keygen(None).unwrap().public],
+        ..Charter::default()
+    };
+    keys.apply(&mut first).unwrap();
+    let refused = init(Path::new(""), &first, NOW).unwrap_err().to_string();
+    assert!(refused.contains("no folder was given for the repository"), "{refused}");
+    assert!(!Path::new("root").exists() && !Path::new("catalog.json").exists());
+}
