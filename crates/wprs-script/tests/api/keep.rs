@@ -136,6 +136,9 @@ const CLIPS: &str = r#"import { scene, folder } from "wprs";
             try { pictures.show("film", "v1"); } catch (e) { said.push(e.message); }
             try { all.show("photo", "v1"); } catch (e) { said.push(e.message); }
             all.show("film", "v1");
+            const copy = scene.spawn("badge", { id: "copy" });
+            try { all.show(copy.id, "v1"); } catch (e) { said.push(e.message); }
+            all.show(copy.id, "a1");
         }
         scene.layer("info").text = said.join("|");
     }"#;
@@ -144,7 +147,9 @@ const CLIPS: &str = r#"import { scene, folder } from "wprs";
 fn scripts_that_ask_for_videos_list_and_play_them_on_video_layers() {
     let layers = json!([{ "id": "photo", "type": "solid", "color": "#ffffff" }, { "id": "film", "type": "video", "video": "clip" },
         { "id": "info", "type": "text", "text": "", "size": 10 }]);
-    let doc = json!({ "scripts": [{ "path": "main.js", "uses": ["folders"] }], "assets": { "clip": { "path": "clip.webm" } }, "layers": layers });
+    let badge = json!({ "id": "badge", "type": "solid", "color": "#ffffff" });
+    let doc = json!({ "scripts": [{ "path": "main.js", "uses": ["folders", "layers"] }], "assets": { "clip": { "path": "clip.webm" } },
+        "layers": layers, "templates": { "badge": badge } });
     let mut made = common::setup(doc, &[("main.js", CLIPS)]);
     made.folders = vec!["album".into()];
     let mut script =
@@ -152,8 +157,9 @@ fn scripts_that_ask_for_videos_list_and_play_them_on_video_layers() {
     let listed = r#"{"album":[["a1","k1","sea.png","image"],["v1","k2","waves.webm","video"]]}"#;
     let out = script.update(&Frame { folders: listed, ..Frame::at(0.0) }).unwrap();
     assert_eq!(out.layers["film"].file.as_deref(), Some("wpak-user://album/v1"));
+    assert_eq!(out.layers["copy"].file.as_deref(), Some("wpak-user://album/a1"));
     assert_eq!(
         text(&out, "info"),
-        "pictures:1|all:2|1/2|video||image|v1 is not a file of album|photo is no video layer and cannot show a video"
+        "pictures:1|all:2|1/2|video||image|v1 is not a file of album|photo is no video layer and cannot show a video|copy is no video layer and cannot show a video"
     );
 }

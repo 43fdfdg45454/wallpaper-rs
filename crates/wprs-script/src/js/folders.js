@@ -1,5 +1,5 @@
 import { setup, need, touched, guard, owner } from "wprs:core";
-import { own } from "wprs:layers";
+import { own, info } from "wprs:layers";
 
 const listing = {};
 const handlers = {};
@@ -24,11 +24,11 @@ export function folder(prop, options) {
         },
         show(layer, id) {
             layer = String(layer);
-            if (!setup.layers[layer] && !own.spawned.has(layer.split(".")[0])) throw new TypeError(`${layer} is not a layer`);
+            const type = info(layer)?.type;
+            if (!type) throw new TypeError(`${layer} is not a layer`);
             const file = id === null ? null : found(id);
             if (id !== null && !file) throw new RangeError(`${id} is not a file of ${prop}`);
-            const type = setup.layers[layer]?.type;
-            if (file?.[3] === "video" && type !== undefined && type !== "video") throw new TypeError(`${layer} is no video layer and cannot show a video`);
+            if (file?.[3] === "video" && type !== "video") throw new TypeError(`${layer} is no video layer and cannot show a video`);
             const set = (own.overrides[layer] ??= {});
             if (id === null) delete set.file;
             else set.file = `wpak-user://${prop}/${id}`;
