@@ -4,6 +4,7 @@ mod accent;
 mod account;
 mod acting;
 mod apply;
+mod bench;
 mod blend;
 #[cfg(target_os = "android")]
 mod bridge;
@@ -103,6 +104,12 @@ pub mod host {
 
     pub fn setting(key: &str, value: Option<&str>) -> String {
         settings::setting(key, value).unwrap_or_else(|e| e.to_string())
+    }
+
+    pub fn bench(path: &str, args: &[String]) -> String {
+        crate::bench::run(std::path::Path::new(path), args)
+            .unwrap_or_else(|e| json!({ "error": e }))
+            .to_string()
     }
 }
 

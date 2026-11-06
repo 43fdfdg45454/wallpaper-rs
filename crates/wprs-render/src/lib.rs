@@ -4,6 +4,7 @@ mod allocations;
 mod animation;
 #[cfg(target_os = "linux")]
 mod barrier;
+mod bench;
 mod bind;
 mod calibrate;
 mod choose;
@@ -45,6 +46,7 @@ mod timeout;
 mod yuv;
 
 pub use animation::{MAX_ANIMATION, Pictures, animation};
+pub use bench::{Bench, Level, WARMUP, save_frame, scene_bench, spread};
 pub use choose::{Chosen, Fallback};
 pub use coded::Coding;
 pub use decode::{

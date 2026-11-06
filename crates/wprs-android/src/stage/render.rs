@@ -5,13 +5,12 @@ use crate::hearing;
 use crate::power::{Power, delay_ms};
 use std::sync::atomic::Ordering::Relaxed;
 use wprs_render::{GpuImage, RenderError, Renderer, SceneView};
-use wprs_scene::{Budget, Content, FlashGuard, Quality, Tier, Wake, Why};
+use wprs_scene::{Budget, Content, FlashGuard, PHONE_SHARE, Quality, Tier, Wake, Why};
 
 const LISTEN_MS: i64 = 250;
 const QUIET_MS: i64 = 2_000;
 const MAX_GAP: f64 = 600.0;
 const DAY_MS: f64 = 86_400_000.0;
-const PHONE_SHARE: f32 = 0.75;
 const SLACK_NS: i64 = 2_000_000;
 
 impl Stage {

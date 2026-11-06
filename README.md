@@ -1902,6 +1902,9 @@ wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon, en la tarjeta de render.gpu
 wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memoria con dos pantallas
 wprs-ctl scene bench escena.wpak --size 1440x3040 --quality q3 --passes --shot q3.png   # cada pasada y la imagen del último fotograma
+wprs-ctl scene bench escena.wpak --quality auto --paced 30   # 30 s en tiempo real con el nivel automático del teléfono
+WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh build && WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh copy escena.wpak
+WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh run escena.wpak --level q3 --passes   # el mismo banco en el teléfono, en JSON
 ```
 
 En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada

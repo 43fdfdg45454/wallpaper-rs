@@ -27,6 +27,7 @@ tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 libc.workspace = true
+serde_json.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 ash.workspace = true
@@ -35,5 +36,4 @@ rustix.workspace = true
 [dev-dependencies]
 wprs-ktx2 = { workspace = true, features = ["encode"] }
 brotli.workspace = true
-serde_json.workspace = true
 tempfile.workspace = true

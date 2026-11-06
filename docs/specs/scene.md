@@ -11,7 +11,19 @@ what each frame costs, how long the scene takes to load and draw its first frame
 main memory it holds (`--screens 2` shows it on two screens at once; `--passes` times each render
 pass with GPU timestamps, where the GPU has them inside command encoders, every 15th frame, and lists
 the passes from the dearest, as the performance report of the phone does; `--shot frame.png` saves
-the last frame, so two builds can be compared picture by picture).
+the last frame, so two builds can be compared picture by picture; `--quality auto` steers the level
+by measured GPU time as the phone does, starting where the phone would and listing every step;
+`--paced 30` renders in real time at `--fps` for 30 seconds, with at most two frames on the GPU like
+the swapchain of the phone, and reports the rate it held and the slots it missed). The same bench
+runs on a phone: `scripts/phone-bench.sh build` cross-compiles the `bench` example of
+`crates/wprs-android` for arm64 with the NDK, `copy FILE.wpak...` copies it and the packages to
+`/data/local/tmp/wprs-bench` (nothing else on the phone is touched and no app is installed), and
+`run NAME.wpak --level q3 --passes` or `--level auto --paced 30` loads the package the way the
+live wallpaper does (phone limits, properties, tier from its GPU, 1440x3040 unless `--size` says
+otherwise) and prints the report as JSON with the battery temperature and thermal status before
+and after. The serial of the phone comes from `WPRS_ADB_SERIAL`; each run waits while the screen is
+on (five-minute checks, `WPRS_AWAKE_TRIES` of them) and until the battery is under `WPRS_COOL`
+degrees (36 by default).
 
 ```json
 {

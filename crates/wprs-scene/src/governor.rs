@@ -12,6 +12,7 @@ const PROBE: Duration = Duration::from_secs(60);
 const BOUNCE: Duration = Duration::from_secs(30);
 const TRIES: u8 = 4;
 const AHEAD: f32 = 1.15;
+pub const PHONE_SHARE: f32 = 0.75;
 
 impl Budget {
     pub fn auto(&self, runtime: &Runtime) -> (Quality, Why) {

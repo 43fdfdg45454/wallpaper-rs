@@ -52,7 +52,7 @@ pub use crate::gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
-pub use crate::governor::Governor;
+pub use crate::governor::{Governor, PHONE_SHARE};
 pub use crate::guard::guarded;
 pub use crate::helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
