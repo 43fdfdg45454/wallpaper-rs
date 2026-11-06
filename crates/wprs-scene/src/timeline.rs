@@ -99,8 +99,11 @@ impl Timeline {
             Loop::Pingpong => 2.0 * self.length(),
         };
         let back = head.reversed != (head.rate < 0.0);
-        if period > 0.0 && (head.t >= period || back && head.t < 0.0) {
+        if period > 0.0 && back && head.t < 0.0 {
             head.t = head.t.rem_euclid(period);
+        } else if period > 0.0 && !back && head.t > period {
+            let t = head.t.rem_euclid(period);
+            head.t = if t > 0.0 { t } else { period };
         }
     }
 

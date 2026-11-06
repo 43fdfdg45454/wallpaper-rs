@@ -24,6 +24,21 @@ fn events_fire_once_per_pass_even_when_frames_skip_them() {
 }
 
 #[test]
+fn an_event_at_the_start_of_a_loop_fires_once_when_frames_land_on_the_loop() {
+    let events = json!([{ "t": 0, "name": "kick" }, { "t": 0.5, "name": "snare" }]);
+    let tls = json!([{ "id": "beat", "duration": 1, "loop": "repeat", "events": events },
+                     { "id": "sway", "duration": 0.5, "loop": "pingpong", "events": [{ "t": 0, "name": "edge" }] }]);
+    let mut rt = runtime(tls, json!([]));
+    let mut heard = Vec::new();
+    for _ in 0..64 {
+        rt.advance(0.0625);
+        heard.extend(names(&mut rt));
+    }
+    let count = |name: &str| heard.iter().filter(|n| *n == name).count();
+    assert_eq!((count("beat:kick"), count("beat:snare"), count("sway:edge")), (5, 4, 5), "{heard:?}");
+}
+
+#[test]
 fn events_start_timelines_and_wake_the_scene_only_when_heard() {
     let tls = json!([{ "id": "clock", "duration": 4, "loop": "repeat", "events": [{ "t": 3, "name": "go" }] },
                      { "id": "move", "duration": 1, "trigger": "event:go" }]);
