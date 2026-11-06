@@ -10,7 +10,7 @@ ask "account {\"op\": \"escrow\", \"passphrase\": \"$pocket_phrase\"}" >/dev/nul
 [ "$(phone "['recovery']")" = current ] || fail "the phone's recovery escrow: $(phone "")"
 a server sync --wait >/dev/null
 [ "$(value a "['recovery']")" = current ] || fail "the desktop does not see the phone's escrow: $(a server status)"
-ask 'account {"op": "rotate"}' | grep -q '"epoch":' || fail "the phone did not replace the sync key"
+ask 'account {"op": "rotate"}' | grep '"epoch":' >/dev/null || fail "the phone did not replace the sync key"
 [ "$(phone "['recovery']")" = current ] || fail "the phone's rotation left its recovery escrow behind: $(phone "")"
 a server sync --wait >/dev/null
 [ "$(value a "['recovery']")" = current ] || fail "the desktop sees a stale escrow after the phone's rotation: $(a server status)"
@@ -27,7 +27,7 @@ item=$(ask "account {\"op\": \"install\", \"repo_id\": \"$repo_id\", \"id\": \"o
 [ "$(ask 'account {"op": "repos"}' | jq_ "sorted(x['name'] for x in r['repos'])")" = "['Studio']" ] || fail "the phone repositories"
 sync_phone >/dev/null
 a server sync --wait >/dev/null
-a server status --json | jq_ "[o['name'] for o in r['account']['offers']]" | grep -q Studio &&
+a server status --json | jq_ "[o['name'] for o in r['account']['offers']]" | grep Studio >/dev/null &&
   fail "the repository confirmed on the phone came back to the desktop as an offer"
 echo "phone repository checks passed"
 
@@ -69,7 +69,7 @@ a playlist new "Heard at once" >/dev/null
 a server sync --wait >/dev/null
 [ "$(reply | jq_ "r['changed']")" = True ] || fail "the phone did not hear the change"
 sync_phone >/dev/null
-named playlists "" | grep -q "Heard at once" || fail "the change the phone heard did not arrive"
+named playlists "" | grep "Heard at once" >/dev/null || fail "the change the phone heard did not arrive"
 send 'account {"op": "listen", "token": 2}'
 send 'account {"op": "hush", "token": 2}'
 answers=$(reply && reply)
@@ -95,7 +95,7 @@ wrong=$(spare 'account {"op": "restore", "passphrase": "not the passphrase of th
 grep -q '"error":' <<<"$wrong" || fail "a wrong passphrase restored the key on the spare phone: $wrong"
 spare "account {\"op\": \"restore\", \"passphrase\": \"$pocket_phrase\"}" >/dev/null
 spare 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
-spare 'library {"op": "playlists"}' | grep -q "Phone mix" || fail "the restored spare phone did not sync"
+spare 'library {"op": "playlists"}' | grep "Phone mix" >/dev/null || fail "the restored spare phone did not sync"
 spare 'account {"op": "remove"}' >/dev/null
 exec 5>&- 6<&-
 echo "phone recovery checks passed"

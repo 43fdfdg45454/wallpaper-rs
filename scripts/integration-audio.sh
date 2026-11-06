@@ -95,7 +95,7 @@ refused "is not shown" Inputs1 GrantPackage sss "$sea" sha256:00 audio
 ctl input grant "$sea" audio -o TEST-12
 [ "$(inputs "r['shown']['TEST-12']['granted'], r['shown']['TEST-13']['granted']")" = "(['audio', 'pointer'], [])" ] ||
   fail "granting one package reached its twin: $(ctl input status --json)"
-ctl input status | grep -q "^TEST-13 shows $sea using .* (allowed: none)$" || fail "status: $(ctl input status)"
+ctl input status | grep "^TEST-13 shows $sea using .* (allowed: none)$" >/dev/null || fail "status: $(ctl input status)"
 ctl input grant "$sea" audio -o TEST-13
 [ "$(inputs "r['shown']['TEST-13']['granted']")" = "['audio']" ] || fail "grant -o: $(ctl input status --json)"
 ctl release TEST-13

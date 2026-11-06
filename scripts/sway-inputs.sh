@@ -24,7 +24,7 @@ mkfifo "$WORK/pointer.in"
 exec 7>"$WORK/pointer.in"
 wait_for 10 grep -q ready "$WORK/pointer.log" || fail "no virtual pointer"
 click() { printf '%s %s 1067 360\n1 1\n1 0\n' "$1" "$2" >&7; sleep 0.5; }
-region() { grep "pointer input of the background" "$WORK/wprsd.log" | grep "HEADLESS-1" | tail -n 1 | grep -q "$1$"; }
+region() { grep "pointer input of the background" "$WORK/wprsd.log" | grep "HEADLESS-1" | tail -n 1 | grep "$1$" >/dev/null; }
 taking() { ctl input status --json | python3 -c "import json, sys; sys.exit('HEADLESS-1' not in json.load(sys.stdin)['clicking'])"; }
 ctl input grant org.example.clicks pointer -o HEADLESS-1
 ctl input grant org.example.clicks clicks -o HEADLESS-1

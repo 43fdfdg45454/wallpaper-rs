@@ -26,7 +26,7 @@ ctl playlist add Colors "$red" "$blue" "$green"
   fail "manual playlist: $(ctl playlist show Colors --json)"
 read -r _ _ _ s8 < <(ctl stream TEST-8 160 90)
 shown="s['outputs']['TEST-8']['item']"
-color() { "$BIN/probe" "$s8" 3 | grep -q "center bgra \[$1\]"; }
+color() { "$BIN/probe" "$s8" 3 | grep "center bgra \[$1\]" >/dev/null; }
 ctl playlist start Colors -o TEST-8
 expect "$shown" "$red"
 expect "s['outputs']['TEST-8']['playlist']['name'], s['outputs']['TEST-8']['playlist']['count']" "('Colors', 3)"

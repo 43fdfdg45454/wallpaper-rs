@@ -37,7 +37,7 @@ catalog() {
       check)
         msgfmt --check -o /dev/null "$po"
         msgcmp -N "$po" "$pot"
-        if { msgattrib --untranslated --no-obsolete "$po" && msgattrib --only-fuzzy --no-obsolete "$po"; } | grep -q '^msgid '; then
+        if { msgattrib --untranslated --no-obsolete "$po" && msgattrib --only-fuzzy --no-obsolete "$po"; } | grep '^msgid ' >/dev/null; then
           echo "$po has untranslated or fuzzy strings" >&2 && exit 1
         fi
         ;;

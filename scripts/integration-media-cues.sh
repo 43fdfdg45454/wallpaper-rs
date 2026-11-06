@@ -58,7 +58,7 @@ printf '{"title": "Night Drive", "playing": true, "duration": 100, "cover": "blu
 printf '{"title": "Night Drive", "playing": false, "duration": 100, "cover": "blue.png"}' >"$WORK/heard/paused.json"
 ctl media simulate TEST-23 "$WORK/heard/playing.json" || fail "the made-up track was refused"
 shown "$s23" 0 0 255
-ctl media status | grep -q "^media player: not read" || fail "a made-up track read the media player: $(ctl media status)"
+ctl media status | grep "^media player: not read" >/dev/null || fail "a made-up track read the media player: $(ctl media status)"
 ctl media simulate TEST-23 "$WORK/heard/paused.json"
 shown "$s23" 0 255 0
 printf '{"title": "%s"}' "$(printf 'x%.0s' $(seq 600))" >"$WORK/heard/long.json"

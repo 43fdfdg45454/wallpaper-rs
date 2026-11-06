@@ -89,13 +89,13 @@ ask 'setting repos.vote_counts false' >/dev/null
 [ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['shown']")" = False ] || fail "the phone fetched hidden counts"
 ask 'setting repos.vote_counts true' >/dev/null
 
-a server rotate --wait --json | jq_ "r['output']['shared']" | grep -q "$pocket" || fail "the new key did not go to the phone"
+a server rotate --wait --json | jq_ "r['output']['shared']" | grep "$pocket" >/dev/null || fail "the new key did not go to the phone"
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
 [ "$(phone "['state']")" = ready ] || fail "the phone after a rotation: $(phone "")"
 a playlist new "After the phone" >/dev/null
 a server sync --wait >/dev/null
 ask 'account {"op": "sync", "conflict": "%1 (conflict)"}' >/dev/null
-named playlists "" | grep -q "After the phone" || fail "the phone did not read a record after the rotation"
+named playlists "" | grep "After the phone" >/dev/null || fail "the phone did not read a record after the rotation"
 echo "phone rotation checks passed"
 source "$(dirname "$0")"/sync-pocket.sh
 
@@ -117,7 +117,7 @@ ask "account {\"op\": \"confirm\", \"code\": \"$(code b)\"}" >/dev/null
 b server join "$pocket" --code "$shown" --wait >/dev/null
 await b "$job"
 b server sync --wait >/dev/null
-b playlist ls | grep -q "Phone mix" || fail "the laptop that joined from the phone: $(b playlist ls)"
+b playlist ls | grep "Phone mix" >/dev/null || fail "the laptop that joined from the phone: $(b playlist ls)"
 ask 'account {"op": "pause", "paused": true}' >/dev/null
 [ "$(phone "['state']")" = paused ] || fail "the paused phone: $(phone "")"
 if grep -r -q -s -a -e 'wprs_d_' -e correct-horse-battery "$WORK/phone/sync.json" "$WORK/phone.log"; then

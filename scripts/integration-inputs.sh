@@ -58,7 +58,7 @@ ctl scene import "$draft" "$ROOT/tests/fixtures/green-64x32.png" --id leaf >/dev
 ctl scene mesh-from-picture "$draft" leaf --cells 8 --id puppet >/dev/null || fail "no mesh was cut from a picture"
 ctl scene bone "$draft" puppet root --at 0.2,0.5 || fail "the mesh took no root bone"
 ctl scene bone "$draft" puppet arm --parent root --at 0.6,0.5 || fail "the mesh took no arm"
-ctl scene bones "$draft" puppet | grep -q '"arm"' || fail "the bones of the mesh were not listed"
+ctl scene bones "$draft" puppet | grep '"arm"' >/dev/null || fail "the bones of the mesh were not listed"
 ctl scene part-outlines "$draft" puppet | grep '\[' >/dev/null || fail "the outlines of the parts were not listed"
 ctl scene set "$draft" /scene/layers/1/clips '[{"id": "wave", "bones": {"arm": {"rotation": [[0, 0], [1, 40]]}}}]'
 ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "wave"}]'
@@ -72,7 +72,7 @@ ctl scene set "$draft" /scene/canvas/wind '[40, 0]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with reaching and swinging bones was not previewed"
 ctl scene bone "$draft" puppet hand --parent arm --at 0.9,0.5 || fail "the mesh took no hand"
 ctl scene weights "$draft" puppet arm '0.5,0.5;0.6,0.5' --mode add --by 0.5 --radius 0.2 --lock root || fail "no weights were painted"
-ctl scene vertex-weights "$draft" puppet | grep -q '"arm"' || fail "the weights of the vertices were not listed"
+ctl scene vertex-weights "$draft" puppet | grep '"arm"' >/dev/null || fail "the weights of the vertices were not listed"
 ctl scene bone "$draft" puppet hand --rename paw || fail "the hand was not renamed"
 ctl scene bone "$draft" puppet paw --root || fail "the paw was not rehung"
 ctl scene auto-weights "$draft" puppet || fail "the weights were not bound to the bones again"
@@ -100,7 +100,7 @@ ctl scene attach "$draft" badge --nudge 4,-2 || fail "the layer was not moved al
 ctl scene ik "$draft" puppet add root arm || fail "no chain without limits was added"
 ctl scene point "$draft" puppet pin --at 0.5,0.3 || fail "no point was placed"
 ctl scene point "$draft" puppet pin --rename peg --parent root || fail "the point was not renamed and rehung"
-ctl scene bones "$draft" puppet | grep -q '"peg"' || fail "the point was not listed"
+ctl scene bones "$draft" puppet | grep '"peg"' >/dev/null || fail "the point was not listed"
 ctl scene point "$draft" puppet peg --remove || fail "the point was not removed"
 ctl scene validate "$draft" >/dev/null || fail "removing a point left the scene invalid"
 ctl scene parts "$draft" puppet --order body 2 --hide body || fail "the part was not ordered"
@@ -179,10 +179,10 @@ shown "$s15" 0 0 255
 ctl scene set "$draft" /manifest/properties/tone/default red
 ctl scene preview "$draft" -o preview:1 --time 0
 shown "$s15" 255 0 0
-ctl scene show "$draft" /manifest/requires/features | grep -q properties2 || fail "a button left properties2 out of the features"
+ctl scene show "$draft" /manifest/requires/features | grep properties2 >/dev/null || fail "a button left properties2 out of the features"
 if ctl scene remove-property "$draft" tone 2>/dev/null; then fail "a property that a binding follows was removed"; fi
 ctl scene remove-property "$draft" flash
-if ctl scene show "$draft" /manifest/properties | grep -q flash; then fail "remove-property kept the button"; fi
+if ctl scene show "$draft" /manifest/properties | grep flash >/dev/null; then fail "remove-property kept the button"; fi
 ctl scene preview "$draft" -o preview:1 --stop
 ctl release preview:1 && expect "list(s['outputs'])" "[]"
 echo "scene editor preview checks passed"
@@ -192,7 +192,7 @@ inputs() { ctl input status --json | python3 -c "import json, sys; r = json.load
 if ctl input grant "$sea" audio 2>"$WORK/grant.err"; then fail "an input was granted to a scene that is not shown"; fi
 grep -q "is not shown" "$WORK/grant.err" || fail "grant before showing: $(cat "$WORK/grant.err")"
 ctl input pointer 10 10 && ctl input pointer -10 -10
-ctl input status | grep -qx "audio capture: off" || fail "status: $(ctl input status)"
+ctl input status | grep -x "audio capture: off" >/dev/null || fail "status: $(ctl input status)"
 refused "is not audio, pointer, clicks, network, rgb, media or media_network" Inputs1 Grant ss "$sea" camera
 refused "is not a scene package id" Inputs1 Grant ss "Not A Scene" audio
 refused "Signature mismatch" Inputs1 SetPointer dd 1 1

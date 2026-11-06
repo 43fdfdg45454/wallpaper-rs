@@ -27,7 +27,7 @@ wait_for 30 ctl state || fail "the daemon did not start while clients came and w
 timeout 30 "$BIN/wprsd" >"$WORK/second.log" 2>&1 || true
 grep -q "another wprsd" "$WORK/second.log" || { echo "FAIL: a second daemon took over"; exit 1; }
 dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
-  org.freedesktop.DBus.RequestName string:io.github.wallpaper_rs.Daemon uint32:6 | grep -q "uint32 3" ||
+  org.freedesktop.DBus.RequestName string:io.github.wallpaper_rs.Daemon uint32:6 | grep "uint32 3" >/dev/null ||
   fail "another client replaced the daemon"
 
 read -r _ node _ serial < <("$BIN/wprs-ctl" stream TEST-1 320 180)
@@ -179,7 +179,7 @@ echo "unknown setting, size limit and local file checks passed"
 read -r _ _ _ held < <(ctl stream " " 160 90)
 sleep 0.5
 expect "list(s['outputs'])" "['default']"
-"$BIN/probe" "$held" 10 | grep -q "frame 160x90" || fail "the held stream did not survive the command"
+"$BIN/probe" "$held" 10 | grep "frame 160x90" >/dev/null || fail "the held stream did not survive the command"
 ctl covered "" true && expect "s['outputs']['default']['covered']" True
 ctl release "" && expect "list(s['outputs'])" "[]"
 echo "held stream and default output name checks passed"

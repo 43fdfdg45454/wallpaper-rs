@@ -4,7 +4,7 @@ declare anchor log output port
 restored() {
   read -r _ _ _ serial < <(ctl stream TEST-1 320 180) || return 1
   [ -z "${1:-}" ] || [ "$serial" = "$1" ] || return 1
-  "$BIN/probe" "$serial" 3 | grep -q "frame 320x180 .* buffers 4 center bgra \[0, 255, 0, 255\]"
+  "$BIN/probe" "$serial" 3 | grep "frame 320x180 .* buffers 4 center bgra \[0, 255, 0, 255\]" >/dev/null
 }
 ctl stream TEST-1 320 180 >/dev/null
 ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit
@@ -38,7 +38,7 @@ retry 10 sh -c "'$BIN/probe' $gpu 3 --dmabuf | grep -q 'type DmaBuf modifier 0x0
   fail "no frame in GPU memory: $("$BIN/probe" "$gpu" 3 --dmabuf 2>&1)"
 first=$("$BIN/probe" "$gpu" 3 2>&1)
 grep -q "type MemFd $green" <<<"$first" || fail "the first frame in shared memory after GPU memory: $first"
-"$BIN/probe" "$gpu" 5 --dmabuf --late | grep -q "type DmaBuf" || fail "a late GPU memory consumer waited"
+"$BIN/probe" "$gpu" 5 --dmabuf --late | grep "type DmaBuf" >/dev/null || fail "a late GPU memory consumer waited"
 ctl set "$ROOT/tests/fixtures/magenta-64x32.webm" --fit stretch
 "$BIN/probe" "$gpu" 4 --dmabuf --hold >"$WORK/gpu.out" & held=$!
 expect "${output}['buffers'], ${output}['kind']" "('dmabuf', 'video')"

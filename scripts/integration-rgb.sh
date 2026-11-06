@@ -9,7 +9,7 @@ ctl config rgb.server "lights.example.org:6742"
 [ "$(ctl rgb status --json | js "r['local']")" = False ] || fail "a remote server counted as this computer"
 ctl config rgb.server "127.0.0.1:$openrgb"
 ctl config rgb.enabled true
-ctl rgb devices | grep -q "Example keyboard" || fail "no devices: $(ctl rgb status)"
+ctl rgb devices | grep "Example keyboard" >/dev/null || fail "no devices: $(ctl rgb status)"
 [ "$(ctl rgb devices --json | js "[d['leds'] for d in r]")" = "[4, 1]" ] || fail "devices: $(ctl rgb devices --json)"
 ctl rgb test 1
 if ctl rgb test 7 2>/dev/null; then fail "a device that does not exist was tested"; fi
@@ -38,7 +38,7 @@ stripped() { "$BIN/probe" "$sr" 3 >/dev/null 2>&1; ctl rgb strip -o TEST-RGB >/d
 wait_for 20 stripped || fail "no strip after the grant: $(ctl rgb status)"
 [ "$(ctl rgb strip -o TEST-RGB --json | js "r['width'], r['height'], set(r['colors'])")" = "(32, 8, {'#00ff00'})" ] ||
   fail "strip: $(ctl rgb strip -o TEST-RGB --json)"
-green() { tail -n 2 "$rgbs/painted" | grep -q '"device": 0, "colors": \[\[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\]\]'; }
+green() { tail -n 2 "$rgbs/painted" | grep '"device": 0, "colors": \[\[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\], \[0, 255, 0\]\]' >/dev/null; }
 wait_for 10 green || fail "the keyboard did not turn green: $(tail -n 3 "$rgbs/painted")"
 [ "$(ctl rgb status --json | js "r['source'], r['frames'] > 0")" = "('TEST-RGB', True)" ] || fail "status: $(ctl rgb status)"
 ctl input revoke org.example.lit rgb
@@ -48,7 +48,7 @@ ctl rgb test 1
 tested() { [ "$(ctl rgb status --json | js "r['testing']")" = False ]; }
 wait_for 10 tested || fail "the test pattern did not end"
 sleep 0.5
-if tail -n "+$((before + 1))" "$rgbs/painted" | grep -q '"device": 0'; then
+if tail -n "+$((before + 1))" "$rgbs/painted" | grep '"device": 0' >/dev/null; then
   fail "the colors of a revoked package came back after a test"
 fi
 source "$(dirname "$0")"/integration-rgb-covered.sh

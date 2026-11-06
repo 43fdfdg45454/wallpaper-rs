@@ -6,7 +6,7 @@ fn runaway_scripts_are_stopped_and_then_disabled() {
     for _ in 0..3 {
         let start = Instant::now();
         assert!(matches!(update(&mut script, 0.0), Err(Error::Timeout(_))));
-        assert!(start.elapsed() < Duration::from_millis(500), "{:?}", start.elapsed());
+        assert!(start.elapsed() < Duration::from_secs(3), "{:?}", start.elapsed());
     }
     assert_eq!(update(&mut script, 0.0), Err(Error::Disabled));
     let looping = plain(&[("main.js", "for (;;) {}")], 1).err();

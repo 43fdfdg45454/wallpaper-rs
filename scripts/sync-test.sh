@@ -51,7 +51,7 @@ unset WPRS_DATA WPRS_LISTEN WPRS_PUBLIC_URL WPRS_RATE_LIMITS WPRS_AUTO_PUBLISH W
 
 keyring() {
   env "$1" dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
-    org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | grep -q 'boolean true'
+    org.freedesktop.DBus.NameHasOwner string:org.freedesktop.secrets | grep 'boolean true' >/dev/null
 }
 
 declare -A daemons

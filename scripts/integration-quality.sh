@@ -39,7 +39,7 @@ grep -q '^\[outputs.TEST-Q\]' "$config" || fail "the own level of the screen was
 ctl config playback.quality.TEST-GONE q2
 [ "$(ctl config playback.quality.TEST-GONE)" = "playback.quality.TEST-GONE = q2" ] ||
   fail "the own level of a screen that is not connected cannot be read: $(ctl config playback.quality.TEST-GONE)"
-ctl quality -o TEST-GONE | grep -q "^playback.quality.TEST-GONE = q2, not connected" ||
+ctl quality -o TEST-GONE | grep "^playback.quality.TEST-GONE = q2, not connected" >/dev/null ||
   fail "wprs-ctl quality -o for a screen that is not connected: $(ctl quality -o TEST-GONE)"
 kept=$(ctl profile save Kept)
 ctl profile use "$kept"

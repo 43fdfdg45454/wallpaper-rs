@@ -9,7 +9,7 @@ cat >"$pkg/src/manifest.json" <<'MANIFEST'
  "license": "CC0-1.0", "kind": "image", "entry": "image.png", "preview": "preview.png", "tags": ["sky"]}
 MANIFEST
 a pack build "$pkg/src" -o "$pkg/dusk.wpak" >/dev/null
-a server upload "$pkg/dusk.wpak" --wait --json | jq_ "r['output']['state']" | grep -qx pending_review ||
+a server upload "$pkg/dusk.wpak" --wait --json | jq_ "r['output']['state']" | grep -x pending_review >/dev/null ||
   fail "the upload did not wait for review"
 case_id=$(review "$URL/api/v1/mod/queue" | jq_ "r['items'][0]['id']")
 if api -d '{"decision": "approve"}' "$URL/api/v1/mod/cases/$case_id/decision" 2>/dev/null; then

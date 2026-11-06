@@ -20,7 +20,7 @@ cd wallpaper-rs-*-linux
 ./install.sh 2>&1 | tee "$OUT/install.log"
 cd "$WORK"
 dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
-  org.freedesktop.DBus.ListActivatableNames | grep -q '"io.github.wallpaper_rs"' ||
+  org.freedesktop.DBus.ListActivatableNames | grep '"io.github.wallpaper_rs"' >/dev/null ||
   { echo "FAIL: the session bus cannot start the app right after the install"; exit 1; }
 
 pids=()
@@ -55,7 +55,7 @@ wait_for() {
 
 bus_has() {
   dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
-    org.freedesktop.DBus.ListNames | grep -q "\"$1\""
+    org.freedesktop.DBus.ListNames | grep "\"$1\"" >/dev/null
 }
 
 pipewire >"$OUT/pipewire.log" 2>&1 & pids+=($!)

@@ -121,7 +121,7 @@ before=$(surfaces HEADLESS-2)
 swaymsg -q output HEADLESS-2 disable && swaymsg -q output HEADLESS-2 enable
 check HEADLESS-2 "0.5,0.5,$green" "0.02,0.02,$blue"
 sleep 1
-if grep "output removed" "$WORK/wprsd.log" | grep -q HEADLESS-2; then fail "a short output flap removed the output"; fi
+if grep "output removed" "$WORK/wprsd.log" | grep HEADLESS-2 >/dev/null; then fail "a short output flap removed the output"; fi
 [ $(($(surfaces HEADLESS-2) - before)) -le 1 ] || fail "a short output flap rebuilt the surface more than once"
 echo "hotplug checks passed"
 

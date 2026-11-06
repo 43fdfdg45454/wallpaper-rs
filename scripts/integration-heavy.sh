@@ -23,12 +23,12 @@ frames() { field "s['outputs']['TEST-Q']['frames']"; }
 moves() { local before; before=$(frames); sleep 1; [ "$(frames)" -gt "$before" ]; }
 expect "s['outputs']['TEST-Q']['kind'], $costs" "('scene', 'still', False)"
 moves && fail "automatic quality played a scene too heavy for this device"
-ctl quality | grep -q "^TEST-Q: this scene is too heavy for this device" || fail "wprs-ctl quality: $(ctl quality)"
-ctl quality q0 | grep -q "^TEST-Q: this scene costs .* frames may drop and battery use rise; automatic quality would keep it still" ||
+ctl quality | grep "^TEST-Q: this scene is too heavy for this device" >/dev/null || fail "wprs-ctl quality: $(ctl quality)"
+ctl quality q0 | grep "^TEST-Q: this scene costs .* frames may drop and battery use rise; automatic quality would keep it still" >/dev/null ||
   fail "wprs-ctl quality q0 did not warn: $(ctl quality)"
 expect "$level, $costs" "('q0', 'user', 'stop', True)"
 wait_for 10 moves || fail "a fixed level left the heavy scene still"
-ctl quality min-q1 -o TEST-Q | grep -q "^TEST-Q: this scene costs" || fail "wprs-ctl quality min-q1: $(ctl quality)"
+ctl quality min-q1 -o TEST-Q | grep "^TEST-Q: this scene costs" >/dev/null || fail "wprs-ctl quality min-q1: $(ctl quality)"
 expect "$level, $costs" "('q1', 'user', 'stop', True)"
 wait_for 10 moves || fail "a floor left the heavy scene still"
 ctl quality none -o TEST-Q >/dev/null && ctl quality auto >/dev/null

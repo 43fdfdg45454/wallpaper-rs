@@ -15,7 +15,7 @@ abis=$(find "$WORK/lib" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | 
 for abi in $abis; do
   test -f "$WORK/lib/$abi/libwprs_android.so" || fail "the APK has no lib/$abi/libwprs_android.so"
 done
-if find "$WORK/lib" -name 'libonnxruntime*' | grep -q .; then
+if find "$WORK/lib" -name 'libonnxruntime*' | grep . >/dev/null; then
   fail "the APK carries ONNX Runtime, which is downloaded with the depth model"
 fi
 if grep -a -l -F -e "$HOME/" -e "$ROOT/" "$WORK"/lib/*/libwprs_android.so; then
