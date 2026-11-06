@@ -7,7 +7,7 @@ saw() {
   local seen; seen=$(tail -n "+$1" "$WORK/sway.log" | announced)
   [ -z "$seen" ] || [ "$seen" = "new layer surface: namespace $2 layer 0" ] || fail "the compositor saw: $seen"
 }
-expect "s['layer_shell']" "{'namespace': 'wallpaper', 'from': 'default', 'restart': False, 'ignored': None}"
+expect "s['layer_shell']" "{'namespace': 'wallpaper', 'from': 'default', 'restart': False, 'ignored': None, 'ignored_from': None, 'ignored_empty': False}"
 saw 1 wallpaper
 [ -n "$(announced <"$WORK/sway.log")" ] || fail "the compositor log does not show layer surface namespaces"
 ctl config "$key" | grep -x "$key = \"auto\"" >/dev/null || fail "config does not read back the automatic namespace"
@@ -29,6 +29,7 @@ wprsd=$!; pids+=("$wprsd")
 wait_for 30 ctl state || fail "the daemon did not start again"
 expect "[s['layer_shell'][k] for k in ('namespace', 'from', 'restart')]" "['wprs-check', 'config', False]"
 expect "'environment' in (s['layer_shell']['ignored'] or '')" True
+expect "s['layer_shell']['ignored_from'], s['layer_shell']['ignored_empty']" "('environment', False)"
 check HEADLESS-1 "0.5,0.5,$magenta"
 saw "$mark" wprs-check
 [ -n "$(tail -n "+$mark" "$WORK/sway.log" | announced)" ] || fail "the compositor did not log the new surfaces"
