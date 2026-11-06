@@ -1,12 +1,19 @@
 use super::*;
 
+fn worked() -> Duration {
+    let mut t = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+    assert_eq!(unsafe { libc::clock_gettime(libc::CLOCK_THREAD_CPUTIME_ID, &mut t) }, 0);
+    Duration::new(t.tv_sec as u64, t.tv_nsec as u32)
+}
+
 #[test]
 fn runaway_scripts_are_stopped_and_then_disabled() {
     let mut script = load("export function update() { for (;;) {} }");
     for _ in 0..3 {
-        let start = Instant::now();
+        let start = worked();
         assert!(matches!(update(&mut script, 0.0), Err(Error::Timeout(_))));
-        assert!(start.elapsed() < Duration::from_secs(3), "{:?}", start.elapsed());
+        let spent = worked() - start;
+        assert!(spent < Duration::from_millis(500), "the stopped loop ran for {spent:?} of processor time");
     }
     assert_eq!(update(&mut script, 0.0), Err(Error::Disabled));
     let looping = plain(&[("main.js", "for (;;) {}")], 1).err();

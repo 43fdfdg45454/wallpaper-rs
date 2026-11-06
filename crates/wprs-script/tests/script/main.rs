@@ -10,7 +10,7 @@ fn load(source: &str) -> Script {
     plain(&[("main.js", source)], 1).unwrap()
 }
 use serde_json::{Value, json};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use wprs_scene::{AudioFrame, Course, Fired, LayerOverride, PointerState, ScriptOutputs, TimelineCommand};
 use wprs_script::{Error, Frame, Limits, Script, Setup};
 
