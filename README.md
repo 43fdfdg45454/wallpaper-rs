@@ -537,7 +537,9 @@ al activarlo, la app explica para qué lo usa y abre ese ajuste. Con los dos per
 sigue la sesión multimedia activa por sus avisos, sin consultarla periódicamente, solo mientras se ve
 un fondo que la usa, y le da lo mismo que el ordenador: textos, carátula reducida a 256 píxeles,
 colores, posición, disparadores `media:` y eventos de scripts; nunca lee las notificaciones ni guarda,
-registra o envía lo que suena. Una página que además puede salir a internet pide un segundo permiso.
+registra o envía lo que suena. Debajo del interruptor dice si ahora se lee, cuántos reproductores
+encontró y si hay pista, si suena y si tiene carátula, nunca cuál. Una página que además puede salir
+a internet pide un segundo permiso, con su propio diálogo al encenderlo.
 
 *Reaccionar al sonido*, *Reaccionar al tacto* y *Reaccionar a los toques* solo aparecen en las
 escenas y las páginas web que los usan y se activan paquete a paquete; empiezan apagados. El sonido se lee con el visualizador de Android, que da un espectro de
@@ -1570,16 +1572,24 @@ ese permiso que lo usa; sigue sus señales sin preguntar cada poco, elige el que
 que sonó) y deja de escuchar en cuanto nada visible lo necesita. Nada de lo que lee se guarda, se
 registra ni se envía a ningún sitio. *Ajustes → Reproductor multimedia* y `wprs-ctl media status`
 dicen si se está leyendo, para qué pantallas y si hay un reproductor abierto, sin mostrar la pista.
+Si la escucha falla (por ejemplo, se pierde el bus), se marca como no leída y vuelve a empezar a los
+10 segundos mientras un fondo visible la necesite.
 
 Algunos reproductores dan la carátula como una dirección de internet en vez de un archivo. Solo se
 descarga con *Descargar carátulas de internet* encendido (`wprs-ctl config media.remote_covers
 true`, apagado por defecto y propio de cada equipo), como mucho 4 MiB y en 5 segundos, y esa web
 puede saber que esa pista suena aquí; las carátulas solo viven en memoria. Al encenderlo se
 descarga enseguida la carátula de lo que suena y al apagarlo se quitan las que vinieron de internet.
+Cada dirección se descarga una sola vez: las últimas ocho carátulas de internet se recuerdan en
+memoria mientras el interruptor siga encendido, así que volver a una pista no la pide de nuevo.
 
 En el editor, el menú de enlace de cada campo tiene *Seguir al reproductor multimedia* con los
 datos que le caben: el título, el artista, el álbum, el artista del álbum, el subtítulo, los
-géneros y el tipo para un texto, cada uno con lo que mostraría ahora. La pestaña *Reproductor*
+géneros y el tipo para un texto, cada uno con lo que mostraría ahora. *Texto mientras no suena
+nada…* abre el texto que muestra mientras no hay pista o falta el permiso (`placeholder`, un texto
+o uno por idioma, como mucho 512 caracteres), con sus traducciones; desde la terminal, `wprs-ctl
+scene set CARPETA /scene/layers/0/text/placeholder '"Nada suena"'` y `wprs-ctl scene translate
+CARPETA /scene/layers/0/text/placeholder es "No suena nada"`. La pestaña *Reproductor*
 simula una pista (título, artista, álbum, si suena y carátula) para diseñar sin música sonando; solo la ve la vista
 previa, sin pedir permiso ni leer los reproductores. Desde la terminal, `wprs-ctl scene preview
 CARPETA --media pista.json` hace lo mismo con un JSON de esos campos.
@@ -1606,7 +1616,9 @@ barra pide como mucho 30 fotogramas por segundo y un texto uno por segundo, solo
 Una línea de tiempo o una capa de sonido también puede arrancar sola, sin scripts, con
 `media:play` (empieza a sonar), `media:pause` (se pausa o se para), `media:track` (llega una pista
 nueva) o `media:cover` (llega una carátula nueva). El selector de disparador del editor los ofrece
-con su nombre, el botón *Pista siguiente* de la pestaña *Reproductor* los prueba en la vista previa y
+con su nombre, junto a los eventos con nombre de las líneas de tiempo y los clips (`event:`) y el
+clic, la entrada y la salida del puntero de cada capa sólida o con huesos tocables (`click:`,
+`enter:`, `leave:`), el botón *Pista siguiente* de la pestaña *Reproductor* los prueba en la vista previa y
 desde la terminal `wprs-ctl scene trigger CARPETA ID media:track` los pone (`--list` muestra los que
 hay).
 
@@ -1621,8 +1633,9 @@ simulate PANTALLA pista.json` muestra una pista inventada en cualquier pantalla 
 Un fondo web que declara `media` recibe lo mismo con `window.wprs.onMedia(cb)`: estado, título,
 artista, álbum, la carátula como una dirección `blob:` hecha en la propia página, sus colores,
 posición y duración. Si además puede salir a internet (declara orígenes de red), pide una segunda
-confirmación aparte (`wprs-ctl input grant ID media_network`, o el segundo aviso de la app y la
-bandeja), porque el título y la carátula podrían salir por la red.
+confirmación aparte (`wprs-ctl input grant ID media_network`, el segundo aviso de la app y la
+bandeja, que también lo dejan quitar en los controles de la escena, o en el teléfono un diálogo
+propio al encender el segundo interruptor), porque el título y la carátula podrían salir por la red.
 
 ## Servidor propio
 

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -1578,8 +1578,10 @@ msgid "the system has no collider %1"
 msgstr "el sistema no tiene el colisionador %1"
 
 #: crates/wprs-editor/src/texts.rs
-msgid "name a language such as en or pt-BR and a text of the manifest"
-msgstr "indica un idioma como en o pt-BR y un texto del manifiesto"
+msgid ""
+"name a language such as en or pt-BR and a text of the manifest or the scene"
+msgstr ""
+"indica un idioma como en o pt-BR y un texto del manifiesto o de la escena"
 
 #: crates/wprs-editor/src/texts.rs
 msgid "write the text in the default language first"

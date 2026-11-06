@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -715,11 +715,11 @@ msgstr ""
 "carátula y el avance de lo que suena en un reproductor de este equipo; nada "
 "de eso se guarda, se registra ni se envía."
 
-#: apps/wprs-app/qml/Consent.qml
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
 msgid "Show what plays even though it can reach the network"
 msgstr "Mostrar lo que suena aunque pueda salir a internet"
 
-#: apps/wprs-app/qml/Consent.qml
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
 msgid ""
 "This web wallpaper may also reach the sites it names, so the title, artist "
 "and cover of what plays could leave this computer. Allow it only if you "
@@ -3011,6 +3011,10 @@ msgstr "Quitar el fotograma clave de aquí"
 #: apps/wprs-app/qml/SceneBind.qml
 msgid "Edit the source…"
 msgstr "Editar el origen…"
+
+#: apps/wprs-app/qml/SceneBind.qml
+msgid "Text while nothing plays…"
+msgstr "Texto mientras no suena nada…"
 
 #: apps/wprs-app/qml/SceneBind.qml
 msgid "Follow a user property"
@@ -8500,6 +8504,22 @@ msgid "When a new cover arrives"
 msgstr "Cuando llega una carátula nueva"
 
 #: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "At the event %1"
+msgstr "En el evento %1"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When %1 is clicked or tapped"
+msgstr "Al hacer clic o tocar %1"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When the pointer enters %1"
+msgstr "Cuando el puntero entra en %1"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
+msgid "When the pointer leaves %1"
+msgstr "Cuando el puntero sale de %1"
+
+#: apps/wprs-app/qml/facade/SceneMediaWords.qml
 msgid "yes"
 msgstr "sí"
 
@@ -8567,6 +8587,10 @@ msgstr "Paso de puntos"
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Pivot"
 msgstr "Pivote"
+
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "While nothing plays"
+msgstr "Mientras no suena nada"
 
 #: apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Play on"
