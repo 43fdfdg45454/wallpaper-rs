@@ -5,6 +5,11 @@ use super::{Fill, Op, Src};
 use wprs_scene::{Affine, EffectDraw, MaskMode, Wrapping};
 
 const MOST: f32 = 0.7;
+const TILED_LEAST: f32 = 1_000_000.0;
+
+pub(crate) fn worth(saved: f32, units: f32, tiled: bool) -> bool {
+    !tiled || saved * units.max(1.0) >= TILED_LEAST
+}
 
 fn span(boxes: impl Iterator<Item = [f32; 4]>) -> Option<[f32; 4]> {
     let full = boxes.filter(|b| b[2] > b[0] && b[3] > b[1]);
@@ -68,7 +73,8 @@ impl Painter<'_, '_, '_> {
         if c <= a || d <= b {
             return Region::Empty;
         }
-        if (c - a) * (d - b) > MOST * (w * h) as f32 {
+        let (all, part) = ((w * h) as f32, (c - a) * (d - b));
+        if part > MOST * all || !worth(all - part, e.descriptor.units(), self.r.tiled) {
             return Region::Whole;
         }
         Region::Part([a as u32, b as u32, (c - a) as u32, (d - b) as u32])
@@ -101,5 +107,15 @@ impl Painter<'_, '_, '_> {
         self.release(next);
         self.release(copy);
         Some(current)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn tiled_gpus_narrow_an_effect_only_when_the_work_saved_outweighs_a_copy_and_a_reload() {
+        assert!(super::worth(1000.0, 1.0, false));
+        assert!(!super::worth(800_000.0, 1.0, true));
+        assert!(super::worth(800_000.0, 2.0, true) && super::worth(2_000_000.0, 1.0, true));
     }
 }
