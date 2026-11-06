@@ -47,13 +47,13 @@ Item {
                     "point": k,
                     "at": at
                 });
-        const points = (info?.points ?? []).map(p => p.local ?? [0, 0]);
-        points[k] = at;
         page.run("layer", {
                 "instance": {
                     "layer": own,
                     "values": {
-                        "points": points
+                        "points": {
+                            [String(k)]: at
+                        }
                     }
                 }
             }, true);

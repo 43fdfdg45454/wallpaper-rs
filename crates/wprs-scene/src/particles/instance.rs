@@ -45,7 +45,7 @@ pub struct Instance {
     pub color: Option<Value<Color>>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     #[schemars(extend("x-unit" = "px"))]
-    pub points: Vec<Value<Vec2>>,
+    pub points: Vec<Option<Value<Vec2>>>,
 }
 
 impl Instance {
@@ -62,7 +62,7 @@ impl Instance {
         let mut set: Vec<Tunable> =
             numbers.into_iter().filter(|(_, v)| v.is_some()).map(|(t, _)| t).collect();
         set.extend(self.color.as_ref().map(|_| Tunable::Color));
-        set.extend((!self.points.is_empty()).then_some(Tunable::Points));
+        set.extend(self.points.iter().any(Option::is_some).then_some(Tunable::Points));
         set
     }
 }

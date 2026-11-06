@@ -19,7 +19,8 @@ impl Check<'_> {
         }
         i.color.iter().for_each(|c| self.value(&format!("{p}/color"), c));
         self.count(&format!("{p}/points"), i.points.len(), super::MAX_CONTROL);
-        i.points.iter().enumerate().for_each(|(k, v)| self.value(&format!("{p}/points/{k}"), v));
+        let set = i.points.iter().enumerate().filter_map(|(k, v)| Some((k, v.as_ref()?)));
+        set.for_each(|(k, v)| self.value(&format!("{p}/points/{k}"), v));
         let locked = s.map(|s| s.lock.as_slice()).unwrap_or_default();
         for field in i.fields().into_iter().filter(|f| locked.contains(f)) {
             let name = serde_json::to_value(field)

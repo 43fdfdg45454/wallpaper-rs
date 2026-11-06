@@ -5530,6 +5530,18 @@ msgstr ""
 "los siguientes"
 
 #: apps/wprs-ctl/src/staging.rs
+msgid ""
+"Move control point K of this layer only in pixels, the others staying as "
+"they are; repeat it for more"
+msgstr ""
+"Mover solo el punto de control K de esta capa, en píxeles; los demás quedan "
+"como están; repetirlo para más"
+
+#: apps/wprs-ctl/src/staging.rs
+msgid "Draw control point K as the system does again"
+msgstr "Volver a dibujar el punto de control K como lo hace el sistema"
+
+#: apps/wprs-ctl/src/staging.rs
 msgid "Draw this value as the system does again"
 msgstr "Volver a dibujar este valor como lo hace el sistema"
 

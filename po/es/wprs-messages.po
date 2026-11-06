@@ -1243,6 +1243,10 @@ msgid "%1 is not a value of an instance: %2"
 msgstr "%1 no es un valor de una instancia: %2"
 
 #: crates/wprs-editor/src/shaping/layers.rs
+msgid "a control point goes from 0 to %1, not %2"
+msgstr "un punto de control va de 0 a %1, no %2"
+
+#: crates/wprs-editor/src/shaping/layers.rs
 msgid "the rotation goes from -360 to 360 degrees"
 msgstr "el giro va de -360 a 360 grados"
 

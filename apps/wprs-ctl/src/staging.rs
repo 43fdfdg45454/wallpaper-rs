@@ -6,6 +6,12 @@ use wprs_editor::actions::LayerEdit as L;
 
 const XY: &str = "X,Y";
 
+fn indexed(text: &str) -> Result<(usize, [f64; 2]), String> {
+    let (k, at) = text.split_once('=').ok_or_else(|| format!("{text} is not K=X,Y"))?;
+    let k = k.trim().trim_start_matches('p').parse().map_err(|_| format!("{k} is not a control point"))?;
+    Ok((k, pair(at)?))
+}
+
 fn mode(text: &str) -> Result<wprs_scene::Blend, String> {
     serde_json::from_value(json!(text)).map_err(|_| format!("{text} is not a blend mode"))
 }
@@ -62,6 +68,15 @@ pub enum Stage {
         color: Option<String>,
         #[arg(long = "point", value_name = "X,Y", value_parser = pair, allow_hyphen_values = true, help = "A control point of this layer in pixels, p0 first; repeat it for the next ones")]
         points: Vec<[f64; 2]>,
+        #[arg(long = "move-point", value_name = "K=X,Y", value_parser = indexed, allow_hyphen_values = true, conflicts_with = "points", help = "Move control point K of this layer only in pixels, the others staying as they are; repeat it for more")]
+        moved: Vec<(usize, [f64; 2])>,
+        #[arg(
+            long = "unset-point",
+            value_name = "K",
+            conflicts_with = "points",
+            help = "Draw control point K as the system does again"
+        )]
+        unset_points: Vec<usize>,
         #[arg(long, value_name = "VALUE", help = "Draw this value as the system does again")]
         unset: Vec<String>,
         #[arg(long, help = "Draw the layer as the system does in every value")]
@@ -85,6 +100,8 @@ pub(crate) fn edit(layer: String, what: Stage) -> L {
             brightness,
             color,
             points,
+            moved,
+            unset_points,
             unset,
             clear,
         } => {
@@ -96,6 +113,14 @@ pub(crate) fn edit(layer: String, what: Stage) -> L {
             color.iter().for_each(|c| drop(values.insert("color".into(), value(c))));
             if !points.is_empty() {
                 values.insert("points".into(), json!(points));
+            }
+            let each = moved.into_iter().map(|(k, at)| (k, json!(at)));
+            let each: Map<String, Value> = each
+                .chain(unset_points.into_iter().map(|k| (k, Value::Null)))
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
+            if !each.is_empty() {
+                values.insert("points".into(), Value::Object(each));
             }
             unset.into_iter().for_each(|k| drop(values.insert(k, Value::Null)));
             L::Instance { layer, values, clear }

@@ -1425,7 +1425,8 @@ The newer fields behave as follows.
 - **Control points.** `at` is in pixels of the layer, or of the canvas with `space: world`; a point
   that follows the cursor goes back to the center of the canvas when the pointer leaves. A shape
   with `at` is drawn around that point, turned by its `angle`. The `points` of a layer's `instance`
-  and the `point(n, [x, y])` of scripts move points `p0` to `p7` for that layer.
+  and the `point(n, [x, y])` of scripts move points `p0` to `p7` for that layer; a `null` entry
+  of `points` leaves that point to the system.
 - **Shapes.** `inner` cuts a box of that size out of the middle of a `box`, which births fill evenly.
   `scale` stretches a `circle` into an ellipse and `sign` keeps its positive (1) or negative (−1)
   half along x and along y.

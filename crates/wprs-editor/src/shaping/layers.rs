@@ -53,10 +53,36 @@ fn instance(
     for (key, value) in values {
         match value {
             Value::Null => drop(next.remove(key)),
+            Value::Object(each) if key == "points" => {
+                let list = points(next.get("points"), each)?;
+                match list.is_empty() {
+                    true => drop(next.remove(key)),
+                    false => drop(next.insert(key.clone(), Value::Array(list))),
+                }
+            }
             v => drop(next.insert(key.clone(), v.clone())),
         }
     }
     Ok(put(doc, &at, (!next.is_empty()).then_some(Value::Object(next))))
+}
+
+fn points(old: Option<&Value>, each: &Map<String, Value>) -> Result<Vec<Value>> {
+    let mut list = old.and_then(Value::as_array).cloned().unwrap_or_default();
+    for (k, v) in each {
+        let index = k.parse::<usize>().ok().filter(|k| *k < wprs_scene::MAX_CONTROL);
+        let last = wprs_scene::MAX_CONTROL - 1;
+        let bad = said("editor.point_index", "a control point goes from 0 to %1, not %2", &[&last, k]);
+        ensure!(index.is_some(), bad);
+        let index = index.unwrap_or_default();
+        if list.len() <= index {
+            list.resize(index + 1, Value::Null);
+        }
+        list[index] = v.clone();
+    }
+    while list.last().is_some_and(Value::is_null) {
+        list.pop();
+    }
+    Ok(list)
 }
 
 pub(crate) fn edit(dir: &Path, doc: &Value, e: &L) -> Result<Vec<Op>> {

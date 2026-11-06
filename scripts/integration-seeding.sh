@@ -34,6 +34,9 @@ if ctl scene particles "$craft" dust force vortex p9 --strength 10 2>/dev/null; 
 if ctl scene particles "$craft" dust force slow-near p0 --inner 50 --outer 10 --factor 0.5 2>/dev/null; then fail "a slowing that ends before it starts was kept"; fi
 if ctl scene particles "$craft" dust force slow-near p0 --inner 1 --outer 10 --factor 2 2>/dev/null; then fail "a slowing factor of 2 was kept"; fi
 ctl scene layer "$craft" dust instance --point 10,20 --point 30,-40 || fail "the instance took no control points"
+ctl scene layer "$craft" dust instance --unset-point 0 --move-point 2=5,6 || fail "one control point of the instance was not moved"
+ctl scene show "$craft" /scene/layers | tr -d ' \n' | grep -q '"points":\[null,\[30.0,-40.0\],\[5.0,6.0\]\]' || fail "moving one point of the instance changed the others"
+if ctl scene layer "$craft" dust instance --move-point 8=1,1 2>/dev/null; then fail "a control point p8 was kept"; fi
 printf 'const system = "sparks";\nexport function update() { return system; }\n' >"$WORK/sparks.js"
 ctl scene import-script "$craft" "$WORK/sparks.js" >/dev/null || fail "the script that names the system was not imported"
 ctl scene particles "$craft" sparks rename embers 2>"$WORK/renamed.err" || fail "the system was not renamed"
