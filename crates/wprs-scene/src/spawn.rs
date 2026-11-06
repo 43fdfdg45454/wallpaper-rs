@@ -2,7 +2,7 @@ use crate::scripted::{Extent, LayerRead};
 use crate::{Kind, Layer, LayerOverride, MAX_LAYERS, MAX_SPAWNED, ParamKind, Runtime, ScriptOutputs};
 use std::collections::HashMap;
 
-const SCRIPTED: [ParamKind; 8] = [
+const SCRIPTED: [ParamKind; 9] = [
     ParamKind::Float,
     ParamKind::Int,
     ParamKind::Enum,
@@ -11,6 +11,7 @@ const SCRIPTED: [ParamKind; 8] = [
     ParamKind::Color,
     ParamKind::Bool,
     ParamKind::Blend,
+    ParamKind::Emitters,
 ];
 
 impl Runtime {

@@ -124,6 +124,30 @@ fn emitters_blend_between_keys_of_the_same_shape_and_jump_otherwise() {
     assert_eq!(point.lerp(&line, 1.0), line);
 }
 
+#[test]
+fn scripts_set_the_emitter_list_a_fluid_draws() {
+    let doc = effect(json!({ "effect": "fluid" }));
+    let mut runtime = Runtime::new(std::sync::Arc::new(scene(doc)), Default::default());
+    let line = EffectEmitter { from: [0.1, 1.0], to: Some([0.9, 1.0]), angle: -80.0, strength: 3.0 };
+    let set = |list: Vec<EffectEmitter>| {
+        let params = [("emitters".to_string(), Param::Emitters(list))].into();
+        let effects =
+            [("sky".to_string(), vec![EffectControl { at: 0, params, ..Default::default() }])].into();
+        ScriptOutputs { effects, ..Default::default() }
+    };
+    assert!(runtime.set_script(set(vec![spot([0.5, 0.9], 8.0), line])));
+    let frame = runtime.frame([0.0, 0.0, 64.0, 32.0], Quality::Q3);
+    let fx = &frame.effects[0];
+    assert_eq!(fx.emitters[0].1, [spot([0.5, 0.9], 8.0), line]);
+    let slot = fx.descriptor.params.iter().position(|p| p.id == "emitters").unwrap();
+    assert_eq!(fx.slots[slot][0], 2.0, "the shader is told two emitters blow");
+    drop(frame);
+    let crowd = vec![spot([0.5, 0.5], 1.0); MAX_EFFECT_EMITTERS + 1];
+    runtime.set_script(set(crowd));
+    let frame = runtime.frame([0.0, 0.0, 64.0, 32.0], Quality::Q3);
+    assert!(frame.effects[0].emitters[0].1.is_empty(), "a list over the cap is dropped");
+}
+
 fn flow() -> BTreeMap<String, Property> {
     serde_json::from_value(json!({ "flow": { "type": "bool", "label": "Flow", "default": true } })).unwrap()
 }
