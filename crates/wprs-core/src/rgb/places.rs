@@ -2,6 +2,7 @@ use super::Rgb;
 
 pub const PLACE: &str = "rgb.place.";
 pub const MAX_PLACES: usize = 256;
+const SMALLEST: f32 = 0.001;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Flow {
@@ -45,12 +46,14 @@ impl Place {
         let numbers: Vec<f32> =
             words[..4].iter().map(|w| w.parse::<f32>()).collect::<Result<_, _>>().map_err(|_| wrong())?;
         let [x, y, w, h] = [numbers[0], numbers[1], numbers[2], numbers[3]];
-        let inside = |at: f32, size: f32| at >= 0.0 && size > 0.0 && at + size <= 1.0 + 1e-4;
+        let inside =
+            |at: f32, size: f32| (0.0..=1.0).contains(&at) && size >= SMALLEST && at + size <= 1.0 + 1e-4;
         if !numbers.iter().all(|v| v.is_finite()) || !inside(x, w) || !inside(y, h) {
             return Err(wrong());
         }
         let flow = words.get(4).map_or(Some(Flow::Right), |word| Flow::parse(word)).ok_or_else(wrong)?;
-        Ok(Place::At { rect: [x, y, w.min(1.0 - x), h.min(1.0 - y)], flow })
+        let rect = [x, y, w.min(1.0 - x).max(SMALLEST), h.min(1.0 - y).max(SMALLEST)];
+        Ok(Place::At { rect, flow })
     }
 
     pub fn text(&self) -> String {
@@ -84,7 +87,9 @@ impl Rgb {
             self.places.remove(key);
             return Ok(());
         }
-        let place = Place::parse(value).map_err(|e| format!("invalid value for {PLACE}{key}: {e}"))?;
+        let wrong = |e: String| format!("invalid value for {PLACE}{key}: {e}");
+        let place = Place::parse(value).map_err(wrong)?;
+        Place::parse(&place.text()).map_err(wrong)?;
         if !self.places.contains_key(key) && self.places.len() >= MAX_PLACES {
             return Err(format!("at most {MAX_PLACES} devices and zones can be placed"));
         }

@@ -89,10 +89,17 @@ fn devices_and_zones_are_placed_on_the_picture_and_bad_places_refused() {
         "0 0 1 1 sideways",
         "0 0 1 1 right x",
         "NaN 0 1 1",
+        "0 0 0.0004 1",
+        "1.00005 0 0.00005 1",
+        "0 1.5 1 0.5",
     ] {
         assert!(c.set_option("rgb.place.Example mouse", bad).is_err() || bad.is_empty(), "{bad:?}");
     }
     assert_eq!(c.rgb.places.get("Example mouse"), None, "an empty value did not clear the place");
+    c.set_option("rgb.place.Example strip", "0.999 0 0.001 1").unwrap();
+    assert_eq!(c.rgb.places["Example strip"], "0.999 0 0.001 1 right");
+    assert!(c.rgb.place("Example strip").is_some(), "the smallest place cannot be read back");
+    c.rgb.places.remove("Example strip");
     for bad_key in ["rgb.place.", "rgb.place.bad\u{7}name", &format!("rgb.place.{}", "d".repeat(129))] {
         assert!(c.set_option(bad_key, "off").is_err(), "{bad_key:?}");
     }
