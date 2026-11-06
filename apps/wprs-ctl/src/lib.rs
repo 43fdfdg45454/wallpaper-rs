@@ -79,6 +79,7 @@ mod swinging;
 mod tended;
 mod tending;
 mod texturing;
+pub mod told;
 mod triggering;
 mod undoing;
 mod userprops;
@@ -86,7 +87,6 @@ mod userprops;
 pub use calls::CALLS;
 pub use cli::{Cli, Command};
 
-use clap::Parser;
 use std::fmt;
 use std::process::ExitCode;
 use wprs_client::{error_name, explain};
@@ -122,7 +122,7 @@ pub fn main() -> ExitCode {
     wprs_scene::serve_check();
     wprs_scene::check_out_of_process(true);
     wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
-    let result = match Cli::parse().command {
+    let result = match told::parse().command {
         Command::Pack(command) => pack::run(command),
         Command::Scene(command) => bench::run(command),
         Command::Repo(command) => repo::run(command),
