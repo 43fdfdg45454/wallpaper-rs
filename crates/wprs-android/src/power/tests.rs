@@ -65,3 +65,11 @@ fn heat_lowers_the_scene_level_and_only_a_low_memory_phone_lowers_the_tier() {
 fn the_wait_leaves_room_for_the_next_vsync() {
     assert_eq!([60, 30, 10, 0].map(delay_ms), [12, 25, 92, 992]);
 }
+
+#[test]
+fn a_new_headroom_only_wakes_the_wallpaper_when_it_crosses_the_warm_mark() {
+    let cool = on(|p| p.headroom = 0.3);
+    assert!(!cool.differs(on(|p| p.headroom = 0.5)));
+    assert!(cool.differs(on(|p| p.headroom = 0.8)));
+    assert!(cool.differs(on(|p| (p.headroom, p.charging) = (0.3, true))));
+}

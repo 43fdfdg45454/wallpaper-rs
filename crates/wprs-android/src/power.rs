@@ -90,6 +90,11 @@ impl Power {
         if preview { fps.min(PREVIEW_FPS) } else { fps }
     }
 
+    pub(crate) fn differs(self, other: Power) -> bool {
+        let warm = |p: Power| (Power { headroom: 0.0, ..p }, p.headroom >= WARM);
+        warm(self) != warm(other)
+    }
+
     pub(crate) fn moving(self) -> bool {
         !self.paused() && self.thermal < SEVERE
     }

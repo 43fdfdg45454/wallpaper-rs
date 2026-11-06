@@ -37,7 +37,7 @@ object Native {
 
     external fun detach(engine: Long)
 
-    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
+    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean): Boolean
 
     external fun display(hdr: Boolean, peak: Float, ratio: Float, refresh: Float)
 

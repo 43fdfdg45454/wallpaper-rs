@@ -141,10 +141,12 @@ pub fn power<'a>(
     thermal: jint,
     headroom: jfloat,
     still: jboolean,
-) {
+) -> jboolean {
     on(&mut env, |_| {
-        Power { charging, saver, low, thermal, headroom, still }.set();
-        Ok(())
+        let power = Power { charging, saver, low, thermal, headroom, still };
+        let changed = Power::now().differs(power);
+        power.set();
+        Ok(changed)
     })
 }
 
