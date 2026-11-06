@@ -61,9 +61,9 @@ pub async fn run(client: &Client, command: Wallhaven) -> Result<()> {
             add(client, &id, "wallhaven", options, false, (no_secret, secret_stdin)).await?
         }
         Wallhaven::Set { id, filters } => {
-            for (key, value) in filters.pairs()? {
-                providers.set(&id, key, &value).await.map_err(wprs_client::explain)?
-            }
+            let pairs = filters.pairs()?;
+            let changes = pairs.iter().map(|(key, value)| (*key, value.as_str())).collect();
+            providers.update(&id, changes).await.map_err(wprs_client::explain)?
         }
         Wallhaven::Collections { id, user, json } => {
             let found = patient(providers.collections(&id, user.as_deref().unwrap_or(""))).await?;

@@ -1,17 +1,23 @@
 use crate::compositor::lock;
 use crate::daemon::Daemon;
 use crate::error::{Error, Result, not_found};
-use crate::kinds::{effective, kind_of, table};
+use crate::kinds::{Options, effective, kind_of, table};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use wprs_core::model::JobKind;
 
 impl Daemon {
     pub async fn set_provider(self: &Arc<Self>, id: String, key: String, value: String) -> Result<()> {
+        self.update_provider(id, Options::from([(key, value)])).await
+    }
+
+    pub async fn update_provider(self: &Arc<Self>, id: String, changes: Options) -> Result<()> {
         let (known, mut given, _) = self.provider(&id)?;
-        given.insert(key.clone(), value.trim().to_owned());
+        let keys: Vec<String> = changes.keys().cloned().collect();
+        given.extend(changes.into_iter().map(|(key, value)| (key, value.trim().to_owned())));
         effective(&known, &given)?;
-        if known.secret.is_some() && ["url", "server", "user"].contains(&key.as_str()) {
+        if known.secret.is_some() && keys.iter().any(|key| ["url", "server", "user"].contains(&key.as_str()))
+        {
             self.keyring()?.delete(&id).await?;
         }
         let entry = table(&known, &given);
@@ -20,7 +26,7 @@ impl Daemon {
                 c.providers.insert(id.clone(), entry);
                 Ok(())
             })?;
-            tracing::info!(provider = id, key, "provider option changed");
+            tracing::info!(provider = id, keys = keys.join(","), "provider options changed");
             d.changes.changed("providers", vec![id]);
             d.remote.poke.notify_one();
             Ok::<_, Error>(())

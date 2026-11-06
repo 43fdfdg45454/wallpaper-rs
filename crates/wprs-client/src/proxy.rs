@@ -157,6 +157,7 @@ pub trait Providers1 {
     fn list(&self) -> Result<String>;
     fn add(&self, id: &str, kind: &str, options: HashMap<&str, &str>, secret: &str) -> Result<String>;
     fn set(&self, id: &str, key: &str, value: &str) -> Result<()>;
+    fn update(&self, id: &str, options: HashMap<&str, &str>) -> Result<()>;
     fn remove(&self, id: &str, purge: bool) -> Result<()>;
     fn sync(&self, id: &str) -> Result<u64>;
     fn collections(&self, id: &str, owner: &str) -> Result<String>;

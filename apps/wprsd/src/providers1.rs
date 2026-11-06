@@ -35,6 +35,10 @@ impl Providers {
         self.d()?.set_provider(id, key, value).await
     }
 
+    async fn update(&self, id: String, options: HashMap<String, String>) -> Result<()> {
+        self.d()?.update_provider(id, options.into_iter().collect()).await
+    }
+
     async fn remove(&self, id: String, purge: bool) -> Result<()> {
         self.d()?.remove_provider(id, purge).await
     }

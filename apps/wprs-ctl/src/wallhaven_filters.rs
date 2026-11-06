@@ -136,7 +136,6 @@ impl Filters {
                 return Err(usage(format!("--{}: expected {hint}", key.replace('_', "-"))));
             }
         }
-        pairs.sort_by_key(|(_, value)| !value.is_empty());
         Ok(pairs)
     }
 }

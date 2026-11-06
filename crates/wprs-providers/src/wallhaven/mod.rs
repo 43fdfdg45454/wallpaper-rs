@@ -5,6 +5,9 @@ use serde_json::Value;
 use std::path::PathBuf;
 use std::time::Duration;
 
+const MAX_PAGES: u32 = 10;
+const MAX_ITEMS: usize = 240;
+
 mod check;
 mod limit;
 mod search;
@@ -101,15 +104,16 @@ impl Provider for Wallhaven {
         }
         let path = search.target().map_or("/search".into(), |(user, id)| format!("/collections/{user}/{id}"));
         let (mut seed, mut papers) = (search.seed.clone(), Vec::new());
-        for page in search.page..search.page + search.pages {
+        let (pages, wanted) = (search.pages.clamp(1, MAX_PAGES), search.max_items.clamp(1, MAX_ITEMS));
+        for page in search.page..search.page.saturating_add(pages) {
             let reply: Page = self.get(&path, &search.params(page, seed.as_deref())).await?;
             seed = seed.or(reply.meta.seed);
             papers.extend(reply.data);
-            if page >= reply.meta.last_page || papers.len() >= search.max_items {
+            if page >= reply.meta.last_page || papers.len() >= wanted {
                 break;
             }
         }
-        papers.truncate(search.max_items);
+        papers.truncate(wanted);
         let item = |paper: Wallpaper| Item {
             id: format!("wallhaven-{}", paper.id),
             title: format!("{} ({})", paper.id, paper.resolution),

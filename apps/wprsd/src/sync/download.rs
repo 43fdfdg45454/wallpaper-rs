@@ -29,6 +29,7 @@ pub fn failure(e: wprs_providers::Error, secret: bool) -> Error {
             Error::Named(NEEDS_SECRET, "the server rejected the secret; store it again with SetSecret".into())
         }
         wprs_providers::Error::Invalid(message) if message.contains("plain http") => invalid(message),
+        wprs_providers::Error::Setting(message) => invalid(message),
         e => failed(e.to_string()),
     }
 }

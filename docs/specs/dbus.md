@@ -1271,6 +1271,12 @@ Changes one option with the same checks. Cached files stay until the next sync r
 On a kind with a secret, changing `url`, `server` or `user` also deletes the stored secret first
 (`KeyringUnavailable`: nothing changes), so a new host never receives the old secret.
 
+### `Update(s id, a{ss} options)`
+
+Changes several options at once: the result is checked as a whole, so options that only make
+sense together (a `collection` with its search terms cleared, `similar` replacing `query`) can
+change in one call, and nothing changes when any value is refused. `Set` rules otherwise.
+
 ### `Remove(s id, b purge)`
 
 Cancels a running sync, deletes the stored secret (`KeyringUnavailable` only when it exists and

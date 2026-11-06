@@ -97,6 +97,7 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Providers1", "List", "provider ls", &[]),
     ("Providers1", "Add", "provider add", &["ID", "KIND", "KEY=VALUE", "prompt"]),
     ("Providers1", "Set", "provider set", &["ID", "KEY", "VALUE"]),
+    ("Providers1", "Update", "provider wallhaven set", &["ID", "=options"]),
     ("Providers1", "Remove", "provider rm", &["ID", "--purge"]),
     ("Providers1", "Sync", "provider sync", &["ID"]),
     ("Providers1", "Collections", "provider wallhaven collections", &["ID", "--user"]),

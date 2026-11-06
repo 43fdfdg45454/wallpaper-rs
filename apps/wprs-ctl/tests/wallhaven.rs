@@ -41,12 +41,6 @@ fn flags_become_the_options_of_the_daemon() {
 }
 
 #[test]
-fn clearing_options_goes_before_setting_the_others() {
-    let both = run(&["--similar", "94x38z", "--query", ""]).unwrap();
-    assert_eq!(both.first().map(|(key, _)| key.as_str()), Some("query"));
-}
-
-#[test]
 fn wrong_values_are_refused_before_anything_is_sent() {
     for (line, hint) in [
         ("--sorting newest", "sorting must be one of"),
