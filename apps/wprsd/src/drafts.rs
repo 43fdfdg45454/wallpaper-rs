@@ -47,7 +47,8 @@ impl Daemon {
         let (document, simulated) = media::split(document);
         let document = document.as_str();
         let simulated = simulated.map(|m| media::frame(dir, m).map(Arc::new)).transpose()?;
-        let hold = (time >= 0.0 && time.is_finite()).then_some(time.min(600.0));
+        let hold =
+            (time >= 0.0 && time.is_finite()).then_some(time.min(f64::from(wprs_scene::MAX_POSTER_TIME)));
         let pack = match document.trim() {
             "" => None,
             _ => {

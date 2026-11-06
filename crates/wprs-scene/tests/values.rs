@@ -7,8 +7,12 @@ const VIEW: [f32; 4] = [0.0, 0.0, 100.0, 50.0];
 const NOON: f64 = 20_755.0 * 86_400.0 + 12.0 * 3600.0;
 
 fn runtime(layers: Json) -> Runtime {
+    timed(layers, json!([]))
+}
+
+fn timed(layers: Json, timelines: Json) -> Runtime {
     let text = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] }, "layers": layers,
-        "clock": { "step": 600 } });
+        "timelines": timelines, "clock": { "step": 600 } });
     Runtime::new(Arc::new(Scene::load(&text.to_string(), &BTreeMap::new()).unwrap()), Values::new())
 }
 
@@ -120,4 +124,16 @@ fn handles_time_positions_and_colors_by_their_share_of_the_way() {
         "text": { "keys": [[0, "a", { "out": [1, 0] }], [2, "b"]] } }] });
     let refused = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_err();
     assert!(format!("{refused:?}").contains("/layers/0/text/keys/0/2"), "{refused:?}");
+}
+
+#[test]
+fn a_seek_far_ahead_lands_on_the_value_of_its_timeline() {
+    let layers = json!([{ "id": "s", "type": "solid", "color": "#ffffff",
+        "opacity": { "keys": [[0, 0], [3, 1]], "timeline": "loop" } }]);
+    let mut rt = timed(layers, json!([{ "id": "loop", "duration": 3, "loop": "repeat" }]));
+    let started = std::time::Instant::now();
+    let far = at(&mut rt, 86_399.0).draws[0].opacity;
+    assert!((far - 2.0 / 3.0).abs() < 1e-2, "{far}");
+    assert!((at(&mut rt, 2.0).draws[0].opacity - 2.0 / 3.0).abs() < 1e-3);
+    assert!(started.elapsed() < std::time::Duration::from_secs(60), "{:?}", started.elapsed());
 }

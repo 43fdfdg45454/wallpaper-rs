@@ -2,6 +2,8 @@ use super::{MAX_GAP, MAX_STEP, Runtime};
 use crate::particles::Swarm;
 use std::cell::RefCell;
 
+const SETTLE: f64 = 10.0;
+
 impl Runtime {
     pub fn seek(&mut self, t: f64) {
         self.timelines.iter_mut().for_each(|(tl, head)| *head = tl.start());
@@ -14,7 +16,8 @@ impl Runtime {
         (self.onsets, self.gates) =
             (crate::voice::onsets(&self.scene), RefCell::new(vec![None; self.onsets.len()]));
         while self.t < t {
-            self.advance((t - self.t).min(MAX_STEP));
+            let left = t - self.t;
+            self.advance(if left > SETTLE { (left - SETTLE).min(MAX_GAP) } else { left.min(MAX_STEP) });
         }
         self.fired.clear();
         self.played = Default::default();

@@ -39,6 +39,11 @@ main memory it holds (`--screens 2` shows it on two screens at once).
   quality level, and the one drawn as the library thumbnail of a package without a preview picture (with clocks and
 dates at the local time it is drawn), `seed` feeds procedural effects; `"seed": null` picks a new seed each time the
   scene starts, so its random patterns differ every time (`fresh_seed`, which every platform runs).
+  Reaching an instant far into the scene (a poster or a held preview, up to a day) runs the
+  timelines, videos and bones step by step but poses the bones every step only in the last 10
+  seconds (before that, once every 10 minutes), so the
+  springs of the bones settle as they would after a long pause; a looping timeline keeps its place
+  exact however long it plays.
 - `assets` maps at most 256 ids (`[a-z0-9_]{1,32}`) to `{ "path", "linear", "atlas" }`. Images
   (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed),
   sounds (Ogg Vorbis, Opus, FLAC or WAV, see "Sound") and color lookup tables (`.cube`,
