@@ -62,10 +62,8 @@ pub enum Folder {
         restart: bool,
         #[arg(long, value_name = "FILE", help = crate::media::MEDIA)]
         media: Option<PathBuf>,
-        #[arg(long, value_parser = ["dual", "triple", "vertical", "mine"], requires = "out", help = SPREAD)]
-        layout: Option<String>,
-        #[arg(long, requires = "layout", help = "Picture file of --layout: .png, .jpg, .webp or .avif")]
-        out: Option<PathBuf>,
+        #[command(flatten)]
+        span: crate::spanning::Span,
     },
     #[command(about = "Build the scene into the library and show it on an output")]
     Apply {
@@ -86,9 +84,6 @@ pub enum Folder {
         manifest: bool,
     },
 }
-
-const SPREAD: &str =
-    "Write the scene over two or three screens side by side, two stacked or yours, without a desktop";
 
 fn runtime() -> Result<tokio::runtime::Runtime> {
     Ok(tokio::runtime::Builder::new_current_thread().enable_all().build()?)
@@ -143,8 +138,8 @@ pub(crate) fn run(command: Folder) -> Result<()> {
                 false => println!("{sha256} {size} {}", out.display()),
             }
         }
-        Folder::Preview { dir, layout: Some(layout), out: Some(out), time, .. } => {
-            crate::spanning::preview(&dir, &layout, &out, (time >= 0.0).then_some(time))?
+        Folder::Preview { dir, span: span @ crate::spanning::Span { layout: Some(_), .. }, time, .. } => {
+            crate::spanning::preview(&dir, &span, (time >= 0.0).then_some(time))?
         }
         Folder::Preview { dir, output, time, stop, quality, restart, media, .. } => {
             let project = Project::open(&dir)?;

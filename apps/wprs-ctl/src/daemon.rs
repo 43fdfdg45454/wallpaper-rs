@@ -184,16 +184,17 @@ fn options(state: &str, filter: Option<&str>, json: bool) -> Result<()> {
     if filter.is_some_and(|key| crate::levels::own(&state, key, json)) {
         return Ok(());
     }
+    let unknown = |k: &str| format!("unknown setting '{k}'; the settings are {}", show::list(options.keys()));
     if let Some(key) = filter.filter(|key| !options.contains_key(*key)) {
-        return Err(crate::usage(format!(
-            "unknown setting '{key}'; the settings are {}",
-            show::list(options.keys())
-        )));
+        return Err(crate::usage(unknown(key)));
     }
     let shown = options.iter().filter(|(key, _)| filter.is_none_or(|f| key.as_str() == f));
     match json {
         true => println!("{}", Value::Object(shown.map(|(k, v)| (k.clone(), v.clone())).collect())),
         false => shown.for_each(|(key, value)| println!("{key} = {value}")),
+    }
+    if filter == Some(wprs_core::LayerNamespace::KEY) && !json {
+        crate::gpus::in_use(&serde_json::from_value(state["layer_shell"].clone()).unwrap_or_default());
     }
     Ok(())
 }

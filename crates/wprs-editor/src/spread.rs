@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 use wprs_core::layout::Monitor;
-use wprs_core::spread::{bounds, checked, rects, simulated};
+use wprs_core::spread::{SCREEN_MM, bounds, checked, rects, screen, sized};
 
 fn canvas(doc: &Value) -> [u32; 2] {
     let read = |i: usize| doc.pointer(&format!("/scene/canvas/size/{i}")).and_then(Value::as_u64);
@@ -25,10 +25,15 @@ pub fn spread(doc: &Value, q: &Value) -> Value {
     let spread = doc.pointer("/manifest/display/span").and_then(Value::as_str) == Some("all-outputs");
     let layout = q["layout"].as_str().unwrap_or_default();
     let bezel = q["bezel"].as_f64().unwrap_or(0.0);
-    let monitors = match layout {
-        "mine" => given(&q["monitors"]),
-        name => {
-            simulated(name, bezel).ok_or_else(|| format!("{name:?} is not dual, triple, vertical or mine"))
+    let size = match q["screen"].as_str() {
+        Some(text) => screen(text),
+        None => Ok(SCREEN_MM),
+    };
+    let monitors = match (layout, size) {
+        ("mine", _) => given(&q["monitors"]),
+        (_, Err(e)) => Err(e),
+        (name, Ok(mm)) => {
+            sized(name, bezel, mm).ok_or_else(|| format!("{name:?} is not dual, triple, vertical or mine"))
         }
     };
     let monitors = match monitors {

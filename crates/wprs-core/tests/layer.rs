@@ -1,4 +1,4 @@
-use wprs_core::layer::Source;
+use wprs_core::layer::{Refused, Source};
 use wprs_core::model::LayerShellState;
 use wprs_core::{Config, LayerNamespace};
 
@@ -58,6 +58,13 @@ fn the_option_wins_over_the_environment_the_file_and_the_desktop() {
     let ignored = LayerNamespace::choose(None, Some("bad name"), Some(&file), "");
     assert_eq!((ignored.name.as_str(), ignored.from), ("from-file", Source::Config));
     assert!(ignored.ignored.is_some_and(|e| e.contains("environment")));
+    assert_eq!(ignored.refused, Some(Refused { from: Source::Environment, empty: false }));
+    let option = LayerNamespace::choose(Some("a/b"), Some("fine"), None, "");
+    assert_eq!(
+        (option.name.as_str(), option.refused),
+        ("fine", Some(Refused { from: Source::Option, empty: false }))
+    );
+    assert_eq!(LayerNamespace::choose(None, None, None, "").refused, None);
     assert_eq!(LayerNamespace::choose(None, None, None, "").ignored, None);
     for blank in ["", "  "] {
         let set_but_blank = LayerNamespace::choose(None, Some(blank), Some(&file), "KineticWE");
@@ -70,6 +77,7 @@ fn the_option_wins_over_the_environment_the_file_and_the_desktop() {
             set_but_blank.ignored.is_some_and(|e| e.contains("environment") && e.contains("empty")),
             "{blank:?}"
         );
+        assert_eq!(set_but_blank.refused, Some(Refused { from: Source::Environment, empty: true }));
         assert!(LayerNamespace::given(blank).unwrap_err().contains("empty"));
     }
     assert_eq!(LayerNamespace::given(" Auto ").unwrap(), None);
@@ -82,8 +90,13 @@ fn the_option_wins_over_the_environment_the_file_and_the_desktop() {
 fn the_state_reads_a_daemon_that_does_not_report_ignored_values() {
     let old: LayerShellState =
         serde_json::from_str(r#"{"namespace": "wallpaper", "from": "default", "restart": false}"#).unwrap();
-    assert_eq!(old.ignored, None);
-    let new = LayerShellState { ignored: Some("the environment value is ignored".into()), ..old };
+    assert_eq!((&old.ignored, &old.ignored_from, old.ignored_empty), (&None, &None, false));
+    let new = LayerShellState {
+        ignored: Some("the environment value is ignored".into()),
+        ignored_from: Some("environment".into()),
+        ignored_empty: true,
+        ..old
+    };
     let back: LayerShellState = serde_json::from_str(&serde_json::to_string(&new).unwrap()).unwrap();
     assert_eq!(back, new);
 }

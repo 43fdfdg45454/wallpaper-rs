@@ -1,5 +1,5 @@
 use wprs_core::layout::Monitor;
-use wprs_core::spread::{LAYOUTS, bounds, checked, rects, simulated};
+use wprs_core::spread::{LAYOUTS, SCREEN_MM, bounds, checked, rects, screen, simulated, sized};
 
 fn close(a: [f32; 4], b: [f32; 4]) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() < 0.05)
@@ -46,4 +46,27 @@ fn hand_made_layouts_need_named_screens_with_real_sizes() {
     assert!(checked(one("left", [0.0, 0.0, 20_000.0, 300.0])).is_err());
     let many = (0..65).map(|i| Monitor { id: format!("s{i}"), mm: [0.0, 0.0, 1.0, 1.0] }).collect();
     assert!(checked(many).is_err());
+}
+
+#[test]
+fn simulated_screens_take_the_size_the_author_gives() {
+    let wide = sized("dual", 5.0, [800.0, 335.0]).unwrap();
+    assert_eq!(wide[1].mm, [810.0, 0.0, 800.0, 335.0]);
+    assert_eq!(sized("triple", 0.0, SCREEN_MM), simulated("triple", 0.0));
+    for bad in [[49.0, 300.0], [600.0, 3001.0], [f64::NAN, 300.0], [600.0, f64::INFINITY], [-600.0, 300.0]] {
+        assert!(sized("dual", 0.0, bad).is_none(), "{bad:?}");
+    }
+    let near = |a: [f64; 2], b: [f64; 2]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 0.5);
+    assert!(near(screen("24in").unwrap(), [531.3, 298.9]));
+    assert!(near(screen(" 34in@21:9 ").unwrap(), [793.8, 340.2]));
+    assert!(near(screen("27in@16:10").unwrap(), [581.5, 363.4]));
+    assert_eq!(screen("600x340").unwrap(), [600.0, 340.0]);
+    assert_eq!(screen("600 × 340").unwrap(), [600.0, 340.0]);
+    for bad in [
+        "", "24", "in", "24in@16", "24in@0:9", "24in16:9", "x340", "600x", "-600x340", "nanx340", "1in",
+        "200in", "600x40",
+    ] {
+        assert!(screen(bad).is_err(), "{bad:?}");
+    }
+    assert!(screen("1in").unwrap_err().contains("50 to 3000 mm"));
 }

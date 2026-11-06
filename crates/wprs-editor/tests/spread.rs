@@ -88,3 +88,26 @@ fn spreading_the_scene_is_an_undoable_manifest_change() {
     let problems = wprs_editor::package::problems(&p.dir, &p.doc);
     assert!(problems.iter().all(|f| f.warning), "a spread scene is a valid package: {problems:?}");
 }
+
+#[test]
+fn simulated_screens_take_the_size_and_frames_the_editor_picks() {
+    let root = tempfile::tempdir().unwrap();
+    let p = project(&root);
+    let screens = |q: Value| ask(&p, q)["screens"].clone();
+    let wide = screens(json!({ "layout": "dual", "bezel": 0, "screen": "34in@21:9" }));
+    assert!((wide[0]["mm"][2].as_f64().unwrap() - 793.8).abs() < 0.5, "{wide}");
+    let framed = screens(json!({ "layout": "dual", "bezel": 20, "screen": "600x340" }));
+    assert_eq!(framed[1]["mm"], json!([640.0, 0.0, 600.0, 340.0]));
+    assert_eq!(screens(json!({ "layout": "dual" }))[0]["mm"], json!([0.0, 0.0, 527.0, 296.0]));
+    for bad in ["10x10", "24", "34in@21", "nan x 3"] {
+        let reply = ask(&p, json!({ "layout": "dual", "screen": bad }));
+        assert!(reply["error"].is_string() && reply["parts"] == json!([]), "{bad}: {reply}");
+    }
+    let mine = json!([{ "id": "left", "mm": [0, 0, 600, 340] }]);
+    let real = ask(&p, json!({ "layout": "mine", "monitors": mine, "screen": "10x10" }));
+    assert_eq!(
+        real["parts"][0]["id"],
+        json!("left"),
+        "the size of simulated screens never touches the real ones"
+    );
+}
