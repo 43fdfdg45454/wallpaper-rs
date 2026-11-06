@@ -22,27 +22,37 @@ fn particles_off_the_screen_keep_simulating_while_nothing_on_it_changes() {
     assert_eq!(away, shown, "steps of a particle layer off the screen were lost");
 }
 
-fn gpu_ms(r: &Renderer, dt: f64) -> Option<[f64; 2]> {
+fn simulated(r: &Renderer) -> Option<Run> {
     let mut systems = flow(200_000, 0.0, 40.0);
     systems["flow"]["emitters"][0]["burst"] = json!({ "count": 200_000 });
     let layer = json!([{ "id": "f", "type": "particles", "system": "flow" }]);
     let mut run = Run::new(r, systems, layer, true)?;
     run.frame(r, 1.0 / 60.0);
-    let (mut seen, mut times) = (run.view.gpu_time().0, Vec::new());
-    for _ in 0..30 {
-        run.frame(r, dt);
-        let (samples, stats) = (run.view.gpu_time().0, run.view.stats());
-        let timed = [stats.sim_gpu_us, stats.gpu_us].map(|us| f64::from(us) / 1000.0);
-        times.extend((std::mem::replace(&mut seen, samples) != samples).then_some(timed));
-    }
+    Some(run)
+}
+
+fn timed(r: &Renderer, run: &mut Run, dt: f64, seen: &mut u64) -> Option<[f64; 2]> {
+    run.frame(r, dt);
+    let (samples, stats) = (run.view.gpu_time().0, run.view.stats());
+    let timed = [stats.sim_gpu_us, stats.gpu_us].map(|us| f64::from(us) / 1000.0);
+    (std::mem::replace(seen, samples) != samples).then_some(timed)
+}
+
+fn median(mut times: Vec<[f64; 2]>) -> Option<[f64; 2]> {
     times.sort_by(|a, b| a[0].total_cmp(&b[0]));
-    times.first().copied()
+    times.get(times.len() / 2).copied()
 }
 
 #[test]
 fn the_gpu_time_of_a_frame_counts_its_particle_simulation() {
     let Some(r) = renderer() else { return };
-    let (Some(one), Some(many)) = (gpu_ms(r, 1.0 / 60.0), gpu_ms(r, 0.25)) else { return };
+    let (Some(mut one), Some(mut many)) = (simulated(r), simulated(r)) else { return };
+    let (mut seen, mut times) = ([one.view.gpu_time().0, many.view.gpu_time().0], [Vec::new(), Vec::new()]);
+    for _ in 0..40 {
+        times[0].extend(timed(r, &mut one, 1.0 / 60.0, &mut seen[0]));
+        times[1].extend(timed(r, &mut many, 0.25, &mut seen[1]));
+    }
+    let [Some(one), Some(many)] = times.map(median) else { return };
     assert!(one[0] > 0.0 && one[1] >= one[0] && many[1] >= many[0], "{one:?} {many:?}");
     assert!(many[0] > one[0] * 2.0, "{one:?} ms with one step a frame, {many:?} with fifteen");
 }
