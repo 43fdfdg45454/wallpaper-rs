@@ -68,3 +68,60 @@ fn an_hdr_video_takes_the_lowest_headroom_of_the_screens_that_show_it() {
     outputs.insert("DP-2".to_string(), dim);
     assert_eq!(video(&outputs, &reel), 1.0, "a screen in standard range keeps the video standard");
 }
+
+#[test]
+fn hdr_ktx2_pictures_ask_for_hdr_and_keep_their_light_while_the_screen_has_it() {
+    use super::super::Picture;
+    let dir = tempfile::tempdir().unwrap();
+    let sun = image::Rgba32FImage::from_fn(16, 8, |x, _| {
+        image::Rgba([if x < 8 { 6.0 } else { 0.5 }, 0.3, 0.2, 1.0])
+    });
+    let options = wprs_ktx2::Options {
+        codec: wprs_ktx2::Codec::Uastc,
+        quality: 90,
+        srgb: true,
+        mips: false,
+        repeat: false,
+    };
+    let file = dir.path().join("sun.ktx2");
+    std::fs::write(&file, wprs_ktx2::encode_light(&[sun], &options).unwrap()).unwrap();
+    let picture = |file: &std::path::Path, edit: Option<Arc<wprs_core::edit::Edit>>| {
+        let place = wprs_core::Place::Fit;
+        Content::Image(Picture {
+            file: file.to_owned(),
+            modified: None,
+            pixels: None,
+            edit,
+            place,
+            depth: None,
+        })
+    };
+    let mut output = Output::new((16, 9), shown(None), Sink::Stream(None), 60);
+    output.shown.content = picture(&dir.path().join("plain.png"), None);
+    super::super::pictures::follow(&mut output);
+    assert!(!output.top(), "a standard picture asked for HDR");
+    output.shown.content = picture(&file, None);
+    super::super::pictures::follow(&mut output);
+    assert!(output.top(), "an HDR picture did not ask for HDR");
+    let mut turned = wprs_core::edit::Edit::default();
+    turned.geometry.rotate = 90;
+    output.shown.content = picture(&file, Some(Arc::new(turned)));
+    super::super::pictures::follow(&mut output);
+    assert!(!output.top(), "an edited picture, drawn in standard range, asked for HDR");
+    output.shown.content = picture(&file, None);
+    super::super::pictures::follow(&mut output);
+    let Ok(renderer) = wprs_render::Renderer::shared() else {
+        return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none());
+    };
+    assert!(!output.lit[0].relight(renderer, 1.0) && output.lit[0].image().is_none());
+    assert!(output.lit[0].relight(renderer, 4.0), "a screen with HDR got no light");
+    let lit = output.lit[0].image().unwrap();
+    assert!(renderer.read_light(lit).unwrap().iter().any(|t| t[0] > 2.0), "the light stayed under white");
+    let id = lit.id();
+    assert!(!output.lit[0].relight(renderer, 4.0), "the same peak built the light again");
+    let players = HashMap::new();
+    let layer = output.shown.layer(&players, 1.0, None, (16, 9)).lit(output.lit[0].image());
+    assert_eq!(layer.image.map(wprs_render::GpuImage::id), Some(id));
+    output.show(shown(None), (16, 9), false);
+    assert!(output.lit[0].image().is_none(), "the light outlived its picture");
+}

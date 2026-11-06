@@ -51,3 +51,4 @@ roxmltree.workspace = true
 smithay-client-toolkit.workspace = true
 wprs-format = { workspace = true, features = ["sign"] }
 wiremock.workspace = true
+wprs-ktx2 = { workspace = true, features = ["encode"] }

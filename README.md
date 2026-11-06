@@ -678,10 +678,12 @@ descripciones de imagen propias, el daemon codifica en PQ y describe la superfic
 sus metadatos HDR (MaxCLL, la luz más alta que puede dibujar, y MaxFALL, su blanco). La app,
 `wprs-ctl quality` y `wprs-ctl state` dicen cuál de las tres se usa. `playback.hdr` vale `auto` (solo si
 el escritorio o el teléfono dicen que la pantalla muestra HDR, con corriente y con una escena con
-`canvas.hdr` y mapeo de tonos en `q3` o con un vídeo HDR, porque gasta más), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el
+`canvas.hdr` y mapeo de tonos en `q3`, con un vídeo HDR o con una imagen KTX2 HDR, porque gasta más), `on` (siempre que la superficie lo admita, aunque la pantalla no lo diga) u `off`, y cada pantalla puede tener el
 suyo (`playback.hdr.DP-1`); si la pantalla no puede, se ve en SDR como siempre. Con el HDR encendido, un vídeo HDR (PQ o HLG)
 conserva sus luces por encima del blanco, ajustadas al pico de la pantalla (el más bajo de las
-pantallas que lo muestran), y las imágenes, los vídeos normales y las páginas, hechos para el rango
+pantallas que lo muestran); una imagen KTX2 HDR (UASTC HDR, sin retoques de foto) conserva también su
+luz por encima del blanco, doblada con suavidad hacia el pico de la pantalla, en el escritorio y en el
+teléfono; y las demás imágenes, los vídeos normales y las páginas, hechos para el rango
 estándar, ponen su blanco en el blanco de la pantalla. La app lo ofrece en
 *Ajustes* → *HDR* y en cada pantalla, con lo que la pantalla admite y por qué está activado o no; el
 panel de tonos del editor avisa de cómo se ven esas escenas en una pantalla HDR. En el teléfono

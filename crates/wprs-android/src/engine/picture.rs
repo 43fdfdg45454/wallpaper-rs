@@ -13,7 +13,7 @@ use wprs_render::RenderError;
 impl Engine {
     pub(super) fn frame(&mut self, nanos: i64, fps: u32, power: Power) -> Result<(u32, i64), RenderError> {
         if self.target.as_ref().is_none_or(|(gpu, _)| !gpu.current()) {
-            (self.target, self.fading, self.dirty) = (None, None, true);
+            (self.target, self.fading, self.dirty, self.lit) = (None, None, true, Default::default());
             let opened = gpu::open(&self.window, self.size)?;
             if std::mem::replace(&mut self.checked.0, 0) != opened.0.epoch {
                 (self.image, self.raised, self.checked) = (None, None, (0, 0, (0, 0)));
@@ -29,6 +29,7 @@ impl Engine {
             let (size, shown) = (self.size, choice::shown_on(self.preview, self.lock));
             if shown.as_ref().is_some_and(|shown| shown.video || shown.web) {
                 (self.image, self.framed, self.crop) = (None, None, None);
+                self.lit.follow(None);
                 return self.compose(nanos, fps, power);
             }
             self.stage(shown.as_ref());
@@ -58,6 +59,9 @@ impl Engine {
             });
             self.framed = wanted.as_ref().map(|(key, _, framed)| (key.item.clone(), framed.clone()));
             if self.image.as_ref().map(|(key, _)| key) != wanted.as_ref().map(|(key, ..)| key) {
+                let plain = wanted.as_ref().filter(|(.., framed)| framed.develop.is_none());
+                self.lit = Default::default();
+                self.lit.follow(plain.map(|(_, path, _)| path.as_path()));
                 let loaded = wanted
                     .and_then(|(key, path, framed)| Some((key.clone(), gpu.texture(key, &path, &framed)?)));
                 let previous = std::mem::replace(&mut self.image, loaded);
@@ -80,6 +84,10 @@ impl Engine {
             return Ok(next);
         }
         let Some((gpu, surface)) = self.target.as_mut() else { return Ok((0, 0)) };
+        if self.lit.bright() {
+            let (headroom, relit) = crate::hdr::light(&gpu.renderer, surface, power.charging, true)?;
+            self.dirty |= self.lit.relight(&gpu.renderer, headroom) | relit;
+        }
         if power.moving() && self.offset != self.shown {
             (self.shown, self.dirty) = (self.offset, true);
         }
@@ -98,10 +106,12 @@ impl Engine {
         let (fit, background, pan, size) = (self.look.fit, self.look.background, self.shown, self.size);
         let (flip, grade) = (self.look.flip, self.look.grade);
         let look = Seen { fit, background, pan, crop: self.crop, flip, grade };
-        let current = self.image.as_ref().map(|(_, image)| image.as_ref());
+        let current = self.lit.image().or(self.image.as_ref().map(|(_, image)| image.as_ref()));
         let raised = self.raised.as_ref().map(|raised| (raised, power.charging));
         let layers = [layer(current, 1.0, &look, size, raised)];
-        crate::hdr::dark(&gpu.renderer, surface)?;
+        if !self.lit.bright() {
+            crate::hdr::dark(&gpu.renderer, surface)?;
+        }
         self.dirty = !gpu.renderer.present_layers(surface, size, &layers, || {})?;
         if !self.dirty {
             self.presented = nanos;

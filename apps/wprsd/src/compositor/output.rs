@@ -38,6 +38,7 @@ pub(super) struct Output {
     pub(super) ages: Ages,
     pub(super) hdr: super::light::Hdr,
     pub(super) bright_video: bool,
+    pub(super) lit: [wprs_render::Lit; 2],
 }
 
 impl Output {
@@ -65,6 +66,7 @@ impl Output {
             ages: Ages::default(),
             hdr: Default::default(),
             bright_video: false,
+            lit: Default::default(),
         }
     }
 
@@ -97,6 +99,8 @@ impl Output {
         let animate = transition && !resized && self.active && self.last_render.is_some();
         let old = std::mem::replace(&mut self.shown, shown);
         self.fade = (animate && !old.content.same_source(&self.shown.content)).then_some((old, None));
+        let kept = std::mem::take(&mut self.lit[0]);
+        self.lit[1] = if self.fade.is_some() { kept } else { Default::default() };
         if let Sink::Stream(target) = &mut self.sink
             && resized
         {

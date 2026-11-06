@@ -34,6 +34,14 @@ fn serves(have: (u32, u32), need: (u32, u32)) -> bool {
     fine(have.0, need.0) && fine(have.1, need.1)
 }
 
+pub(super) fn follow(output: &mut Output) {
+    let file = match &output.shown.content {
+        Content::Image(p) if p.edit.as_deref().is_none_or(|e| !e.develops()) => Some(p.file.as_path()),
+        _ => None,
+    };
+    output.lit[0].follow(file);
+}
+
 fn showing(output: &Output, look: &Look) -> bool {
     matches!(&output.shown.content, Content::Image(p) if self::look(p) == *look)
 }

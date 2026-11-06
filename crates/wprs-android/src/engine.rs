@@ -62,6 +62,7 @@ pub(crate) struct Engine {
     reel: crate::reel::Reel,
     still: Option<i64>,
     over: bool,
+    lit: wprs_render::Lit,
 }
 
 fn size(width: i32, height: i32) -> (u32, u32) {
@@ -111,6 +112,7 @@ impl Engine {
             reel: Default::default(),
             still: None,
             over: false,
+            lit: Default::default(),
         }
     }
 

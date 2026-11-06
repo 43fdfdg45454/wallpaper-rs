@@ -7210,6 +7210,7 @@ dependencies = [
  "wprs-core",
  "wprs-depth",
  "wprs-format",
+ "wprs-ktx2",
  "wprs-library",
  "wprs-pipewire",
  "wprs-providers",

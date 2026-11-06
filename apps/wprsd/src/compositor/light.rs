@@ -41,6 +41,7 @@ impl Output {
     fn top(&self) -> bool {
         let bright = |s: &super::scene::SceneState| s.spec.pack.scene.canvas.bright();
         self.bright_video
+            || self.lit[0].bright()
             || self.shown.scene.as_ref().is_some_and(|s| s.quality().quality == "q3" && bright(s))
     }
 }

@@ -25,6 +25,7 @@ mod filled;
 pub mod hdr;
 #[cfg(target_os = "linux")]
 mod import;
+mod lit;
 mod looked;
 mod lost;
 mod luma;
@@ -64,6 +65,7 @@ pub use encoding::Encoding;
 pub use exported::Exported;
 #[cfg(target_os = "linux")]
 pub use import::{Imported, Shared};
+pub use lit::{Lit, bright_picture, light_texels};
 pub use luma::Meter;
 #[cfg(target_os = "linux")]
 pub use page::{ARGB8888, PageBuffer, XRGB8888};
