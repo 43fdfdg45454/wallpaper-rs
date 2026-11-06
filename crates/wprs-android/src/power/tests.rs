@@ -7,9 +7,10 @@ fn on(f: impl FnOnce(&mut Power)) -> Power {
 }
 
 #[test]
-fn the_charger_doubles_the_cap_and_previews_stay_at_thirty() {
+fn battery_and_charger_both_keep_sixty_and_previews_stay_at_thirty() {
     let charging = on(|p| p.charging = true);
-    assert_eq!((Power::BATTERY.fps(false), charging.fps(false), charging.fps(true)), (30, 60, 30));
+    assert_eq!((Power::BATTERY.fps(false), charging.fps(false), charging.fps(true)), (60, 60, 30));
+    assert_eq!(Power::BATTERY.capped(false, [BATTERY_FPS, CHARGING_FPS]), 60);
 }
 
 #[test]
@@ -24,7 +25,7 @@ fn saving_power_or_a_low_battery_pauses_everything() {
 fn a_normal_battery_keeps_moving_and_each_pause_says_why() {
     assert_eq!((Power::BATTERY.moving(), Power::BATTERY.stills()), (true, None));
     let warm = on(|p| (p.thermal, p.headroom) = (MODERATE, 0.9));
-    assert_eq!((warm.moving(), warm.stills(), warm.fps(false)), (true, None, 15));
+    assert_eq!((warm.moving(), warm.stills(), warm.fps(false)), (true, None, 30));
     let reasons =
         [on(|p| p.saver = true), on(|p| p.low = true), on(|p| p.thermal = SEVERE)].map(Power::stills);
     assert_eq!(reasons, [Some("saver"), Some("battery"), Some("heat")]);
@@ -33,7 +34,7 @@ fn a_normal_battery_keeps_moving_and_each_pause_says_why() {
 
 #[test]
 fn heat_lowers_the_rate_before_pausing() {
-    assert_eq!(on(|p| p.headroom = 0.8).fps(false), 15);
+    assert_eq!(on(|p| p.headroom = 0.8).fps(false), 30);
     assert_eq!(on(|p| (p.thermal, p.charging) = (MODERATE, true)).fps(false), 30);
     let severe = on(|p| p.thermal = SEVERE);
     assert_eq!((severe.fps(false), severe.moving()), (10, false));
@@ -47,7 +48,7 @@ fn the_chosen_caps_apply_before_heat() {
 }
 
 #[test]
-fn heat_lowers_the_scene_level_and_the_device_class_picks_the_tier() {
+fn heat_lowers_the_scene_level_and_only_a_low_memory_phone_lowers_the_tier() {
     let levels = [0, LIGHT, MODERATE, SEVERE].map(|t| on(|p| p.thermal = t).ceiling());
     assert_eq!(levels, [Quality::Q3, Quality::Q2, Quality::Q1, Quality::Q0]);
     assert_eq!(on(|p| (p.thermal, p.headroom) = (LIGHT, 0.9)).ceiling(), Quality::Q1);
@@ -55,7 +56,7 @@ fn heat_lowers_the_scene_level_and_the_device_class_picks_the_tier() {
         device(low, class);
         tier(false, true)
     });
-    assert_eq!(tiers, [Tier::T1, Tier::T2, Tier::T0]);
+    assert_eq!(tiers, [Tier::T2, Tier::T2, Tier::T0]);
     device(false, 34);
     assert_eq!((tier(true, true), tier(false, false)), (Tier::T0, Tier::T0));
     device(false, 0);
@@ -64,4 +65,12 @@ fn heat_lowers_the_scene_level_and_the_device_class_picks_the_tier() {
 #[test]
 fn the_wait_leaves_room_for_the_next_vsync() {
     assert_eq!([60, 30, 10, 0].map(delay_ms), [12, 25, 92, 992]);
+}
+
+#[test]
+fn a_new_headroom_only_wakes_the_wallpaper_when_it_crosses_the_warm_mark() {
+    let cool = on(|p| p.headroom = 0.3);
+    assert!(!cool.differs(on(|p| p.headroom = 0.5)));
+    assert!(cool.differs(on(|p| p.headroom = 0.8)));
+    assert!(cool.differs(on(|p| (p.headroom, p.charging) = (0.3, true))));
 }

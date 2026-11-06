@@ -40,7 +40,7 @@ private val HDRS = listOf("auto" to R.string.hdr_auto, "on" to R.string.hdr_on, 
 private val CONVERTS = listOf("auto" to R.string.convert_auto, "keep" to R.string.convert_keep, "off" to R.string.never)
 private val CHOICES = listOf(
     Triple(R.string.fit, "fit", FIT),
-    Triple(R.string.battery_fps, "playback.max_fps", listOf("30", "15", "10").map { it to R.string.fps }),
+    Triple(R.string.battery_fps, "playback.max_fps", listOf("60", "30", "15", "10").map { it to R.string.fps }),
     Triple(R.string.charger_fps, "charger_fps", listOf("60", "30").map { it to R.string.fps }),
     Triple(R.string.system_colors, "system_colors", COLORS),
     Triple(R.string.backend, "backend", BACKENDS),
@@ -149,6 +149,7 @@ fun Settings(main: Main) {
                 }
             }
         }
+        item { PerfControls() }
         item { Header(stringResource(R.string.licenses)) }
         items(NOTICES) { ListItem(headlineContent = { Text(it) }, modifier = Modifier.clickable { notice = it }) }
     }

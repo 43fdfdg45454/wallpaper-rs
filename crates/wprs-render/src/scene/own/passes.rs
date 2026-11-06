@@ -60,7 +60,17 @@ impl Painter<'_, '_, '_> {
         let vertices = grid.map_or(3, |[x, y]| x * y * 6);
         let more = pass.copy.is_none().then(|| self.pool.push(&*more));
         let tex = self.set(tex);
-        self.ops.push(Op::Effect(Fill { target, shader, slot, tex, more, mode, load, vertices }));
+        self.ops.push(Op::Effect(Fill {
+            target,
+            shader,
+            slot,
+            tex,
+            more,
+            mode,
+            load,
+            vertices,
+            scissor: None,
+        }));
         target
     }
 
@@ -82,7 +92,7 @@ impl Painter<'_, '_, '_> {
         let (max, made) = (self.r.device.limits().max_texture_dimension_2d as f32, self.made.len());
         for t in d.targets.values() {
             let format = if t.format == Texel::Rgba16f { self.state_format } else { Format::Rgba8Unorm };
-            let side = |v: f32| (v * t.scale * scale).ceil().clamp(1.0, max) as u32;
+            let side = |v: f32| (v * t.scale * scale * self.density - 1e-3).ceil().clamp(1.0, max) as u32;
             let Some(src) = self.borrow((side(rect.w), side(rect.h)), format).map(Src::Pool) else {
                 (made..self.made.len()).for_each(|k| self.release(self.made[k]));
                 self.made.truncate(made);

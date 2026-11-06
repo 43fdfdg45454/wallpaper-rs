@@ -67,7 +67,7 @@ impl Painter<'_, '_, '_> {
         let next = match list {
             [e] if e.descriptor.key != 0 => self.own(i, e, input, current, rect, uv),
             [e] => self.effect(i, e, input, current, rect, uv),
-            _ => self.chain(list, current, rect, uv),
+            _ => self.chain(i, list, current, (rect, uv)),
         };
         self.missed(i, list.first());
         next

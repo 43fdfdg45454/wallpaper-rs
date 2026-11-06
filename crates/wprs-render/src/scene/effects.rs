@@ -3,7 +3,8 @@ use super::fed::Fed;
 use super::item::{Fx, Rect};
 use super::paint::Painter;
 use super::pipes::Shader;
-use wprs_scene::{Affine, CHAIN_ENTRY, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
+use super::region::Region;
+use wprs_scene::{Affine, EffectDraw, MaskMode, Output, ParamKind, PassDef, descriptor};
 
 pub(crate) const EMPTY: [Src; 7] =
     [Src::Clear, Src::White, Src::Clear, Src::Clear, Src::Clear, Src::Clear, Src::Void];
@@ -32,32 +33,28 @@ impl Painter<'_, '_, '_> {
         while k < list.len() {
             let n = list[k].chain.clamp(1, list.len() - k);
             let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
-            if self.cut(i, &list[k]) {
+            let region = if n == 1 {
+                self.region(&list[k], (rect, layer_uv), self.size_of(current))
+            } else {
+                Region::Whole
+            };
+            if self.cut(i, &list[k]) || region == Region::Empty {
                 k += 1;
                 continue;
             }
-            let next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
+            let from = self.ops.len();
+            let mut next = self.step(i, &list[k..k + n], (input, current), rect, layer_uv);
+            if let Region::Part(r) = region
+                && next != current
+            {
+                next = self.in_place(from, (input, current, next), r).unwrap_or(next);
+            }
             if current != input && current != next {
                 self.release(current);
             }
             (current, k) = (next, k + n);
         }
         current
-    }
-
-    pub(crate) fn chain(&mut self, list: &[EffectDraw<'_>], input: Src, rect: Rect, layer_uv: Affine) -> Src {
-        let key =
-            self.r.pipes().chain(&self.r.device, list.iter().map(|e| e.descriptor), Some(&mut *self.lease));
-        let (mut fx, _) = self.base(&list[0], layer_uv);
-        let mut base = 0;
-        for e in list {
-            let n = e.descriptor.params.len();
-            fx.slots[base..base + n].copy_from_slice(&e.slots[..n]);
-            base += n;
-        }
-        let mut tex = EMPTY;
-        tex[0] = input;
-        self.pass(Shader::Fx(key, CHAIN_ENTRY), rect, None, 1.0, tex, fx)
     }
 
     pub(crate) fn effect(
@@ -71,15 +68,16 @@ impl Painter<'_, '_, '_> {
     ) -> Src {
         let Some(d) = descriptor(&e.descriptor.id) else { return current };
         let key = self.r.pipes().chain(&self.r.device, std::iter::once(d), Some(&mut *self.lease));
-        let fed = self.fed(i, e, rect, layer_uv);
-        let (fx, mask) = self.base(e, layer_uv);
+        let fed = self.fed(i, e, (rect, layer_uv), d.reads_mask_at_its_pixel().then_some(0.0));
+        let (mut fx, mask) = self.base(e, layer_uv);
+        fx.crop[0] = fed.crop;
         let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
         let tune = d.scale_at(self.frame.quality);
         let mut ticks = 0;
         let sim = match &d.state {
             Some(s) => {
-                let side = |v: f32| (v * s.scale * tune).ceil().max(1.0) as u32;
+                let side = |v: f32| (v * s.scale * tune * self.density - 1e-3).ceil().max(1.0) as u32;
                 let Some((sim, _, n)) = self.state(i, e, (side(rect.w), side(rect.h))) else {
                     fed.all().for_each(|s| self.release(s));
                     return current;
@@ -152,7 +150,8 @@ impl Painter<'_, '_, '_> {
         }
         let state = pass.output == Output::State;
         let scale = if n == at.last { pass.scale } else { pass.scale * at.scale };
-        let side = |v: f32| (v * scale.clamp(0.05, 1.0)).ceil().max(1.0) as u32;
+        let dense = self.density;
+        let side = |v: f32| (v * scale.clamp(0.05, 1.0) * dense - 1e-3).ceil().max(1.0) as u32;
         let temp = (pass.output == Output::Step)
             .then(|| self.borrow((side(at.rect.w), side(at.rect.h)), self.state_format));
         let out = front.filter(|_| state).map(|(id, side)| Src::State(id, 1 - side));

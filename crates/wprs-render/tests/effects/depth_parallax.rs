@@ -35,12 +35,10 @@ fn depth_parallax_takes_fewer_steps_at_lower_quality() {
         let fx = || relief(json!({ "strength": 32, "focus": 0, "steps": steps }), &stripes).quality(quality);
         Some(moved(fx)?.1)
     };
-    let (Some(fine), Some(coarse), Some(low)) = (shot(16, Quality::Q3), shot(8, Quality::Q3), shot(16, Quality::Q1))
-    else {
-        return;
-    };
+    let (Some(fine), Some(coarse)) = (shot(16, Quality::Q3), shot(8, Quality::Q3)) else { return };
+    let (Some(low), Some(fewer)) = (shot(16, Quality::Q1), shot(8, Quality::Q1)) else { return };
     assert!(fine.diff(&coarse) > 5.0, "{}", fine.diff(&coarse));
-    assert_eq!(low.diff(&coarse), 0.0);
+    assert_eq!(low.diff(&fewer), 0.0);
 }
 
 #[test]

@@ -11,6 +11,8 @@ const MARGIN: f32 = 1.5;
 const PROBE: Duration = Duration::from_secs(60);
 const BOUNCE: Duration = Duration::from_secs(30);
 const TRIES: u8 = 4;
+const AHEAD: f32 = 1.15;
+pub const PHONE_SHARE: f32 = 0.75;
 
 impl Budget {
     pub fn auto(&self, runtime: &Runtime) -> (Quality, Why) {
@@ -29,6 +31,18 @@ impl Budget {
             Heat::Hot => Quality::Q0,
         };
         (heated, steps(fitted, heated, Why::Heat, why))
+    }
+
+    pub fn reach(&self) -> (Quality, Why) {
+        let (start, why) = match self.saver {
+            true => (self.tier.quality(true).lower(), Why::Saver),
+            false => (Quality::Q3, Why::Full),
+        };
+        match self.heat {
+            Heat::Cool => (start, why),
+            Heat::Warm => (start.lower(), Why::Heat),
+            Heat::Hot => (Quality::Q0, Why::Heat),
+        }
     }
 
     pub fn steady(&self) -> Quality {
@@ -62,15 +76,32 @@ pub struct Governor {
     raised: Option<Instant>,
     steps: u8,
     tries: u8,
+    probes: u8,
+    probing: bool,
     gains: [f32; 4],
     gauge: Option<f32>,
     floor: Option<Quality>,
+    timed: bool,
 }
 
 impl Governor {
+    pub fn timed() -> Governor {
+        Governor { timed: true, ..Governor::default() }
+    }
+
     pub fn hold(&mut self, floor: Quality) {
         if self.floor.unwrap_or(Quality::Q0) != floor {
-            *self = Governor { floor: Some(floor), ..Governor::default() };
+            *self = Governor { floor: Some(floor), timed: self.timed, ..Governor::default() };
+        }
+    }
+
+    pub fn begin(&mut self, ceiling: Quality, fitted: Quality) {
+        if self.last.is_none() && self.changed.is_none() {
+            let mut q = ceiling;
+            self.steps = 0;
+            while q > fitted.min(ceiling) {
+                (q, self.steps) = (q.lower(), self.steps + 1);
+            }
         }
     }
 
@@ -95,7 +126,11 @@ impl Governor {
         }
         self.last = Some(at);
         if self.raised.is_some_and(|r| at.saturating_duration_since(r) >= BOUNCE) {
-            (self.raised, self.tries) = (None, self.tries.saturating_sub(1));
+            match std::mem::take(&mut self.probing) {
+                true => self.probes = 0,
+                false => self.tries = self.tries.saturating_sub(1),
+            }
+            self.raised = None;
         }
         let settled = self.changed.is_none_or(|c| at.saturating_duration_since(c) >= APART);
         let (steps, index) = (usize::from(self.steps), usize::from(self.steps).wrapping_sub(1));
@@ -109,25 +144,34 @@ impl Governor {
         let above = (1..steps).fold(ceiling, |q, _| q.lower());
         let ((limit, cost), (high, dearer)) = (budget(here), budget(above));
         let expected = (dearer / cost.max(f32::EPSILON) * MARGIN).clamp(1.0, MOST);
-        let gain = self.gains.get(index).map_or(1.0, |g| g.clamp(1.0, expected));
+        let measured = self.gains.get(index).filter(|g| **g > 0.0).map(|g| g.clamp(1.0, expected));
         let slow = self.ewma > limit && here > self.floor.unwrap_or(Quality::Q0);
-        let fits = steps > 0 && raises && self.ewma < high / 2.0;
-        let fast = fits && self.ewma * gain < high / 2.0;
+        let ratio = measured.unwrap_or((expected / MARGIN).max(1.0)) * AHEAD;
+        let fits =
+            steps > 0 && raises && if self.timed { self.ewma * ratio < high } else { self.ewma < high / 2.0 };
+        let fast = fits && (self.timed || self.ewma * measured.unwrap_or(1.0) < high / 2.0);
+        let room = self.timed && steps > 0 && raises && !fits && self.ewma * AHEAD < high;
         let since = |mark: &mut Option<Instant>, on: bool| {
             *mark = if on { Some(mark.unwrap_or(at)) } else { None };
             mark.map(|m| at.saturating_duration_since(m))
         };
         let (over, under) = (since(&mut self.over, slow), since(&mut self.under, fast));
-        let held = since(&mut self.held, fits && !fast);
+        let held = since(&mut self.held, fits && !fast || room);
         let waited = |wait: Duration, d: Option<Duration>| d.is_some_and(|d| d >= wait * (1 << self.tries));
-        let step = match () {
-            _ if settled && over.is_some_and(|d| d >= LOWER) => 1,
-            _ if settled && (waited(RAISE, under) || waited(PROBE, held)) => -1,
+        let probed = held.is_some_and(|d| d >= RAISE * (1 << self.probes));
+        let (step, probe) = match () {
+            _ if settled && over.is_some_and(|d| d >= LOWER) => (1, false),
+            _ if settled && (waited(RAISE, under) || !self.timed && waited(PROBE, held)) => (-1, false),
+            _ if settled && self.timed && probed => (-1, true),
             _ => return false,
         };
         if step > 0 && self.raised.take().is_some() {
-            self.tries = (self.tries + 1).min(TRIES);
+            match std::mem::take(&mut self.probing) {
+                true => self.probes = (self.probes + 1).min(TRIES),
+                false => self.tries = (self.tries + 1).min(TRIES),
+            }
         }
+        self.probing = probe;
         (self.raised, self.gauge) = ((step < 0).then_some(at), (step > 0).then_some(self.ewma));
         self.steps = self.steps.saturating_add_signed(step);
         (self.changed, self.over, self.under, self.held) = (Some(at), None, None, None);

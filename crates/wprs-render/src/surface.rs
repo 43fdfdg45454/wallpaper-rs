@@ -13,7 +13,7 @@ pub struct Presentation {
 
 impl Presentation {
     pub const DESKTOP: Self = Self { vsync: false, latency: 2, format: Some(TARGET_FORMAT), hdr: false };
-    pub const MOBILE: Self = Self { vsync: true, latency: 1, format: None, hdr: false };
+    pub const MOBILE: Self = Self { vsync: true, latency: 2, format: None, hdr: false };
 }
 
 pub struct Surface {
@@ -43,6 +43,10 @@ impl Surface {
 
     pub fn present_mode(&self) -> PresentMode {
         self.config.present_mode
+    }
+
+    pub fn latency(&self) -> u32 {
+        self.config.desired_maximum_frame_latency
     }
 }
 

@@ -16,7 +16,7 @@ pub fn lit(caps: &SurfaceCapabilities, wanted: bool) -> (bool, Option<(Format, S
 
 impl crate::GpuImage {
     pub fn format(&self) -> Format {
-        self.texture.format()
+        self.format
     }
 }
 

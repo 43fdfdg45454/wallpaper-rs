@@ -65,6 +65,7 @@ impl Renderer {
                 }
             }
             view.samplings = super::sampling::samplings(scene, assets);
+            super::inked::ink(scene, assets, &mut view.samplings);
             self.mipmap(&mut view.images, &view.samplings, &view.sources);
             let pool = &mut view.pool;
             view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
@@ -92,8 +93,8 @@ impl Renderer {
         let format = match (srgb, usable) {
             (true, _) if deep => Format::Rgba16Float,
             (true, _) => Format::Rgba8Unorm,
-            (false, true) => Format::Rgba16Float,
-            (false, false) => Format::Rgba8UnormSrgb,
+            (false, _) if deep => Format::Rgba16Float,
+            (false, _) => Format::Rgba8UnormSrgb,
         };
         let state_format = if usable { Format::Rgba16Float } else { format };
         let id = super::stops::view();
@@ -123,7 +124,8 @@ impl Renderer {
             let size = std::mem::size_of::<FrameData>() as u64;
             let mut pool = Pool::new(&self.device, &self.queue, format);
             pool.ledger = ledger;
-            let samplings = super::sampling::samplings(scene, assets);
+            let mut samplings = super::sampling::samplings(scene, assets);
+            super::inked::ink(scene, assets, &mut samplings);
             let sources = assets.images.clone();
             self.mipmap(&mut images, &samplings, &sources);
             let swarms =
@@ -182,6 +184,7 @@ impl Renderer {
                 tone: if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 },
                 split: scene.draft.split,
                 debug3d: scene.draft.debug3d,
+                timed: false,
             }
         })
         .inspect_err(|_| super::flight::forget(id))

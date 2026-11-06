@@ -25,7 +25,12 @@ struct Key {
 
 @group(0) @binding(0) var<storage, read> particles: array<Particle>;
 @group(0) @binding(1) var<storage, read_write> sorted: array<Particle>;
-@group(0) @binding(2) var<storage, read_write> bins: array<atomic<u32>, 256>;
+@group(0) @binding(2) var<storage, read_write> bins: array<atomic<u32>, 1024>;
+
+const DEAD: u32 = 256u;
+const AT: u32 = 512u;
+
+var<workgroup> part: array<u32, 256>;
 @group(0) @binding(3) var<uniform> key: Key;
 
 fn bin(p: Particle) -> u32 {
@@ -36,29 +41,38 @@ fn bin(p: Particle) -> u32 {
     return min(u32(k[min(key.kind, 5u)] * 256.0), 255u);
 }
 
-@compute @workgroup_size(64)
-fn tally(@builtin(global_invocation_id) gid: vec3<u32>) {
-    if gid.x >= key.count || particles[gid.x].age >= particles[gid.x].life {
-        return;
-    }
-    atomicAdd(&bins[bin(particles[gid.x])], 1u);
+fn slot(p: Particle) -> u32 {
+    return select(bin(p), DEAD, p.age >= p.life);
 }
 
-@compute @workgroup_size(1)
-fn scan() {
-    var sum = 0u;
-    for (var b = 0u; b < 256u; b++) {
-        let n = atomicLoad(&bins[b]);
-        atomicStore(&bins[b], sum);
-        sum += n;
+@compute @workgroup_size(64)
+fn tally(@builtin(global_invocation_id) gid: vec3<u32>) {
+    if gid.x < key.count {
+        atomicAdd(&bins[slot(particles[gid.x])], 1u);
+    }
+}
+
+@compute @workgroup_size(256)
+fn scan(@builtin(local_invocation_index) t: u32) {
+    let n = atomicExchange(&bins[t], 0u);
+    part[t] = n;
+    for (var d = 1u; d < 256u; d = d << 1u) {
+        workgroupBarrier();
+        let v = select(0u, part[t - min(d, t)], t >= d);
+        workgroupBarrier();
+        part[t] += v;
+    }
+    atomicStore(&bins[AT + t], part[t] - n);
+    if t == 255u {
+        atomicStore(&bins[AT + DEAD], part[t]);
+        atomicStore(&bins[DEAD], 0u);
     }
 }
 
 @compute @workgroup_size(64)
 fn scatter(@builtin(global_invocation_id) gid: vec3<u32>) {
-    if gid.x >= key.count || particles[gid.x].age >= particles[gid.x].life {
-        return;
+    if gid.x < key.count {
+        let p = particles[gid.x];
+        sorted[atomicAdd(&bins[AT + slot(p)], 1u)] = p;
     }
-    let p = particles[gid.x];
-    sorted[atomicAdd(&bins[bin(p)], 1u)] = p;
 }

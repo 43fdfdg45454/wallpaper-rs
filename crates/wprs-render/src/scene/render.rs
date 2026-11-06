@@ -30,7 +30,7 @@ impl Renderer {
         self.figures(view, (runtime, frame), videos, view.screen(size).0)?;
         let created = (view.pool.created, pipes::compiled(0));
         let format = targets::output_format(view);
-        if view.target.as_ref().is_none_or(|(t, out)| t.size() != size || out.texture.format() != format) {
+        if view.target.as_ref().is_none_or(|(t, out)| t.size() != size || out.format != format) {
             retarget(self, view, size);
         }
         let screen = view.screen(size);
@@ -88,6 +88,7 @@ impl Renderer {
             flocks: &scratch.flocks,
             flat: std::cell::Cell::new(None),
             aired: (0, None),
+            density: 1.0,
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
             painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);
@@ -142,8 +143,8 @@ impl Renderer {
             _ => None,
         };
         painter.run(Src::Canvas, background.map(f64::from), keep);
-        let clip = painter.clip;
-        let reused = painter.reused;
+        let (clip, reused) = (painter.clip, painter.reused);
+        super::gather::gather(&mut scratch.ops, &scratch.sets);
         let (trial, drawn) = (super::flight::trial(v.id), !scratch.drawn.is_empty());
         let timing = v.clock.start(self, &scratch.ops, trial, drawn);
         let serial = super::flight::sending(self, v.id, &scratch.drawn)
@@ -151,7 +152,8 @@ impl Renderer {
         let quiet = self.quiet(timing);
         let (pool, kept) = (&mut v.pool, &scratch.kept);
         v.caches.extract_if(|id, _| !kept.contains(id)).for_each(|(_, c)| pool.give(c.tex));
-        let resolve = (srgb || v.tone > 0).then(|| resolve(pool, srgb, (v.tone, v.split, v.headroom)));
+        let apart = v.target.as_ref().is_some_and(|(canvas, out)| canvas.id != out.id);
+        let resolve = apart.then(|| resolve(pool, srgb, (v.tone, v.split, v.headroom)));
         pool.upload(&self.device, &self.queue, self.pipes(), &v.uniform);
         v.swarms.iter_mut().for_each(|s| s.upload(self, &v.uniform));
         let (canvas, output) = v.target.as_ref().expect("created above");
@@ -160,9 +162,8 @@ impl Renderer {
         let scissor = clip.map(|c| [c.x as u32, c.y as u32, c.w as u32, c.h as u32]);
         let sets = &scratch.sets;
         let sources = encode::Sources { caches, states, luts, exts, canvas, output, swarms, scissor, sets };
-        let clock = (&v.clock, timing);
-        let encoded =
-            self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, (v.id, serial)));
+        let (clock, at) = ((&v.clock, timing), (v.id, serial, v.timed));
+        let encoded = self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, at));
         let index = encoded.as_ref().ok().map(|(_, index, _)| index.clone());
         super::flight::sent(self, v.id, serial, index)
             .map_err(|keys| timed::stuck(&mut v.refused, frame, keys))?;

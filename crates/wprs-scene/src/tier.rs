@@ -69,14 +69,15 @@ impl Tier {
     pub fn max_fps(self, on_battery: bool, wanted: u32, cost: Option<f32>) -> u32 {
         let wanted = wanted.clamp(1, 240);
         let fits = cost.is_some_and(|cost| cost * wanted as f32 <= self.budget() * 60.0);
-        let cap = match (self, on_battery) {
-            (Tier::T0, false) => 24,
-            (Tier::T0, true) => 15,
-            (Tier::T1, _) | (Tier::T2, true) => 30,
-            (Tier::T2, false) if fits => wanted,
-            (Tier::T2, false) | (Tier::T3, true) => 60,
-            (Tier::T3, false) => wanted,
+        let cap = match self {
+            Tier::T0 => 24,
+            Tier::T1 if fits => wanted.min(60),
+            Tier::T1 => 30,
+            Tier::T2 if fits => wanted,
+            Tier::T2 => 60,
+            Tier::T3 => wanted,
         };
+        let cap = if on_battery { cap.min(60) } else { cap };
         cap.min(wanted)
     }
 

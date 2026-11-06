@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.display.DisplayManager
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
@@ -16,10 +18,15 @@ import androidx.core.content.ContextCompat
 
 val powered = mutableIntStateOf(0)
 
-class Power(private val context: Context) : BroadcastReceiver(), PowerManager.OnThermalStatusChangedListener {
+class Power(private val context: Context) :
+    BroadcastReceiver(),
+    PowerManager.OnThermalStatusChangedListener,
+    DisplayManager.DisplayListener {
     private val visible = mutableSetOf<Any>()
     private var headroom = 0f
     private var sampled = -HEADROOM_MS
+    private val handler = Handler(Looper.getMainLooper())
+    private val again = Runnable { update(false) }
 
     fun show(engine: Any, shown: Boolean) {
         val before = visible.isNotEmpty()
@@ -39,21 +46,34 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
         filter.addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
         ContextCompat.registerReceiver(context, this, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         manager().addThermalStatusListener(context.mainExecutor, this)
+        displays()?.registerDisplayListener(this, handler)
         update()
     }
 
     private fun stop() {
+        handler.removeCallbacks(again)
         context.unregisterReceiver(this)
         manager().removeThermalStatusListener(this)
+        displays()?.unregisterDisplayListener(this)
     }
 
     override fun onReceive(context: Context, intent: Intent) = update()
 
     override fun onThermalStatusChanged(status: Int) = update()
 
+    override fun onDisplayChanged(displayId: Int) {
+        if (displayId == Display.DEFAULT_DISPLAY) display()
+    }
+
+    override fun onDisplayAdded(displayId: Int) = Unit
+
+    override fun onDisplayRemoved(displayId: Int) = Unit
+
     private fun manager() = context.getSystemService(PowerManager::class.java)!!
 
-    private fun update() {
+    private fun displays() = context.getSystemService(DisplayManager::class.java)
+
+    private fun update(full: Boolean = true) {
         val power = manager()
         val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val now = SystemClock.elapsedRealtime()
@@ -61,7 +81,7 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             sampled = now
             headroom = power.getThermalHeadroom(FORECAST_SECONDS).takeUnless { it.isNaN() } ?: headroom
         }
-        Native.power(
+        val changed = Native.power(
             (battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0,
             power.isPowerSaveMode,
             battery?.getBooleanExtra(BatteryManager.EXTRA_BATTERY_LOW, false) == true,
@@ -69,17 +89,20 @@ class Power(private val context: Context) : BroadcastReceiver(), PowerManager.On
             headroom,
             !ValueAnimator.areAnimatorsEnabled(),
         )
-        display()
+        if (full) display()
+        handler.removeCallbacks(again)
+        if (visible.isNotEmpty()) handler.postDelayed(again, HEADROOM_MS)
+        if (!full && !changed) return
         powered.intValue++
         Render.post { Wallpaper.wake() }
     }
 
     private fun display() {
-        val shown = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY) ?: return
+        val shown = displays()?.getDisplay(Display.DEFAULT_DISPLAY) ?: return
         val ratio = if (Build.VERSION.SDK_INT >= 34 && shown.isHdrSdrRatioAvailable) shown.hdrSdrRatio else 0f
         @Suppress("DEPRECATION")
         val peak = shown.hdrCapabilities?.desiredMaxLuminance ?: 0f
-        Native.display(shown.isHdr, peak, ratio)
+        Native.display(shown.isHdr, peak, ratio, shown.refreshRate)
     }
 
     private companion object {

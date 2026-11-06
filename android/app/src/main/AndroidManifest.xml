@@ -35,7 +35,7 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/backup"
         android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
+        android:label="${label}"
         android:theme="@style/App">
 
         <meta-data

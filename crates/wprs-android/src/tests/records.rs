@@ -95,7 +95,7 @@ pub(super) fn records() {
     assert_eq!(local::apply(&local, applied, &mut links, &replica, &mut kept), (3, Vec::new()));
     let values =
         ["transition.duration_ms", "playback.max_fps"].map(|key| settings::setting(key, None).unwrap());
-    assert_eq!(values, ["900", "30"]);
+    assert_eq!(values, ["900", "60"]);
     let item = library::with(|lib| Ok(lib.item(&green)?)).unwrap();
     assert_eq!((item.title.as_str(), item.favorite, item.tags), ("Desk", true, vec!["sky".to_string()]));
     let shared = links["playlists/l"].clone();

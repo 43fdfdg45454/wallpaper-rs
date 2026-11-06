@@ -4,6 +4,7 @@ mod allocations;
 mod animation;
 #[cfg(target_os = "linux")]
 mod barrier;
+mod bench;
 mod bind;
 mod calibrate;
 mod choose;
@@ -45,6 +46,7 @@ mod timeout;
 mod yuv;
 
 pub use animation::{MAX_ANIMATION, Pictures, animation};
+pub use bench::{Bench, Ceiling, Level, WARMUP, ceiling, save_frame, scene_bench, spread};
 pub use choose::{Chosen, Fallback};
 pub use coded::Coding;
 pub use decode::{
@@ -69,8 +71,9 @@ pub use platform::{Platform, heif, set_platform_decoder};
 pub use readback::TargetLimits;
 pub use save::{FORMATS, save};
 pub use scene::{
-    MAX_FONT, MAX_SCENE_BUILD, Pixels, RGB_MOST, SceneAssets, SceneStats, SceneView, drawn_effects,
-    finish_builds, font, lit, retry_effects, set_build_timeout, set_gpu_budget, stop_builds, stop_effects,
+    MAX_FONT, MAX_SCENE_BUILD, Pixels, RGB_MOST, SceneAssets, SceneStats, SceneView, Stamping, drawn_effects,
+    finish_builds, font, lit, profiled_passes, reset_profiled_passes, retry_effects, set_build_timeout,
+    set_gpu_budget, stop_builds, stop_effects,
 };
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};

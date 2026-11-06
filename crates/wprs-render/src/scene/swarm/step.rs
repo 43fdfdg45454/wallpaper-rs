@@ -1,4 +1,5 @@
 use super::super::clock::SIM_AT;
+use super::dispatch::Job;
 use super::{Stamp, Swarms};
 use crate::{RenderError, Renderer};
 use std::time::{Duration, Instant};
@@ -20,9 +21,10 @@ impl Swarms {
             runtime.swarm(herd).filter(|s| s.count() > 0).map(|s| s.sim(0, part).emitters[4 * e + 1][0])
         };
         self.collect(r, heard);
-        self.stamp = (stamp.cloned(), false);
+        self.stamp = Stamp { set: stamp.cloned(), ..Stamp::default() };
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();
+        let mut jobs = Vec::new();
         self.kitted.clear();
         for i in 0..self.herds.len() {
             let shown =
@@ -64,27 +66,51 @@ impl Swarms {
                         r.queue.write_buffer(trail, 16, bytemuck::cast_slice(&cloud.trail));
                     }
                 }
-                super::sort::sort(
-                    r,
-                    (self.sorts.as_ref(), self.canvas[1]),
-                    &mut flight.stores,
-                    (&flight.clouds, &bake.allocs),
-                    &mut self.stamp,
-                );
+                super::sort::stack(r, self.canvas[1], &mut flight.stores, &flight.clouds);
                 continue;
             }
-            self.dispatch(r, i, &swarm, (count, reset), start)?;
+            jobs.push(Job { herd: i, count, reset });
         }
+        self.dispatch(r, runtime, &jobs, start)?;
+        self.stamp.submit(r);
         if self.profile {
             r.finish()?;
         }
         self.micros = start.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
-        Ok(std::mem::take(&mut self.stamp).1)
+        Ok(std::mem::take(&mut self.stamp).begun)
     }
 }
 
-pub(super) fn mark((set, begun): &mut Stamp, encoder: &mut wgpu::CommandEncoder, end: bool) {
-    let Some(query_set) = set.as_ref().filter(|_| end || !*begun) else { return };
+impl Stamp {
+    pub(super) fn encoder(&mut self, r: &Renderer) -> &mut wgpu::CommandEncoder {
+        let (set, begun) = (&self.set, &mut self.begun);
+        self.open.get_or_insert_with(|| {
+            let mut encoder = r.device.create_command_encoder(&Default::default());
+            mark(set.as_ref(), begun, &mut encoder, false);
+            encoder
+        })
+    }
+
+    pub(super) fn cut(&mut self) {
+        if let Some(encoder) = self.open.take() {
+            self.done.push(encoder.finish());
+        }
+    }
+
+    pub(super) fn submit(&mut self, r: &Renderer) {
+        if self.open.is_none() && self.done.is_empty() {
+            return;
+        }
+        let mut encoder =
+            self.open.take().unwrap_or_else(|| r.device.create_command_encoder(&Default::default()));
+        mark(self.set.as_ref(), &mut self.begun, &mut encoder, true);
+        self.done.push(encoder.finish());
+        r.queue.submit(self.done.drain(..));
+    }
+}
+
+fn mark(set: Option<&wgpu::QuerySet>, begun: &mut bool, encoder: &mut wgpu::CommandEncoder, end: bool) {
+    let Some(query_set) = set.filter(|_| end || !*begun) else { return };
     *begun |= !end;
     let at = Some(SIM_AT + u32::from(end));
     let (beginning_of_pass_write_index, end_of_pass_write_index) = if end { (None, at) } else { (at, None) };

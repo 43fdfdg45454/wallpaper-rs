@@ -23,7 +23,29 @@ impl Scene {
         })
     }
 
-    fn units(&self, l: &Layer, quality: Quality) -> f32 {
+    fn zoom(&self, l: &Layer) -> f32 {
+        match &l.transform.scale {
+            crate::Value::Fixed(crate::Vec2([x, y])) => (x * y).abs().sqrt().max(1e-3),
+            crate::Value::Bound(_) => 1.0,
+        }
+    }
+
+    pub fn thin(&self, l: &Layer, quality: Quality, magnify: f32) -> f32 {
+        let mesh = matches!(l.kind, Kind::Mesh(_));
+        if l.effects.is_empty() || !(mesh || matches!(l.kind, Kind::Image { .. } | Kind::Video { .. })) {
+            return 1.0;
+        }
+        let loose = if mesh && quality == Quality::Q3 { 1.5 } else { 1.0 };
+        let shown = magnify * quality.render_scale_for(magnify) * self.zoom(l);
+        (quality.density() * loose / shown.max(1e-6)).clamp(0.125, 1.0)
+    }
+
+    fn units(&self, l: &Layer, quality: Quality, magnify: f32) -> f32 {
+        let thin = self.thin(l, quality, magnify);
+        thin * thin * self.flat_units(l, quality)
+    }
+
+    fn flat_units(&self, l: &Layer, quality: Quality) -> f32 {
         let effects = l.effects.iter().filter_map(|e| {
             let d = self.effect(&e.effect)?;
             let scale = quality.effect_scale(d.class(), e.optional)? * d.scale_at(quality);
@@ -49,23 +71,45 @@ impl Scene {
         effects.sum::<f32>() + fed.sum::<f32>() + backdrop + solid + if apart { APART } else { 0.0 }
     }
 
-    pub fn copies_cost<'a>(&self, copies: impl Iterator<Item = &'a Layer>, quality: Quality) -> f32 {
+    pub fn copies_cost<'a>(
+        &self,
+        copies: impl Iterator<Item = &'a Layer>,
+        quality: Quality,
+        magnify: f32,
+    ) -> f32 {
         let mut stack: Vec<&Layer> = copies.collect();
         let mut units = 0.0;
         while let Some(l) = stack.pop() {
             stack.extend(l.children());
-            units += if l.flat() { self.units(l, quality) } else { 0.0 };
+            units += if l.flat() { self.units(l, quality, magnify) } else { 0.0 };
         }
-        let scale = quality.render_scale();
+        let scale = quality.render_scale_for(magnify);
         units * scale * scale
     }
 
+    pub fn magnify(&self, (w, h): (u32, u32)) -> f32 {
+        let fit = match self.canvas.fit {
+            wprs_core::Fit::Tile => wprs_core::Fit::Center,
+            wprs_core::Fit::Span => wprs_core::Fit::Fill,
+            fit => fit,
+        };
+        let [cw, ch] = self.canvas.size;
+        let uv = wprs_core::UvRect::compute(fit, (cw, ch), (w, h));
+        let [sw, sh] = [uv.scale[0] * cw as f32, uv.scale[1] * ch as f32].map(|v| v.max(1e-3));
+        (w as f32 / sw * h as f32 / sh).sqrt()
+    }
+
     pub fn cost(&self, quality: Quality) -> f32 {
+        self.cost_at(quality, 1.0)
+    }
+
+    pub fn cost_at(&self, quality: Quality, magnify: f32) -> f32 {
         let areas = self.areas();
         let whole = self.canvas.camera.is_some();
         let area = |l: &Layer| areas.get(&std::ptr::from_ref(l)).copied().filter(|_| !whole).unwrap_or(1.0);
-        let layers = self.layers().filter(|l| l.flat()).map(|l| self.units(l, quality) * area(l));
-        let glow = crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality));
+        let layers = self.layers().filter(|l| l.flat()).map(|l| self.units(l, quality, magnify) * area(l));
+        let glow =
+            crate::glow::glows(&self.canvas)[0].as_deref().map_or(0.0, |g| self.units(g, quality, magnify));
         let particles = self.layers().filter_map(|l| match &l.kind {
             Kind::Particles { system, .. } => self.particles.get(system),
             _ => None,
@@ -75,7 +119,7 @@ impl Scene {
             particles.map(|s| (s.capacity as f32 / 100_000.0 + s.overdraw(canvas)) * quality.particles());
         let read: std::collections::HashSet<&str> = self.layers().flat_map(crate::links::reads).collect();
         let apart = read.into_iter().filter_map(|id| self.layer(id)).map(|l| APART * area(l));
-        let scale = quality.render_scale();
+        let scale = quality.render_scale_for(magnify);
         BASE + (layers.sum::<f32>() + particles.sum::<f32>() + apart.sum::<f32>() + glow) * scale * scale
     }
 }

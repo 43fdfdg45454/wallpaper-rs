@@ -4,7 +4,7 @@ use wprs_scene::Quality;
 
 impl SceneView {
     pub fn inner(&self, r: &Renderer, size: (u32, u32), quality: Quality) -> (u32, u32) {
-        let scale = quality.render_scale() * r.render_scale(size) * self.shrink.0;
+        let scale = quality.render_scale_for(self.magnify(size)) * r.render_scale(size) * self.shrink.0;
         let side = |v: u32| (v as f32 * scale).round().max(1.0) as u32;
         (side(size.0), side(size.1))
     }

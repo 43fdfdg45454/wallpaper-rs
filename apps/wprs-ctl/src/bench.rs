@@ -1,17 +1,14 @@
 use crate::editing::dimensions;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Subcommand;
-use serde_json::json;
-use std::path::{Path, PathBuf};
+use serde_json::{Value, json};
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
-use wprs_format::{Limits, open};
-use wprs_render::{Renderer, SceneAssets};
-use wprs_scene::{Quality, Runtime, Spare, Wake, effective};
+use std::time::Duration;
+use wprs_render::{Bench, Level, Renderer, WARMUP};
+use wprs_scene::{PHONE_SHARE, Runtime};
 
-use crate::benching::{ms_of, spread};
-
-const WARMUP: usize = 10;
+use crate::benching::{load, ms_of, passes};
 
 #[derive(Subcommand, Debug)]
 pub enum SceneCommand {
@@ -24,7 +21,7 @@ pub enum SceneCommand {
         size: String,
         #[arg(long, default_value_t = 60, help = "Frames per second of the simulated clock")]
         fps: u32,
-        #[arg(long, value_parser = ["q0", "q1", "q2", "q3"], help = "Quality level; picked like the daemon when omitted")]
+        #[arg(long, value_parser = ["q0", "q1", "q2", "q3", "auto"], help = "Quality level; picked like the daemon when omitted, steered by GPU time like the phone with auto")]
         quality: Option<String>,
         #[arg(long, default_value_t = 1, help = "Number of screens that show the scene at once")]
         screens: usize,
@@ -32,162 +29,151 @@ pub enum SceneCommand {
         json: bool,
         #[arg(long, value_parser = ["t0", "t1", "t2", "t3"], help = "Apply the limits of this device tier")]
         tier: Option<String>,
+        #[arg(long, help = "Time each render pass with GPU timestamps, where the GPU has them")]
+        passes: bool,
+        #[arg(long, value_name = "FILE.png", help = "Save the last frame as a PNG image")]
+        shot: Option<PathBuf>,
+        #[arg(
+            long,
+            value_name = "SECONDS",
+            help = "Render in real time at --fps for this long instead of frame after frame"
+        )]
+        paced: Option<f64>,
     },
     #[command(flatten)]
     Author(Box<crate::author::Author>),
 }
 
-fn load(path: &Path) -> Result<(wprs_scene::Scene, wprs_scene::Values, SceneAssets)> {
-    let mut package =
-        open(path, &Limits::default()).with_context(|| format!("cannot open {}", path.display()))?;
-    let scene = package.scene()?;
-    let mut assets = SceneAssets::read(&scene, |path| package.read_file(path).map_err(|e| e.to_string()))
-        .map_err(anyhow::Error::msg)?;
-    let file = path.to_owned();
-    assets.reloadable(&scene, move || {
-        let mut package = open(&file, &Limits::default()).ok()?;
-        Some(move |path: &str| package.read_file(path).map_err(|e| e.to_string()))
-    });
-    let values = effective(&package.manifest.properties, &[]);
-    Ok((scene, values, assets))
-}
-
 pub fn run(command: SceneCommand) -> Result<()> {
-    let (path, frames, size, fps, quality, screens, json, forced) = match command {
-        SceneCommand::Bench { path, frames, size, fps, quality, screens, json, tier } => {
-            (path, frames, size, fps, quality, screens.clamp(1, 16), json, tier)
+    let (path, bench, json, forced) = match command {
+        SceneCommand::Bench {
+            path,
+            frames,
+            size,
+            fps,
+            quality,
+            screens,
+            json,
+            tier,
+            passes,
+            shot,
+            paced,
+        } => {
+            let level = match quality.as_deref() {
+                None => Level::Fitted,
+                Some("auto") => Level::Timed(PHONE_SHARE),
+                Some(q) => Level::Fixed(serde_json::from_value(json!(q))?),
+            };
+            let paced = paced.map(|s| Duration::from_secs_f64(s.clamp(0.1, 3600.0)));
+            let (size, screens) = (dimensions(&size)?, screens.clamp(1, 16));
+            let bench = Bench {
+                frames,
+                size,
+                fps,
+                level,
+                tier: None,
+                screens,
+                passes,
+                shot,
+                paced,
+                ..Bench::default()
+            };
+            (path, bench, json, tier)
         }
         SceneCommand::Author(command) => return crate::authoring::run(*command),
     };
-    let size = dimensions(&size)?;
     let (scene, values, assets) = load(&path)?;
     let gpu =
         wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p)).map(|c| c.render.gpu);
     let r = Renderer::with_choice(None, &gpu.unwrap_or_default())?.renderer;
-    let calibrated = r.calibrate(wprs_core::gpu_tier().as_deref());
+    let unit_ms = r.calibrate(wprs_core::gpu_tier().as_deref()).unit_ms;
     if let Some(t) = forced {
         r.force_tier(Some(serde_json::from_value(json!(t))?));
     }
-    let (tier, unit_ms) = (r.tier(), calibrated.unit_ms);
-    let quality = match quality.as_deref() {
-        Some(q) => serde_json::from_value(json!(q))?,
-        None => Quality::fit(&scene, tier, tier.quality(false)),
-    };
-    let cost = scene.cost(quality);
-    let mut runtime = Runtime::new(Arc::new(scene), values);
-    runtime.set_quality(quality);
-    assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
-    let start = Instant::now();
-    let mut others = Vec::new();
-    for _ in 1..screens {
-        others.push(r.scene_view(&runtime.scene, &assets, runtime.props())?);
-    }
-    let mut view = r.scene_view(&runtime.scene, &assets, runtime.props())?;
-    let mut inner = view.inner(&r, size, quality);
-    let load_ms = start.elapsed().as_secs_f64() * 1e3;
-    drop(assets);
-    view.profile_particles(true);
-    let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
-    let (mut sim, mut steps, mut compiled, mut gpu, mut sim_gpu) = (Vec::new(), 0, 0, Vec::new(), Vec::new());
-    let (mut wake, mut spare) = (Wake::Frame, Spare::default());
-    let mut since = Duration::ZERO;
-    let step = Duration::from_secs(1) / fps.max(1);
-    for i in 0..frames.max(1) {
-        if i > 0 {
-            runtime.advance(step.as_secs_f64());
-            since += step;
-        }
-        let due = match wake {
-            Wake::Frame => true,
-            Wake::At(s) => since.as_secs_f64() >= s,
-            Wake::Idle => false,
-        };
-        needed += usize::from(due);
-        since = if due { Duration::ZERO } else { since };
-        inner = view.inner(&r, size, quality);
-        let start = Instant::now();
-        let frame = runtime.frame_in(std::mem::take(&mut spare), view.view(inner), quality);
-        eval.push(start.elapsed().as_secs_f64() * 1e6);
-        let start = Instant::now();
-        for other in &mut others {
-            r.render_scene(other, &runtime, &frame, inner, quality, &[])?;
-        }
-        r.render_scene(&mut view, &runtime, &frame, inner, quality, &[])?;
-        r.finish()?;
-        render.push(start.elapsed().as_secs_f64() * 1e3);
-        wake = frame.wake;
-        spare = frame.spare();
-        if i >= WARMUP {
-            let s = view.stats();
-            (created, steps, compiled) = (created + s.created, steps + s.steps, compiled + s.compiled);
-            sim.push(f64::from(s.sim_us) / 1e3);
-            gpu.push(f64::from(s.gpu_us) / 1e3);
-            sim_gpu.push(f64::from(s.sim_gpu_us) / 1e3);
-        }
-    }
-    let steady = frames.saturating_sub(WARMUP).max(1);
-    let stats = view.stats();
-    let alive: u32 = r.census(&view)?.iter().map(|(_, c)| c.alive).sum();
-    let first_ms = render.first().copied().unwrap_or(0.0);
-    let gpu_mib = r.gpu_memory().map_or(-1.0, |b| b as f64 / 1048576.0);
-    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
-    let rss =
-        status.lines().find_map(|l| l.strip_prefix("VmRSS:")).and_then(|v| v.trim().strip_suffix(" kB"));
-    let rss_mib = rss.and_then(|kb| kb.trim().parse::<f64>().ok()).map_or(-1.0, |kb| kb / 1024.0);
-    let engine = view.gpu_particles().map_or("none", |gpu| if gpu { "gpu" } else { "cpu" });
-    let particles = json!({
-        "engine": engine, "slots": stats.particles, "alive": alive, "steps": steps, "sim_ms": spread(sim),
-        "sim_gpu_ms": spread(sim_gpu),
-    });
-    let report = json!({
-        "path": path, "adapter": r.adapter(), "tier": tier, "unit_ms": unit_ms, "quality": quality, "size": [size.0, size.1],
-        "render_size": [inner.0, inner.1], "frames": frames, "needed": needed, "cost_units": cost,
-        "eval_us": spread(eval), "render_ms": spread(render), "gpu_ms": spread(gpu), "passes": stats.passes, "draws": stats.draws,
-        "textures": stats.textures, "cached": stats.reused, "created_after_warmup": created,
-        "compiled_after_warmup": compiled, "screens": screens, "load_ms": load_ms, "first_ms": first_ms,
-        "gpu_mib": gpu_mib, "rss_mib": rss_mib,
-        "particles": particles, "left_out": view.left_out(),
-    });
+    let runtime = Runtime::new(Arc::new(scene), values);
+    let mut report = wprs_render::scene_bench(&r, runtime, assets, &bench)?;
+    (report["path"], report["unit_ms"]) = (json!(path), json!(unit_ms));
     if json {
         println!("{report}");
         return Ok(());
     }
+    print!("{}", text(&report));
+    Ok(())
+}
+
+fn text(report: &Value) -> String {
     let ms = |key: &str, unit: &str| ms_of(&report[key], unit);
-    println!(
-        "adapter      {}\ntier         {tier:?} ({}), quality {quality:?}, {}x{} rendered at {}x{}",
-        r.adapter(),
-        if unit_ms > 0.0 { format!("{unit_ms:.3} ms a unit") } else { "from its model".into() },
-        size.0,
-        size.1,
-        inner.0,
-        inner.1
+    let (n, f) =
+        (|key: &str| report[key].as_u64().unwrap_or(0), |key: &str| report[key].as_f64().unwrap_or(0.0));
+    let size = |key: &str| format!("{}x{}", report[key][0], report[key][1]);
+    let unit_ms = f("unit_ms");
+    let unit = if unit_ms > 0.0 { format!("{unit_ms:.3} ms a unit") } else { "from its model".into() };
+    let mut out = format!("adapter      {}\n", report["adapter"].as_str().unwrap_or_default());
+    out += &format!(
+        "tier         {} ({unit}), quality {}, {} rendered at {}\n",
+        report["tier"],
+        report["quality"],
+        size("size"),
+        size("render_size")
     );
-    println!("frames       {frames}, {needed} needed by the scheduler, estimated cost {cost:.2} units");
-    println!("evaluation   {}\nrender       {}", ms("eval_us", "µs"), ms("render_ms", "ms"));
-    println!("gpu          {}", ms("gpu_ms", "ms"));
-    println!(
-        "start        {load_ms:.1} ms to load, {first_ms:.1} ms for the first frame of {screens} screens"
-    );
-    println!("memory       {gpu_mib:.1} MiB on the GPU, {rss_mib:.1} MiB resident");
-    println!(
-        "last frame   {} passes, {} draws, {} pooled textures, {} cached parts",
-        stats.passes, stats.draws, stats.textures, stats.reused
-    );
-    println!(
-        "created      {created} GPU resources, {compiled} of them shaders, after {WARMUP} warm-up frames"
-    );
-    view.left_out().iter().for_each(|note| println!("left out     {note}"));
-    if engine != "none" {
-        let per_frame = f64::from(steps) / steady as f64;
-        println!(
-            "particles    {engine}, {} slots, {alive} alive at the end, {per_frame:.1} steps per frame",
-            stats.particles
+    let needed =
+        report["needed"].as_u64().map_or(String::new(), |k| format!(", {k} needed by the scheduler"));
+    out += &format!("frames       {}{needed}, estimated cost {:.2} units\n", n("frames"), f("cost_units"));
+    out += &format!("evaluation   {}\n", ms("eval_us", "µs"));
+    if report["render_ms"].is_object() {
+        out += &format!("render       {}\n", ms("render_ms", "ms"));
+    }
+    out += &format!("gpu          {}\n", ms("gpu_ms", "ms"));
+    if let Some(paced) = report["paced"].as_object() {
+        let at = |key: &str| paced.get(key).and_then(Value::as_f64).unwrap_or(0.0);
+        out += &format!(
+            "paced        {:.1} frames a second of {} over {:.1} s, {} slots missed\n",
+            at("fps"),
+            at("target_fps"),
+            at("seconds"),
+            at("missed_slots")
         );
-        println!(
-            "simulation   {}, {} of it on the GPU, after {WARMUP} warm-up frames",
-            ms_of(&report["particles"]["sim_ms"], "ms"),
-            ms_of(&report["particles"]["sim_gpu_ms"], "ms")
+        out += &format!("cpu          {}\n", ms("cpu_ms", "ms"));
+    }
+    if let Some(levels) = report["auto"]["levels"].as_array() {
+        let steps: Vec<String> =
+            levels.iter().map(|l| format!("{} at {:.1} s", l[1], l[0].as_f64().unwrap_or(0.0))).collect();
+        out += &format!("auto         {}\n", steps.join(", "));
+    }
+    let first =
+        report["first_ms"].as_f64().map_or(String::new(), |ms| format!(", {ms:.1} ms for the first frame"));
+    out += &format!("start        {:.1} ms to load{first} of {} screens\n", f("load_ms"), n("screens"));
+    out += &format!("memory       {:.1} MiB on the GPU, {:.1} MiB resident\n", f("gpu_mib"), f("rss_mib"));
+    out += &format!(
+        "last frame   {} passes, {} draws, {} pooled textures, {} cached parts\n",
+        n("passes"),
+        n("draws"),
+        n("textures"),
+        n("cached")
+    );
+    out += &format!(
+        "created      {} GPU resources, {} of them shaders, after {WARMUP} warm-up frames\n",
+        n("created_after_warmup"),
+        n("compiled_after_warmup")
+    );
+    for note in report["left_out"].as_array().into_iter().flatten() {
+        out += &format!("left out     {}\n", note.as_str().unwrap_or_default());
+    }
+    out += &passes(report);
+    let particles = &report["particles"];
+    let engine = particles["engine"].as_str().unwrap_or("none");
+    if engine != "none" {
+        let steady = n("frames").saturating_sub(WARMUP as u64).max(1);
+        let per_frame = particles["steps"].as_f64().unwrap_or(0.0) / steady as f64;
+        out += &format!(
+            "particles    {engine}, {} slots, {} alive at the end, {per_frame:.1} steps per frame\n",
+            particles["slots"], particles["alive"]
+        );
+        out += &format!(
+            "simulation   {}, {} of it on the GPU, after {WARMUP} warm-up frames\n",
+            ms_of(&particles["sim_ms"], "ms"),
+            ms_of(&particles["sim_gpu_ms"], "ms")
         );
     }
-    Ok(())
+    out
 }

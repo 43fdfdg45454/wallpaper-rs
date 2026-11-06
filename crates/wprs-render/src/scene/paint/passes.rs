@@ -1,4 +1,5 @@
-use super::super::item::{Rect, invert};
+use super::super::item::{Item, Rect, invert, ndc};
+use super::super::pipes::Mode;
 use super::super::pool::BUDGET;
 use super::super::{Op, Src};
 use super::{Painter, Target};
@@ -44,11 +45,27 @@ impl<'a> Painter<'a, '_, '_> {
                 self.reused += 1;
             }
             self.kept.push(0);
-            self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin });
+            match self.clip {
+                Some(_) => {
+                    self.ops.push(Op::Copy { from: Src::Cache(0), to: canvas, origin, size, at: origin })
+                }
+                None => self.blit(Src::Cache(0), canvas),
+            }
         }
         self.list(static_end..draws.len(), root, false);
         self.air_until(usize::MAX, root);
         self.unshare();
+    }
+
+    fn blit(&mut self, from: Src, to: Src) {
+        let full = self.full;
+        let mut item =
+            Item { quad: [0.0, 0.0, 1.0, 1.0], uv: [0.0, 0.0, 1.0, 1.0], color: [1.0; 4], ..Item::default() };
+        (item.m0, item.m1) = ndc(full, full.affine());
+        let slot = self.pool.push(&item);
+        self.ops.push(Op::Clear(to, [0.0; 4]));
+        let tex = [from, Src::White, Src::Clear];
+        self.ops.push(Op::Draw { target: to, entry: "fs_texture", mode: Mode::Replace, slot, tex });
     }
 
     pub(crate) fn list(&mut self, range: Range<usize>, target: Target, clip: bool) {
@@ -94,17 +111,21 @@ impl<'a> Painter<'a, '_, '_> {
     fn isolated(&mut self, i: usize) -> Option<(Src, Rect)> {
         let frame = self.frame;
         let d = &frame.draws[i];
-        let rect = self.extent(i)?.pixels(self.full)?.bucket();
+        let (rect, dense, size) = self.fitted(i, self.extent(i)?.pixels(self.full)?);
         let id = d.layer as *const Layer as usize;
         let (fed, moving) = self.feeding(i..d.end);
         let still = !d.dynamic && self.backdrop.is_none() && !moving && !self.shifting(i..d.end);
-        let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed)));
+        let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed, dense.to_bits(), size)));
         if key.is_some() && self.caches.get(&id).map(|c| c.key) == key {
             self.reused += 1;
             self.kept.push(id);
             return Some((Src::Cache(id), rect));
         }
-        let src = self.hold(i, rect.size())?;
+        let outer = std::mem::replace(&mut self.density, dense);
+        let Some(src) = self.hold(i, size) else {
+            self.density = outer;
+            return None;
+        };
         self.ops.push(Op::Clear(src, [0.0; 4]));
         let target = Target { src, rect };
         match d.content {
@@ -114,6 +135,7 @@ impl<'a> Painter<'a, '_, '_> {
         let layer = self.geometry(i).map_or(rect.affine(), |(size, _)| self.local(i, size));
         let uv = invert(layer).then(rect.affine());
         let out = self.effects(i, src, rect, uv);
+        self.density = outer;
         if out != src {
             self.release(src);
         }

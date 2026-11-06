@@ -5,6 +5,7 @@ mod chart;
 mod dispatch;
 mod fence;
 mod flight;
+mod hull;
 mod kit;
 mod lamp;
 mod looks;
@@ -17,6 +18,7 @@ pub(crate) use setup::sprites;
 mod sort;
 mod sprite;
 mod stage;
+mod stages;
 mod staging;
 mod step;
 mod store;
@@ -34,10 +36,16 @@ use wprs_scene::{Bake, Blend, Cloud, Quality, Stack};
 
 const CHUNK: usize = 16;
 const SIM: u64 = 3584;
-const LOOK: u64 = 1536;
+const LOOK: u64 = 1792;
 const PARTICLE: u64 = 96;
 
-type Stamp = (Option<wgpu::QuerySet>, bool);
+#[derive(Default)]
+struct Stamp {
+    set: Option<wgpu::QuerySet>,
+    begun: bool,
+    open: Option<wgpu::CommandEncoder>,
+    done: Vec<wgpu::CommandBuffer>,
+}
 
 struct Store {
     particles: Buffer,

@@ -1,5 +1,5 @@
 struct Fx {
-    slot: array<vec4<f32>, 24>,
+    slot: array<vec4<f32>, 48>,
     texel: vec4<f32>,
     channel: vec4<f32>,
     mask_m0: vec4<f32>,
@@ -8,6 +8,7 @@ struct Fx {
     area: vec4<f32>,
     clip: vec4<f32>,
     velocity: vec4<f32>,
+    crop: array<vec4<f32>, 2>,
 };
 
 struct VertexOut {
@@ -28,6 +29,7 @@ struct VertexOut {
 @group(1) @binding(7) var lut_tex: texture_3d<f32>;
 
 var<private> fx_base: u32;
+var<private> fx_mask: u32;
 
 const TAU: f32 = 6.2831853;
 const LUMA: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
@@ -68,9 +70,21 @@ fn from_layer(p: vec2<f32>) -> vec2<f32> {
     return vec2<f32>(b.y * q.x - a.y * q.y, a.x * q.y - b.x * q.x) / (a.x * b.y - a.y * b.x);
 }
 
+fn cropped(lu: vec2<f32>, c: vec4<f32>) -> vec2<f32> {
+    return select(lu, (lu - c.xy) / c.zw, c.z > 0.0);
+}
+
 fn mask_at(uv: vec2<f32>) -> f32 {
-    let m = dot(textureSampleLevel(mask_tex, samp, layer_uv(uv), 0.0), fx.channel);
-    return mix(mix(m, 1.0 - m, fx.info.x), 1.0, fx.mask_m0.w);
+    let lu = layer_uv(uv);
+    let first = textureSampleLevel(mask_tex, samp, cropped(lu, fx.crop[0]), 0.0);
+    if fx_mask == 0u {
+        let m = dot(first, fx.channel);
+        return mix(mix(m, 1.0 - m, fx.info.x), 1.0, fx.mask_m0.w);
+    }
+    let pick = fx.slot[fx_mask + 1u];
+    let second = textureSampleLevel(aux3, samp, cropped(lu, fx.crop[1]), 0.0);
+    let m = dot(select(first, second, pick.z > 0.5), fx.slot[fx_mask]);
+    return mix(mix(m, 1.0 - m, pick.x), 1.0, pick.y);
 }
 
 fn asset_at(t: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {

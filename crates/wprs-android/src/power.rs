@@ -3,7 +3,7 @@ use wprs_core::QualityChoice;
 use wprs_scene::{Quality, Tier};
 
 const CHARGING_FPS: u32 = 60;
-pub(crate) const BATTERY_FPS: u32 = 30;
+pub(crate) const BATTERY_FPS: u32 = 60;
 const MAX_FPS: u32 = 60;
 const PREVIEW_FPS: u32 = 30;
 const HOT_FPS: u32 = 10;
@@ -12,8 +12,10 @@ const MODERATE: i32 = 2;
 const SEVERE: i32 = 3;
 const CRITICAL: i32 = 4;
 const WARM: f32 = 0.75;
-const HIGH_CLASS: i32 = 33;
 
+const DEFAULT_HZ: u32 = 60_000;
+
+static REFRESH: AtomicU32 = AtomicU32::new(DEFAULT_HZ);
 static CAPS: [AtomicU32; 2] = [AtomicU32::new(BATTERY_FPS), AtomicU32::new(CHARGING_FPS)];
 static CLASS: AtomicI32 = AtomicI32::new(0);
 static GUARD: AtomicBool = AtomicBool::new(false);
@@ -88,6 +90,11 @@ impl Power {
         if preview { fps.min(PREVIEW_FPS) } else { fps }
     }
 
+    pub(crate) fn differs(self, other: Power) -> bool {
+        let warm = |p: Power| (Power { headroom: 0.0, ..p }, p.headroom >= WARM);
+        warm(self) != warm(other)
+    }
+
     pub(crate) fn moving(self) -> bool {
         !self.paused() && self.thermal < SEVERE
     }
@@ -124,8 +131,7 @@ pub(crate) fn tier(software: bool, compute: bool) -> Tier {
     match CLASS.load(Relaxed) {
         _ if software || !compute => Tier::T0,
         class if class < 0 => Tier::T0,
-        HIGH_CLASS.. => Tier::T2,
-        _ => Tier::T1,
+        _ => Tier::T2,
     }
 }
 
@@ -134,10 +140,24 @@ pub(crate) fn caps(battery: u32, charging: u32) {
     CAPS[1].store(charging.clamp(1, MAX_FPS), Relaxed);
 }
 
+pub(crate) fn refresh(hz: f32) {
+    let millihertz = if hz.is_finite() && hz >= 1.0 { (hz * 1000.0) as u32 } else { DEFAULT_HZ };
+    REFRESH.store(millihertz, Relaxed);
+}
+
+pub(crate) fn hz() -> f32 {
+    REFRESH.load(Relaxed) as f32 / 1000.0
+}
+
+pub(crate) fn vsync_ns() -> i64 {
+    1_000_000_000_000 / i64::from(REFRESH.load(Relaxed).max(1000))
+}
+
 pub(crate) fn delay_ms(fps: u32) -> i64 {
     let interval = 1000.0 / f64::from(fps.max(1));
     (interval - (interval / 4.0).min(8.0)).floor().max(1.0) as i64
 }
 
+pub(crate) mod pace;
 #[cfg(test)]
 mod tests;

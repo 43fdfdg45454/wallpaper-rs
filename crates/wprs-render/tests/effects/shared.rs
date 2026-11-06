@@ -72,7 +72,8 @@ fn cursor_and_audio_reach_effects() {
 fn fused_chains_match_separate_passes() {
     let waves = json!({ "effect": "waves", "params": { "amplitude": 10, "frequency": 1, "speed": 0, "direction": 90 } });
     let gray = json!({ "effect": "color_adjust", "params": { "saturation": 0.5 } });
-    let masked = json!({ "effect": "color_adjust", "params": { "saturation": 0.5 }, "mask": "white" });
+    let masked = json!({ "effect": "color_adjust", "params": { "saturation": 0.5 },
+        "mask": { "texture": "white", "feather": 1 } });
     let run = |effects: Value| {
         let fx = Fx::chain(effects).input(halves(RED, BLUE)).image("white", solid([255; 3]), false);
         let mut run = fx.run()?;

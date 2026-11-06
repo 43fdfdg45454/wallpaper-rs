@@ -6,6 +6,7 @@ use std::borrow::Cow;
 
 mod drawn;
 pub(crate) mod lamps;
+mod rest;
 mod shown;
 pub(crate) mod staged;
 
@@ -99,7 +100,7 @@ fn emit<'a>(
         (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
-        let chain = crate::chain::runs(&layer.effects).find(|r| r.start == i).map_or(1, |r| r.len());
+        let Some(chain) = rest::chain(layer, i, (d, &slots), cx.pointer) else { continue };
         let textures = d.params.iter().filter(|p| p.kind.asset());
         let textures = textures.filter_map(|p| match (effect.params.get(&p.id)?, p.id.as_str()) {
             (bound @ crate::Value::Bound(_), id) => match bound.get(cx) {

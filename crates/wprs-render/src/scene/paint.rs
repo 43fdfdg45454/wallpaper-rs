@@ -11,6 +11,7 @@ use std::ops::Range;
 use wprs_scene::{Affine, Frame};
 
 mod air;
+mod density;
 mod geometry;
 mod passes;
 
@@ -56,6 +57,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) flocks: &'a [u64],
     pub(crate) flat: std::cell::Cell<Option<(wprs_scene::Lean, wprs_scene::Lean)>>,
     pub(crate) aired: (usize, Option<Src>),
+    pub(crate) density: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -123,7 +125,7 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn digest(&self, range: Range<usize>, extra: impl std::fmt::Debug) -> u64 {
-        self.sealed(range, extra, true)
+        self.sealed(range, (extra, self.frame.quality), true)
     }
 
     pub(crate) fn sealed(&self, range: Range<usize>, extra: impl std::fmt::Debug, lamps: bool) -> u64 {

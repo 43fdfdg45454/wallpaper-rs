@@ -17,7 +17,7 @@ phone() { ask 'account {"op": "status"}' | jq_ "r$1"; }
 named() { ask "library {\"op\": \"$1\"$2}" | jq_ "sorted(${3:-x['playlist']['name'] for x in r})"; }
 
 a config transition.duration_ms 900 >/dev/null
-a config playback.max_fps 60 >/dev/null
+a config playback.max_fps 45 >/dev/null
 a lib tag "$(a lib search meadow --json | jq_ "r['items'][0]['uid']")" --add from-the-desk >/dev/null
 a edit set "$own/meadow.png" ev=0.5 >/dev/null
 a server sync --wait >/dev/null
@@ -48,7 +48,7 @@ expected="['After the revocation', 'From the revoked device', 'Phone mix', 'Quie
 [ "$(named playlists "")" = "$expected" ] || fail "the playlists on the phone: $(named playlists "")"
 [ "$(named items ', "query": "tag:from-the-desk"' "x['title'] for x in r")" = "['meadow']" ] ||
   fail "the desktop's title and tag did not reach the phone: $(ask 'library {"op": "items", "query": ""}')"
-[ "$(ask "setting transition.duration_ms")/$(ask "setting playback.max_fps")" = 900/30 ] ||
+[ "$(ask "setting transition.duration_ms")/$(ask "setting playback.max_fps")" = 900/60 ] ||
   fail "settings on the phone: $(ask "setting transition.duration_ms") $(ask "setting playback.max_fps")"
 phoned=$(find "$WORK/phone" -name '*.wprs.json' | head -n 1)
 [ "$(jq_ "(r['ops'][0]['ev'], r['fit'], r['parallax']['enabled'])" <"$phoned")" = "(0.5, 'center', True)" ] ||
@@ -71,7 +71,7 @@ a server sync --wait >/dev/null
 [ "$(a playlist show "Phone mix" --json | jq_ "r['total']")" = 1 ] || fail "the phone's playlist on the desktop: $(a playlist ls)"
 [ "$(a lib search fav:yes --json | jq_ "[i['title'] for i in r['items']]")" = "['meadow']" ] ||
   fail "the phone's favourite on the desktop: $(a lib search fav:yes)"
-[ "$(a config playback.max_fps)" = "playback.max_fps = 60" ] || fail "the phone changed a desktop-only setting"
+[ "$(a config playback.max_fps)" = "playback.max_fps = 45" ] || fail "the phone changed a desktop-only setting"
 [ "$(value a "['devices'][-1]['label']")" = Pocket ] || fail "the phone's name on the desktop: $(a server status)"
 echo "phone link, join and sync checks passed"
 [ "$(ask 'account {"op": "votes", "ids": ["org.example.noon"]}' | jq_ "r['items']['org.example.noon']['mine']")" = down ] ||

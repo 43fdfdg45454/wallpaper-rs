@@ -36,6 +36,9 @@ pub(crate) fn forget() {
 
 impl Drop for Engine {
     fn drop(&mut self) {
+        if !self.preview && !self.hidden {
+            crate::perf::spans::show(self.lock, false);
+        }
         self.paged.take().into_iter().for_each(crate::page::close);
         let mut stage = self.stage.take();
         self.unreport();

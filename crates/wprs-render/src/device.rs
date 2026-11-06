@@ -29,6 +29,7 @@ pub struct Renderer {
     pub(crate) placeholder: GpuImage,
     adapter: String,
     pub(crate) kind: wgpu::DeviceType,
+    pub(crate) tiled: bool,
     pub(crate) limits: TargetLimits,
     pub(crate) developer: OnceLock<Developer>,
     pub(crate) reliefs: OnceLock<Pairs>,
@@ -48,6 +49,8 @@ pub struct Renderer {
     pub(crate) lost: crate::lost::Lost,
 }
 
+const TILED: [u32; 5] = [0x13b5, 0x5143, 0x1010, 0x106b, 0x14e4];
+
 impl Renderer {
     pub fn new() -> Result<Self, RenderError> {
         Self::with_display(None)
@@ -60,8 +63,8 @@ impl Renderer {
             max_buffer_size: offered.max_buffer_size,
             ..wgpu::Limits::downlevel_defaults()
         };
-        let required_features =
-            adapter.features() & (wgpu::Features::TIMESTAMP_QUERY | crate::packed::COMPRESSED);
+        let timing = wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS;
+        let required_features = adapter.features() & (timing | crate::packed::COMPRESSED);
         let descriptor = wgpu::DeviceDescriptor {
             label: Some("wprs-render"),
             required_limits,
@@ -99,6 +102,7 @@ impl Renderer {
             placeholder: create_image(&device, &queue, &[0; 4], 1, 1, 4),
             adapter: format!("{} ({:?})", info.name, info.backend),
             kind: info.device_type,
+            tiled: TILED.contains(&info.vendor),
             limits,
             developer: OnceLock::new(),
             reliefs: OnceLock::new(),

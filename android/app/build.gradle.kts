@@ -9,6 +9,7 @@ val rustLibs = layout.buildDirectory.dir("rustJniLibs").get().asFile.path
 val workspace = rootDir.parentFile
 val keystore = providers.environmentVariable("WPRS_KEYSTORE")
 val keystorePassword = providers.environmentVariable("WPRS_KEYSTORE_PASSWORD")
+val testSuffix = providers.gradleProperty("testSuffix").orNull?.takeIf { it.isNotBlank() }
 val abis = providers.gradleProperty("abis").getOrElse("arm64-v8a,x86_64").split(',')
 val home = providers.systemProperty("user.home").get()
 val remaps = listOf(
@@ -30,6 +31,8 @@ android {
             lines.first { it.startsWith("version = ") }.substringAfter('"').substringBefore('"')
         }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        applicationIdSuffix = testSuffix?.let { ".$it" }
+        manifestPlaceholders["label"] = testSuffix?.let { "wallpaper-rs $it" } ?: "@string/app_name"
     }
     splits.abi {
         isEnable = true

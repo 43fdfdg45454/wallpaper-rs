@@ -3,6 +3,7 @@ mod builders;
 mod capture;
 mod chains;
 mod clock;
+mod crop;
 mod damage;
 mod draw;
 mod effects;
@@ -11,8 +12,11 @@ mod fed;
 mod field;
 mod flight;
 mod fonts;
+mod fused;
+mod gather;
 mod held;
 mod hits;
+mod inked;
 mod item;
 mod lamps;
 mod limit;
@@ -28,8 +32,10 @@ mod pipes;
 mod placed;
 mod pool;
 mod poster;
+mod profile;
 mod rasters;
 mod ready;
+mod region;
 mod render;
 mod sampling;
 mod sized;
@@ -53,7 +59,7 @@ mod woff2;
 use crate::Renderer;
 use crate::texture::GpuImage;
 pub use builders::{finish_builds, stop_builds};
-pub use clock::set_gpu_budget;
+pub use clock::{Stamping, set_gpu_budget};
 pub use flight::drawn_effects;
 pub(crate) use flight::hanging;
 pub use fonts::{MAX_FONT, font};
@@ -61,6 +67,7 @@ pub use packages::{MAX_SCENE_BUILD, set_build_timeout};
 pub(crate) use pipes::Pipes;
 use pipes::{Mode, Shader};
 use pool::Tex;
+pub use profile::{profiled_passes, reset_profiled_passes};
 pub(crate) use sampling::layout;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -108,6 +115,7 @@ pub(crate) struct Fill {
     pub(crate) mode: Mode,
     pub(crate) load: bool,
     pub(crate) vertices: u32,
+    pub(crate) scissor: Option<[u32; 4]>,
 }
 
 pub(crate) struct Cached {

@@ -137,3 +137,23 @@ fn particle_shaders_the_engine_cannot_build_are_left_out_and_particles_still_dra
         assert!(at(&p, 60, 40)[0] > 200, "gpu {gpu}: drawn plainly");
     }
 }
+
+#[test]
+fn particles_and_the_layers_drawn_between_them_share_one_pass() {
+    let Some(r) = renderer() else { return };
+    let passes = |between: bool| {
+        let solid = json!({ "id": "s", "type": "solid", "color": "#ff0000", "size": [40, 40],
+            "transform": { "position": { "keys": [[0, [40, 40]], [9, [120, 40]]] } } });
+        let mut layers = vec![json!({ "id": "p", "type": "particles", "system": "s" })];
+        if between {
+            layers.push(solid);
+        }
+        layers.push(json!({ "id": "q", "type": "particles", "system": "s" }));
+        let mut run = Run::new(r, json!({ "s": dot([80.0, 40.0], json!({})) }), json!(layers), true)?;
+        run.frame(r, 0.0);
+        run.frame(r, 1.0 / 30.0);
+        Some(run.view.stats().passes)
+    };
+    let (Some(alone), Some(between)) = (passes(false), passes(true)) else { return };
+    assert_eq!(alone, between, "{alone} passes without the layer between, {between} with it");
+}

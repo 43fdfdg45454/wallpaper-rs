@@ -185,4 +185,8 @@
     <string name="quality_q2">Siempre alta (2 de 3)</string>
     <string name="quality_q1">Siempre reducida (1 de 3)</string>
     <string name="quality_q0">Siempre la más baja (0 de 3), la que menos batería gasta</string>
+    <string name="perf_record">Medir el rendimiento del fondo que se muestra</string>
+    <string name="perf_hint">Actívalo, mira el fondo durante 30 segundos, vuelve y copia el informe.</string>
+    <string name="perf_copy">Copiar informe de rendimiento</string>
+    <string name="perf_copied">Informe de rendimiento copiado</string>
 </resources>

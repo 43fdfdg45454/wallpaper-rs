@@ -90,8 +90,9 @@ pub fn draw<'a>(
     handle: jlong,
     nanos: jlong,
     force: jboolean,
+    measured: jboolean,
 ) -> jlong {
-    on(&mut env, |_| engine(handle, |e| e.draw(nanos, force)))
+    on(&mut env, |_| engine(handle, |e| e.draw(nanos, force, measured)))
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
@@ -115,9 +116,17 @@ pub fn detach<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, handle: jlong) {
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]
-pub fn display<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>, hdr: jboolean, peak: jfloat, ratio: jfloat) {
+pub fn display<'a>(
+    mut env: EnvUnowned<'a>,
+    _: JObject<'a>,
+    hdr: jboolean,
+    peak: jfloat,
+    ratio: jfloat,
+    refresh: jfloat,
+) {
     on(&mut env, |_| {
         crate::hdr::screen(hdr, peak, ratio);
+        crate::power::refresh(refresh);
         Ok(())
     })
 }
@@ -132,10 +141,12 @@ pub fn power<'a>(
     thermal: jint,
     headroom: jfloat,
     still: jboolean,
-) {
+) -> jboolean {
     on(&mut env, |_| {
-        Power { charging, saver, low, thermal, headroom, still }.set();
-        Ok(())
+        let power = Power { charging, saver, low, thermal, headroom, still };
+        let changed = Power::now().differs(power);
+        power.set();
+        Ok(changed)
     })
 }
 

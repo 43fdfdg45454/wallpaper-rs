@@ -353,7 +353,7 @@ mismo modelo y la misma lógica de rotación que el escritorio.
 
 La pestaña *Ajustes* elige cómo se ajustan las imágenes que no tienen ajuste propio y los vídeos
 (rellenar, imagen completa, estirar o centrar), el fundido entre fondos, el sonido de los vídeos,
-los fotogramas por segundo con batería (30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
+los fotogramas por segundo con batería (60, 30, 15 o 10) y con el cargador (60 o 30), cuándo cambian los
 colores del sistema y los gráficos (automático, Vulkan u OpenGL ES). Debajo, el diagnóstico muestra
 la GPU, los fotogramas dibujados y por segundo, el límite que se aplica en ese momento, el estado de
 carga, ahorro de energía y temperatura y, con una escena, la clase del teléfono (y si se midió en su
@@ -553,7 +553,7 @@ con ese permiso; sin él, tocar la vista previa no le llega a la escena.
 
 Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
 ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
-mucho a los fotogramas por segundo elegidos (30 con batería y 60 con el cargador si no se cambian, y
+mucho a los fotogramas por segundo elegidos (60 con batería y con el cargador si no se cambian, y
 30 en la vista previa), se detienen con el ahorro de energía o con poca batería y bajan cuando el
 teléfono se calienta. Los vídeos se pausan con el ahorro de energía, con poca batería o con el
 teléfono muy caliente. Los colores del sistema (Material You) salen de la imagen o del primer
@@ -602,17 +602,23 @@ bloqueo). Un ajuste desconocido termina con error y muestra la lista de ajustes 
 `playback.max_fps` vale `display` por defecto (*Igual que la pantalla* en la app):
 con corriente cada pantalla se dibuja como mucho a su frecuencia de refresco (la que da el
 compositor al presentar cada superficie o la del modo de `wl_output`, la de RandR en X11 o, en
-Plasma, la que da KWin) y con batería a 30 fotogramas por
-segundo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
-GPU pone su propio límite: el render por software se queda en 24 (15 con batería), una GPU
-integrada en 60 (30 con batería) salvo escenas ligeras con corriente, y una dedicada sigue a la
-pantalla hasta 240 (60 con batería). Los vídeos se quedan en 30 con `display` y render por
+Plasma, la que da KWin) y con batería a esa frecuencia hasta 60 fotogramas por
+segundo, porque la batería baja la calidad (resolución y efectos) y no el ritmo; un número fija el tope (`wprs-ctl config playback.max_fps 60`). Salvo en los vídeos, la
+GPU pone su propio límite: el render por software se queda en 24, una GPU
+integrada en 60 salvo escenas ligeras, y una dedicada sigue a la pantalla hasta 240 (60 con
+batería). Los vídeos se quedan en 30 con `display` y render por
 software y nunca pasan de sus propios fotogramas, nada se dibuja si nada cambia y `wprs-ctl state`
 muestra la frecuencia (`refresh`) y el tope (`fps`) de cada pantalla.
 
 Las escenas calculan antes de dibujar cuánto cuesta cada fotograma: cuentan sus efectos, las capas
 que se dibujan aparte y las mezclas que copian el fondo, cada una por la parte de la pantalla que
-ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Las GPU integradas antiguas (Intel
+ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Los efectos de una imagen, un vídeo
+o una malla corren a la densidad de su imagen: si la pantalla la amplía (un lienzo de 2560×1440 en un
+teléfono de 1440×3040 muestra cada texel en 2,1 píxeles), trabajan sobre sus propios texeles y el
+resultado se amplía al componer, como la imagen misma, así que en Q3 se ven igual y cuestan una
+cuarta parte; Q2, Q1 y Q0 bajan esa densidad a 0,75, 0,6 y 0,5, y el coste las cuenta así. Si la
+pantalla amplía el lienzo, Q2 lo dibuja a un píxel por unidad del lienzo (entre tres cuartos y el
+tamaño completo) y Q1 a 0,85 (entre 0,6 y tres cuartos), píxeles que no tendrían más detalle. Las GPU integradas antiguas (Intel
 HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
 nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
 corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
@@ -629,7 +635,13 @@ justo antes de bajar no deje la escena abajo, y si solo eso la retiene, a los 60
 el nivel de arriba; cada vez que tiene que volver a bajar en menos de 30 s, las esperas se duplican
 (hasta cuatro veces) y se acortan otra vez cuando una subida se mantiene. Nunca sube con batería ni
 por encima de lo que permiten la clase, la batería y la temperatura. Sin marcas de tiempo en la GPU
-mide uno de cada quince fotogramas esperando a la GPU. `wprs-ctl state` (`tier`,
+mide uno de cada quince fotogramas esperando a la GPU. En el teléfono el nivel se guía solo por el
+tiempo medido: empieza en el nivel que el modelo de costes cree que cabe, puede llegar a Q3 (menos con
+ahorro de energía o calor), usa tres cuartas partes del intervalo entre fotogramas, sube también con
+batería en cuanto el tiempo medido por lo que encarece el nivel de arriba (medido al bajar, o estimado)
+y un 15 % de margen cabe durante 15 s, y la frecuencia no depende del nivel: 60 fotogramas por segundo
+con batería salvo que elijas otra. Presenta con tres imágenes para que la GPU dibuje un fotograma
+mientras se prepara el siguiente. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
 clase medida, el nivel y por qué bajó.
 
@@ -1150,7 +1162,8 @@ describe cada campo y sus límites.
 
 De esa lista, el escritorio y el teléfono ya dibujan la cámara 2D (centro, zoom, giro y una
 sacudida de ruido que se apaga con «reducir movimiento» y en la calidad más baja), el resplandor de
-escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente), los
+escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente; difumina
+a un cuarto del tamaño, se suma al lienzo con la mezcla sin copiarlo y no cuesta nada con fuerza cero), los
 fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redibuja la imagen
 entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
 de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
@@ -1192,7 +1205,12 @@ línea de la simulación); un efecto de paquete solo queda fuera por lento cuand
 paquete de un fotograma pasan del límite por sí solos, nunca por lo que cuestan las capas o los
 efectos integrados, de eso se encarga el nivel de calidad. Los destinos de los efectos de paquete se
 limpian en su primera pasada y las capas de ajuste leen lo que tienen debajo sin copiarlo: una pila
-de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos.
+de cuatro efectos de paquete a 4K cuesta alrededor de un 10 % menos. El paralaje de profundidad
+(`depth_parallax`) no dibuja nada mientras no movería la imagen (sin órbita ni `overscan` y con el
+puntero fuera, en el centro o sin seguirlo), que en el teléfono es casi siempre. Un efecto de una
+pasada con una máscara de imagen en modo `strength` solo se dibuja sobre el recuadro donde su máscara
+no es cero, y nada mientras ese recuadro queda fuera de la pantalla; un efecto de paquete puede
+declarar con `bounded` qué texturas limitan dónde cambia la imagen.
 Cada pasada, cada lectura de textura y cada operación del shader cuentan en el coste de la escena
 aunque el descriptor diga menos, y
 `wprs-ctl pack check`, `pack build` y el editor avisan cuando una escena no cabe con calidad 2 en
@@ -1287,7 +1305,9 @@ También se mueven solas: las cadenas de cinemática inversa giran sus huesos ha
 un hueso, otra capa o el puntero (este solo con el permiso del puntero, que la app avisa como
 cualquier otro uso del puntero), exactas para dos huesos y por rondas para cadenas más largas, con
 límites por hueso, peso y sentido del codo. La física de huesos simula muelles, péndulos y cuerdas a
-un paso fijo de 1/60 s (1/30 s con batería y como mucho 15 pasos por fotograma), con inercia,
+subpasos de 1/120 s que siguen el intervalo entre fotogramas (uno a 120 fps, dos a 60, cuatro a 30,
+también con batería, así que se mueve igual a esas frecuencias, y como mucho un cuarto de segundo por
+fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
 (`canvas.gusts`, de 0 a 1);
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
@@ -1881,6 +1901,10 @@ wprs-ctl prop preset export Noche -f noche.json -o DP-1
 wprs-ctl prop preset import noche.json --save Noche -o HDMI-A-1
 wprs-ctl scene bench escena.wpak --size 1920x1080 --frames 300   # coste por fotograma, sin daemon, en la tarjeta de render.gpu
 wprs-ctl scene bench escena.wpak --screens 2   # carga, primer fotograma y memoria con dos pantallas
+wprs-ctl scene bench escena.wpak --size 1440x3040 --quality q3 --passes --shot q3.png   # cada pasada y la imagen del último fotograma
+wprs-ctl scene bench escena.wpak --quality auto --paced 30   # 30 s en tiempo real con el nivel automático del teléfono
+WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh build && WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh copy escena.wpak
+WPRS_ADB_SERIAL=<serie> scripts/phone-bench.sh run escena.wpak --level q3 --passes   # el mismo banco en el teléfono, en JSON
 ```
 
 En la página *Ajustes* de la app, el botón *Ajustes de la escena* (o *Ajustes del vídeo*) de cada
@@ -2506,6 +2530,7 @@ APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
 rustup target add aarch64-linux-android x86_64-linux-android
 ANDROID_NDK_HOME=/ruta/al/ndk android/gradlew -p android assembleDebug
 adb install -r -d android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
+android/gradlew -p android assembleRelease -PtestSuffix=perf  # se instala junto a la app normal como «wallpaper-rs perf»
 android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64  # pruebas en un emulador x86_64
 scripts/android-power.sh -o consumo.csv  # consumo, fps y memoria por escenario en el teléfono
 ANDROID_NDK_HOME=/ruta/al/ndk scripts/apk-check.sh android/app/build/outputs/apk/release/app-universal-release.apk

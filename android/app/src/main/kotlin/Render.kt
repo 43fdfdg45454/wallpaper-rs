@@ -31,15 +31,15 @@ object Native {
 
     external fun listen(engine: Long): String?
 
-    external fun draw(engine: Long, nanos: Long, force: Boolean): Long
+    external fun draw(engine: Long, nanos: Long, force: Boolean, measured: Boolean): Long
 
     external fun ended(engine: Long, path: String, over: Boolean): Boolean
 
     external fun detach(engine: Long)
 
-    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean)
+    external fun power(charging: Boolean, saver: Boolean, low: Boolean, thermal: Int, headroom: Float, still: Boolean): Boolean
 
-    external fun display(hdr: Boolean, peak: Float, ratio: Float)
+    external fun display(hdr: Boolean, peak: Float, ratio: Float, refresh: Float)
 
     external fun moving(): Boolean
 
@@ -112,6 +112,12 @@ object Native {
     external fun finish()
 
     external fun allocations(start: Boolean): Long
+
+    external fun perf(record: Boolean)
+
+    external fun performance(): String
+
+    external fun looped(engine: Long, nanos: Long, ms: Float)
 }
 
 object Render {
@@ -131,10 +137,13 @@ object Render {
 }
 
 fun interface Draw {
-    fun frame(nanos: Long): Long
+    fun frame(nanos: Long, measured: Boolean): Long
 }
 
-class Frames(private val draw: Draw) : Choreographer.FrameCallback {
+class Frames(
+    private val looped: (Long, Float) -> Unit = { _, _ -> },
+    private val draw: Draw,
+) : Choreographer.FrameCallback {
     private var at = Long.MAX_VALUE
 
     fun start() {
@@ -146,7 +155,8 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
         at = Long.MAX_VALUE
     }
 
-    fun schedule(delay: Long) = if (delay > 0L) post(delay) else stop()
+    fun schedule(delay: Long, since: Long = System.nanoTime()) =
+        if (delay > 0L) post((delay - (System.nanoTime() - since) / NANOS_PER_MS).coerceAtLeast(0L)) else stop()
 
     private fun post(delay: Long) {
         stop()
@@ -154,7 +164,14 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
         at = SystemClock.uptimeMillis() + delay
     }
 
-    override fun doFrame(frameTimeNanos: Long) = schedule(draw.frame(frameTimeNanos))
+    override fun doFrame(frameTimeNanos: Long) {
+        val measured = Perf.on
+        val start = if (measured) System.nanoTime() else 0L
+        val delay = draw.frame(frameTimeNanos, measured)
+        if (measured) looped(frameTimeNanos, (System.nanoTime() - start) / NANOS_PER_MS.toFloat())
+        schedule(delay, frameTimeNanos)
+    }
 }
 
 private const val SOON_MS = 100L
+private const val NANOS_PER_MS = 1_000_000L

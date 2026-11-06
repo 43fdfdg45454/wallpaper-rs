@@ -4,6 +4,7 @@ mod accent;
 mod account;
 mod acting;
 mod apply;
+mod bench;
 mod blend;
 #[cfg(target_os = "android")]
 mod bridge;
@@ -43,10 +44,13 @@ mod opened;
 mod pack;
 mod page;
 mod pairing;
+mod perf;
 mod playing;
 mod power;
 mod private;
 mod props;
+#[cfg(target_os = "android")]
+mod recorded;
 mod reel;
 #[cfg(target_os = "android")]
 mod relief;
@@ -100,6 +104,14 @@ pub mod host {
 
     pub fn setting(key: &str, value: Option<&str>) -> String {
         settings::setting(key, value).unwrap_or_else(|e| e.to_string())
+    }
+
+    pub fn bench(path: &str, args: &[String]) -> String {
+        let report = match path {
+            "ceiling" => crate::bench::ceiling(args),
+            _ => crate::bench::run(std::path::Path::new(path), args),
+        };
+        report.unwrap_or_else(|e| json!({ "error": e })).to_string()
     }
 }
 

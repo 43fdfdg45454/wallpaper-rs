@@ -39,7 +39,7 @@ pub(super) fn framing(green: &str, bands: &str) {
     };
     assert_eq!(
         [power(|_| {}), power(|p| p.charging = true), power(|p| p.saver = true)],
-        [[30, 30], [60, 30], [0, 0]]
+        [[60, 30], [60, 30], [0, 0]]
     );
     assert_eq!([power(|p| p.low = true), power(|p| (p.low, p.charging) = (true, true))], [[0, 0], [60, 30]]);
     assert_eq!(tilt::rate(false, power::Power::now(), false), 0);

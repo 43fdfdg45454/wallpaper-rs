@@ -52,6 +52,7 @@ pub struct SceneView {
     pub(super) tone: u8,
     pub(super) split: f32,
     pub(super) debug3d: u8,
+    pub(super) timed: bool,
 }
 
 impl Drop for SceneView {
@@ -67,6 +68,11 @@ impl SceneView {
             self.span = usable;
             self.marks.clear();
         }
+    }
+
+    pub fn magnify(&self, size: (u32, u32)) -> f32 {
+        let [_, _, w, h] = self.view(size);
+        (size.0 as f32 / w.max(1e-3) * size.1 as f32 / h.max(1e-3)).sqrt()
     }
 
     pub fn view(&self, size: (u32, u32)) -> [f32; 4] {
@@ -114,6 +120,14 @@ impl SceneView {
         let again = !self.refused.is_empty();
         self.refused.clear();
         again
+    }
+
+    pub fn time_passes(&mut self, on: bool) {
+        self.timed = on;
+    }
+
+    pub fn stamping(&mut self, stamping: super::clock::Stamping) {
+        self.clock.stamping = stamping;
     }
 
     pub fn stats(&self) -> SceneStats {

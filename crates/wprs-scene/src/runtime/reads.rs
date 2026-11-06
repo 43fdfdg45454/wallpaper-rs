@@ -47,12 +47,20 @@ impl Runtime {
         self.dt
     }
 
+    pub fn set_magnify(&self, magnify: f32) {
+        let magnify = if magnify.is_finite() && magnify > 0.0 { magnify } else { 1.0 };
+        if self.magnify.replace(magnify) != magnify {
+            self.costs.set(Default::default());
+        }
+    }
+
     pub fn cost(&self, quality: Quality) -> f32 {
         let at = Arc::as_ptr(&self.scene) as usize;
         let (kept, mut costs) = self.costs.get();
         costs = if kept == at { costs } else { [None; 4] };
         let cost = *costs[quality as usize].get_or_insert_with(|| {
-            self.scene.cost(quality) + self.scene.copies_cost(self.spawned(), quality)
+            let magnify = self.magnify.get();
+            self.scene.cost_at(quality, magnify) + self.scene.copies_cost(self.spawned(), quality, magnify)
         });
         self.costs.set((at, costs));
         cost

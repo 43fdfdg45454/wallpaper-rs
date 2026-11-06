@@ -8,7 +8,23 @@ with the JSON path of the field, such as `/layers/2/effects/0/params/radius is 3
 0..=128`. The model lives in
 `crates/wprs-scene`; `wprs-ctl scene bench <file.wpak>` renders a package offscreen and reports
 what each frame costs, how long the scene takes to load and draw its first frame, and the GPU and
-main memory it holds (`--screens 2` shows it on two screens at once).
+main memory it holds (`--screens 2` shows it on two screens at once; `--passes` times each render
+pass with GPU timestamps, where the GPU has them inside command encoders, every 15th frame, and lists
+the passes from the dearest, as the performance report of the phone does; `--shot frame.png` saves
+the last frame, so two builds can be compared picture by picture; `--quality auto` steers the level
+by measured GPU time as the phone does, starting where the phone would and listing every step;
+`--paced 30` renders in real time at `--fps` for 30 seconds, with at most two frames on the GPU like
+the swapchain of the phone, and reports the rate it held and the slots it missed; it does not time
+the particle steps apart, so the CPU never waits for the GPU there). The same bench runs on a phone:
+`scripts/phone-bench.sh build` cross-compiles the `bench` example of `crates/wprs-android` for arm64
+with the NDK and the same path remaps as the Gradle build of the app, so both share one cache, `copy FILE.wpak...` copies it and the packages to
+`/data/local/tmp/wprs-bench` (nothing else on the phone is touched and no app is installed), and
+`run NAME.wpak --level q3 --passes` or `--level auto --paced 30` loads the package the way the
+live wallpaper does (phone limits, properties, tier from its GPU, 1440x3040 unless `--size` says
+otherwise) and prints the report as JSON with the battery temperature and thermal status before
+and after. The serial of the phone comes from `WPRS_ADB_SERIAL`; each run waits while the screen is
+on (five-minute checks, `WPRS_AWAKE_TRIES` of them) and until the battery is under `WPRS_COOL`
+degrees (36 by default).
 
 ```json
 {
@@ -57,7 +73,7 @@ its thumbnail and details in the library. Scenes without them read and draw as b
 |----------------|---------|---------|
 | `parallax` | `{ "amount" (0 to 4, default 1), "delay" (0 to 2 s, default 0.15), "pointer" (0 to 1, default 1), "gyro" }`: how far and how softly layers with a `parallax` follow the pointer, how much the pointer counts and whether the tilt of the phone moves them too (on Android, through the same motion sensors as picture parallax, only while the scene is shown; the phone has no pointer, so there every scene with parallax layers follows the tilt as if `gyro` were on, or the launcher pages when the phone has no motion sensor, and neither moves them with the battery saver on); `pointer: 0` needs no pointer; a layer moves by its `parallax` times the canvas size times `amount` times the offset of the pointer from the middle (−0.5 to 0.5) times `pointer`, plus half the tilt; where the system asks for reduced motion, layers stay in place and neither the pointer nor the tilt moves them | `parallax2` |
 | `camera` | `{ "center", "zoom" (0.1 to 10), "rotation", "shake" }` moves, zooms and turns the whole scene as one transform without extra passes: the point `center` of the canvas (its middle by default) shows at the middle, `zoom` times larger and turned clockwise by `rotation` degrees; `shake` is `{ "enabled", "amplitude" (0 to 1000 px), "roughness" (0 to 1), "speed" (0 to 60 Hz) }`, a smooth noise of the scene time (four octaves, each weighed by `roughness` against the one before) that moves the scene by at most `amplitude` pixels and asks for a frame every frame while it runs; it is turned off where motion is reduced and at the lowest quality level, and the scene then stands still; all of them may be bound | `camera` |
-| `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else, with the `bloom` effect and its `tint` over the whole canvas, as an adjustment layer at the top would; the `hdr` threshold and strength replace the plain ones at level `q3`, and at `q2` on mains power; it costs like that effect (four passes at half size), is dropped where the effect is and is drawn only when something below it changed | `bloom` |
+| `bloom` | `{ "threshold" (0 to 4), "strength" (0 to 8), "radius" (0 to 128 px), "tint", "hdr": { "threshold" (0 to 16), "strength" (0 to 8) } }`, a glow of the bright parts drawn after everything else, with the `bloom` effect and its `tint` over the whole canvas, as an adjustment layer at the top would; the `hdr` threshold and strength replace the plain ones at level `q3`, and at `q2` on mains power; it costs like that effect (the bright parts at half size, the blur at a quarter, and the glow added onto the canvas by blending, without a copy of the canvas), is dropped where the effect is, is left out while its strength is zero and is drawn only when something below it changed | `bloom` |
 | `hdr`, `tonemap` | `hdr: true` keeps colors brighter than white in 16-bit intermediate images (in either blend space, on every tier and on phones, wherever the graphics card can draw and blend them; cards that cannot keep 8 bits and still apply the tone map) and draws models in 16 bits, and `tonemap` (`none`, `aces` or `agx`, only with `hdr`) maps them to the screen in one last pass at every quality level; `none` keeps the picture of a scene without `hdr`. On a screen with HDR output (`playback.hdr` in `dbus.md`, `COLOR_MODE_HDR` and an extended-range surface on phones with Android 14 or later) the last pass keeps 16 bits and, instead of `aces` or `agx`, bends what is brighter than 0.8 of white softly toward the peak of that screen (its brightest white over its reference white), keeping hue and midtones; `none` passes the colors on | `hdr` |
 | `clear` | `false` draws every frame over the previous one, which leaves trails: the canvas is filled with `background` only when the view starts or changes size, and no layer is kept as a still picture; each frame that changes is drawn whole instead of only the part that changed, so it costs more | `keep_frame` |
 | `perspective` | distance of the viewer in pixels (100 to 100000) for layers tilted with `transform.tilt` and moved with `transform.z`; without it the distance at which the canvas height fills the `fov` of `camera3d`, or 45° | `tilt` |
@@ -158,7 +174,20 @@ whose place can change while it plays (a bound or animated `position`, `rotation
 in the scene) counts as the whole canvas. A
 layer that masks or feeds others adds one more unit times its share, once however many read it,
 since it is drawn on its own at most once a frame. Particles add their overdraw, `canvas.bloom` adds the units of its effect over the whole canvas, a
-`canvas.camera` makes every layer count as the whole canvas, and every frame costs 1.5 units for composing and copying. A scene
+`canvas.camera` makes every layer count as the whole canvas, and every frame costs 1.5 units for composing and copying.
+An image, video or mesh layer with effects runs them at the density of its picture: its target holds
+at most one texel of the picture per pixel of the screen, so a picture that the screen magnifies
+(a 2560×1440 canvas filling a 1440×3040 phone shows each texel on 2.1 pixels) runs its effects on
+its own texels and the composite scales the result up, as it scales the picture itself. At Q3 an
+image that is neither turned nor stretched lines its target up with its texels, so the picture is
+copied as it is and only the effects change; a turned image or a mesh keeps one and a half times
+that density. Lower levels multiply the density by 0.75 at Q2, 0.6 at Q1 and 0.5 at Q0, also on a
+screen that does not magnify the canvas. The canvas itself renders at full size at Q3 and half size
+at Q0; at Q2 it renders at one pixel per canvas unit, between three quarters and full size, and at Q1
+at 0.85 pixels per unit, between 0.6 and three quarters, so a screen that magnifies the canvas draws
+fewer pixels that hold no more detail. The cost counts each such layer at that density, from the
+magnification of the screen (pixels per canvas unit), the fixed scale of the layer and one texel
+per unit of its `size`. A scene
 that costs more at level `q2` than the 8 units of older integrated and phone GPUs gets a warning
 from `wprs-ctl pack check`, `pack build` and the scene editor, since those devices show it with
 fewer details. The quality level is the highest whose cost fits the budget of the device: 4, 8, 16
@@ -183,7 +212,20 @@ computer that switches between two cards (`render.gpu` in `dbus.md`) measures ea
 A measure that lowered the tier, which a busy start can cause, is taken again on the next starts,
 three times in all, and the fastest one counts (`runs` in the file).
 `GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
-among its diagnostics.
+among its diagnostics. A phone takes the tier of its GPU and this measure, at most that of newer
+integrated GPUs, and the lowest tier when Android marks it as a low-memory device. Its settings can
+record the performance of the shown wallpaper: while that switch is on, each frame that the home
+or the lock screen presents while it is visible (never a preview) keeps its time, the delay of its
+callback after the vsync, the time of the whole frame loop, the processor time of the scene, of
+encoding and of presenting, its GPU time, passes, draws, allocations and the refresh rate of the
+display, and every 15th frame times each pass, as `wprs-ctl scene bench --passes` does. A button
+copies a report of the last 30 seconds for the screen shown last: it gives the frames presented,
+the seconds the screen was shown (from the moment it became visible to the moment it was hidden,
+while any engine showed it) and the seconds it was animating (between frames of the same run,
+since hiding the wallpaper starts a new run), and the rate both per second shown and per second
+animating, so a wallpaper that stays still while shown lowers the first one. It also gives the level, its
+reason, the render and screen sizes, the rate, its cap and the present mode. With the switch off a
+frame costs one atomic read and nothing is measured.
 
 While a scene plays, the GPU time of its frames (measured as described below) moves the quality
 level: when their average (an exponential average over the measured frames, started again after
@@ -198,8 +240,20 @@ up to four times, and every raise that holds for 30 seconds halves them again. T
 above the one that the tier, the cost, the power source and the temperature allow, and never rises on battery,
 with power saving or while the GPU or CPU is warm (on phones, only while charging and cool). The
 budget of a level is half of its frame interval on mains power and a quarter on battery, with power
-saving and on phones; since a lower level may also draw fewer frames a second, its budget is larger,
-and comparing the cost measured at the level above keeps a scene from bouncing between two levels.
+saving and on phones. A lower level draws fewer pixels and effects but keeps the frame rate, which
+only the tier, the power source, the temperature and the user set, and comparing the cost measured
+at the level above keeps a scene from bouncing between two levels. The phone steers by time alone:
+its ceiling is `q3` (one step under the tier level with power saving, lower while warm or hot), it
+starts at the level the cost model fits and its budget is three quarters of the frame interval. It
+rises, also on battery, when the measured average times the ratio of the level above (measured at
+the last step down, else from the cost model) and a 15 % margin fits that budget for 15 seconds.
+When that product does not fit but the average with the 15 % margin alone does, the phone tries the
+level above anyway after 15 seconds: if it is over the budget it comes back down and the ratio
+measured there replaces the model for the next decision, and every try that comes back within 30
+seconds doubles the wait for the next one, up to four times (four minutes); a try that holds for 30
+seconds resets that wait. Its frame rate never depends on the level (60 on battery unless the user sets another cap). It
+presents through three swapchain images (latency 2), so the GPU draws a frame while the next one is
+recorded.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
 which all do, with timestamps or by waiting (see below). `GetState().outputs[x].quality` and
 `quality_reason` tell the level and why it is below the highest; the app, the tray and the phone
@@ -254,9 +308,11 @@ it as it draws instead of in a pass of its own, and an adjustment layer reads wh
 directly instead of a copy. `wprs-ctl scene bench` prints these notes after its
 numbers.
 
-On battery the level drops one step and the rate is capped at 30 frames per second (15 with
-software rendering); power saving (the `power-saver` profile on Linux, battery saver on Android)
-drops one step more. A GPU or CPU within 20 °C of its critical temperature (95 °C when its driver
+On battery the level drops one step, which lowers resolution and effects, not the rate: the rate
+follows the display up to 60 frames per second unless the user chose a rate (`playback.max_fps`,
+on the phone its rate on battery, 60 by default), which then holds as on mains power; power saving
+(the `power-saver` profile on Linux, battery saver on Android) drops one step more and caps
+`display` at 30. A GPU or CPU within 20 °C of its critical temperature (95 °C when its driver
 reports none) drops one level and caps the rate at 30; within 10 °C, or once the system starts
 throttling it, it falls to the lowest level and 15 frames per second. Other sensors, such as
 drives, memory or network cards, do not count, and GPUs whose driver exposes no sensor are not read. Where the system asks for
@@ -573,8 +629,9 @@ max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cu
 pointer only while the scene may read it (the pointer input, told to the user like any other use of
 the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
 
-Bodies of `physics` swing at a fixed step of 1/60 s (1/30 s on battery), at most 15 steps a frame,
-so that they do not depend on the frame rate: each step follows the pose of the parent along the
+Bodies of `physics` swing in substeps of 1/120 s, also on battery, so each frame interval runs as
+many substeps as it covers (one at 120 fps, two at 60, four at 30) and the motion is the same at any
+of those rates; at most 30 substeps (a quarter second) run a frame: each step follows the pose of the parent along the
 time it covers, also on frames that take no step, and a frame between steps shows the bodies where
 their last step carries them; longer gaps are dropped. A `spring` pulls the end of
 its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings like a pendulum held
@@ -852,7 +909,10 @@ each point by `(depth - focus) × strength` pixels towards the pointer (`follow`
 orbit (`orbit`, which also takes over while the pointer is away), searching its `depth` image (a
 `linear` asset, bright is near) in 8 to 16 `steps`, fewer at lower quality levels, so that near
 parts slide over far ones without tearing; `overscan` enlarges the layer to keep its edges out of
-sight. Still images with a depth map move with the same search. `glitch` stays still until
+sight. While it would move nothing (no orbit, no `overscan` and the pointer away, centred or not
+followed, or a `strength` of zero) the frame leaves it out, so it costs no pass; the phone, whose
+pointer only follows touches, shows it this way most of the time. Still images with a depth map
+move with the same search. `glitch` stays still until
 `bursts` or `beat` is set (a beat keeps it on for `length` seconds), and `film_grain` only changes
 over time with an `fps` above zero. `blur_motion` streaks along `angle` for `length` pixels, or,
 with `follow`, along the way the layer moved: its speed in canvas pixels per second times
@@ -902,7 +962,7 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 |-------|---------|
 | `uses` | `time`, `cursor`, `audio`: the scene keeps rendering while time runs, the pointer moves or sound plays; otherwise the effect costs nothing after its first frame |
 | `pace` | when a time effect changes: `{ "rate": "<float parameter>" }` (that many times a second), `{ "sweep": ["<speed>", "<gap>", "<phase>"] }` (a band crosses the layer once every `1 + gap` turns and waits off it in between), `{ "steps": [<high>, <low>] }` (1 to 240 times a second, the second number at Q0) or `"outside"` (only while the pointer is off the output); the scene then sleeps until the picture changes |
-| `mask_mode` | `mix` (default) blends the result with the input by the mask; with `strength` the shader scales itself by `mask_at(uv)`, as distortions should |
+| `mask_mode` | `mix` (default) blends the result with the input by the mask; with `strength` the shader scales itself by `mask_at(uv)`, as distortions should, and must leave the picture as it is where the mask is zero: a single-pass effect masked by a picture (not a layer or a shape, not inverted, feathered or weakened) is then drawn only over the box of the lit texels of its mask channel, grown by `reach` and kept inside the visible part of the layer, and left out while that box is off screen |
 | `params` | at most 16 of `float`, `vec2`, `color`, `bool`, `texture` and `lut`, with `id`, `default`, `min`, `max` and `uses` (`time`, `cursor`, `clicks` or `audio`; clicks come with the pointer), an input needed only while the parameter is not zero (a `follow` flag needs the pointer only when set, a `vec2` while either part is not zero); parameter *n* is `param(nu)`, in `.x`, `.xy` or `.rgba` (linear) |
 | `passes` | `{ "entry", "scale", "inputs", "output" }`; `scale` is a fraction of the layer size, and lower quality levels shrink every pass but the last; `inputs` (default `["previous"]`) name `previous`, `input`, `source` (the layer before its effects), `mask`, `pass:N`, `state`, `backdrop` (what is already drawn under the layer, which then draws on its own) or `asset:<texture parameter>`, bound to `input_tex` and then `aux0` to `aux3` |
 | `cost` | `{ "taps", "passes", "scale" }`; taps × passes × scale² units, light up to 1, medium up to 6, heavy above |
@@ -910,6 +970,7 @@ fn uv_nudge(uv: vec2<f32>) -> vec2<f32> {
 | `velocity` | a `bool` parameter that, when set, gives the shader the speed of the layer in `fx.velocity.xy` (canvas pixels per second) and keeps the scene drawing while it moves |
 | `fuse` | `uv` or `color` for single-pass effects, see below |
 | `reach` | a float parameter, in pixels, by which the effect grows the layer bounds |
+| `bounded` | texture or mask parameters outside whose lit texels (any of red, green and blue above zero) the effect leaves the picture as it is; the engine then draws a single-pass effect only over the box of those texels, grown by `reach` |
 | `state` | `{ "scale", "settle", "fade" }`, persistent textures for simulations, see below |
 | `solve` | `homography`: the first four parameters are `vec2` corners (top left, top right, bottom right, bottom left, as fractions of the layer) and the three slots after the parameters hold the rows of the matrix that takes a layer point back to the unit square; such an effect is not fused |
 | `quality` | overrides per level, `{ "q1": { "params": { "taps": 8 }, "scale": 0.5 } }`, applied at that level and below; a number is an upper limit for the value the scene sets, other values replace it, `scale` shrinks the inner passes and the state, and `"freeze": true` keeps an effect that would be dropped at that level: its state stops and it shows its last picture without asking for frames |
@@ -1230,7 +1291,7 @@ rules are also what a phone or a laptop on battery draws.
 
 | Effect | Newer parameters |
 |--------|------------------|
-| `bloom` | `tint` (white) colors the glow, as `canvas.bloom` does |
+| `bloom` | `tint` (white) colors the glow, as `canvas.bloom` does; it blurs at a quarter of the layer size, and on an adjustment layer at full opacity it adds the glow onto what lies below by blending instead of copying the result back |
 | `blur` | `blend` (`normal`) and `amount` (0 to 1) mix the blurred picture back into the sharp one |
 | `blur_motion` | `follow`, `shutter` (0 to 0.5 s) |
 | `chromatic_aberration` | `mode` (0 grows with the distance from `center`, 1 the same shift along `angle`, 2 the same shift away from `center`, 3 grows with the square of the distance), `angle` (−360 to 360) |

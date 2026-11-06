@@ -29,9 +29,9 @@ pub use crate::drafted::{DEBUG_VIEWS, Drafted};
 pub use crate::drawn::TRIANGLE_UNIT;
 pub use crate::easing::Ease;
 pub use crate::effects::{
-    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, Fuse, GENERIC_PICTURES, MaskMode, NOISE_WGSL, Output,
-    PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget, SLOTS, Solve, Stage,
-    State, Texel, Tune, Use, Variant, builtin, descriptor, register,
+    BLEND_WGSL, Cost, Descriptor, Entry, FRAME_WGSL, FX_SLOTS, Fuse, GENERIC_PICTURES, MASK_SLOTS, MaskMode,
+    NOISE_WGSL, Output, PRELUDE, Pace, ParamDef, ParamKind, PassBlend, PassDef, RELIEF_WGSL, RenderTarget,
+    SLOTS, Solve, Stage, State, Texel, Tune, Use, Variant, builtin, descriptor, register,
 };
 pub use crate::eval::lamps::{Lamp, Picture, SHADOW_BIAS};
 pub use crate::eval::{
@@ -52,7 +52,7 @@ pub use crate::gltf::{
     EXTENSIONS, MAX_BONES, MAX_MODEL_BYTES, MAX_MODEL_ENTRIES, MAX_MODEL_JSON, MAX_MODEL_PARTS,
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
-pub use crate::governor::Governor;
+pub use crate::governor::{Governor, PHONE_SHARE};
 pub use crate::guard::guarded;
 pub use crate::helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,

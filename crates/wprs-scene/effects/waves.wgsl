@@ -1,7 +1,7 @@
 fn waves_one(uv: vec2<f32>, degrees: f32, depth: f32, shift: f32) -> vec2<f32> {
     let angle = radians(degrees);
     let dir = vec2<f32>(cos(angle), sin(angle));
-    let phase = (dot(uv, dir) * param(1u).x / depth - frame.time * param(2u).x) * TAU + shift;
+    let phase = (dot(layer_uv(uv), dir) * param(1u).x / depth - frame.time * param(2u).x) * TAU + shift;
     return vec2<f32>(-dir.y, dir.x) * sin(phase) * px(param(0u).x) * depth;
 }
 

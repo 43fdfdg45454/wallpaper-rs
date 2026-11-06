@@ -26,6 +26,8 @@ pub const PRELUDE: &str = concat!(
     include_str!("blend.wgsl")
 );
 pub const SLOTS: usize = 16;
+pub const FX_SLOTS: usize = 48;
+pub const MASK_SLOTS: usize = 2;
 pub const GENERIC_PICTURES: [&str; 4] = ["white", "black", "normal_flat", "noise"];
 const FILES: &[(&str, &str, &str)] = &include!(concat!(env!("OUT_DIR"), "/effects.rs"));
 
@@ -49,6 +51,8 @@ pub struct Descriptor {
     pub fuse: Option<Fuse>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bounded: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub min_fps: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -87,11 +87,30 @@ impl Engine {
     }
 
     pub(crate) fn visible(&mut self, shown: bool) {
-        self.hidden = !shown;
+        let was = !std::mem::replace(&mut self.hidden, !shown);
+        if !self.preview && was != shown {
+            crate::perf::spans::show(self.lock, shown);
+        }
         if !shown {
             self.forget_old_gpu();
             self.hint(0);
             self.stage.iter_mut().for_each(Stage::hide);
+        }
+    }
+
+    pub(crate) fn looped(&self, nanos: i64, ms: f32) {
+        if !self.preview {
+            crate::perf::looped(self.lock, nanos, ms);
+        }
+    }
+
+    pub(super) fn forget_old_gpu(&mut self) {
+        if self.target.as_ref().is_some_and(|(gpu, _)| !gpu.current()) {
+            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
+            self.checked = (0, 0, (0, 0));
+            self.stage.iter_mut().for_each(Stage::drop_view);
+            self.clips.forget();
+            crate::gpu::trim();
         }
     }
 
@@ -108,6 +127,7 @@ impl Engine {
         stage.light(crate::hdr::light(&gpu.renderer, surface, power.charging, stage.top())?.0);
         stage.turn();
         stage.reports = (!self.preview).then_some(usize::from(self.lock));
+        stage.measured = self.measured;
         let wanted = stage.videos();
         let videos = self.clips.frames(&gpu.renderer, (gpu.epoch, 1.0), &wanted);
         let shot =
@@ -124,8 +144,13 @@ impl Engine {
                 flip: [false; 2],
                 grade: self.look.grade,
             };
+            let at = self.measured.then(std::time::Instant::now);
             let presented =
                 crate::counted::gpu(|| gpu.renderer.present_layers(surface, self.size, &[shown], || {}));
+            if let Some(at) = at {
+                let ms = at.elapsed().as_secs_f32() * 1e3;
+                crate::perf::presented(ms, mode(surface.present_mode()), surface.latency());
+            }
             self.dirty = !presented?;
             if !self.dirty {
                 self.presented = nanos;
@@ -137,5 +162,15 @@ impl Engine {
             stage.rest();
         }
         Ok(Some((hint, delay)))
+    }
+}
+
+fn mode(mode: wgpu::PresentMode) -> &'static str {
+    match mode {
+        wgpu::PresentMode::Fifo => "fifo",
+        wgpu::PresentMode::FifoRelaxed => "fifo relaxed",
+        wgpu::PresentMode::Mailbox => "mailbox",
+        wgpu::PresentMode::Immediate => "immediate",
+        _ => "automatic",
     }
 }
