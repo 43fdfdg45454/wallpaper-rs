@@ -85,3 +85,16 @@ fn a_longer_chain_keeps_the_curl_of_its_clip_while_it_reaches() {
     assert!(kept.iter().zip(&bent).all(|(k, b)| (k - b).abs() < 20.0), "{kept:?} keeps {bent:?}");
     assert!((kept[0] - kept[1]).abs() > 5.0, "no even arc: {kept:?}");
 }
+
+#[test]
+fn a_longer_chain_holds_the_same_reach_from_one_frame_to_the_next() {
+    let ik = json!({ "chain": ["root", "arm", "hand"], "target": [40.0, 40.0] });
+    let mut rt = runtime(json!({ "ik": [ik] }));
+    rt.advance(1.0 / 60.0);
+    let first = [at(&rt, "root"), at(&rt, "arm"), at(&rt, "hand")];
+    for _ in 0..5 {
+        rt.advance(1.0 / 60.0);
+        let now = [at(&rt, "root"), at(&rt, "arm"), at(&rt, "hand")];
+        assert!(first.iter().zip(&now).all(|(a, b)| close(*a, *b, 0.01)), "{first:?} {now:?}");
+    }
+}

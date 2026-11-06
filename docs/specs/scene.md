@@ -572,7 +572,9 @@ exactly, bending at their middle joint the way `bend` says. A longer chain, like
 back without letting any joint bend the other way, starting from its pose, so the curl of its clips
 stays while it reaches. When that pose is straight or already bends a joint the other way, or when
 the rounds from it miss a target within reach, the chain first curls into an even arc, every joint
-turning the way `bend` says by the same angle, that reaches the target. A target out of reach
+turning the way `bend` says by the same angle, that reaches the target; a chain that needed that arc
+starts the next frames from it while the target stays within reach, so each frame runs one set of
+rounds. A target out of reach
 stretches the chain towards it. `limits` keep each listed bone within `[min,
 max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cursor"` follows the
 pointer only while the scene may read it (the pointer input, told to the user like any other use of

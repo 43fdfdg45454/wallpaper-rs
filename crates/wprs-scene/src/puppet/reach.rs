@@ -24,6 +24,7 @@ pub(crate) struct Chain {
     pub limits: Vec<Option<[f32; 2]>>,
     pub points: Vec<[f32; 2]>,
     pub turns: Vec<f32>,
+    pub curled: bool,
 }
 
 pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
@@ -46,7 +47,8 @@ pub(super) fn chains(rig: &Rigged, m: &Fig) -> Vec<Chain> {
         let limits = ik.chain.iter().map(|b| range(ik.limits.get(b).copied())).collect();
         let n = nodes.len();
         let end = tip(rig, *nodes.last()? as usize);
-        Some(Chain { entry, nodes, end, goal, limits, points: vec![[0.0; 2]; n + 1], turns: vec![0.0; n] })
+        let (points, turns, curled) = (vec![[0.0; 2]; n + 1], vec![0.0; n], false);
+        Some(Chain { entry, nodes, end, goal, limits, points, turns, curled })
     };
     m.rig.ik.iter().enumerate().filter_map(resolve).take(crate::MAX_CHAINS).collect()
 }
@@ -113,7 +115,7 @@ impl Puppet {
                 rotate(c, i, wrap(want - angle(gap(c.points[i], c.points[i + 1]))));
             }
         };
-        let seeded = n > 2 && !super::arc::kept(&c.points, side);
+        let seeded = n > 2 && (c.curled || !super::arc::kept(&c.points, side));
         if seeded {
             curl(c);
         }
@@ -154,11 +156,13 @@ impl Puppet {
         let (mut points, mut turns) = ([[0.0; 2]; crate::MAX_CHAIN + 1], [0.0; crate::MAX_CHAIN]);
         points[..=n].copy_from_slice(&c.points);
         turns[..n].copy_from_slice(&c.turns);
-        if !rounds(c) && n > 2 && !seeded && super::arc::within(&points[..=n], target) {
+        let hit = rounds(c);
+        c.curled &= hit || !super::arc::within(&points[..=n], target);
+        if !hit && n > 2 && !seeded && super::arc::within(&points[..=n], target) {
             c.points.copy_from_slice(&points[..=n]);
             c.turns.copy_from_slice(&turns[..n]);
             curl(c);
-            rounds(c);
+            c.curled = rounds(c);
         }
     }
 }
