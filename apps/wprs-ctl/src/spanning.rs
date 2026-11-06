@@ -1,9 +1,9 @@
 use anyhow::{Context, Result, anyhow, ensure};
 use image::{Rgba, RgbaImage, imageops};
 use std::collections::BTreeMap;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use wprs_core::layout::Monitor;
-use wprs_core::spread::{bounds, checked, rects, simulated};
+use wprs_core::spread::{bounds, checked, rects, sized};
 use wprs_editor::Project;
 use wprs_editor::actions::visible;
 use wprs_render::{Renderer, SceneAssets};
@@ -18,9 +18,24 @@ async fn mine() -> Result<Vec<Monitor>> {
     Ok(placed.collect())
 }
 
-fn monitors(layout: &str, bezel: f64) -> Result<Vec<Monitor>> {
+const SPREAD: &str =
+    "Write the scene over two or three screens side by side, two stacked or yours, without a desktop";
+
+#[derive(clap::Args, Debug)]
+pub struct Span {
+    #[arg(long, value_parser = ["dual", "triple", "vertical", "mine"], requires = "out", help = SPREAD)]
+    pub layout: Option<String>,
+    #[arg(long, requires = "layout", help = "Picture file of --layout: .png, .jpg, .webp or .avif")]
+    pub out: Option<PathBuf>,
+    #[arg(long, requires = "layout", value_parser = bezel, help = "Frame of each simulated screen in millimetres, 0 to 100; the layout.bezel_mm setting without it")]
+    pub bezel: Option<f64>,
+    #[arg(long, requires = "layout", value_parser = wprs_core::spread::screen, help = "Size of each simulated screen: WIDTHxHEIGHT in millimetres, or a diagonal such as 24in or 34in@21:9 (16:9 without a ratio); 527x296 without it")]
+    pub screen: Option<[f64; 2]>,
+}
+
+fn monitors(layout: &str, bezel: f64, screen: [f64; 2]) -> Result<Vec<Monitor>> {
     if layout != "mine" {
-        return simulated(layout, bezel)
+        return sized(layout, bezel, screen)
             .ok_or_else(|| anyhow!("{layout} is not dual, triple, vertical or mine"));
     }
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
@@ -65,9 +80,14 @@ pub fn compose(canvas: &RgbaImage, monitors: &[Monitor], edge: u32) -> RgbaImage
     out
 }
 
-pub fn preview(dir: &Path, layout: &str, out: &Path, time: Option<f64>) -> Result<()> {
-    let bezel = wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p));
-    let monitors = monitors(layout, bezel.map_or(0.0, |c| c.layout.bezel_mm))?;
+pub fn preview(dir: &Path, span: &Span, time: Option<f64>) -> Result<()> {
+    let (Some(layout), Some(out)) = (&span.layout, &span.out) else {
+        return Err(anyhow!("--layout needs --out"));
+    };
+    let config = || wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p));
+    let bezel = span.bezel.unwrap_or_else(|| config().map_or(0.0, |c| c.layout.bezel_mm));
+    let screen = span.screen.unwrap_or(wprs_core::spread::SCREEN_MM);
+    let monitors = monitors(layout, bezel, screen)?;
     let canvas = poster(dir, EDGE * 2, time)?;
     let image = compose(&canvas, &monitors, EDGE);
     wprs_render::save(&image, out, 95).with_context(|| format!("cannot write {}", out.display()))?;
@@ -81,4 +101,12 @@ pub(crate) fn second(text: &str) -> Result<f64, String> {
     let fits = time.is_finite() && time <= most;
     fits.then_some(time)
         .ok_or_else(|| format!("the time is a finite number of seconds up to {most}, not {text}"))
+}
+
+pub(crate) fn bezel(text: &str) -> Result<f64, String> {
+    let most = wprs_core::Layout::MAX_BEZEL_MM;
+    let mm: f64 = text.parse().map_err(|_| format!("{text} is not a number of millimetres"))?;
+    (mm.is_finite() && (0.0..=most).contains(&mm))
+        .then_some(mm)
+        .ok_or_else(|| format!("the frame is 0 to {most} mm, not {text}"))
 }

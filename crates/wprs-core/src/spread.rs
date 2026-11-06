@@ -2,20 +2,53 @@ use crate::layout::{Layout, Monitor, span};
 
 pub const LAYOUTS: [&str; 3] = ["dual", "triple", "vertical"];
 
-const SCREEN_MM: [f64; 2] = [527.0, 296.0];
+pub const SCREEN_MM: [f64; 2] = [527.0, 296.0];
+pub const SCREEN_RANGE: [f64; 2] = [50.0, 3000.0];
 
 fn gap(bezel_mm: f64) -> f64 {
     2.0 * if bezel_mm.is_finite() { bezel_mm.clamp(0.0, Layout::MAX_BEZEL_MM) } else { 0.0 }
 }
 
 pub fn simulated(name: &str, bezel_mm: f64) -> Option<Vec<Monitor>> {
+    sized(name, bezel_mm, SCREEN_MM)
+}
+
+pub fn screen(text: &str) -> Result<[f64; 2], String> {
+    let bad =
+        || format!("{text:?} is not WIDTHxHEIGHT in millimetres or a diagonal such as 27in or 34in@21:9");
+    let number = |t: &str| t.trim().parse::<f64>().ok().filter(|v| v.is_finite() && *v > 0.0).ok_or_else(bad);
+    let mm = match text.trim().split_once("in") {
+        Some((inches, rest)) => {
+            let (a, b) = match rest.trim() {
+                "" => ("16", "9"),
+                r => r.strip_prefix('@').and_then(|r| r.split_once(':')).ok_or_else(bad)?,
+            };
+            let (a, b) = (number(a)?, number(b)?);
+            let unit = number(inches)? * 25.4 / a.hypot(b);
+            [a * unit, b * unit]
+        }
+        None => {
+            let (w, h) = text.split_once(['x', '×']).ok_or_else(bad)?;
+            [number(w)?, number(h)?]
+        }
+    };
+    let [lo, hi] = SCREEN_RANGE;
+    let fine = mm.iter().all(|v| (lo..=hi).contains(v));
+    fine.then_some(mm).ok_or_else(|| format!("simulated screens are {lo} to {hi} mm a side, not {text:?}"))
+}
+
+pub fn sized(name: &str, bezel_mm: f64, screen_mm: [f64; 2]) -> Option<Vec<Monitor>> {
+    let [lo, hi] = SCREEN_RANGE;
+    if !screen_mm.iter().all(|v| (lo..=hi).contains(v)) {
+        return None;
+    }
     let (count, vertical) = match name {
         "dual" => (2, false),
         "triple" => (3, false),
         "vertical" => (2, true),
         _ => return None,
     };
-    let ([w, h], gap) = (SCREEN_MM, gap(bezel_mm));
+    let ([w, h], gap) = (screen_mm, gap(bezel_mm));
     let place = |i: usize| {
         let step = i as f64;
         let mm = if vertical { [0.0, step * (h + gap), w, h] } else { [step * (w + gap), 0.0, w, h] };
