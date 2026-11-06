@@ -4150,6 +4150,7 @@ msgid "Line %1"
 msgstr "Línea %1"
 
 #: apps/wprs-app/qml/SceneEmitterList.qml
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
 msgid "Point %1"
 msgstr "Punto %1"
 
@@ -5673,7 +5674,7 @@ msgstr "Carátula de lo que suena (%1)"
 msgid "Previous cover (%1)"
 msgstr "Carátula anterior (%1)"
 
-#: apps/wprs-app/qml/SceneRefs.qml
+#: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneTemplateFollow.qml
 msgid "Bone %1"
 msgstr "Hueso %1"
 
@@ -7237,6 +7238,30 @@ msgid ""
 msgstr ""
 "De izquierda a derecha, la vida de una partícula; la fuerza aparece, actúa "
 "por completo y se desvanece donde la forma sube, se mantiene y baja"
+
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
+msgid "Follow a mesh of the scene"
+msgstr "Seguir una malla de la escena"
+
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
+msgid "Every copy follows %1 of %2"
+msgstr "Cada copia sigue %1 de %2"
+
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
+msgid ""
+"Copies of this template may follow a bone or point of a mesh of the scene"
+msgstr ""
+"Las copias de esta plantilla pueden seguir un hueso o punto de una malla "
+"de la escena"
+
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
+#: apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Follow"
+msgstr "Seguir"
+
+#: apps/wprs-app/qml/SceneTemplateFollow.qml
+msgid "Stop following"
+msgstr "Dejar de seguir"
 
 #: apps/wprs-app/qml/SceneTemplates.qml
 msgid "The scene"
@@ -10213,10 +10238,6 @@ msgstr "Muestreo"
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Function"
 msgstr "Función"
-
-#: apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Follow"
-msgstr "Seguir"
 
 #: apps/wprs-app/qml/facade/SceneTerms.qml
 msgid "Keep inheriting"

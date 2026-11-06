@@ -11,7 +11,7 @@ ColumnLayout {
     readonly property var page: owner.host.input.page
     readonly property var mesh: page.mesh
     readonly property string layerId: owner.host.layerId
-    readonly property var layers: (page.view.layers ?? []).map(l => l.id).filter(id => id !== layerId)
+    readonly property var layers: (page.view.layers ?? []).concat(page.view.outside ?? []).map(l => l.id).filter((id, i, all) => id !== layerId && all.indexOf(id) === i)
     readonly property var choices: [null].concat(owner.targets, layers.map(id => "layer:" + id))
 
     function label(t) {

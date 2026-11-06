@@ -155,7 +155,7 @@ ColumnLayout {
                 node: inspector.node
             }
 
-            SceneRgb {
+            SceneLayerLinks {
                 Layout.fillWidth: true
                 page: inspector.page
                 node: inspector.node
