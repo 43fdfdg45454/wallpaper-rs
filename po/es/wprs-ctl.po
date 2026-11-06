@@ -314,6 +314,10 @@ msgid "Author of a work it is based on"
 msgstr "Autor de una obra en la que se basa"
 
 #: apps/wprs-ctl/src/backdrop.rs
+msgid "%1 is not none or THRESHOLD,STRENGTH"
+msgstr "%1 no es none ni UMBRAL,FUERZA"
+
+#: apps/wprs-ctl/src/backdrop.rs
 msgid ""
 "Let the bright parts of the scene glow, or --off; a new glow starts from the "
 "defaults"
@@ -1245,6 +1249,10 @@ msgstr "Calidad de un archivo con pérdida, de 1 a 100"
 msgid "Size of the file; the size of the edited image when omitted"
 msgstr "Tamaño del archivo; el de la imagen editada si se omite"
 
+#: apps/wprs-ctl/src/effected.rs
+msgid "%1 is not KEY=VALUE"
+msgstr "%1 no es CLAVE=VALOR"
+
 #: apps/wprs-ctl/src/effecting.rs
 msgid ""
 "A parameter as KEY=VALUE, the value as JSON or text, such as radius=8 or "
@@ -2164,12 +2172,13 @@ msgstr ""
 msgid ""
 "Add or replace a keyframe of an animatable value, remove it with --remove or "
 "move it with --from; --base makes the keyframes relative, --in-handle and --"
-"out-handle bend the curve of a number and --straighten makes it straight "
+"out-handle bend the curve between keys and --straighten makes it straight "
 "again"
 msgstr ""
-"Añadir o reemplazar un fotograma clave de un valor animable, quitarlo con --"
-"remove o moverlo con --from; --base hace relativas las claves, --in-handle y "
-"--out-handle curvan la curva de un número y --straighten la vuelve recta"
+"Añadir o reemplazar una clave de un valor animable, quitarla con "
+"--remove o moverla con --from; --base hace relativas las claves, "
+"--in-handle y --out-handle curvan el tramo entre claves y --straighten "
+"lo vuelve recto"
 
 #: apps/wprs-ctl/src/keying.rs
 msgid "Seconds on the timeline, or on the scene clock without one"
@@ -2279,18 +2288,40 @@ msgstr "Quitar antes todos los eventos"
 #: apps/wprs-ctl/src/keying.rs
 msgid ""
 "Bézier handle into this keyframe: seconds before it, up to the previous "
-"keyframe, and how much less the value is there"
+"keyframe, and how much less the value is there; between keys of a position, "
+"color or other list it is a share of the way from the previous key (0) to "
+"this one (1), in value units only when both keys are single numbers"
 msgstr ""
-"Asa Bézier hacia esta clave: segundos antes de ella, hasta la clave "
-"anterior, y cuánto menor es ahí el valor"
+"Asa Bézier de entrada a esta clave: segundos antes, hasta la clave "
+"anterior, y cuánto menos vale allí; entre claves de una posición, un "
+"color u otra lista es una fracción del camino de la clave anterior (0) "
+"a esta (1), y en unidades del valor solo cuando las dos claves son "
+"números sueltos"
 
 #: apps/wprs-ctl/src/keying.rs
 msgid ""
 "Bézier handle out of this keyframe: seconds after it, up to the next "
-"keyframe, and how much more the value is there"
+"keyframe, and how much more the value is there; between keys of a position, "
+"color or other list it is a share of the way from this key (0) to the next "
+"(1), in value units only when both keys are single numbers"
 msgstr ""
-"Asa Bézier desde esta clave: segundos después de ella, hasta la clave "
-"siguiente, y cuánto mayor es ahí el valor"
+"Asa Bézier de salida de esta clave: segundos después, hasta la clave "
+"siguiente, y cuánto más vale allí; entre claves de una posición, un "
+"color u otra lista es una fracción del camino de esta clave (0) a la "
+"siguiente (1), y en unidades del valor solo cuando las dos claves son "
+"números sueltos"
+
+#: apps/wprs-ctl/src/keying.rs
+msgid "%1 is not T:NAME"
+msgstr "%1 no es T:NOMBRE"
+
+#: apps/wprs-ctl/src/keying.rs apps/wprs-ctl/src/spanning.rs
+msgid "%1 is not a number of seconds"
+msgstr "%1 no es un número de segundos"
+
+#: apps/wprs-ctl/src/keying.rs
+msgid "%1 is not DT,DV"
+msgstr "%1 no es DT,DV"
 
 #: apps/wprs-ctl/src/keys.rs
 msgid "Number of root keys that must sign a root"
@@ -4283,6 +4314,200 @@ msgstr "Píxeles por segundo; negativo gira al otro lado"
 msgid "Pixels beyond which it does not turn them"
 msgstr "Píxeles más allá de los cuales no las hace girar"
 
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unexpected argument '%1' found"
+msgstr "argumento inesperado «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the argument '%1' cannot be used multiple times"
+msgstr "el argumento «%1» no puede usarse varias veces"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the argument '%1' cannot be used with '%2'"
+msgstr "el argumento «%1» no puede usarse con «%2»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid ""
+"the argument '%1' cannot be used with one or more of the other specified "
+"arguments"
+msgstr ""
+"el argumento «%1» no puede usarse con uno o más de los otros argumentos "
+"dados"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the argument '%1' cannot be used with:"
+msgstr "el argumento «%1» no puede usarse con:"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the subcommand '%1' cannot be used with '%2'"
+msgstr "la orden «%1» no puede usarse con «%2»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid ""
+"the subcommand '%1' cannot be used with one or more of the other specified "
+"arguments"
+msgstr ""
+"la orden «%1» no puede usarse con uno o más de los otros argumentos "
+"dados"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the subcommand '%1' cannot be used with:"
+msgstr "la orden «%1» no puede usarse con:"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "equal sign is needed when assigning values to '%1'"
+msgstr "hace falta un signo igual para dar valores a «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "a value is required for '%1' but none was supplied"
+msgstr "«%1» necesita un valor y no se dio ninguno"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unexpected value '%1' for '%2' found; no more were expected"
+msgstr "valor inesperado «%1» para «%2»; no se esperaban más"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "invalid value '%1' for '%2'"
+msgstr "valor no válido «%1» para «%2»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "[possible values: %1]"
+msgstr "[valores posibles: %1]"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "[subcommands: %1]"
+msgstr "[órdenes: %1]"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unrecognized subcommand '%1'"
+msgstr "orden desconocida «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "the following required arguments were not provided:"
+msgstr "faltan estos argumentos obligatorios:"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "'%1' requires a subcommand but one was not provided"
+msgstr "«%1» necesita una orden y no se dio ninguna"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "%1 values required by '%2'; only %3 were provided"
+msgstr "«%2» necesita %1 valores; solo se dieron %3"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "%1 values required by '%2'; only %3 was provided"
+msgstr "«%2» necesita %1 valores; solo se dio %3"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "%1 values required for '%2' but %3 were provided"
+msgstr "«%2» necesita %1 valores, pero se dieron %3"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "%1 values required for '%2' but %3 was provided"
+msgstr "«%2» necesita %1 valores, pero se dio %3"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "For more information, try '%1'."
+msgstr "Para más información, prueba «%1»."
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "a similar argument exists: '%1'"
+msgstr "existe un argumento parecido: «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "a similar subcommand exists: '%1'"
+msgstr "existe una orden parecida: «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "a similar value exists: '%1'"
+msgstr "existe un valor parecido: «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "some similar arguments exist: %1"
+msgstr "existen argumentos parecidos: %1"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "some similar subcommands exist: %1"
+msgstr "existen órdenes parecidas: %1"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "some similar values exist: %1"
+msgstr "existen valores parecidos: %1"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "to pass '%1' as a value, use '%2'"
+msgstr "para pasar «%1» como valor, usa «%2»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "subcommand '%1' exists; to use it, remove the '%2' before it"
+msgstr "existe la orden «%1»; para usarla, quita el «%2» de delante"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "'%1' exists"
+msgstr "existe «%1»"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "one of the values isn't valid for an argument"
+msgstr "uno de los valores no vale para un argumento"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unexpected argument found"
+msgstr "argumento inesperado"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unrecognized subcommand"
+msgstr "orden desconocida"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "equal is needed when assigning values to one of the arguments"
+msgstr "hace falta un signo igual para dar valores a uno de los argumentos"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "invalid value for one of the arguments"
+msgstr "valor no válido para uno de los argumentos"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "unexpected value for an argument found"
+msgstr "valor inesperado para un argumento"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "more values required for an argument"
+msgstr "un argumento necesita más valores"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "too many or too few values for an argument"
+msgstr "demasiados o demasiado pocos valores para un argumento"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid ""
+"an argument cannot be used with one or more of the other specified arguments"
+msgstr ""
+"un argumento no puede usarse con uno o más de los otros argumentos dados"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "one or more required arguments were not provided"
+msgstr "faltan uno o más argumentos obligatorios"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "a subcommand is required but one was not provided"
+msgstr "hace falta una orden y no se dio ninguna"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "invalid UTF-8 was detected in one or more arguments"
+msgstr "uno o más argumentos tienen UTF-8 no válido"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "error"
+msgstr "error"
+
+#: apps/wprs-ctl/src/refusing.rs
+msgid "tip"
+msgstr "consejo"
+
+#: apps/wprs-ctl/src/refusing.rs apps/wprs-ctl/src/told.rs
+msgid "Usage"
+msgstr "Uso"
+
 #: apps/wprs-ctl/src/remote.rs
 msgid "List the repositories added to this computer"
 msgstr "Listar los repositorios añadidos a este equipo"
@@ -4733,6 +4958,14 @@ msgstr ""
 "pesos de hueso como JSON"
 
 #: apps/wprs-ctl/src/seeding.rs
+msgid "%1 is not none or FADE_IN,FULL,FADE_OUT,GONE"
+msgstr "%1 no es none ni APARECE,PLENA,SE_DESVANECE,IDA"
+
+#: apps/wprs-ctl/src/seeding.rs
+msgid "%1 is not ON_MIN,ON_MAX:OFF_MIN,OFF_MAX"
+msgstr "%1 no es ACTIVO_MIN,ACTIVO_MAX:PAUSA_MIN,PAUSA_MAX"
+
+#: apps/wprs-ctl/src/seeding.rs
 msgid ""
 "Make an emitter burst, pause, start late, stop, follow the pointer or wait "
 "for sound"
@@ -4843,6 +5076,10 @@ msgid ""
 msgstr ""
 "Una parada del degradado del que eligen las partículas nuevas, TIME de 0 a "
 "1; repetirla"
+
+#: apps/wprs-ctl/src/seeding.rs
+msgid "%1 is not three numbers H,S,V"
+msgstr "%1 no son tres números H,S,V"
 
 #: apps/wprs-ctl/src/server.rs
 msgid "Add the server this computer syncs with, by its https:// address"
@@ -5109,6 +5346,10 @@ msgid "Also delete the local copies of the synced records"
 msgstr "Borrar también las copias locales de los registros sincronizados"
 
 #: apps/wprs-ctl/src/shaping.rs
+msgid "%1 is not ROWS,COLUMNS"
+msgstr "%1 no es FILAS,COLUMNAS"
+
+#: apps/wprs-ctl/src/shaping.rs
 msgid ""
 "Copy a picture, video, sound, font or .cube table into the folder as an asset"
 msgstr ""
@@ -5247,10 +5488,38 @@ msgstr ""
 msgid "Assets package file"
 msgstr "Archivo del paquete de recursos"
 
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not two numbers A,B"
+msgstr "%1 no son dos números A,B"
+
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not TIME:SCALE"
+msgstr "%1 no es TIEMPO:ESCALA"
+
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not TIME:COLOR"
+msgstr "%1 no es TIEMPO:COLOR"
+
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not two colors COLOR,COLOR"
+msgstr "%1 no son dos colores COLOR,COLOR"
+
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not a color such as #ffcc88"
+msgstr "%1 no es un color como #ffcc88"
+
+#: apps/wprs-ctl/src/sowed.rs
+msgid "%1 is not X,Y:X,Y"
+msgstr "%1 no es X,Y:X,Y"
+
 #: apps/wprs-ctl/src/sowing.rs
 msgid "Write the plain value over keyframes or another source that drives it"
 msgstr ""
 "Escribir el valor simple encima de las claves u otra fuente que lo mueve"
+
+#: apps/wprs-ctl/src/sowing.rs
+msgid "%1 is not MIN,MAX[,CURVE], each end a number, prop:ID or _"
+msgstr "%1 no es MIN,MAX[,CURVA], cada extremo un número, prop:ID o _"
 
 #: apps/wprs-ctl/src/sowing.rs
 msgid "Degrees of the direction"
@@ -5435,6 +5704,22 @@ msgstr ""
 #: apps/wprs-ctl/src/sowing.rs
 msgid "Which particles are drawn on top"
 msgstr "Qué partículas se dibujan encima"
+
+#: apps/wprs-ctl/src/spanning.rs
+msgid "the time is a finite number of seconds up to %1, not %2"
+msgstr "el tiempo es un número finito de segundos hasta %1, no %2"
+
+#: apps/wprs-ctl/src/staging.rs
+msgid "%1 is not K=X,Y"
+msgstr "%1 no es K=X,Y"
+
+#: apps/wprs-ctl/src/staging.rs
+msgid "%1 is not a control point"
+msgstr "%1 no es un punto de control"
+
+#: apps/wprs-ctl/src/staging.rs
+msgid "%1 is not a blend mode"
+msgstr "%1 no es un modo de fusión"
 
 #: apps/wprs-ctl/src/staging.rs
 msgid ""
@@ -6162,16 +6447,20 @@ msgid "Capture the whole canvas"
 msgstr "Capturar todo el lienzo"
 
 #: apps/wprs-ctl/src/told.rs
+msgid "default"
+msgstr "predeterminado"
+
+#: apps/wprs-ctl/src/told.rs
+msgid "possible values"
+msgstr "valores posibles"
+
+#: apps/wprs-ctl/src/told.rs
 msgid "Options"
 msgstr "Opciones"
 
 #: apps/wprs-ctl/src/told.rs
 msgid "Arguments"
 msgstr "Argumentos"
-
-#: apps/wprs-ctl/src/told.rs
-msgid "Usage"
-msgstr "Uso"
 
 #: apps/wprs-ctl/src/told.rs
 msgid "Commands"
@@ -6184,6 +6473,14 @@ msgstr "Imprimir la ayuda"
 #: apps/wprs-ctl/src/told.rs
 msgid "Print version"
 msgstr "Imprimir la versión"
+
+#: apps/wprs-ctl/src/told.rs
+msgid "Print this message or the help of the given subcommand(s)"
+msgstr "Imprimir este mensaje o la ayuda de las órdenes dadas"
+
+#: apps/wprs-ctl/src/told.rs
+msgid "The command whose help to print"
+msgstr "Orden cuya ayuda se imprime"
 
 #: apps/wprs-ctl/src/triggering.rs
 msgid ""

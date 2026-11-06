@@ -1,40 +1,49 @@
 use crate::forcing::{Child, Force, Kin};
 use crate::sowing::Sowing;
+use crate::told::{fill, told};
 use serde_json::{Map, Value, json};
 use wprs_editor::actions::{ParticleEdit as P, SowEdit as S, TendEdit};
 
 pub(crate) fn pair(text: &str) -> Result<[f64; 2], String> {
     let parsed =
         text.split_once(',').and_then(|(a, b)| Some([a.trim().parse().ok()?, b.trim().parse().ok()?]));
-    parsed.ok_or_else(|| format!("{text} is not two numbers A,B"))
+    parsed.ok_or_else(|| fill(told("%1 is not two numbers A,B"), &[&text]))
 }
 
 pub(crate) fn scale_key(text: &str) -> Result<String, String> {
     let fits = text
         .split_once(':')
         .is_some_and(|(t, v)| t.trim().parse::<f64>().is_ok() && v.trim().parse::<f64>().is_ok());
-    if fits || text == "none" { Ok(text.to_owned()) } else { Err(format!("{text} is not TIME:SCALE")) }
+    if fits || text == "none" {
+        Ok(text.to_owned())
+    } else {
+        Err(fill(told("%1 is not TIME:SCALE"), &[&text]))
+    }
 }
 
 pub(crate) fn color_stop(text: &str) -> Result<String, String> {
     let fits =
         text.split_once(':').is_some_and(|(t, v)| t.trim().parse::<f64>().is_ok() && !v.trim().is_empty());
-    if fits || text == "none" { Ok(text.to_owned()) } else { Err(format!("{text} is not TIME:COLOR")) }
+    if fits || text == "none" {
+        Ok(text.to_owned())
+    } else {
+        Err(fill(told("%1 is not TIME:COLOR"), &[&text]))
+    }
 }
 
 pub(crate) fn colors(text: &str) -> Result<String, String> {
     let ends: Vec<&str> = text.split(',').map(str::trim).collect();
     if ends.len() != 2 {
-        return Err(format!("{text} is not two colors COLOR,COLOR"));
+        return Err(fill(told("%1 is not two colors COLOR,COLOR"), &[&text]));
     }
     match ends.iter().find(|c| wprs_scene::Color::parse(c).is_none()) {
-        Some(bad) => Err(format!("{bad} is not a color such as #ffcc88")),
+        Some(bad) => Err(fill(told("%1 is not a color such as #ffcc88"), &[&bad])),
         None => Ok(text.to_owned()),
     }
 }
 
 pub(crate) fn sweep(text: &str) -> Result<[[f64; 2]; 2], String> {
-    let (a, b) = text.split_once(':').ok_or_else(|| format!("{text} is not X,Y:X,Y"))?;
+    let (a, b) = text.split_once(':').ok_or_else(|| fill(told("%1 is not X,Y:X,Y"), &[&text]))?;
     Ok([pair(a)?, pair(b)?])
 }
 

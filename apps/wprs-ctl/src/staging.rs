@@ -1,5 +1,6 @@
 use crate::sowed::pair;
 use crate::steps::value;
+use crate::told::{fill, told};
 use clap::Subcommand;
 use serde_json::{Map, Value, json};
 use wprs_editor::actions::LayerEdit as L;
@@ -7,13 +8,17 @@ use wprs_editor::actions::LayerEdit as L;
 const XY: &str = "X,Y";
 
 fn indexed(text: &str) -> Result<(usize, [f64; 2]), String> {
-    let (k, at) = text.split_once('=').ok_or_else(|| format!("{text} is not K=X,Y"))?;
-    let k = k.trim().trim_start_matches('p').parse().map_err(|_| format!("{k} is not a control point"))?;
+    let (k, at) = text.split_once('=').ok_or_else(|| fill(told("%1 is not K=X,Y"), &[&text]))?;
+    let k = k
+        .trim()
+        .trim_start_matches('p')
+        .parse()
+        .map_err(|_| fill(told("%1 is not a control point"), &[&k]))?;
     Ok((k, pair(at)?))
 }
 
 fn mode(text: &str) -> Result<wprs_scene::Blend, String> {
-    serde_json::from_value(json!(text)).map_err(|_| format!("{text} is not a blend mode"))
+    serde_json::from_value(json!(text)).map_err(|_| fill(told("%1 is not a blend mode"), &[&text]))
 }
 
 #[derive(Subcommand, Debug)]

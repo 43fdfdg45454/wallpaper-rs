@@ -58,6 +58,7 @@ pub mod props;
 pub mod propsets;
 pub mod providers;
 mod pulling;
+pub mod refusing;
 pub mod remote;
 pub mod repo;
 mod rgb;

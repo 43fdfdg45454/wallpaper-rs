@@ -1,4 +1,5 @@
 use crate::sowed::sweep;
+use crate::told::{fill, told};
 use clap::{ArgAction, Args, Subcommand};
 use serde_json::{Value, json};
 
@@ -9,7 +10,7 @@ pub(crate) const REPLACE: &str = "Write the plain value over keyframes or anothe
 
 pub(crate) fn range(text: &str) -> Result<Value, String> {
     let parts: Vec<&str> = text.split(',').map(str::trim).collect();
-    let bad = || format!("{text} is not MIN,MAX[,CURVE], each end a number, prop:ID or _");
+    let bad = || fill(told("%1 is not MIN,MAX[,CURVE], each end a number, prop:ID or _"), &[&text]);
     let end = |p: &str| match p {
         "_" => Some(Value::Null),
         p => p

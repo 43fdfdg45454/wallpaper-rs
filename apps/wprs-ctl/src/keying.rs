@@ -1,5 +1,6 @@
 use crate::author::{DIR, POINTER};
 use crate::steps::value;
+use crate::told::{fill, told};
 use clap::{ArgAction, Subcommand};
 use std::path::PathBuf;
 use wprs_editor::actions::{Action, KeyframeEdit, TimelineEdit, TimelineEvent};
@@ -7,7 +8,7 @@ use wprs_editor::actions::{Action, KeyframeEdit, TimelineEdit, TimelineEvent};
 #[derive(Subcommand, Debug)]
 pub enum Keying {
     #[command(
-        about = "Add or replace a keyframe of an animatable value, remove it with --remove or move it with --from; --base makes the keyframes relative, --in-handle and --out-handle bend the curve of a number and --straighten makes it straight again"
+        about = "Add or replace a keyframe of an animatable value, remove it with --remove or move it with --from; --base makes the keyframes relative, --in-handle and --out-handle bend the curve between keys and --straighten makes it straight again"
     )]
     Keyframe {
         #[arg(help = DIR)]
@@ -102,19 +103,19 @@ pub enum Keying {
     },
 }
 
-const HANDLE_IN: &str = "Bézier handle into this keyframe: seconds before it, up to the previous keyframe, and how much less the value is there";
-const HANDLE_OUT: &str = "Bézier handle out of this keyframe: seconds after it, up to the next keyframe, and how much more the value is there";
+const HANDLE_IN: &str = "Bézier handle into this keyframe: seconds before it, up to the previous keyframe, and how much less the value is there; between keys of a position, color or other list it is a share of the way from the previous key (0) to this one (1), in value units only when both keys are single numbers";
+const HANDLE_OUT: &str = "Bézier handle out of this keyframe: seconds after it, up to the next keyframe, and how much more the value is there; between keys of a position, color or other list it is a share of the way from this key (0) to the next (1), in value units only when both keys are single numbers";
 
 fn event(text: &str) -> Result<TimelineEvent, String> {
-    let (t, name) = text.split_once(':').ok_or_else(|| format!("{text} is not T:NAME"))?;
-    let t = t.trim().parse().map_err(|_| format!("{t} is not a number of seconds"))?;
+    let (t, name) = text.split_once(':').ok_or_else(|| fill(told("%1 is not T:NAME"), &[&text]))?;
+    let t = t.trim().parse().map_err(|_| fill(told("%1 is not a number of seconds"), &[&t]))?;
     Ok(TimelineEvent { t, name: name.trim().into() })
 }
 
 fn pair(text: &str) -> Result<[f64; 2], String> {
     let parsed =
         text.split_once(',').and_then(|(a, b)| Some([a.trim().parse().ok()?, b.trim().parse().ok()?]));
-    parsed.ok_or_else(|| format!("{text} is not DT,DV"))
+    parsed.ok_or_else(|| fill(told("%1 is not DT,DV"), &[&text]))
 }
 
 pub(crate) fn action(command: Keying) -> (PathBuf, Action) {

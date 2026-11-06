@@ -948,11 +948,12 @@ wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
 contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
 
-La ayuda de `wprs-ctl` (`--help` de cada orden y cada argumento, los títulos *Uso*, *Argumentos*,
-*Opciones* y *Órdenes*) sale en el idioma del escritorio con el catálogo `po/<idioma>/wprs-ctl.po`;
-los nombres de las órdenes, de las opciones y de sus valores, y los avisos que escribe la propia
-biblioteca de argumentos al rechazar una orden, quedan en inglés para que los scripts sigan
-funcionando igual en cualquier idioma.
+La ayuda de `wprs-ctl` (`--help` y la orden `help` de cada grupo, cada argumento con su valor
+predeterminado y sus valores posibles, los títulos *Uso*, *Argumentos*, *Opciones* y *Órdenes*) y
+los avisos con que rechaza una orden mal escrita (argumento inesperado, valor no válido, argumento
+obligatorio que falta, consejos) salen en el idioma del escritorio con el catálogo
+`po/<idioma>/wprs-ctl.po`; los nombres de las órdenes, de las opciones y de sus valores quedan en
+inglés para que los scripts sigan funcionando igual en cualquier idioma.
 
 La pestaña *Dispositivos* enlaza el teléfono con tu [servidor propio](#servidor-propio) con el
 mismo cliente en Rust que el escritorio, para compartir la biblioteca, las listas y los ajustes con

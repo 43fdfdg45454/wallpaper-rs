@@ -1,3 +1,4 @@
+use crate::told::{fill, told};
 use clap::{ArgAction, Subcommand};
 use serde_json::json;
 use wprs_editor::actions::CanvasEdit as C;
@@ -5,7 +6,7 @@ use wprs_editor::actions::CanvasEdit as C;
 fn glare(text: &str) -> Result<String, String> {
     match text == "none" || crate::sowed::pair(text).is_ok() {
         true => Ok(text.to_owned()),
-        false => Err(format!("{text} is not none or THRESHOLD,STRENGTH")),
+        false => Err(fill(told("%1 is not none or THRESHOLD,STRENGTH"), &[&text])),
     }
 }
 

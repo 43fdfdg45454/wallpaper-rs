@@ -1,4 +1,5 @@
 use crate::author::{DIR, ID};
+use crate::told::{fill, told};
 use clap::Subcommand;
 use std::fs;
 use std::path::PathBuf;
@@ -8,7 +9,7 @@ use wprs_editor::actions::PropertyEdit;
 fn cells(text: &str) -> Result<[u32; 2], String> {
     let parsed =
         text.split_once(',').and_then(|(a, b)| Some([a.trim().parse().ok()?, b.trim().parse().ok()?]));
-    parsed.ok_or_else(|| format!("{text} is not ROWS,COLUMNS"))
+    parsed.ok_or_else(|| fill(told("%1 is not ROWS,COLUMNS"), &[&text]))
 }
 
 #[derive(Subcommand, Debug)]

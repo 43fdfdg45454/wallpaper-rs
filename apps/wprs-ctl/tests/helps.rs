@@ -56,3 +56,44 @@ fn the_help_speaks_the_language_of_the_desktop() {
         "{spanish}"
     );
 }
+
+#[test]
+fn the_refusals_and_the_help_command_speak_the_language_of_the_desktop() {
+    let run = |args: &[&str]| {
+        let mut run = std::process::Command::new(env!("CARGO_BIN_EXE_wprs-ctl"));
+        run.args(args).env("LANG", "es_ES.UTF-8");
+        let out = run.env_remove("LANGUAGE").env_remove("LC_ALL").env_remove("LC_MESSAGES").output().unwrap();
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout).into_owned() + &String::from_utf8_lossy(&out.stderr),
+        )
+    };
+    let (code, said) = run(&["scene", "layer", "d", "l", "transform", "--rotaton", "4"]);
+    assert_eq!(code, Some(2), "{said}");
+    assert!(
+        said.contains("argumento inesperado «--rotaton»") && said.contains("existe un argumento parecido"),
+        "{said}"
+    );
+    assert!(said.contains("Para más información") && !said.contains("For more information"), "{said}");
+    let (code, said) = run(&["scene", "bench", "x", "--tier", "t9"]);
+    assert_eq!(code, Some(2), "{said}");
+    assert!(
+        said.contains("valor no válido «t9»") && said.contains("[valores posibles: t0, t1, t2, t3]"),
+        "{said}"
+    );
+    let (code, said) = run(&["scene", "layer", "d", "l", "blend", "nope"]);
+    assert_eq!(code, Some(2), "{said}");
+    assert!(said.contains("nope no es un modo de fusión"), "{said}");
+    let (code, said) = run(&["scene", "bench", "--help"]);
+    assert_eq!(code, Some(0), "{said}");
+    assert!(said.contains("[predeterminado: 300]") && !said.contains("[default:"), "{said}");
+    let (code, said) = run(&["repo", "help", "rotate-root"]);
+    assert_eq!(code, Some(0), "{said}");
+    assert!(said.contains("Quitar todas las réplicas de la raíz"), "{said}");
+    let (code, said) = run(&["repo", "--help"]);
+    assert_eq!(code, Some(0), "{said}");
+    assert!(
+        said.contains("Imprimir este mensaje o la ayuda") && !said.contains("Print this message"),
+        "{said}"
+    );
+}
