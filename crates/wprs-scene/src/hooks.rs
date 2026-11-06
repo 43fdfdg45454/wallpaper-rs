@@ -99,8 +99,10 @@ impl Check<'_> {
                 }
             }
             self.count(&format!("{p}/layers"), flat, MAX_LAYERS);
+            self.kept = Some(layer);
             self.layer(&p, layer, 1);
         }
+        self.kept = None;
         self.count("/pools", scene.pools.len(), MAX_POOLS);
         for (id, pool) in &scene.pools {
             let p = format!("/pools/{id}");

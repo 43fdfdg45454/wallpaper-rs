@@ -2357,7 +2357,9 @@ interfaz completa; lo esencial:
   las de dentro de cada copia suman como mucho 512 (una plantilla tiene como mucho 256), `destroy()`
   las quita y `scene.order(id, índice)` las reordena: así se hacen los visualizadores. Una plantilla
   puede ser también una capa `mesh` (o un grupo con ellas): cada copia recibe su propio títere, con
-  huesos, clips, física e IK como las mallas de la escena (64 títeres como mucho en total), y el botón
+  huesos, clips, física, IK y adjuntos como las mallas de la escena (64 títeres como mucho en total);
+  un `attach`, un `parent` o un objetivo `layer:<id>` de dentro de la plantilla que nombra otra capa
+  de ella apunta en cada copia a la capa de esa misma copia, y el botón
   *Hacer plantilla* del editor copia la capa elegida a `templates` (`wprs-ctl scene set DIR
   /scene/templates/<id> '<capa>'` hace lo mismo).
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en

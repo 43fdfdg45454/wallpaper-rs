@@ -4,7 +4,18 @@ use crate::validate::{Check, Issue, nested};
 use crate::{Kind, Layer, MAX_KEYS};
 use std::collections::HashMap;
 
-impl Check<'_> {
+impl<'a> Check<'a> {
+    pub(crate) fn find(&self, id: &str) -> Option<&'a Layer> {
+        let mut stack: Vec<&'a Layer> = self.kept.into_iter().collect();
+        while let Some(l) = stack.pop() {
+            if l.id == id {
+                return Some(l);
+            }
+            stack.extend(l.children());
+        }
+        self.scene.layer(id)
+    }
+
     pub(crate) fn figures(&mut self) {
         let scene = self.scene;
         let figures = scene.layers().filter(|l| l.figure().is_some()).count();
@@ -29,6 +40,19 @@ impl Check<'_> {
                 self.attach(path, l, a);
             }
         }
+        for (key, t) in &scene.templates {
+            let mut inner = vec![(format!("/templates/{key}"), t.id.as_str())];
+            nested(&format!("/templates/{key}/layers"), t.children(), &mut inner);
+            self.kept = Some(t);
+            for (path, id) in inner {
+                if let Some(l) = self.find(id)
+                    && let Some(a) = &l.attach
+                {
+                    self.attach(&path, l, a);
+                }
+            }
+        }
+        self.kept = None;
         if let Some(wind) = &scene.canvas.wind {
             self.uses(true, "bone_physics");
             self.value("/canvas/wind", wind);
@@ -70,7 +94,7 @@ impl Check<'_> {
     fn attach(&mut self, path: &str, l: &Layer, a: &Attach) {
         self.uses(true, "attach");
         let scene = self.scene;
-        let target = scene.layer(&a.layer).filter(|t| t.id != l.id && t.figure().is_some());
+        let target = self.find(&a.layer).filter(|t| t.id != l.id && t.figure().is_some());
         self.known(&format!("{path}/attach/layer"), "mesh or model layer", &a.layer, target.is_some());
         if l.parent.is_some() || a.bone.is_some() == a.point.is_some() {
             self.issues.push(Issue::Type(format!("{path}/attach")));
@@ -92,7 +116,7 @@ impl Check<'_> {
             self.issues.push(Issue::Type(format!("{path}/attach/inherit")));
         }
         if let Some(t) = target
-            && std::iter::successors(Some(t), |at| at.attach.as_ref().and_then(|x| scene.layer(&x.layer)))
+            && std::iter::successors(Some(t), |at| at.attach.as_ref().and_then(|x| self.find(&x.layer)))
                 .skip(1)
                 .take(crate::MAX_DEPTH + 1)
                 .any(|at| at.id == l.id)

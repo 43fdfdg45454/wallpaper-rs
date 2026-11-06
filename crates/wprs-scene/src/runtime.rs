@@ -35,7 +35,7 @@ pub struct Runtime {
     glided: f64,
     tilt: [f32; 2],
     pub(crate) still: bool,
-    homes: HashMap<String, String>,
+    pub(crate) homes: HashMap<String, String>,
     sheets: BTreeMap<String, Vec<f32>>,
     pub(crate) script: ScriptOutputs,
     pub(crate) spawned: Vec<(String, Box<Layer>)>,
@@ -100,7 +100,7 @@ impl Runtime {
         let wake = Cell::new(Wake::Frame);
         let fresh = || std::time::UNIX_EPOCH.elapsed().map_or(0, |d| d.as_nanos() as u64 ^ d.as_secs() << 32);
         let (seed, size) = (scene.clock.seed.unwrap_or_else(fresh), scene.canvas.size);
-        let homes = crate::kin::homes(&scene);
+        let homes = crate::kin::homes(scene.layers.iter());
         let flocks = flocks(&scene);
         let systems: Vec<System> = scene.particles.values().cloned().collect();
         let work = flocks.iter().flat_map(|f| &f.parts).map(|p| u64::from(systems[p.system].capacity)).sum();

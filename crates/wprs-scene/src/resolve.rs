@@ -43,6 +43,7 @@ pub(crate) struct Context<'a> {
     pub(crate) flocks: &'a [crate::particles::Flock],
     pub(crate) tapes: &'a [crate::Tape],
     pub(crate) puppets: &'a [crate::puppet::Puppet],
+    pub(crate) spawned: &'a [(String, Box<crate::Layer>)],
 }
 
 pub(crate) type Motion = ([f32; 2], f64, [f32; 2]);

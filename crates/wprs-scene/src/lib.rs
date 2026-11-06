@@ -15,6 +15,7 @@ mod chain;
 mod choice;
 mod clip;
 mod content;
+mod copies;
 mod cost;
 mod counter;
 mod cover;

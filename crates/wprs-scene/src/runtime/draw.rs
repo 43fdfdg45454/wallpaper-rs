@@ -70,6 +70,7 @@ impl Runtime {
             flocks: &self.flocks,
             tapes: &self.tapes,
             puppets: &self.puppets,
+            spawned: &self.spawned,
         }
     }
 

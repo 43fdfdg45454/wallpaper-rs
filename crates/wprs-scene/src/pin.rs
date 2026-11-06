@@ -12,7 +12,7 @@ pub(crate) fn parts(f: Affine) -> ([f32; 2], f32, [f32; 2]) {
 
 impl Context<'_> {
     pub(crate) fn pinned(&self, a: &Attach, depth: usize) -> Option<(Affine, Option<Lean>, bool)> {
-        let target = self.scene.layer(&a.layer).filter(|_| depth < 2 * MAX_DEPTH)?;
+        let target = self.find(&a.layer).filter(|_| depth < 2 * MAX_DEPTH)?;
         let place = self.placed(target, None, depth + 1);
         let found = self.puppets.iter().find(|p| p.layer == target.id);
         let name = a.bone.as_deref().or(a.point.as_deref())?;

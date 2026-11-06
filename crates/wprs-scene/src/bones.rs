@@ -159,7 +159,7 @@ impl Check<'_> {
             }
             Some(("bone", _)) => {}
             Some(("layer", id)) => {
-                let usable = id != layer && self.scene.layer(id).is_some_and(crate::Layer::drawn);
+                let usable = id != layer && self.find(id).is_some_and(crate::Layer::drawn);
                 self.known(path, "layer", id, usable);
             }
             _ => self.known(path, "target", name, false),
