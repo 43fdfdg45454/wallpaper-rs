@@ -133,3 +133,25 @@ fn the_card_draws_each_ktx2_class_it_reads_like_the_processor_decodes_it() {
         assert!(off < 3.0, "{target:?}: {off}");
     }
 }
+
+#[test]
+fn the_card_keeps_the_alpha_of_the_crops_it_draws() {
+    let Some(r) = renderer() else { return };
+    let source = image::RgbaImage::from_fn(64, 32, |x, _| image::Rgba([220, 120, 40, (x * 4) as u8]));
+    let options = Options { codec: Codec::Uastc, quality: 90, srgb: true, mips: false, repeat: false };
+    let bytes = encode(&source, &options).unwrap();
+    for target in r.ktx2_targets().into_iter().filter(|t| t.compressed()) {
+        let drawn = r.look_ktx2(&bytes, target).unwrap();
+        let decoded = wprs_ktx2::look(&bytes, target).unwrap();
+        let alpha = |i: &image::RgbaImage, x: u32| i.get_pixel(x, 16).0[3];
+        for x in [0, 20, 40, 63] {
+            assert!(
+                alpha(&drawn, x).abs_diff(alpha(&decoded, x)) <= 3,
+                "{target:?} at {x}: {}",
+                alpha(&drawn, x)
+            );
+        }
+        let color = drawn.get_pixel(40, 16).0;
+        assert!(color[0].abs_diff(220) <= 6 && color[2].abs_diff(40) <= 6, "{target:?}: {color:?}");
+    }
+}
