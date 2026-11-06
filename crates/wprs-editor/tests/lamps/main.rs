@@ -10,6 +10,7 @@ mod air;
 mod cast;
 mod edits;
 mod gizmos;
+mod linear;
 mod maps;
 mod shared;
 mod surfaces;

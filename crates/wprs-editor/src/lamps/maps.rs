@@ -39,7 +39,7 @@ fn made(dir: &Path, doc: &Value, m: &NormalsMake) -> Result<(String, RgbaImage)>
         )
     );
     let id = source(doc, m)?;
-    let picture = crate::pictures::open(dir.join(path_of(doc, &id).unwrap_or_default()))?.into_rgba8();
+    let picture = crate::pictures::asset(dir, doc, &id)?.into_rgba8();
     Ok((id, wprs_depth::normals(&picture, m.strength, m.blur)))
 }
 
@@ -125,8 +125,7 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &MapStroke) -> Result<Vec<Op>> {
     );
     let field = s.map.field();
     let named = layer["lighting"][field].as_str().filter(|id| path_of(doc, id).is_some());
-    let old =
-        named.and_then(|id| crate::pictures::open(dir.join(path_of(doc, id)?)).ok()).map(|i| i.into_rgba8());
+    let old = named.and_then(|id| crate::pictures::asset(dir, doc, id).ok()).map(|i| i.into_rgba8());
     let mut picture = old.unwrap_or_else(|| blank(dir, doc, layer, field == "roughness_map"));
     let pointer = format!("/scene/layers/{}", s.layer);
     let brush = Stroke {
@@ -156,7 +155,7 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &MapStroke) -> Result<Vec<Op>> {
 pub fn heat(dir: &Path, doc: &Value, layer: &str, field: &str) -> Value {
     let Ok((_, l)) = crate::actions::layer(doc, layer) else { return Value::Null };
     let Some(id) = l["lighting"][field].as_str() else { return json!({ "map": null }) };
-    let Some(image) = path_of(doc, id).and_then(|p| crate::pictures::open(dir.join(p)).ok()) else {
+    let Some(image) = crate::pictures::asset(dir, doc, id).ok() else {
         return Value::Null;
     };
     let mut shown = small(&image.into_rgba8());

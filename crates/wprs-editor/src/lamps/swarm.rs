@@ -69,8 +69,7 @@ fn rendered<'a>(doc: &'a Value, id: &str, layer: Option<&str>) -> &'a Value {
 }
 
 fn pixels(dir: &Path, doc: &Value, id: Option<&str>) -> Option<RgbaImage> {
-    let path = doc.pointer(&format!("/scene/assets/{}/path", escape(id?))).and_then(Value::as_str)?;
-    let image = crate::pictures::open(dir.join(path)).ok()?;
+    let image = crate::pictures::asset(dir, doc, id?).ok()?;
     Some(image::imageops::resize(&image.into_rgba8(), SIDE, SIDE, image::imageops::FilterType::Triangle))
 }
 

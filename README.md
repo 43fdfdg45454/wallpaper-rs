@@ -2130,8 +2130,10 @@ cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, az
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
 hace lo mismo desde la terminal). Si la máscara, el mapa o la imagen de partida es KTX2, la imagen
-nueva también lo es, con el mismo códec y la misma calidad, en lugar de un PNG; cada trazo vuelve a
-comprimirla, así que conviene pintar sobre PNG y convertir al final.
+nueva también lo es, con el mismo códec y la misma calidad, en lugar de un PNG. Mientras la app
+sigue abierta, cada trazo parte de una copia exacta del trazo anterior, así que la pérdida de la
+compresión no se acumula trazo a trazo; desde la terminal cada llamada parte del archivo, así que ahí
+conviene pintar sobre PNG y convertir al final.
 
 También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
 capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos, igual
