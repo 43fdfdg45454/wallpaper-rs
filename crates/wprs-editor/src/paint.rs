@@ -36,7 +36,10 @@ pub(crate) fn paint(dir: &Path, doc: &Value, s: &Stroke) -> Result<Vec<Op>> {
     let mut picture =
         old.unwrap_or_else(|| RgbaImage::from_pixel(SIDE, SIDE, Rgba(blank(dir, doc, s.pointer))));
     stroke(&mut picture, s);
-    let saved = crate::pictures::store(dir, ("masks", &id), &picture, path.map(|p| dir.join(p)).as_deref())?;
+    let layer = s.pointer.rsplit_once("/effects/").and_then(|(at, _)| doc.pointer(at));
+    let image = layer.and_then(|l| l["image"].as_str()).filter(|i| doc.pointer(&asset(i)).is_some());
+    let like = path.or_else(|| doc.pointer(&format!("{}/path", asset(image?)))?.as_str());
+    let saved = crate::pictures::store(dir, ("masks", &id), &picture, like.map(|p| dir.join(p)).as_deref())?;
     let mut ops = set(doc, &asset(&id), json!({ "path": saved, "linear": true }));
     ops.extend(set(doc, s.pointer, json!(id)));
     Ok(ops)
