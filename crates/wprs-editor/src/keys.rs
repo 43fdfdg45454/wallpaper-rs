@@ -164,5 +164,16 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
         crate::ops::apply(&mut staged, &ops[ops.len() - 1..])?;
     }
     ops.extend(based(&staged, e)?);
+    fits(doc, e, &ops)?;
     Ok(ops)
+}
+
+fn fits(doc: &Value, e: &KeyframeEdit, ops: &[Op]) -> Result<()> {
+    let (Some(value), Some(like)) = (&e.value, doc.pointer(&e.pointer)) else { return Ok(()) };
+    let like = like.pointer("/keys/0/1").unwrap_or(like);
+    let reads = |d: &Value| serde_json::from_value::<wprs_scene::Scene>(d["scene"].clone()).is_ok();
+    let mut staged = doc.clone();
+    crate::ops::apply(&mut staged, ops)?;
+    ensure!(reads(&staged) || !reads(doc), crate::blend::fitting(&e.pointer, value, like));
+    Ok(())
 }

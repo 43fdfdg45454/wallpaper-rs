@@ -151,7 +151,7 @@ fn steps(doc: &Value, action: &Action) -> Result<Vec<Op>> {
             Some(_) => vec![Op::Remove { path: format!("{EDITOR}/solo") }],
             None => Vec::new(),
         },
-        Action::Keyframe(k) => keyframe(doc, k)?,
+        Action::Keyframe(k) => crate::shaping::checked(None, doc, keyframe(doc, k)?)?,
         Action::Translate { pointer, language, text, add } => {
             crate::texts::translate(doc, pointer, language, text.as_deref(), *add)?
         }

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -342,6 +342,34 @@ msgstr "una capa se mueve con dos números de píxeles"
 #: crates/wprs-editor/src/skin/mod.rs
 msgid "there is no bone \"%1\""
 msgstr "no hay ningún hueso «%1»"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a number such as 0.5"
+msgstr "un número como 0.5"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "true or false"
+msgstr "true o false"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a color such as \"#ff8800\" or [1, 0.5, 0]"
+msgstr "un color como \"#ff8800\" o [1, 0.5, 0]"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a text"
+msgstr "un texto"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a list of %1 numbers such as [%2]"
+msgstr "una lista de %1 números como [%2]"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a value like %1"
+msgstr "un valor como %1"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "%1 cannot take the keyframe value %2; give %3"
+msgstr "%1 no admite el valor de clave %2; da %3"
 
 #: crates/wprs-editor/src/bodies.rs
 msgid "%1 goes from 0 to 1"

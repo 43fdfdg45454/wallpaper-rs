@@ -50,7 +50,8 @@ if ctl scene layer "$craft" card transform --rotation 900 2>/dev/null; then fail
 ctl scene layer "$craft" card transform --tilt 20,-10 --z 120 || fail "the layer was not tilted"
 if ctl scene layer "$craft" card transform --tilt 95,0 2>/dev/null; then fail "a tilt of 95 degrees was kept"; fi
 ctl scene keyframe "$craft" /scene/layers/0/transform/scale 0 '[1,1]' >/dev/null || fail "the scale took no keyframe"
-if ctl scene keyframe "$craft" /scene/layers/0/transform/scale 1 1,1 2>/dev/null; then fail "a scale keyframe of text was kept"; fi
+if ctl scene keyframe "$craft" /scene/layers/0/transform/scale 1 1,1 2>"$WORK/unfit.err"; then fail "a scale keyframe of text was kept"; fi
+grep -q 'give a list of 2 numbers such as \[1, 1\]' "$WORK/unfit.err" || fail "the scale keyframe was refused without its shape: $(cat "$WORK/unfit.err")"
 if ctl scene layer "$craft" card transform --scale 3,3 2>/dev/null; then fail "a plain scale dropped the keyframes"; fi
 ctl scene layer "$craft" card transform --scale 3,3 --replace || fail "the keyframes were not replaced"
 ctl scene set "$craft" /scene/particles/dust/emitters/0/rate '{"keys": [[0, 10], [1, 30]]}' >/dev/null

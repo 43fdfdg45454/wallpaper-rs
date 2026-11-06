@@ -1,4 +1,5 @@
 use serde_json::{Value, json};
+use wprs_core::message::{Message, said};
 use wprs_scene::Color;
 
 pub(crate) fn parts(v: &Value) -> Option<Vec<f64>> {
@@ -38,6 +39,28 @@ pub(crate) fn added(base: &Value, value: &Value) -> Option<Value> {
         (_, [one]) => json!(one),
         _ => json!(sum),
     })
+}
+
+pub(crate) fn fitting(pointer: &str, value: &Value, like: &Value) -> Message {
+    let shape = match like {
+        Value::Number(_) => said("editor.shape_number", "a number such as 0.5", &[]),
+        Value::Bool(_) => said("editor.shape_switch", "true or false", &[]),
+        Value::String(text) if Color::parse(text).is_some() => {
+            said("editor.shape_color", "a color such as \"#ff8800\" or [1, 0.5, 0]", &[])
+        }
+        Value::String(_) => said("editor.shape_text", "a text", &[]),
+        Value::Array(list) => {
+            let ones = vec!["1"; list.len()].join(", ");
+            said("editor.shape_list", "a list of %1 numbers such as [%2]", &[&list.len(), &ones])
+        }
+        _ => said("editor.shape_like", "a value like %1", &[&like]),
+    };
+    let unfit = said(
+        "editor.keyframe_unfit",
+        "%1 cannot take the keyframe value %2; give %3",
+        &[&pointer, &value, &shape],
+    );
+    unfit.with(3, shape)
 }
 
 #[cfg(test)]

@@ -22,10 +22,14 @@ pub(crate) fn own(dir: &Path, doc: &Value) -> crate::inspect::Own {
 }
 
 pub(crate) fn refused(dir: &Path, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
+    checked(Some(dir), doc, ops)
+}
+
+pub(crate) fn checked(dir: Option<&Path>, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
     let mut probe = doc.clone();
     apply(&mut probe, &ops)?;
-    let before: Vec<String> = review(doc, Some(dir)).into_iter().map(|p| p.message).collect();
-    let fresh = review(&probe, Some(dir)).into_iter().find(|p| !p.warning && !before.contains(&p.message));
+    let before: Vec<String> = review(doc, dir).into_iter().map(|p| p.message).collect();
+    let fresh = review(&probe, dir).into_iter().find(|p| !p.warning && !before.contains(&p.message));
     if let Some(problem) = fresh {
         bail!(problem.said);
     }
