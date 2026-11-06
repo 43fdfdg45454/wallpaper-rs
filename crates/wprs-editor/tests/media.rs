@@ -156,11 +156,17 @@ fn the_own_clock_switch_shows_only_where_named_video_files_play() {
         { "id": "still", "type": "image", "image": "sky", "playback": clock },
         { "id": "bars", "type": "video", "video": "bars", "playback": clock },
         { "id": "picked", "type": "video", "video": { "prop": "film", "map": { "x": "clip" } }, "playback": clock },
-        { "id": "own", "type": "video", "video": { "prop": "film" }, "playback": clock }
+        { "id": "own", "type": "video", "video": { "prop": "film" }, "playback": clock },
+        { "id": "chosen", "type": "video", "video": { "prop": "pick" }, "playback": clock }
     ]);
+    doc["manifest"]["properties"] = json!({ "pick": { "type": "file", "accept": ["video"] } });
     let shows =
         |i: usize| fields(&doc, &format!("/scene/layers/{i}/playback")).iter().any(|f| f.key == "own_clock");
-    assert_eq!([0, 1, 2, 3, 4].map(shows), [true, false, false, true, false]);
+    assert_eq!(
+        [0, 1, 2, 3, 4, 5].map(shows),
+        [true, false, false, true, false, true],
+        "a file property picks the last one"
+    );
 }
 
 #[test]

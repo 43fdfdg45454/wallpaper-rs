@@ -189,7 +189,7 @@ impl Stage {
         if !fresh.same(&self.extras) {
             (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
         }
-        let user = |(k, _): &&(String, PathBuf)| k.starts_with(wprs_scene::USER_FILES);
+        let user = |(k, _): &&(String, PathBuf)| !self.pack.videos.iter().any(|(o, _)| o == k);
         for (key, path) in
             fresh.videos.iter().filter(user).filter(|(k, _)| !self.extras.videos.iter().any(|(o, _)| o == k))
         {

@@ -1472,9 +1472,10 @@ enlazar el final de un bucle con su principio (`wrap`, rechazado mientras el mot
 vídeo comparten su reloj, guiado por la primera; con `playback.own_clock` una capa `video` lo
 reproduce con un reloj propio (su velocidad, tramo, pausa y saltos de los scripts, a costa de un
 decodificador más; un vídeo elegido por una propiedad con `map` lleva un reloj propio para cada
-vídeo de la lista y los saltos de los scripts los mueven a todos; en una capa de imagen, en un vídeo
-que una propiedad de archivo elige al vuelo o en una capa que muestra geometría de scripts se
-rechaza), que el inspector del editor ofrece como *Reloj propio*; la línea de tiempo del editor
+vídeo de la lista y los saltos de los scripts los mueven a todos, y un vídeo que una propiedad de
+archivo elige al vuelo lleva el suyo para el archivo que el usuario elija; en una capa de imagen, en
+un vídeo atado sin `map` a una propiedad que no es de archivo o en una capa que muestra geometría de
+scripts se rechaza), que el inspector del editor ofrece como *Reloj propio*; la línea de tiempo del editor
 muestra cada reloj propio con el tramo del vídeo como una barra cuyos extremos se arrastran, su
 velocidad, bucle y reproducción y dónde está en el instante elegido (`wprs-ctl scene clocks DIR
 --time T` lo imprime), y `wprs-ctl scene set DIR

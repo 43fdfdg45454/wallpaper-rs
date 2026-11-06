@@ -12,9 +12,11 @@ use wprs_render::{Pictures, SceneAssets};
 use wprs_scene::{Preset, Property, Scene};
 
 mod info;
+mod lanes;
 mod mirror;
 
 pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
+pub(crate) use lanes::lanes;
 pub(crate) use mirror::flip;
 
 const IMAGES: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "ktx2"];

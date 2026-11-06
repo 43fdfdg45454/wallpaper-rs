@@ -90,6 +90,11 @@ pub(crate) fn lanes(scene: &Scene, videos: &mut Vec<(String, Reel)>) {
     }
 }
 
+pub(crate) fn picked(scene: &Scene, id: &str, file: &Path) -> Vec<(String, Reel)> {
+    let own = scene.lanes().into_iter().filter(|(_, asset)| asset == id);
+    own.map(|(key, _)| (key.clone(), Reel { lane: key, ..Reel::plain(file.to_owned()) })).collect()
+}
+
 pub(crate) fn filmed(lengths: &mut BTreeMap<String, f32>, videos: &[(String, Reel)]) {
     let found = videos.iter().filter_map(|(id, reel)| Some((id.clone(), wprs_scene::film_file(&reel.path)?)));
     lengths.extend(found);
@@ -152,6 +157,7 @@ impl Daemon {
             };
             if wprs_video::is_video(&file) {
                 reels.extend(keys.into_iter().map(|key| (key, Reel::plain(file.clone()))));
+                reels.extend(picked(&pack.scene, id, &file));
                 continue;
             }
             match self.scene_pixels(&file) {

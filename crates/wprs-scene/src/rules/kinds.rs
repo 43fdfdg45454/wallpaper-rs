@@ -22,7 +22,12 @@ impl Check<'_> {
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
                 if playback.as_ref().is_some_and(|b| b.own_clock) {
-                    match !crate::footage::owned(self.scene, kind).is_empty() {
+                    let file = |b: &crate::Binding<String>| {
+                        let control = b.prop.as_ref().and_then(|id| self.props.get(id)).map(|p| &p.control);
+                        b.map.is_some() || matches!(control, Some(crate::Control::File { .. }))
+                    };
+                    let picked = !matches!(named, crate::Value::Bound(b) if !file(b));
+                    match picked && !crate::footage::owned(self.scene, kind).is_empty() {
                         true => self.uses(true, "video_clocks"),
                         false => self.issues.push(Issue::Clock(format!("{p}/playback/own_clock"))),
                     }

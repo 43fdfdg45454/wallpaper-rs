@@ -1,4 +1,4 @@
-use super::lanes;
+use super::{lanes, picked};
 use crate::compositor::Reel;
 use serde_json::json;
 use wprs_scene::{SCHEMA, Scene};
@@ -17,4 +17,16 @@ fn layers_with_their_own_clock_get_a_reel_of_their_own() {
     let (key, reel) = &videos[1];
     assert_eq!((key.as_str(), &reel.path, reel.lane.as_str()), ("clip@b", &videos[0].1.path, "clip@b"));
     assert_ne!(*reel, videos[0].1, "the decoder of the own clock is not shared");
+}
+
+#[test]
+fn a_video_a_file_property_picks_gets_a_reel_for_each_own_clock() {
+    let layers = json!([{ "id": "a", "type": "video", "video": { "prop": "pick" } },
+        { "id": "b", "type": "video", "video": { "prop": "pick" }, "playback": { "own_clock": true } }]);
+    let text = json!({ "schema": SCHEMA, "canvas": { "size": [64, 32] }, "layers": layers });
+    let scene = Scene::from_json(&text.to_string()).unwrap();
+    let reels = picked(&scene, "pick", std::path::Path::new("/tmp/chosen.webm"));
+    assert_eq!(reels.len(), 1);
+    assert_eq!((reels[0].0.as_str(), reels[0].1.lane.as_str()), ("pick@b", "pick@b"));
+    assert!(picked(&scene, "other", std::path::Path::new("/tmp/chosen.webm")).is_empty());
 }

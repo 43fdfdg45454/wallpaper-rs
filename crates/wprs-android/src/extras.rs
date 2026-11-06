@@ -63,6 +63,7 @@ impl Extras {
             };
             if kind(&file) == Some("video") {
                 videos.extend(keys.into_iter().map(|key| (key, file.clone())));
+                videos.extend(crate::pack::lanes(pack, id, &file));
                 continue;
             }
             let kept = old.images.iter().find(|(_, f, _)| *f == file).map(|(.., pixels)| Arc::clone(pixels));

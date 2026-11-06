@@ -157,3 +157,22 @@ fn a_folder_video_that_does_not_loop_ends_once_its_length_is_known() {
     rt.fill_videos(&mut courses);
     assert!(courses.iter().any(|c| c.id == "a" && c.duration == 1.0 && !c.playing), "{courses:?}");
 }
+
+#[test]
+fn a_video_a_file_property_picks_keeps_a_clock_of_its_own() {
+    let layers = json!([{ "id": "a", "type": "video", "video": { "prop": "pick" }, "size": [20, 20] },
+        { "id": "b", "type": "video", "video": { "prop": "pick" }, "size": [20, 20], "playback": { "own_clock": true, "rate": 2 } }]);
+    let doc = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] }, "layers": layers });
+    let props: BTreeMap<String, Property> =
+        serde_json::from_value(json!({ "pick": { "type": "file", "accept": ["video"] } })).unwrap();
+    let scene = Scene::load(&doc.to_string(), &props).unwrap();
+    assert!(scene.validate(&props).is_empty(), "{:?}", scene.validate(&props));
+    let mut rt = Runtime::new(Arc::new(scene), effective(&props, &[]));
+    assert_eq!(rt.scene.lanes(), [("pick@b".to_string(), "pick".to_string())]);
+    rt.set_props(serde_json::from_value(json!({ "pick": "/videos/sea.webm" })).unwrap());
+    assert_eq!(shown(&rt), ["/videos/sea.webm", "pick@b"], "the second layer plays its own clock");
+    rt.frame(VIEW, Quality::Q3);
+    rt.advance(0.5);
+    let at = |rt: &Runtime, key: &str| rt.tapes().iter().find(|t| t.asset == key).map(|t| t.at);
+    assert!(at(&rt, "pick@b").is_some_and(|t| (t - 1.0).abs() < 0.05), "{:?}", rt.tapes());
+}

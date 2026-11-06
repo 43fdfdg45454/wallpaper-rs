@@ -6,9 +6,14 @@ fn album() -> std::sync::Arc<pack::Pack> {
 }
 
 fn album_of() -> (String, std::sync::Arc<pack::Pack>) {
+    let layers = json!([{ "id": "film", "type": "video", "video": "clip" }]);
+    let album = json!({ "album": { "type": "folder", "mode": "all", "accept": ["image", "video"] } });
+    packed(layers, album)
+}
+
+fn packed(layers: Value, properties: Value) -> (String, std::sync::Arc<pack::Pack>) {
     let source = tempfile::tempdir().unwrap();
     let scripts = json!([{ "path": "list.js", "uses": ["folders"] }]);
-    let layers = json!([{ "id": "film", "type": "video", "video": "clip" }]);
     let text = json!({ "schema": wprs_scene::SCHEMA, "canvas": { "size": [32, 16] }, "layers": layers, "scripts": scripts,
         "assets": { "clip": { "path": "clip.webm" } } });
     fs::write(source.path().join("scene.json"), text.to_string()).unwrap();
@@ -17,7 +22,7 @@ fn album_of() -> (String, std::sync::Arc<pack::Pack>) {
     let manifest = json!({ "schema": wprs_format::SCHEMA, "id": "org.example.album", "version": "1.0.0",
         "title": "Album", "license": "CC0-1.0", "kind": "scene", "entry": "scene.json",
         "content": { "rating": "general" }, "photosensitive": false, "origin": { "kind": "original" },
-        "properties": { "album": { "type": "folder", "mode": "all", "accept": ["image", "video"] } } });
+        "properties": properties });
     fs::write(source.path().join("manifest.json"), manifest.to_string()).unwrap();
     let wpak = source.path().join("album.wpak");
     wprs_format::build(source.path(), &wpak, &wprs_format::Limits::default()).unwrap();
@@ -93,4 +98,18 @@ pub(super) fn folder_videos_get_their_length_and_a_clock_scripts_steer() {
     assert!(stage.videos().iter().any(|(k, _)| *k == key), "the phone opens a player for it");
     let tape = stage.tapes().iter().find(|t| t.asset == key).expect("a clock of its own");
     assert!(tape.shown && !tape.playing && tape.layer.as_deref() == Some("film"), "{tape:?}");
+}
+
+pub(super) fn a_video_a_file_property_picks_plays_on_each_own_clock() {
+    let layers = json!([{ "id": "a", "type": "video", "video": { "prop": "pick" } },
+        { "id": "b", "type": "video", "video": { "prop": "pick" }, "playback": { "own_clock": true } }]);
+    let (_, pack) = packed(layers, json!({ "pick": { "type": "file", "accept": ["video"] } }));
+    let dir = tempfile::tempdir().unwrap();
+    let film = dir.path().join("sea.webm");
+    fs::copy(Path::new(FIXTURES).join("magenta-64x32.webm"), &film).unwrap();
+    let values: wprs_scene::Values = serde_json::from_value(json!({ "pick": film })).unwrap();
+    let extras = crate::extras::Extras::gather(&pack, (&values, &[]), 0, &Default::default());
+    let lane = extras.videos.iter().find(|(k, _)| k == "pick@b").expect("a player for the own clock");
+    assert_ne!(lane.1, film, "the own clock gets a player of its own");
+    assert_eq!(fs::read(&lane.1).unwrap(), fs::read(&film).unwrap());
 }

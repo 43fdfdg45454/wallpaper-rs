@@ -46,6 +46,7 @@ pub(crate) fn owned<'a>(scene: &Scene, kind: &'a Kind) -> Vec<&'a String> {
     let Kind::Video { video, playback: Some(p), .. } = kind else { return Vec::new() };
     let mut names: Vec<&String> = match video {
         Value::Fixed(id) => vec![id],
+        Value::Bound(b) if b.map.is_none() => b.prop.iter().collect(),
         Value::Bound(b) => b.map.iter().flat_map(|m| m.values()).collect(),
     };
     names.sort();
@@ -55,8 +56,9 @@ pub(crate) fn owned<'a>(scene: &Scene, kind: &'a Kind) -> Vec<&'a String> {
 }
 
 pub fn lane(scene: &Scene, layer: &Layer, asset: &str) -> Option<String> {
-    let own = owned(scene, &layer.kind).into_iter().any(|id| id == asset);
-    own.then(|| format!("{asset}@{}", layer.id))
+    let picked = matches!(&layer.kind, Kind::Video { video: Value::Bound(b), .. } if b.map.is_none());
+    let own = owned(scene, &layer.kind).into_iter().find(|id| picked || *id == asset)?;
+    Some(format!("{own}@{}", layer.id))
 }
 
 impl Scene {
