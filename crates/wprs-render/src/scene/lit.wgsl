@@ -19,7 +19,9 @@ fn gobo(b: Bulb, l: vec3<f32>) -> vec3<f32> {
     let up = cross(side, a);
     let w = -l;
     let wide = sqrt(max(1.0 - b.dir.w * b.dir.w, 1e-6)) / max(b.dir.w, 1e-3);
-    let uv = 0.5 + 0.5 * vec2<f32>(dot(w, side), dot(w, up)) / (max(dot(w, a), 1e-3) * wide);
+    let crop = lights.crops[(slot - 1u) / 2u];
+    let fit = select(crop.xy, crop.zw, (slot - 1u) % 2u == 1u);
+    let uv = clamp(0.5 + 0.5 * vec2<f32>(dot(w, side), dot(w, up)) / (max(dot(w, a), 1e-3) * wide), vec2<f32>(0.0), vec2<f32>(1.0)) * fit;
     var c = textureSampleLevel(gobo_a, samp, uv, 0.0);
     if slot == 2u {
         c = textureSampleLevel(gobo_b, samp, uv, 0.0);
@@ -35,7 +37,7 @@ fn facing(at: vec2<f32>) -> vec3<f32> {
     if item.lit_maps.x < 0.5 {
         return vec3<f32>(0.0, 0.0, 1.0);
     }
-    let t = textureSampleLevel(normal_tex, samp, at, 0.0).xyz * 2.0 - 1.0;
+    let t = textureSampleLevel(normal_tex, samp, at * item.lit_scale.xy, 0.0).xyz * 2.0 - 1.0;
     let xy = t.x * item.lit_basis.xy - t.y * item.lit_basis.zw;
     return normalize(vec3<f32>(xy * item.lit_at.z, max(t.z, 0.0) + 1e-3));
 }
@@ -46,8 +48,8 @@ fn shade(c: vec4<f32>, at: vec2<f32>, in: Out) -> vec4<f32> {
     }
     let albedo = c.rgb / c.a;
     let n = facing(at);
-    let rough = item.lit.y * select(1.0, textureSampleLevel(rough_tex, samp, at, 0.0).r, item.lit_maps.y > 0.5);
-    let glow = item.lit.w * select(1.0, textureSampleLevel(glow_tex, samp, at, 0.0).r, item.lit_maps.z > 0.5);
+    let rough = item.lit.y * select(1.0, textureSampleLevel(rough_tex, samp, at * item.lit_scale.zw, 0.0).r, item.lit_maps.y > 0.5);
+    let glow = item.lit.w * select(1.0, textureSampleLevel(glow_tex, samp, at * item.lit_more.xy, 0.0).r, item.lit_maps.z > 0.5);
     let p = in.position.xy + item.lit_at.xy;
     var light = mix(lights.ambient.rgb, lights.sky.rgb, 0.5 - 0.5 * n.y);
     var spec = vec3<f32>(0.0);
@@ -67,7 +69,7 @@ fn shade(c: vec4<f32>, at: vec2<f32>, in: Out) -> vec4<f32> {
     }
     var rgb = albedo * light + spec + albedo * glow;
     if item.lit_maps.w > 0.5 {
-        var uv = vec2<f32>(0.5 + 0.5 * n.x, 0.5 + 0.5 * n.y);
+        var uv = vec2<f32>(0.5 + 0.5 * n.x, 0.5 + 0.5 * n.y) * item.lit_more.zw;
         if item.lit_maps.w > 1.5 {
             uv = item.lit_env.xy + (in.position.xy + n.xy * item.lit_at.w) * item.lit_env.zw;
         }

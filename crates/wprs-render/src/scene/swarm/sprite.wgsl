@@ -14,6 +14,7 @@ struct Look {
     light: vec4<f32>,
     place: vec4<f32>,
     bend: vec4<f32>,
+    crops: vec4<f32>,
     sizes: array<vec4<f32>, 16>,
     colors: array<vec4<f32>, 64>,
 };

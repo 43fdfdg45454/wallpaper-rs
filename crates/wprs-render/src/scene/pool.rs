@@ -36,6 +36,7 @@ pub(crate) struct Pool {
     pub(crate) ledger: super::limit::Ledger,
     pub(crate) glow: super::lamps::Glow,
     pub(crate) strip: super::strip::Strip,
+    pub(crate) exact: HashMap<u64, crate::GpuImage>,
 }
 
 impl Pool {
@@ -71,6 +72,7 @@ impl Pool {
             ledger,
             glow: super::lamps::Glow::new(device),
             strip: Default::default(),
+            exact: HashMap::new(),
         }
     }
 

@@ -16,13 +16,20 @@ fn flag(b: bool) -> f32 {
     f32::from(u8::from(b))
 }
 
-pub(super) fn light(r: &Renderer, kit: &mut Kit, render: &Render, lamp: &Lamp<'_>) {
+pub(super) fn light(r: &Renderer, kit: &mut Kit, (render, sprite): (&Render, [f32; 2]), lamp: &Lamp<'_>) {
+    let [sx, sy] = sprite;
+    kit.look.crops = [1.0 / sx, 1.0 / sy, 1.0 / sx, 1.0 / sy];
     let bend = render.refract.as_ref();
     if !render.lit && render.normal.is_none() && bend.is_none() && !lamp.layers {
         return;
     }
-    let view = |id: Option<&String>| id.and_then(|id| lamp.images.get(id)).map_or(lamp.white, |i| &i.0.view);
-    let (normal, bent) = (view(render.normal.as_ref()), view(bend.map(|b| &b.normal)));
+    let exact = |id: Option<&String>| {
+        let found = id.and_then(|id| lamp.images.get(id)).map(|i| &i.0);
+        found.and_then(|i| r.exact(i)).or_else(|| found.cloned())
+    };
+    let (normal, bent) = (exact(render.normal.as_ref()), exact(bend.map(|b| &b.normal)));
+    let (normal, bent) =
+        (normal.as_ref().map_or(lamp.white, |i| &i.view), bent.as_ref().map_or(lamp.white, |i| &i.view));
     let entries = [
         wgpu::BindGroupEntry { binding: 0, resource: lamp.lights.as_entire_binding() },
         wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(normal) },

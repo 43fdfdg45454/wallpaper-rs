@@ -1,7 +1,7 @@
 use super::item::{Rect, linear, scale_of};
 use bytemuck::{Pod, Zeroable};
 use std::hash::{DefaultHasher, Hash, Hasher};
-use wprs_scene::{Affine, Beam, Color, Frame, Lamp, MAX_LIGHTS, MAX_PROJECTIONS, Quality};
+use wprs_scene::{Affine, Beam, Color, Frame, Lamp, MAX_LIGHTS, MAX_PROJECTIONS, Picture, Quality};
 
 pub(crate) const FEW: usize = 8;
 
@@ -22,6 +22,7 @@ pub(crate) struct Lights {
     pub(crate) ambient: [f32; 4],
     pub(crate) sky: [f32; 4],
     pub(crate) bulbs: [Bulb; MAX_LIGHTS],
+    pub(crate) crops: [[f32; 4]; 2],
 }
 
 pub(crate) struct Glow {
@@ -73,18 +74,25 @@ pub(crate) fn bulb(lamp: &Lamp<'_>, screen: Affine, srgb: bool) -> (Bulb, Rect) 
 
 pub(crate) type Mark = (usize, u64, Rect);
 
+pub(crate) type Crop<'a> = &'a std::collections::HashMap<String, super::Image>;
+
 pub(crate) fn lights(
     frame: &Frame<'_>,
-    (screen, srgb): (Affine, bool),
+    (screen, srgb, crop): (Affine, bool, Crop<'_>),
     cap: usize,
     (marks, slots): (&mut [Mark], &mut [usize; MAX_PROJECTIONS]),
 ) -> Lights {
-    let mut out = Lights::default();
+    let mut out = Lights { crops: [[1.0; 4]; 2], ..Lights::default() };
     let shown = frame.lamps.iter().take(cap.min(MAX_LIGHTS).min(marks.len()));
     let mut taken = 0;
     for (i, lamp) in shown.enumerate() {
         let (mut b, rect) = bulb(lamp, screen, srgb);
         if lamp.picture.is_some() && taken < MAX_PROJECTIONS {
+            let shown = match &lamp.picture {
+                Some(Picture::Asset(id)) => crop.get(id.as_ref()).map_or([1.0; 2], |image| image.0.crop),
+                _ => [1.0; 2],
+            };
+            out.crops[taken / 2][taken % 2 * 2..taken % 2 * 2 + 2].copy_from_slice(&shown);
             (slots[taken], taken, b.air[2]) = (i, taken + 1, (taken + 1) as f32);
         }
         out.bulbs[i] = b;
@@ -127,7 +135,7 @@ impl Glow {
         queue: &wgpu::Queue,
         frame: &Frame<'_>,
         screen: Affine,
-        srgb: bool,
+        (srgb, crop): (bool, Crop<'_>),
         cap: usize,
     ) {
         self.gobos = None;
@@ -138,7 +146,7 @@ impl Glow {
             self.moved = false;
             return;
         }
-        let now = lights(frame, (screen, srgb), cap, (&mut self.marks, &mut self.slots));
+        let now = lights(frame, (screen, srgb, crop), cap, (&mut self.marks, &mut self.slots));
         self.moved = self.written.is_some_and(|w| w != now);
         self.now = now;
         if self.written != Some(now) {

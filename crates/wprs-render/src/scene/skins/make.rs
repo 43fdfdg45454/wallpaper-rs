@@ -90,10 +90,16 @@ impl Renderer {
         })
     }
 
-    pub(crate) fn bind_skin(&self, skin: &mut Skin, (id, picture): (u64, &wgpu::TextureView)) {
+    pub(crate) fn bind_skin(
+        &self,
+        skin: &mut Skin,
+        (id, picture, padded): (u64, &wgpu::TextureView, Option<&crate::GpuImage>),
+    ) {
         if skin.group.as_ref().is_some_and(|(found, _)| *found == id) {
             return;
         }
+        let exact = padded.and_then(|p| self.exact(p));
+        let picture = exact.as_ref().map_or(picture, |e| &e.view);
         let entries = [
             wgpu::BindGroupEntry { binding: 0, resource: skin.bones.as_entire_binding() },
             wgpu::BindGroupEntry { binding: 1, resource: skin.pieces.as_entire_binding() },

@@ -23,6 +23,7 @@ pub(super) struct Look {
     pub(super) light: [f32; 4],
     pub(super) place: [f32; 4],
     pub(super) bend: [f32; 4],
+    pub(super) crops: [f32; 4],
     pub(super) sizes: [[f32; 4]; 16],
     pub(super) colors: [[f32; 4]; 64],
 }

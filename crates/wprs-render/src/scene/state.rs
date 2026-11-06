@@ -51,7 +51,18 @@ impl Painter<'_, '_, '_> {
         };
         let found = id.and_then(|id| images.get(id)).or_else(|| paints.iter().find(painted).map(|(.., i)| i));
         let moving = id.and_then(|id| self.moving(id));
-        moving.or(found.map(|image| &image.0)).map(|image| self.ext(image))
+        let image = moving.or(found.map(|image| &image.0))?;
+        if image.crop == [1.0; 2] {
+            return Some(self.ext(image));
+        }
+        let r = self.r;
+        let exact = self
+            .pool
+            .exact
+            .entry(image.id)
+            .or_insert_with(|| r.exact(image).unwrap_or_else(|| image.clone()));
+        let exact = exact.clone();
+        Some(self.ext(&exact))
     }
 
     pub(crate) fn lut(&mut self, e: &EffectDraw<'_>) -> Src {

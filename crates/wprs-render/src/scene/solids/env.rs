@@ -6,6 +6,8 @@ const SIDE: u32 = 256;
 
 impl Renderer {
     pub(crate) fn env_map(&self, source: &GpuImage) -> GpuImage {
+        let exact = self.exact(source);
+        let source = exact.as_ref().unwrap_or(source);
         let levels = 32 - SIDE.leading_zeros();
         let format = crate::packed::drawable(source.texture.format());
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {

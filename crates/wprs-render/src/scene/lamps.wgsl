@@ -11,6 +11,7 @@ struct Lights {
     ambient: vec4<f32>,
     sky: vec4<f32>,
     bulbs: array<Bulb, 12>,
+    crops: array<vec4<f32>, 2>,
 };
 
 fn reach(b: Bulb, p: vec2<f32>) -> vec4<f32> {

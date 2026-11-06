@@ -51,7 +51,7 @@ pub(crate) struct Pipes {
     pub(crate) sampler: wgpu::Sampler,
     pub(crate) wrap: wgpu::Sampler,
     pub(crate) near: wgpu::Sampler,
-    pub(crate) shrinks: Mutex<HashMap<TextureFormat, wgpu::RenderPipeline>>,
+    pub(crate) shrinks: Mutex<HashMap<(TextureFormat, bool), wgpu::RenderPipeline>>,
     pub(crate) fields: Mutex<Option<super::field::Fielders>>,
 }
 

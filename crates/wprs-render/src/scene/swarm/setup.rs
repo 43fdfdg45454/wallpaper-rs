@@ -74,9 +74,10 @@ impl Swarms {
         let kits = renders(scene).into_iter().zip(&sprites).map(|((system, layer, render), sprite)| {
             let frames = sprite.as_ref().and_then(|t| cells.get(t)).map_or(&[][..], |c| &c.cells[..]);
             let sprite = sprite.as_deref().map(|t| (t, images.get(t)));
-            let frames = cropped(frames, sprite.and_then(|s| s.1).map_or([1.0; 2], |i| i.0.crop));
+            let crop = sprite.and_then(|s| s.1).map_or([1.0; 2], |i| i.0.crop);
+            let frames = cropped(frames, crop);
             let mut kit = kit(r, &layouts[2], (system, layer), render, scene, (sprite, &frames), white, srgb);
-            super::lamp::light(r, &mut kit, render, &lamp);
+            super::lamp::light(r, &mut kit, (render, crop), &lamp);
             kit
         });
         let systems: Vec<_> = scene.particles.values().collect();

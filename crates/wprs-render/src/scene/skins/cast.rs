@@ -39,6 +39,7 @@ impl Renderer {
                 video.or_else(|| named.and_then(|t| view.images.get(t)).map(|i| &i.0)).or(skin.own.as_ref());
             let white = &view.pool.white;
             let picture = found.map_or((white.id, white.view.clone()), |p| (p.id, p.view.clone()));
+            let padded = found.filter(|p| p.crop != [1.0; 2]).cloned();
             if skin.image.size() != fits {
                 (skin.image, skin.depth) = self.skin_targets(fits);
                 skin.generation = u64::MAX;
@@ -50,7 +51,7 @@ impl Renderer {
             {
                 continue;
             }
-            self.bind_skin(skin, (picture.0, &picture.1));
+            self.bind_skin(skin, (picture.0, &picture.1, padded.as_ref()));
             self.scoped(|| self.paint_skin(skin, (&p.rig, p.posed()), *size, *relief))?;
             (skin.generation, skin.relief) = (*pose, *relief);
         }

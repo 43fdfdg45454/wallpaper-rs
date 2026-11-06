@@ -37,6 +37,8 @@ pub(crate) struct Item {
     pub(crate) lit_basis: [f32; 4],
     pub(crate) lit_at: [f32; 4],
     pub(crate) lit_env: [f32; 4],
+    pub(crate) lit_scale: [f32; 4],
+    pub(crate) lit_more: [f32; 4],
 }
 
 #[repr(C)]

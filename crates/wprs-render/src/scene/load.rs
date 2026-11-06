@@ -66,6 +66,8 @@ impl Renderer {
             }
             view.samplings = super::sampling::samplings(scene, assets);
             self.mipmap(&mut view.images, &view.samplings, &view.sources);
+            let kept: HashSet<u64> = view.images.values().map(|i| i.0.id).collect();
+            view.pool.exact.retain(|id, _| kept.contains(id));
             let pool = &mut view.pool;
             view.caches.drain().for_each(|(_, c)| pool.give(c.tex));
             if particles {
