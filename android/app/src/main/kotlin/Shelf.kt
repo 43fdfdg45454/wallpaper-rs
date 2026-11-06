@@ -1,6 +1,7 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
@@ -15,6 +16,9 @@ import org.json.JSONObject
 private val CHILDREN = arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_MIME_TYPE, Document.COLUMN_DISPLAY_NAME)
 private val LEFT = setOf("packages", "previews")
 private val SHELVING = Mutex()
+private const val KEPT = "stall"
+private const val TREE = "tree"
+private const val GRANTED = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
 fun safe(path: String) = path.split('/').none { it.isEmpty() || it == "." || it == ".." }
 
@@ -88,3 +92,20 @@ suspend fun Context.stalled(tree: Uri, op: String, vararg args: Pair<String, Any
             }
         }
     }
+
+fun Context.keptStall(): String? {
+    val kept = getSharedPreferences(KEPT, Context.MODE_PRIVATE)
+    val tree = kept.getString(TREE, null) ?: return null
+    val granted = contentResolver.persistedUriPermissions.any { it.uri.toString() == tree && it.isReadPermission && it.isWritePermission }
+    if (!granted) kept.edit().remove(TREE).apply()
+    return tree.takeIf { granted }
+}
+
+fun Context.keepStall(tree: Uri) {
+    val kept = getSharedPreferences(KEPT, Context.MODE_PRIVATE)
+    kept.getString(TREE, null)?.takeIf { it != tree.toString() }?.let { old ->
+        runCatching { contentResolver.releasePersistableUriPermission(Uri.parse(old), GRANTED) }
+    }
+    runCatching { contentResolver.takePersistableUriPermission(tree, GRANTED) }
+    kept.edit().putString(TREE, tree.toString()).apply()
+}

@@ -1765,7 +1765,9 @@ desactivados. En el teléfono, *Repositorio estático* de
 sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelve a mostrar, destaca o
 deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre
 una copia temporal sin los paquetes ni las vistas previas y escribe en la carpeta solo los archivos
-que cambiaron.
+que cambiaron. Recuerda la carpeta elegida, también tras cerrar la app, mientras Android mantenga el
+permiso de lectura y escritura que le da el selector; al elegir otra suelta el permiso de la anterior.
+Cada paso deja los botones desactivados hasta que terminan todos los que estén en marcha.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde
