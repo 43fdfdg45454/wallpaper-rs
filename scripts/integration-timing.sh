@@ -42,4 +42,4 @@ ctl scene timeline "$timed" opening --remove || fail "the timeline was not remov
 ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --absolute || fail "the base was not dropped"
 printf 'import { scene } from "wprs";\nexport function update() { scene.parallax = { amount: 2 }; }\n' >"$WORK/tilt.js"
 ctl scene import-script "$timed" "$WORK/tilt.js" >/dev/null || fail "the camera script was not imported"
-ctl scene show "$timed" /scene/scripts | grep -q '"camera"' || fail "a script that moves the parallax does not declare camera"
+ctl scene show "$timed" /scene/scripts | grep '"camera"' >/dev/null || fail "a script that moves the parallax does not declare camera"
