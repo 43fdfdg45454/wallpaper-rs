@@ -13,6 +13,7 @@ const VIDEOS: usize = SHOWN;
 
 type Loaded = Vec<(String, Arc<Pixels>)>;
 type Files = Vec<(String, PathBuf)>;
+type Shown = (Loaded, Vec<(String, f32)>);
 
 #[derive(Default)]
 pub(in crate::compositor) struct Listed {
@@ -22,7 +23,7 @@ pub(in crate::compositor) struct Listed {
     pub(super) pixels: Loaded,
     asked: Vec<String>,
     pub(super) reels: Vec<(String, super::super::Reel)>,
-    loading: Option<mpsc::Receiver<Loaded>>,
+    loading: Option<mpsc::Receiver<Shown>>,
     scanning: Option<mpsc::Receiver<scan::Scanned>>,
     pub(super) unset: bool,
     watch: Option<watch::Watch>,
@@ -149,8 +150,17 @@ impl SceneState {
             })
             .collect();
         let (videos, paths): (Vec<_>, Vec<_>) = paths.into_iter().partition(|(_, p)| wprs_video::is_video(p));
-        let reels: Vec<_> =
-            videos.into_iter().take(VIDEOS).map(|(k, p)| (k, super::super::Reel::plain(p))).collect();
+        let shows = |key: &String, l: &wprs_scene::LayerOverride| l.file.as_ref() == Some(key);
+        let once =
+            |key: &String| outputs.layers.iter().all(|(id, l)| !shows(key, l) || self.runtime.plays_once(id));
+        let reel = |(k, p): (String, PathBuf)| {
+            (k.clone(), super::super::Reel { once: once(&k), ..super::super::Reel::plain(p) })
+        };
+        let reels: Vec<_> = videos.into_iter().take(VIDEOS).map(reel).collect();
+        let films: Vec<(String, PathBuf)> = (reels.iter())
+            .filter(|(k, _)| !self.listed.reels.iter().any(|(o, _)| o == k))
+            .map(|(k, r)| (k.clone(), r.path.clone()))
+            .collect();
         if reels != self.listed.reels {
             self.listed.reels = reels;
             let spec = self.spec.clone();
@@ -159,20 +169,24 @@ impl SceneState {
         let kept: Loaded =
             self.listed.pixels.iter().filter(|(k, _)| paths.iter().any(|(p, _)| p == k)).cloned().collect();
         let (tx, rx) = mpsc::channel();
+        let wake = self.listed.wake.clone();
         std::thread::spawn(move || {
             let fresh = paths.into_iter().filter(|(k, _)| !kept.iter().any(|(old, _)| old == k));
             let decoded = fresh.filter_map(|(key, path)| {
                 Some((key, Pixels::new(wprs_render::decode_image(&path, 4096).ok()?)))
             });
-            drop(tx.send(kept.iter().cloned().chain(decoded).collect()));
+            let lengths = films.into_iter().filter_map(|(k, p)| Some((k, wprs_scene::film_file(&p)?)));
+            drop(tx.send((kept.iter().cloned().chain(decoded).collect(), lengths.collect())));
+            wake.iter().for_each(|w| w());
         });
         self.listed.loading = Some(rx);
     }
 
     pub(in crate::compositor) fn loaded(&mut self) -> bool {
-        let Some(pixels) = self.listed.loading.as_ref().and_then(|rx| rx.try_recv().ok()) else {
+        let Some((pixels, lengths)) = self.listed.loading.as_ref().and_then(|rx| rx.try_recv().ok()) else {
             return false;
         };
+        lengths.iter().for_each(|(key, seconds)| self.runtime.set_length(key, *seconds));
         (self.listed.pixels, self.listed.loading) = (pixels, None);
         let spec = self.spec.clone();
         self.update(spec)

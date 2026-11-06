@@ -183,6 +183,9 @@ impl Runtime {
                     (t.at, t.ended, t.held, t.jumps) = (t.start, false, Some(false), t.jumps + 1)
                 }
                 VideoCommand::Rate(r) => t.speed = Some(crate::roll::playable(r)),
+                VideoCommand::Volume(v) => {
+                    t.volume = if v.is_finite() { v.clamp(0.0, 1.0) } else { t.volume }
+                }
                 VideoCommand::Seek(_) | VideoCommand::Weight(_) => {}
             }
         }

@@ -139,3 +139,21 @@ fn a_folder_video_a_script_shows_runs_on_a_clock_scripts_steer() {
     rt.set_script(ScriptOutputs::default());
     assert!(!rt.tapes().iter().any(|t| t.asset == file), "the clock goes with the file");
 }
+
+#[test]
+fn a_folder_video_that_does_not_loop_ends_once_its_length_is_known() {
+    let mut rt = filmed(json!([video("a", json!({ "loop": false }))]));
+    let file = "wpak-user://album/abc".to_string();
+    let set = LayerOverride { file: Some(file.clone()), ..Default::default() };
+    rt.set_script(ScriptOutputs { layers: [("a".to_string(), set)].into(), ..Default::default() });
+    assert!(rt.plays_once("a") && !rt.plays_once("missing"));
+    rt.set_length(&file, 1.0);
+    rt.set_length("nothing", f32::NAN);
+    rt.frame(VIEW, Quality::Q3);
+    rt.advance(1.5);
+    rt.frame(VIEW, Quality::Q3);
+    assert_eq!(rt.take_ended(), ["a"], "the layer tells scripts its video ended");
+    let mut courses = Vec::new();
+    rt.fill_videos(&mut courses);
+    assert!(courses.iter().any(|c| c.id == "a" && c.duration == 1.0 && !c.playing), "{courses:?}");
+}

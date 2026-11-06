@@ -10,6 +10,8 @@ use wprs_scene::{FlashGuard, Governor, Press, Quality, Runtime, Spare};
 
 mod heard;
 mod input;
+#[cfg(test)]
+mod probe;
 
 pub(crate) use heard::allowed as media_allowed;
 
@@ -186,6 +188,12 @@ impl Stage {
         let fresh = Extras::gather(&self.pack, (self.runtime.props(), shown), extras::now(), &self.extras);
         if !fresh.same(&self.extras) {
             (self.assets, self.restock, self.touch.2) = (self.stocked(&fresh), true, true);
+        }
+        let user = |(k, _): &&(String, PathBuf)| k.starts_with(wprs_scene::USER_FILES);
+        for (key, path) in
+            fresh.videos.iter().filter(user).filter(|(k, _)| !self.extras.videos.iter().any(|(o, _)| o == k))
+        {
+            wprs_scene::film_file(path).into_iter().for_each(|s| self.runtime.set_length(key, s));
         }
         self.extras = fresh;
     }

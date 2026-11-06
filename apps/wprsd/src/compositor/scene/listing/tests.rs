@@ -109,3 +109,20 @@ fn a_watched_folder_is_looked_at_again_only_when_it_changes() {
     assert!(listed(&mut state, later) && state.listed.text.contains("b.png"));
     assert_eq!(state.listing_wake(later), Wake::Idle);
 }
+
+#[test]
+fn a_shown_folder_video_gets_its_length_so_it_can_end() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut mp4 = b"\0\0\0\x6cmvhd\0\0\0\0\0\0\0\0\0\0\0\0".to_vec();
+    mp4.extend(1000u32.to_be_bytes().into_iter().chain(2500u32.to_be_bytes()));
+    std::fs::write(dir.path().join("clip.mp4"), mp4).unwrap();
+    let (mut state, start) = (state(Some(dir.path())), Instant::now());
+    assert!(listed(&mut state, start));
+    let key = state.listed.files.iter().find(|(_, p)| p.ends_with("clip.mp4")).unwrap().0.clone();
+    let mut outputs = ScriptOutputs::default();
+    let shown = wprs_scene::LayerOverride { file: Some(key.clone()), ..Default::default() };
+    outputs.layers.insert("photo".into(), shown);
+    state.show(&outputs);
+    let (_, lengths) = state.listed.loading.take().unwrap().recv().unwrap();
+    assert_eq!(lengths, vec![(key, 2.5)], "the length is read off the compositor thread");
+}
