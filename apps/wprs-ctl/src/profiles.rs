@@ -1,11 +1,11 @@
 use crate::cli::JSON;
-use crate::input::{one, pairs, path_arg};
+use crate::input::path_arg;
 use crate::show::{self, list, short, table};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Subcommand;
 use std::path::Path;
 use wprs_client::{Client, parse};
-use wprs_core::model::{PresetsReply, Profile as Model, ProfileReply, ProfilesReply};
+use wprs_core::model::{Profile as Model, ProfileReply, ProfilesReply};
 
 #[derive(Subcommand, Debug)]
 pub enum Profile {
@@ -16,60 +16,47 @@ pub enum Profile {
     },
     #[command(about = "Show a profile")]
     Show {
+        #[arg(help = "Name or uid of the profile")]
         profile: String,
         #[arg(long, help = JSON)]
         json: bool,
     },
     #[command(about = "Save what every output shows as a profile and print its uid")]
     Save {
+        #[arg(help = "Name of the new profile")]
         name: String,
         #[arg(long, help = "Leave the settings out of the profile")]
         no_options: bool,
     },
     #[command(about = "Activate a profile")]
-    Use { profile: String },
+    Use {
+        #[arg(help = "Name or uid of the profile")]
+        profile: String,
+    },
     #[command(about = "Clear the active profile without changing anything else")]
     Off,
     #[command(about = "Rename a profile")]
-    Rename { profile: String, name: String },
+    Rename {
+        #[arg(help = "Name or uid of the profile")]
+        profile: String,
+        #[arg(help = "New name")]
+        name: String,
+    },
     #[command(about = "Delete a profile")]
-    Rm { profile: String },
+    Rm {
+        #[arg(help = "Name or uid of the profile")]
+        profile: String,
+    },
     #[command(about = "Print the automatic activation rules, one rule, or change a rule")]
     Auto {
+        #[arg(help = "Name or uid of the profile")]
         profile: String,
         #[arg(help = "outputs, on_battery or priority")]
         key: Option<String>,
+        #[arg(help = "New value of the rule; the rule is printed when left out")]
         value: Option<String>,
         #[arg(long, help = JSON)]
         json: bool,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-pub enum Preset {
-    #[command(about = "List the presets of an item, or the global presets")]
-    Ls {
-        #[arg(value_name = "ITEM", help = "Item whose presets to list; global presets when omitted")]
-        item: Option<String>,
-        #[arg(long, help = JSON)]
-        json: bool,
-    },
-    #[command(about = "Save a preset and print its uid")]
-    Save {
-        #[arg(value_name = "ITEM", help = "Item of the preset, or - for a global preset")]
-        item: String,
-        name: String,
-        #[arg(required = true, value_name = "KEY=VALUE", help = "fit=<placement> or background=#rrggbb")]
-        values: Vec<String>,
-    },
-    #[command(about = "Delete a preset")]
-    Rm {
-        #[arg(
-            value_name = "PRESET",
-            allow_hyphen_values = true,
-            help = "Preset uid, ITEM:NAME, or -:NAME for a global preset"
-        )]
-        preset: String,
     },
 }
 
@@ -100,43 +87,10 @@ pub async fn run(client: &Client, command: Profile) -> Result<()> {
     Ok(())
 }
 
-pub async fn preset(client: &Client, command: Preset) -> Result<()> {
-    let profiles = &client.profiles;
-    match command {
-        Preset::Ls { item, json } => {
-            let item = scope(client, item.as_deref().unwrap_or("-")).await?;
-            show::reply(profiles.list_presets(&item).await?, json, presets)?
-        }
-        Preset::Save { item, name, values } => {
-            let item = scope(client, &item).await?;
-            println!("{}", profiles.save_preset(&item, &name, pairs(&values)?).await?)
-        }
-        Preset::Rm { preset } => {
-            let uid = match named(&preset) {
-                Some((item, name)) => {
-                    let item = scope(client, item).await?;
-                    let reply: PresetsReply = parse(&profiles.list_presets(&item).await?)?;
-                    let mut found =
-                        reply.presets.into_iter().filter(|p| p.item.as_deref().unwrap_or("") == item);
-                    let found = found.find(|p| p.name.eq_ignore_ascii_case(name));
-                    found.map(|p| p.uid).with_context(|| format!("no preset named {name}"))?
-                }
-                None => preset,
-            };
-            profiles.delete_preset(&uid).await?
-        }
-    }
-    Ok(())
-}
-
-fn named(text: &str) -> Option<(&str, &str)> {
+pub(crate) fn named(text: &str) -> Option<(&str, &str)> {
     let splits: Vec<_> = text.match_indices(':').map(|(i, _)| (&text[..i], &text[i + 1..])).collect();
     let file = |item: &str| path_arg(item).is_ok_and(|path| Path::new(&path).is_file());
     splits.iter().rev().find(|(item, _)| file(item)).or(splits.first()).copied()
-}
-
-async fn scope(client: &Client, item: &str) -> Result<String> {
-    if item == "-" { Ok(String::new()) } else { one(client, item).await }
 }
 
 pub fn auto(profile: &Model) -> Vec<(&'static str, String)> {
@@ -175,13 +129,4 @@ pub fn details(profile: Model) -> String {
     ];
     let head = head.into_iter().chain(auto(&profile)).map(|(k, v)| (k.to_string(), v));
     show::lines(head.chain(sections).chain(options))
-}
-
-pub fn presets(reply: PresetsReply) -> String {
-    let rows = reply.presets.into_iter().map(|p| {
-        let (item, fit) =
-            (p.item.as_deref().map_or("-".into(), short), p.value.fit.map_or("-".into(), |f| f.to_string()));
-        vec![short(&p.uid), item, p.name, fit, p.value.background.unwrap_or("-".into())]
-    });
-    table(&["PRESET", "ITEM", "NAME", "FIT", "BACKGROUND"], rows)
 }

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Dialogs
 import QtQuick.Controls as QQC2
 import io.github.wallpaper_rs.app
 
@@ -16,11 +15,14 @@ Flow {
         QQC2.Menu {
             id: kinds
 
-            Repeater {
-                model: tools.owner.page.view.kinds ?? []
+            SceneRepeater {
+                id: listed2
+
+                rows: tools.owner.page.view.kinds ?? []
 
                 delegate: QQC2.MenuItem {
-                    required property string modelData
+                    required property int index
+                    readonly property var modelData: listed2.rows[index]
 
                     visible: modelData !== "light"
                     height: visible ? implicitHeight : 0
@@ -61,10 +63,8 @@ Flow {
                 onTriggered: importer.open()
             }
 
-            QQC2.MenuItem {
-                text: App.tr("Mesh from a .glb file…")
-                icon.name: "draw-polyline"
-                onTriggered: glb.open()
+            SceneLayerFiles {
+                owner: tools.owner
             }
 
             QQC2.MenuItem {
@@ -73,18 +73,6 @@ Flow {
                 enabled: (tools.owner.page.view.assets ?? []).some(asset => asset.kind === "image")
                 onTriggered: cutter.open()
             }
-        }
-
-        FileDialog {
-            id: glb
-
-            fileMode: FileDialog.OpenFile
-            nameFilters: [App.tr("Binary glTF meshes") + " (*.glb)"]
-            onAccepted: tools.owner.page.run("add_layer", {
-                "kind": "mesh",
-                "file": App.path(selectedFile),
-                "into": tools.owner.current?.type === "group" ? tools.owner.current.id : undefined
-            })
         }
 
         SceneMeshCut {
@@ -142,11 +130,14 @@ Flow {
         QQC2.Menu {
             id: into
 
-            Repeater {
-                model: tools.owner.groups
+            SceneRepeater {
+                id: listed
+
+                rows: tools.owner.groups
 
                 delegate: QQC2.MenuItem {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     text: modelData.id
                     onTriggered: tools.owner.move(1000, modelData.id)

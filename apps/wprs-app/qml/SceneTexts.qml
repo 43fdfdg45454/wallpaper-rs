@@ -20,13 +20,16 @@ ColumnLayout {
         });
     }
 
-    Repeater {
-        model: texts.field.options
+    SceneRepeater {
+        id: listed
+
+        rows: texts.field.options
 
         delegate: RowLayout {
             id: row
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property string text: String(modelData.text ?? "")
 
             Layout.fillWidth: true

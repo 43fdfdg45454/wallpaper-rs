@@ -563,6 +563,9 @@ lo aplica la próxima vez que se apaga y enciende la pantalla.
 
 ## Uso desde la terminal
 
+Si lo que lee la salida de `wprs-ctl` deja de leer antes de tiempo (por ejemplo `| head` o
+`| grep -q`), `wprs-ctl` termina sin error ni aviso.
+
 ```sh
 wprs-ctl set ~/Imágenes/fondo.jpg               # todas las pantallas
 wprs-ctl set ~/Vídeos/mar.mp4 -o DP-1 -f fit    # una pantalla, modo de ajuste
@@ -956,6 +959,13 @@ wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
 contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.
+
+La ayuda de `wprs-ctl` (`--help` y la orden `help` de cada grupo, cada argumento con su valor
+predeterminado y sus valores posibles, los títulos *Uso*, *Argumentos*, *Opciones* y *Órdenes*) y
+los avisos con que rechaza una orden mal escrita (argumento inesperado, valor no válido, argumento
+obligatorio que falta, consejos) salen en el idioma del escritorio con el catálogo
+`po/<idioma>/wprs-ctl.po`; los nombres de las órdenes, de las opciones y de sus valores quedan en
+inglés para que los scripts sigan funcionando igual en cualquier idioma.
 
 La pestaña *Dispositivos* enlaza el teléfono con tu [servidor propio](#servidor-propio) con el
 mismo cliente en Rust que el escritorio, para compartir la biblioteca, las listas y los ajustes con
@@ -1768,14 +1778,29 @@ add --unlisted`, `repo unlist` y `repo list-again` hacen lo mismo antes de `repo
 *Repositorio estático* de *Repositorios* abre la carpeta del repositorio y añade paquetes (también
 ocultos), oculta o vuelve a mostrar un paquete o una versión y destaca o deja de destacar, con la misma
 confirmación, y *Publicar…* firma el índice con un archivo de clave en línea (con su contraseña, si
-la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. Cada cambio del catálogo
+la tiene) y los días hasta que caduca, como `wprs-ctl repo publish`. La misma pestaña revoca un
+paquete o una versión con su motivo y un mensaje (`repo revoke`) y retira la revocación (`repo
+unrevoke`), y *Claves de autor…* revoca una clave de autor por su huella (`repo revoke-key`).
+*Repositorio nuevo…* crea uno en una carpeta vacía con su nombre, las claves raíz y en línea (archivos
+`.pub`), cuántas claves raíz deben firmar, un autor con sus claves y la política (`repo init`); *Raíz…*
+muestra la versión de la raíz, cuántas claves la firmaron y la consulta que la ancla, la firma con un
+archivo de clave raíz y su contraseña (`repo sign-root`) y *Rotar la raíz…* escribe la siguiente con
+otras claves, autores quitados o añadidos y otra política (`repo rotate-root`). Las claves que das para
+un autor reemplazan las que tenía, así una clave filtrada deja de valer (`--author ID=PUB`, repetible
+para varias claves); la raíz nueva dura lo mismo que la anterior salvo que digas otros días, conserva
+las réplicas salvo que des otras con `--mirror`, y `--no-mirrors` (o vaciar el campo en el diálogo) las
+quita todas. Cada cambio del catálogo
 trabaja fuera de la ventana, uno detrás de otro, y mientras dura los demás cambios y *Abrir* esperan
 desactivados. En el teléfono, *Repositorio estático* de
 *Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que
 sincronizas con tu servidor): añade paquetes (también ocultos), oculta o vuelve a mostrar, destaca o
 deja de destacar con la misma confirmación y publica con un archivo de clave en línea; trabaja sobre
 una copia temporal sin los paquetes ni las vistas previas y escribe en la carpeta solo los archivos
-que cambiaron.
+que cambiaron. Recuerda la carpeta elegida, también tras cerrar la app, mientras Android mantenga el
+permiso de lectura y escritura que le da el selector; al elegir otra suelta el permiso de la anterior,
+salvo el de lectura si un ajuste de carpeta de un fondo copia esa misma carpeta (y quitar ese ajuste
+tampoco le quita el permiso a la carpeta del repositorio).
+Cada paso deja los botones desactivados hasta que terminan todos los que estén en marcha.
 
 En el catálogo de *Repositorios* (y en *Explorar* del teléfono) los paquetes que destaca el operador
 del repositorio salen primero, en su propia sección (los firma en el repositorio con `wprs-ctl repo feature REPO ID --note …` o la pestaña *Repositorio estático*, o desde
@@ -1983,7 +2008,15 @@ otra página no cierra un editor con cambios sin guardar.
 - **Lienzo**: la vista previa la dibuja el propio daemon en una salida virtual que llega por
   PipeWire, como el fondo de Plasma, así que necesita el módulo QML de KPipeWire. Ctrl y la rueda
   amplían, la rueda o un arrastre con el botón central o el derecho desplazan. Una capa sin
-  bloquear se arrastra directamente, y la elegida gira y escala con sus asas; un arrastre que
+  bloquear se arrastra directamente, y la elegida gira, escala, se inclina en profundidad (asa
+  redonda del borde izquierdo, `transform.tilt`) y se acerca o aleja (rombo de abajo,
+  `transform.z`) con sus asas, y una capa inclinada o alejada muestra en línea discontinua el
+  contorno con la misma perspectiva con que la dibuja la escena; las asas escriben con la acción
+  `layer` como `wprs-ctl scene layer`; en
+  un valor animado ponen una clave en el cabezal (`--at S`), también en cada parte de una posición
+  o escala animada por separado, y una parte que sigue un enlace rechaza el arrastre; con
+  *Escribir sobre las claves* de la barra
+  dejan un valor fijo encima de las claves o enlaces (`--replace`); un arrastre que
   empieza fuera de las capas, o cualquiera con Mayúsculas, traza un rectángulo que elige las capas
   que toca, como Ctrl en la lista, listas para agruparlas. Las guías marcan lo que se ve en pantallas 16:9, 21:9, 32:9,
   4:3, 16:10 y 9:16. *Pantallas* muestra la escena extendida sobre dos o tres pantallas en fila,
@@ -2004,7 +2037,9 @@ otra página no cierra un editor con cambios sin guardar.
   origen* ajusta la línea de tiempo, la escala o el suavizado de ese enlace. Encima de los campos,
   una capa ofrece su modo de fusión, el lienzo interruptores y deslizadores para el brillo y el
   paralaje (cambian la escena en vivo al arrastrarlos y cada arrastre es un solo paso de
-  deshacer), y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
+  deshacer, aunque se detenga a mitad; así con todos los deslizadores del editor, también los de
+  rango, y con las asas del lienzo; deshacer a mitad de un arrastre deja el resto como un paso
+  propio), y una propiedad deslizante su mínimo, máximo, paso y valor por defecto; *Importar una
   hoja de sprites o un mapa de datos…* del panel de recursos corta una imagen en filas y columnas
   o la lee como datos. En la terminal hacen lo mismo `wprs-ctl scene effects CARPETA CAPA
   add|set|remove|move|mask`, `scene layer CARPETA CAPA transform|blend|instance`, `scene manifest
@@ -2012,7 +2047,18 @@ otra página no cierra un editor con cambios sin guardar.
   bloom|parallax` y `scene import --linear --atlas FILAS,COLUMNAS`, con las mismas comprobaciones.
 - **Línea de tiempo**: reproducir, pausar y mover el cabezal (la vista previa se queda en ese
   instante), una pista por valor animado con sus fotogramas clave, que se arrastran a otro
-  instante, la interpolación de cada uno y la línea de tiempo que la mueve, y la lista de líneas de tiempo para crearlas y editarlas.
+  instante, la interpolación de cada uno y la línea de tiempo que la mueve; *Curva y base de la
+  clave* arrastra en vivo las dos asas Bézier de la curva hasta la clave siguiente, un solo paso de
+  deshacer por arrastre aunque se detenga a mitad, también en posiciones, colores y listas de
+  números, donde la altura del asa es la parte del camino entre las dos claves (salvo entre dos claves
+  escritas como un solo número, como una escala `2`, que se curvan en unidades del valor, igual en la
+  vista previa que en el fondo); y la lista de líneas de
+  tiempo para crearlas, renombrarlas, quitarlas y editarlas: *Editar la línea de tiempo y sus
+  eventos…* abre su panel con la duración en segundos o en cuadros y cuadros por segundo, cómo se
+  repite, el fundido del final con el principio, la velocidad (deslizador y campo), el retraso, si
+  arranca sola y qué la arranca, y una franja de eventos con nombre: un doble clic añade uno en ese
+  instante, se arrastran a otro, se renombran y se quitan (`wprs-ctl scene timeline CARPETA ID
+  --event T:NOMBRE --drop-event NOMBRE[@T] --clear-events`).
 - **Paquete**: *Detalles del paquete* lleva el manifiesto al inspector, que también se genera a
   partir de su esquema (`wprs-ctl scene schema --manifest`): título, descripción y notas de esta
   versión en cada idioma (*Traducir* añade uno a partir del texto del idioma por defecto sin tocar
@@ -2082,7 +2128,15 @@ El editor de escenas pinta también las máscaras de los efectos que las piden p
 cada parámetro de máscara hay un botón para pintar, el canal (rojo, verde, azul o alfa), un modo
 para borrar y el tamaño del pincel, y cada trazo sobre la capa en la vista previa se guarda como una
 imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl scene paint-mask`
-hace lo mismo desde la terminal).
+hace lo mismo desde la terminal). Al elegir un efecto de una capa, el inspector ofrece su máscara:
+ninguna, una imagen, otra capa o una forma (rectángulo, elipse, anillo, polígono, estrella o línea),
+el canal, invertir, el borde suave (con un deslizador de hasta 200 px y un campo de hasta 10 000) y
+la intensidad, y el lienzo la dibuja sobre la capa: la imagen encima (también una KTX2, que la app
+descomprime una vez a un PNG en su caché), la capa que enmascara
+recuadrada y la forma con su contorno, el borde suave por dentro y por fuera en trazos, un asa
+para darle tamaño (o mover el extremo de la línea) y un punto junto al borde para suavizarlo; cada
+arrastre es un paso de deshacer y sigue la acción `effects mask`, como `wprs-ctl scene effects
+CARPETA CAPA mask`.
 
 También recorta una malla de una imagen de la escena («Malla desde una imagen» en el menú para añadir
 capas), con una cuadrícula de celdas o siguiendo el contorno de la parte opaca, y le pone huesos, igual
@@ -2163,7 +2217,10 @@ un asa para la distancia focal de la perspectiva. La velocidad turbulenta dibuja
 direcciones que puede dar el ruido, las de algunas partículas que nacen ahora y una flecha con un asa
 que la gira y otra que abre o cierra el abanico; el desfase fractal dibuja flechas desde una rejilla
 de lugares de nacimiento hasta donde los lleva el ruido, calculadas como en el motor, y un anillo con
-un asa para la distancia. El inspector del sistema ofrece el tipo de cada
+un asa para la distancia. Atractores, vórtices, órbitas y frenadas cerca de un punto dibujan un
+anillo a trazos por cada alcance (radio, interior, exterior y el anillo del vórtice) con un asa que
+lo cambia, y un asa en su centro; la sección de distancias y bandadas los añade y muestra el punto
+que siguen, su fuerza y un deslizador por alcance. El inspector del sistema ofrece el tipo de cada
 emisor, a qué punto de control o al puntero siguen `around` y `between`, una lista de las capas desde
 las que puede emitir (nunca una que contenga el sistema) con el umbral, su color, su movimiento y
 cuándo se vuelve a leer, los puntos de control con su dial de ángulo, las reasignaciones de valores
@@ -2179,18 +2236,29 @@ puede dejarlos fuera. Desde la terminal hace lo mismo `wprs-ctl scene particles 
 `emit-from-layer`, `inherit` y `shader`, y `handles` imprime lo que la vista previa dibuja.
 
 El inspector de un sistema empieza con la lista de los sistemas de la escena, donde cada uno se
-renombra (las capas y los sistemas que lo usan lo siguen), se abre o se quita, y se añade uno sin
+renombra (las capas y los sistemas que lo usan lo siguen; los scripts que lo nombran entre comillas no se reescriben y la app y `wprs-ctl` avisan de cada uno), se abre o se quita, y se añade uno sin
 capa. Los rangos iniciales (vida, velocidad, dirección, tamaño, giro, rotación y alfa) tienen un
 deslizador de dos puntas, una curva que reparte los valores hacia un extremo con su dibujo y un
 selector por extremo que lo enlaza a un ajuste del paquete. Los colores iniciales salen de dos
 colores, de tonos con su saturación y su brillo (con pasos), de una paleta con su ruido o de una
 barra de degradado donde un clic añade una parada y arrastrarla la mueve. Cada fuerza puede actuar
 solo en parte de la vida de la partícula, con una forma de cuatro asas que dice dónde aparece, actúa
-y se desvanece. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
+y se desvanece. Cada emisor tiene su ritmo (un deslizador en vivo, con *Ritmo fijo* si sigue claves o
+un enlace) y una franja de tiempo que muestra cuándo emite: el retraso, el final de la duración, los
+tramos de emisión y de pausa (los más cortos en una fila arriba y los más largos en otra abajo) y las
+ráfagas, con asas que arrastran el retraso, la duración, el largo de los tramos y la separación entre
+ráfagas (la escala de la franja queda quieta mientras se arrastra), y debajo el tamaño de la ráfaga y si sale con el tiempo,
+el ritmo o un clic, seguir el puntero, emitir solo con sonido y la velocidad que toma del emisor. La
+sección *Orden de dibujo y lo que pueden cambiar las capas* elige qué partículas quedan encima y cuántas veces se repiten los fotogramas
+en una vida, y qué valores pueden cambiar las capas de partículas (lo demás queda bloqueado). Al
+elegir una capa de partículas, el inspector ofrece sus propios valores sobre los del sistema
+(opacidad, tamaño, parte de las partículas, velocidad, vida, ritmo del tiempo, brillo y tinte, cada
+uno con su vuelta al del sistema) y los puntos de control que se arrastran en el lienzo pasan a ser
+solo de esa capa. Desde la terminal, `wprs-ctl scene particles CARPETA SISTEMA` suma `emitter N` con
 `--burst`, `--every`, `--on`, `--periodic`, `--duration`, `--delay`, `--follow`, `--audio-gate` e
 `--inherit`, `window N A,B,C,D|none`, `rename NUEVO`, `start --hsv|--palette|--gradient`,
 `render --cycles --order`, `settings --lock`, `force turbulence --time-scale --mask` y las fuerzas
-`noise`, `cap`, `torque`, `spin-drag`, `vortex` y `orbit`. Los rangos de `start` aceptan
+`noise`, `cap`, `torque`, `spin-drag`, `vortex`, `orbit` y `slow-near`. Los rangos de `start` aceptan
 `MÍN,MÁX,CURVA`, con `prop:ID` en un extremo para enlazarlo a un ajuste y `_` para dejarlo como está;
 sin curva se conserva la que había y `1` la quita (por ejemplo `start --life 1,prop:vida,2`).
 
@@ -2224,7 +2292,7 @@ y velocidad radial), `force gravity|drag|turbulence|oscillate|attractor|remove`,
 add|set|remove`, `size-over-life`, `color-over-life` y `render` (estiramiento, cuadros del atlas al
 azar, por tiempo o por vida, ritmo del atlas y brillo por encima del blanco).
 
-El menú *Añadir capa* ofrece *Luz* con sus cuatro tipos, cada uno con valores de partida
+El menú *Añadir capa* ofrece *Capa desde un archivo* (imagen, vídeo, sonido o malla `.glb`: elige el archivo, lo importa como recurso y añade la capa en un solo paso, como `wprs-ctl scene add-layer CARPETA TIPO --file ARCHIVO`), *Luz* con sus cuatro tipos, cada uno con valores de partida
 razonables. Las luces se ven sobre la vista previa como marcadores que se arrastran y la elegida
 muestra sus asas: el anillo del radio, la altura, el giro, los bordes del cono de un foco, los dos
 extremos de un tubo y la flecha de una luz direccional, y a petición la caja que redibuja al
@@ -2353,7 +2421,7 @@ wprs-ctl scene add-layer mar mesh --file zorro.glb      # importa el .glb y lo m
 wprs-ctl scene set mar /scene/layers/1/opacity 0.5      # cualquier campo por su JSON Pointer
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 2 1 --ease in_out_sine
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 3 --from 2   # moverlo a otro instante
-wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat   # y --rename, --remove, --frames con --fps
+wprs-ctl scene timeline mar olas --add --duration 6 --loop repeat --event 3:ola   # y --rename, --remove, --frames con --fps, --drop-event
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 -0.5 --timeline olas --base 0.5   # relativo a 0,5
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --out-handle 1,0   # asa Bézier hasta la clave vecina (aquí la de 3 s); también --in-handle
 wprs-ctl scene keyframe mar /scene/layers/1/opacity 0 --straighten   # recta hasta la clave siguiente, sin tocar las curvas vecinas
@@ -2370,7 +2438,7 @@ wprs-ctl scene translate mar /manifest/properties/velocidad/label es Velocidad
 wprs-ctl scene condition mar velocidad "tiempo == 'tormenta'" --enabled   # comprobada como en validate
 wprs-ctl scene add-preset mar --label Calm && wprs-ctl scene set mar /manifest/presets/0/values/tiempo calma
 wprs-ctl scene effects mar far add vignette --param intensity=0.5   # y set, remove, move, mask
-wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2   # y blend, instance
+wprs-ctl scene layer mar far transform --position 960,400 --scale 1.2,1.2 --tilt 15,0 --z 40   # y blend, instance
 wprs-ctl scene property mar velocidad --min 0 --max 10 --step 0.5 --default 2
 wprs-ctl scene manifest mar tags mar noche && wprs-ctl scene manifest mar license CC-BY-4.0   # y origin, authors, display
 wprs-ctl scene canvas mar bloom --strength 1.5 && wprs-ctl scene canvas mar parallax --amount 2
@@ -2506,6 +2574,7 @@ Sway y `xvfb x11-utils x11-xserver-utils xdotool imagemagick openbox` para la de
 
 ```sh
 cargo test --workspace                   # pruebas unitarias, de render y de vídeo
+scripts/private-audio.sh cargo test --workspace  # igual, con un PipeWire propio y una salida muda
 cargo build -p wprs-pipewire --example probe
 cargo build -p wprsd -p wprs-ctl && cargo build -p wprsd --example timedate
 cp target/debug/examples/probe target/debug/
@@ -2516,12 +2585,17 @@ cargo build -p wprs-server && cargo build -p wprs-android --example phone
 cp target/debug/examples/phone target/debug/
 scripts/sync-test.sh target/debug        # daemons, el cliente del teléfono y wprs-server: enlace, clave y sincronización
 scripts/package.sh                       # genera dist/wallpaper-rs-*.tar.gz
-scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML, del validador y del editor
+scripts/translations.sh update [idioma]  # actualiza po/ con los textos del QML, del validador, del editor y de la ayuda de wprs-ctl
 target/debug/wprs-app --check            # carga todo el QML de la app y falla ante cualquier aviso
 ```
 
 `wprs-app --check` recorre cada página con datos de prueba, abre los detalles de un elemento, el
 editor de imágenes y el de escenas, y falla ante cualquier aviso del QML o si no termina en 240 s.
+En el editor de escenas abre y usa el diálogo de la curva, el menú de líneas de tiempo con su panel,
+las herramientas de máscaras, partículas y fuerzas; en una carpeta temporal crea un repositorio
+estático con claves de prueba desde la pestaña *Repositorio estático* (diálogos *Repositorio
+nuevo…*, *Raíz…*, *Revocar* y *Publicar…*), añade un paquete, revoca y retira la revocación de una
+versión, publica y comprueba que la página se dibuja.
 Los archivos QML siguen el formato de `qmlformat` de Qt 6.12.
 
 APK de Android (con el SDK, el NDK 28 o posterior y `cargo install cargo-ndk`):
@@ -2611,6 +2685,15 @@ motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor. En el tel�
 comprueba sus valores, el color que dibuja, la pausa, el límite de fotogramas, lo que oculta cada
 ajuste de privacidad, el borrado de sus datos, los archivos elegidos, los clics solo con permiso y
 que no llega a la red, a otros paquetes ni a archivos del teléfono.
+`ShelfTest` prueba el repositorio estático del teléfono a través de un proveedor de documentos de
+prueba (`Folder` y `Seeder`, solo en el APK de pruebas y en Java, porque ese APK corre sus
+proveedores en su propio proceso sin la biblioteca de Kotlin) que da un permiso de árbol como el
+selector del sistema:
+la copia de la carpeta, la escritura de vuelta de lo que cambió, que los paquetes ya escritos se
+leen en el paso siguiente y que la carpeta elegida se recuerda mientras dura su permiso. `Seeder`
+y `StallTest` arman el repositorio de prueba desde `tests/fixtures/stall` y copian la raíz firmada
+`tests/fixtures/stall-anchor.json` a `root/1.json` al prepararlo, para que ninguna ruta guardada en el
+repositorio parezca una carpeta del sistema (`root/`).
 
 La CI ejecuta además `scripts/plasma-test.sh` en un contenedor con Plasma 6: instala el
 paquete con `install.sh`, arranca una sesión Wayland sin pantalla (KWin y plasmashell sobre
@@ -2622,7 +2705,9 @@ una pantalla, en la bandeja y en la app, sigue difuminada con un paquete para ad
 pulsarla con el ratón o el teclado, y que la bandeja avisa si el fondo destella. También ejecuta
 `scripts/sway-test.sh` en un Sway sin pantalla: captura cada salida con `grim`, conecta y quita una
 pantalla y comprueba que el vídeo se pausa bajo una ventana a pantalla completa y con la pantalla
-apagada, y `scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana raíz y la
+apagada (Sway dibuja por software; con `WPRS_SWAY_RENDERER=gles2` dibuja con la tarjeta gráfica,
+lo que necesita un controlador que no presenta en superficies de memoria compartida), y
+`scripts/x11-test.sh` en un Xvfb con dos monitores, el fondo de la ventana raíz y la
 misma pausa.
 
 | Ruta | Contenido |

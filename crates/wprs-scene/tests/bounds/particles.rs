@@ -127,6 +127,17 @@ fn particle_systems_name_their_broken_fields() {
             "/layers/3/instance/brightness is 20, expected 0..=16".into(),
         ),
         (
+            vec![("/layers/3/instance/points".into(), json!(vec![Json::Null; 9]))],
+            "/layers/3/instance/points has 9 entries, at most 8".into(),
+        ),
+        (
+            vec![(
+                "/layers/3/instance/points".into(),
+                json!([null, { "keys": [[0, [1, 2]]], "timeline": "none" }]),
+            )],
+            "/layers/3/instance/points/1/timeline".into(),
+        ),
+        (
             vec![(format!("{f}/emitters"), json!(vec![json!({ "shape": "edge" }); 9]))],
             format!("{f}/emitters has 9 entries, at most 8"),
         ),

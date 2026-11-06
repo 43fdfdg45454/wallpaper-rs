@@ -81,11 +81,14 @@ ColumnLayout {
         marks: air.info?.marks ?? []
     }
 
-    Repeater {
-        model: air.info?.on ? air.info.levels : []
+    SceneRepeater {
+        id: listed
+
+        rows: air.info?.on ? air.info.levels : []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             font.bold: modelData.quality === SceneLook.quality

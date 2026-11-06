@@ -44,7 +44,7 @@ ColumnLayout {
                 text: modelData[1]
             }
 
-            QQC2.RangeSlider {
+            SceneRangeSlider {
                 Layout.fillWidth: true
                 from: 0
                 to: modelData[2]

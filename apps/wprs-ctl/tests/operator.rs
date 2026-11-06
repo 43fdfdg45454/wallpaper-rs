@@ -70,6 +70,10 @@ fn operator_commands_parse() {
             r#"Repo(Revoke { dir: "site", id: "org.example.dawn", version: Some("1.0.0"), reason: "broken", message: "" })"#,
         ),
         (
+            "repo unrevoke site org.example.dawn --version 1.0.0",
+            r#"Repo(Unrevoke { dir: "site", id: "org.example.dawn", version: Some("1.0.0") })"#,
+        ),
+        (
             "repo revoke-key site ab12 --reason malware",
             r#"Repo(RevokeKey { dir: "site", fingerprint: "ab12", reason: "malware" })"#,
         ),
@@ -106,6 +110,8 @@ fn operator_commands_parse() {
         rotate.contains(r#"removed: ["studio"]"#) && rotate.contains("require_author_signature: Some(false)")
     );
     assert!(rotate.contains("root_days: Some(400)"), "{rotate}");
+    let dropped = parsed("repo rotate-root site --no-mirrors");
+    assert!(dropped.contains("no_mirrors: true"), "{dropped}");
 }
 
 #[test]
@@ -120,6 +126,7 @@ fn usage_errors_exit_with_2() {
         &["repo", "init", "site", "--name", "Example", "--online-key", "o.pub"],
         &["pkg", "install"],
         &["volume", "101"],
+        &["repo", "rotate-root", "site", "--no-mirrors", "--mirror", "https://mirror.example.org"],
     ];
     for args in refused {
         assert_eq!(parse(args).unwrap_err().exit_code(), 2, "{args:?}");

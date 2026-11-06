@@ -45,13 +45,16 @@ ColumnLayout {
         target: lanes.page.editor
     }
 
-    Repeater {
-        model: lanes.paths
+    SceneRepeater {
+        id: listed2
+
+        rows: lanes.paths
 
         delegate: RowLayout {
             id: row
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
             Layout.preferredHeight: Kirigami.Units.gridUnit * 1.6
@@ -76,13 +79,16 @@ ColumnLayout {
                     color: Kirigami.Theme.negativeTextColor
                 }
 
-                Repeater {
-                    model: row.modelData.keys
+                SceneRepeater {
+                    id: listed
+
+                    rows: row.modelData.keys
 
                     delegate: QQC2.Label {
                         id: key
 
-                        required property var modelData
+                        required property int index
+                        readonly property var modelData: listed.rows[index]
                         property real moved: -1
 
                         x: (moved >= 0 ? moved : modelData.t) / lanes.span * lane.width - width / 2

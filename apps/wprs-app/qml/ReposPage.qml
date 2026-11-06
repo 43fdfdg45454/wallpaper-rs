@@ -22,6 +22,7 @@ Kirigami.Page {
     }
 
     function exercise() {
+        tabs.currentIndex = 3;
         tabs.currentIndex = 1;
     }
 

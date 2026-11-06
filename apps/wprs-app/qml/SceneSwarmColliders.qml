@@ -68,11 +68,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: walls.list
+    SceneRepeater {
+        id: listed
+
+        rows: walls.list
 
         delegate: SceneSwarmCollider {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             tools: walls.tools

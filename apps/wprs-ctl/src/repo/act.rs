@@ -1,14 +1,14 @@
 use super::Repo;
 use crate::input::now;
-use crate::keys::{keygen, keys, signer};
+use crate::keys::{keygen, signer};
 use crate::show::{either, lines, list};
 use crate::usage;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
 use wprs_format::{
     Reason, RootStatus, Settings, add, init, publish, revoke, revoke_key, rotate_root, settings, sign_root,
-    status, verify,
+    status, unrevoke, verify,
 };
 use wprs_providers::HttpFetch;
 
@@ -16,9 +16,10 @@ pub fn run(command: Repo) -> Result<()> {
     match command {
         Repo::Keygen { name, no_password } => println!("{}", keygen(&name, no_password)?),
         Repo::Init { dir, name, root_keys, online_keys, policy, json } => {
-            let (root_keys, online_keys) = (keys(&root_keys)?, keys(&online_keys)?);
-            let mut settings = Settings { name, root_keys, online_keys, ..Settings::default() };
-            policy.apply(&mut settings)?;
+            let mut charter = policy.charter()?;
+            (charter.name, charter.root_keys, charter.online_keys) = (Some(name), root_keys, online_keys);
+            let mut settings = Settings::default();
+            charter.apply(&mut settings)?;
             root(&init(&dir, &settings, now()?)?, json)?;
             eprintln!("sign the root next: wprs-ctl repo sign-root {} --key <root key>", dir.display())
         }
@@ -59,17 +60,14 @@ pub fn run(command: Repo) -> Result<()> {
             either(&published, p.json, text)?
         }
         Repo::RotateRoot { dir, root_keys, online_keys, removed, policy, json } => {
+            let mut charter = policy.charter()?;
+            (charter.root_keys, charter.online_keys, charter.removed) = (root_keys, online_keys, removed);
             let mut settings = settings(&dir)?;
-            settings.root_keys = if root_keys.is_empty() { settings.root_keys } else { keys(&root_keys)? };
-            settings.online_keys =
-                if online_keys.is_empty() { settings.online_keys } else { keys(&online_keys)? };
-            for id in removed {
-                settings.authors.remove(&id).with_context(|| format!("the root lists no author {id}"))?;
-            }
-            policy.apply(&mut settings)?;
+            charter.apply(&mut settings)?;
             root(&rotate_root(&dir, &settings, now()?)?, json)?;
             eprintln!("sign the new root with keys of the old and of the new root, then publish");
         }
+        Repo::Unrevoke { dir, id, version } => unrevoke(&dir, &id, version.as_deref().unwrap_or("*"))?,
         Repo::Verify { url, json } => {
             let url =
                 if Path::new(&url).is_dir() { std::path::absolute(&url)?.display().to_string() } else { url };

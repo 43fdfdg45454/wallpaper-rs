@@ -56,13 +56,16 @@ ColumnLayout {
         text: App.tr("At most %1 lights cast shadows; tiers draw %2.", shadows.info?.most ?? 2, (shadows.info?.caps ?? []).map(c => c.tier.toUpperCase() + " " + c.lights).join(", "))
     }
 
-    Repeater {
-        model: shadows.lights.filter(l => ["point", "spot", "directional"].includes(l.type))
+    SceneRepeater {
+        id: listed
+
+        rows: shadows.lights.filter(l => ["point", "spot", "directional"].includes(l.type))
 
         delegate: ColumnLayout {
             id: light
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property var found: shadows.entry(modelData.id)
 
             Layout.fillWidth: true

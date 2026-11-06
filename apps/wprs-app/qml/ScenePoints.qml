@@ -9,13 +9,16 @@ Item {
     readonly property var mesh: host.mesh
     readonly property var list: visible ? (host.rig.points ?? []).filter(p => !p.part && p.at) : []
 
-    Repeater {
-        model: spots.list
+    SceneRepeater {
+        id: listed
+
+        rows: spots.list
 
         delegate: Rectangle {
             id: spot
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             x: modelData.at[0] * spots.width - width / 2
             y: modelData.at[1] * spots.height - height / 2

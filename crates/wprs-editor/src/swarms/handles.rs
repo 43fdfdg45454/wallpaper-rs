@@ -39,6 +39,18 @@ fn points(s: &Value, f: &Frame, t: f64) -> Vec<Value> {
         .collect()
 }
 
+fn tuned(mut spots: Vec<Value>, own: &Value, f: &Frame, t: f64) -> Vec<Value> {
+    for (k, p) in own.as_array().into_iter().flatten().enumerate() {
+        let Some(local) = pair(&value_at(p, t)) else { continue };
+        if k >= spots.len() {
+            spots.push(json!({ "name": format!("p{k}"), "angle": f.turn(), "follow": false, "world": false, "bound": false }));
+        }
+        let at = f.round(if spots[k]["world"] == true { local } else { f.apply(local) });
+        (spots[k]["local"], spots[k]["at"], spots[k]["own"]) = (json!(local), json!(at), json!(true));
+    }
+    spots
+}
+
 pub(super) fn drawn_by<'a>(doc: &'a Value, system: &str) -> Option<&'a str> {
     let layers = crate::layers::walk(doc).into_iter().map(|(_, l)| l);
     layers.filter(|l| l["type"] == "particles" && l["system"] == system).find_map(|l| l["id"].as_str())
@@ -46,11 +58,12 @@ pub(super) fn drawn_by<'a>(doc: &'a Value, system: &str) -> Option<&'a str> {
 
 pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f64) -> Value {
     let Some(s) = doc.pointer(&format!("/scene/particles/{}", escape(system))) else { return Value::Null };
+    let chosen = layer.and_then(|id| crate::actions::layer(doc, id).ok()).map(|(_, l)| l);
     let layer = layer.or_else(|| drawn_by(doc, system));
-    let own = layer.and_then(|id| crate::actions::layer(doc, id).ok()).map(|(_, l)| &l["render"]);
-    let render = own.filter(|r| r.is_object()).unwrap_or(&s["render"]);
+    let drawn = layer.and_then(|id| crate::actions::layer(doc, id).ok()).map(|(_, l)| l);
+    let render = drawn.map(|l| &l["render"]).filter(|r| r.is_object()).unwrap_or(&s["render"]);
     let f = frame(dir, doc, layer, t);
-    let spots = points(s, &f, t);
+    let spots = tuned(points(s, &f, t), chosen.map_or(&Value::Null, |l| &l["instance"]["points"]), &f, t);
     let children = s["children"].as_array().into_iter().flatten().enumerate().map(|(k, c)| {
         json!({ "index": k, "system": c["system"], "on": c["on"], "inherit": c.get("inherit").unwrap_or(&json!([])),
             "follow_inherit": c["follow_inherit"].as_bool().unwrap_or(false) })
@@ -88,6 +101,7 @@ pub fn handles(dir: &Path, doc: &Value, system: &str, layer: Option<&str>, t: f6
         "steady_inputs": steady,
         "colliders": super::walls::colliders(dir, doc, s, &f, t),
         "keeps": super::steers::keeps(s, &f, &spots),
+        "pulls": super::pulls::pulls(s, &f, &spots),
         "boids": super::steers::boids(s, &f),
         "operators": super::steers::operators(s),
         "strands": super::steers::strands(doc, s, render),

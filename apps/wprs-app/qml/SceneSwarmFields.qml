@@ -51,7 +51,7 @@ ColumnLayout {
             text: App.tr("Speed")
         }
 
-        QQC2.RangeSlider {
+        SceneRangeSlider {
             id: speed
 
             Layout.fillWidth: true
@@ -103,11 +103,14 @@ ColumnLayout {
         onEdited: (key, v) => fields.set("offset", key, v)
     }
 
-    Repeater {
-        model: fields.drift ? [[0, App.tr("Across")], [1, App.tr("Down")]] : []
+    SceneRepeater {
+        id: listed
+
+        rows: fields.drift ? [[0, App.tr("Across")], [1, App.tr("Down")]] : []
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             QQC2.Label {
                 text: modelData[1]

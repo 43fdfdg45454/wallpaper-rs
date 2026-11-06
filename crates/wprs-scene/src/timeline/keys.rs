@@ -1,7 +1,7 @@
 use super::{Handles, Loop};
 use crate::Ease;
 use crate::animate::Animate;
-use serde::de::{self, Deserializer};
+use serde::de::{self, Deserializer, IntoDeserializer};
 use serde::ser::{SerializeTuple, Serializer};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ pub struct Key<T> {
     pub v: T,
     pub ease: Ease,
     pub handles: Option<Handles>,
+    pub one: Option<f32>,
 }
 
 pub fn local(t: f32, d: f32, mode: Loop) -> f32 {
@@ -40,10 +41,16 @@ pub fn sample<T: Animate>(keys: &[Key<T>], t: f32) -> T {
 
 fn curve<T: Animate>(a: &Key<T>, b: &Key<T>, t: f32) -> Option<T> {
     let (out, back) = (a.handles.and_then(|h| h.out), b.handles.and_then(|h| h.before));
-    let (([v0, ..], n), ([v1, ..], _)) = (a.v.comps(), b.v.comps());
-    if n != 1 || (out.is_none() && back.is_none()) {
+    if out.is_none() && back.is_none() {
         return None;
     }
+    let (([v0, ..], n), ([v1, ..], _)) = (a.v.comps(), b.v.comps());
+    let lone = a.one.zip(b.one).filter(|_| n != 1);
+    let (v0, v1) = match lone {
+        Some(ends) => ends,
+        None if n == 1 => (v0, v1),
+        None => (0.0, 1.0),
+    };
     let third = [(b.t - a.t) / 3.0, (v1 - v0) / 3.0];
     let ([dt0, dv0], [dt1, dv1]) = (out.unwrap_or(third), back.unwrap_or(third));
     let at = |p: [f32; 4], s: f32| {
@@ -57,7 +64,11 @@ fn curve<T: Animate>(a: &Key<T>, b: &Key<T>, t: f32) -> Option<T> {
         (lo, hi) = if at(xs, mid) < t { (mid, hi) } else { (lo, mid) };
     }
     let v = at([v0, v0 + dv0, v1 - dv1, v1], (lo + hi) / 2.0);
-    Some(a.v.with_comps([v, 0.0, 0.0, 0.0]))
+    Some(match lone {
+        Some(_) => T::from_json(&serde_json::Value::from(v)).unwrap_or_else(|| a.v.clone()),
+        None if n == 1 => a.v.with_comps([v, 0.0, 0.0, 0.0]),
+        None => a.v.lerp(&b.v, v),
+    })
 }
 
 impl<T: Serialize> Serialize for Key<T> {
@@ -65,7 +76,10 @@ impl<T: Serialize> Serialize for Key<T> {
         let plain = self.ease == Ease::default() && self.handles.is_none();
         let mut tuple = s.serialize_tuple(if plain { 2 } else { 3 })?;
         tuple.serialize_element(&self.t)?;
-        tuple.serialize_element(&self.v)?;
+        match self.one {
+            Some(one) => tuple.serialize_element(&one)?,
+            None => tuple.serialize_element(&self.v)?,
+        }
         match &self.handles {
             Some(handles) => tuple.serialize_element(handles)?,
             None if !plain => tuple.serialize_element(&self.ease)?,
@@ -80,19 +94,38 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Key<T> {
         #[derive(Deserialize)]
         #[serde(untagged)]
         enum Repr<T> {
-            Plain((f32, T)),
-            Eased((f32, T, Ease)),
-            Handled((f32, T, Handles)),
+            Plain((f32, Read<T>)),
+            Eased((f32, Read<T>, Ease)),
+            Handled((f32, Read<T>, Handles)),
         }
+        let key = |t, Read(v, one), ease, handles| Key { t, v, ease, handles, one };
         match Repr::deserialize(d) {
-            Ok(Repr::Plain((t, v))) => Ok(Key { t, v, ease: Ease::default(), handles: None }),
-            Ok(Repr::Eased((t, v, ease))) => Ok(Key { t, v, ease, handles: None }),
-            Ok(Repr::Handled((t, v, handles))) => {
-                Ok(Key { t, v, ease: Ease::default(), handles: Some(handles) })
-            }
+            Ok(Repr::Plain((t, v))) => Ok(key(t, v, Ease::default(), None)),
+            Ok(Repr::Eased((t, v, ease))) => Ok(key(t, v, ease, None)),
+            Ok(Repr::Handled((t, v, handles))) => Ok(key(t, v, Ease::default(), Some(handles))),
             Err(_) => Err(de::Error::custom(
                 "a key is [time, value], [time, value, easing] or [time, value, { \"in\", \"out\" }]",
             )),
+        }
+    }
+}
+
+struct Read<T>(T, Option<f32>);
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Read<T> {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Either<T> {
+            One(f32),
+            Other(T),
+        }
+        match Either::deserialize(d)? {
+            Either::One(x) => {
+                let v = T::deserialize(IntoDeserializer::<D::Error>::into_deserializer(x))?;
+                Ok(Read(v, Some(x)))
+            }
+            Either::Other(v) => Ok(Read(v, None)),
         }
     }
 }

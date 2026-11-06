@@ -31,11 +31,14 @@ ColumnLayout {
         text: App.tr("3D models")
     }
 
-    Repeater {
-        model: cost.info?.levels ?? []
+    SceneRepeater {
+        id: listed2
+
+        rows: cost.info?.levels ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -44,11 +47,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: cost.info?.tiers ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: cost.info?.tiers ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap

@@ -132,7 +132,7 @@ impl Check<'_> {
             }
             let Some(h) = k.handles else { continue };
             self.uses(true, "tangents");
-            if !T::SCALAR {
+            if !T::NUMERIC {
                 self.issues.push(Issue::Type(format!("{path}/keys/{i}/2")));
             }
             let before = i.checked_sub(1).map_or(0.0, |j| k.t - keys[j].t);

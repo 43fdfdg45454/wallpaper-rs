@@ -89,26 +89,36 @@ Item {
         stage: stage
     }
 
-    Repeater {
-        model: stage.models
+    SceneRepeater {
+        id: listed2
+
+        readonly property var host: stage
+
+        rows: stage.models
 
         delegate: SceneStageBones {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             anchors.fill: parent
-            stage: stage
+            stage: listed2.host
             model: modelData
         }
     }
 
-    Repeater {
-        model: stage.models
+    SceneRepeater {
+        id: listed
+
+        readonly property var host: stage
+
+        rows: stage.models
 
         delegate: SceneModelGizmo {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             anchors.fill: parent
-            stage: stage
+            stage: listed.host
             model: modelData
         }
     }

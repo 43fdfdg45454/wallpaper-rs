@@ -43,12 +43,16 @@ ColumnLayout {
         text: App.tr("Camera paths")
     }
 
-    Repeater {
-        model: flight.info?.paths ?? []
+    SceneRepeater {
+        id: listed
+
+        readonly property var host: flight
+
+        rows: flight.info?.paths ?? []
 
         delegate: ScenePathRow {
             Layout.fillWidth: true
-            flight: flight
+            flight: listed.host
         }
     }
 

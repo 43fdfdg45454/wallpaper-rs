@@ -84,7 +84,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: field.kind === "slider"
 
-        QQC2.Slider {
+        SceneSlider {
             id: slider
 
             Layout.fillWidth: true

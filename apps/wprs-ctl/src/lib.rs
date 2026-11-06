@@ -1,6 +1,7 @@
 mod about;
 mod account;
 mod animated;
+mod applying;
 mod args;
 pub mod author;
 mod authoring;
@@ -12,6 +13,7 @@ mod caution;
 pub mod cli;
 mod clipping;
 mod consent;
+mod cropping;
 mod daemon;
 mod depth;
 pub mod edit;
@@ -49,12 +51,14 @@ pub mod pack;
 pub mod pkg;
 pub mod playlists;
 mod posing;
+pub mod presets;
 pub mod private;
 pub mod profiles;
 pub mod props;
 pub mod propsets;
 pub mod providers;
 mod pulling;
+pub mod refusing;
 pub mod remote;
 pub mod repo;
 mod rgb;
@@ -76,6 +80,7 @@ mod swinging;
 mod tended;
 mod tending;
 mod texturing;
+pub mod told;
 mod triggering;
 mod undoing;
 mod userprops;
@@ -83,7 +88,6 @@ mod userprops;
 pub use calls::CALLS;
 pub use cli::{Cli, Command};
 
-use clap::Parser;
 use std::fmt;
 use std::process::ExitCode;
 use wprs_client::{error_name, explain};
@@ -103,11 +107,23 @@ pub fn usage(message: impl Into<String>) -> anyhow::Error {
     Usage(message.into()).into()
 }
 
+fn quiet_on_closed_pipe() {
+    let shown = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let text = info.payload_as_str().unwrap_or_default();
+        if text.starts_with("failed printing to stdout") && text.contains("Broken pipe") {
+            std::process::exit(0);
+        }
+        shown(info);
+    }));
+}
+
 pub fn main() -> ExitCode {
+    quiet_on_closed_pipe();
     wprs_scene::serve_check();
     wprs_scene::check_out_of_process(true);
     wprs_core::stopped_effects().inspect(|p| wprs_scene::keep_strikes(p));
-    let result = match Cli::parse().command {
+    let result = match told::parse().command {
         Command::Pack(command) => pack::run(command),
         Command::Scene(command) => bench::run(command),
         Command::Repo(command) => repo::run(command),

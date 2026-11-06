@@ -59,6 +59,26 @@ fn frames(rx: &Receiver<Event>, skip: Duration, span: Duration) -> Vec<(Instant,
     seen
 }
 
+fn playing(rx: &Receiver<Event>, within: impl Fn(Duration) -> bool) {
+    let (start, mut last) = (Instant::now(), None::<Duration>);
+    while start.elapsed() < Duration::from_secs(10) {
+        match rx.recv_timeout(Duration::from_secs(2)) {
+            Ok(Event::Frame(f)) => {
+                let pts = f.pts.filter(|pts| within(*pts));
+                if let (Some(pts), Some(was)) = (pts, last)
+                    && pts > was
+                {
+                    return;
+                }
+                last = pts.or(last);
+            }
+            Ok(Event::Error(e)) => panic!("playback error: {e}"),
+            Err(_) => {}
+        }
+    }
+    panic!("the video did not play within 10 s");
+}
+
 fn speed(seen: &[(Instant, Duration)]) -> f64 {
     let steps = seen.windows(2).filter(|w| w[1].1 > w[0].1);
     let (stream, wall) = steps.fold((0.0, 0.0), |(s, w), p| {
@@ -70,11 +90,12 @@ fn speed(seen: &[(Instant, Duration)]) -> f64 {
 #[test]
 fn a_video_with_sound_takes_a_new_speed_and_part() {
     let Some((mut player, rx, path)) = opened("part") else { return };
-    frames(&rx, Duration::from_millis(300), Duration::ZERO);
+    playing(&rx, |_| true);
     player.set_cut(Cut { speed: 200, start: 300, end: 1500 });
+    let range = Duration::from_millis(300) - FRAME..Duration::from_millis(1500) + FRAME;
+    playing(&rx, |pts| range.contains(&pts));
     let seen = frames(&rx, Duration::from_millis(500), Duration::from_secs(2));
     std::fs::remove_file(path).unwrap();
-    let range = Duration::from_millis(300) - FRAME..Duration::from_millis(1500) + FRAME;
     assert!(seen.len() > 10, "only {} frames after the change", seen.len());
     assert!(seen.iter().all(|(_, pts)| range.contains(pts)), "{seen:?}");
     assert!((speed(&seen) / 200.0 - 1.0).abs() < 0.35, "played at {:.0} %", speed(&seen));
@@ -83,9 +104,11 @@ fn a_video_with_sound_takes_a_new_speed_and_part() {
 #[test]
 fn a_video_with_sound_keeps_its_position_on_a_new_speed() {
     let Some((mut player, rx, path)) = opened("speed") else { return };
-    let before = frames(&rx, Duration::from_millis(300), Duration::from_millis(200));
+    playing(&rx, |_| true);
+    let before = frames(&rx, Duration::from_millis(100), Duration::from_millis(200));
     let last = before.last().expect("frames before the change").1;
     player.set_cut(Cut { speed: 50, start: 0, end: 0 });
+    playing(&rx, |_| true);
     let after = frames(&rx, Duration::from_millis(400), Duration::from_millis(800));
     std::fs::remove_file(path).unwrap();
     let first = after.first().expect("frames after the change").1;

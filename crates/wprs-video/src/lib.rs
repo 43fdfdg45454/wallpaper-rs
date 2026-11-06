@@ -12,6 +12,7 @@ mod probe;
 mod sound;
 mod still;
 mod video_sink;
+mod wish;
 
 pub use bank::{Bank, decode, probe as probe_sound};
 pub use deep::{Hdr, Transfer};

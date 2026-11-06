@@ -7,8 +7,12 @@ const VIEW: [f32; 4] = [0.0, 0.0, 100.0, 50.0];
 const NOON: f64 = 20_755.0 * 86_400.0 + 12.0 * 3600.0;
 
 fn runtime(layers: Json) -> Runtime {
+    timed(layers, json!([]))
+}
+
+fn timed(layers: Json, timelines: Json) -> Runtime {
     let text = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] }, "layers": layers,
-        "clock": { "step": 600 } });
+        "timelines": timelines, "clock": { "step": 600 } });
     Runtime::new(Arc::new(Scene::load(&text.to_string(), &BTreeMap::new()).unwrap()), Values::new())
 }
 
@@ -33,6 +37,10 @@ fn colors_blend_in_oklab_along_the_shorter_hue() {
     let mut rt = runtime(solid(json!([[0, "#ff0040"], [2, "#ff4000"]])));
     let [r, g, b, _] = color(&at(&mut rt, 1.0));
     assert!(r > 0.95 && g < 0.2 && b < 0.2, "the hue went the long way: {r} {g} {b}");
+    let mut rt = runtime(
+        json!([{ "id": "s", "type": "solid", "color": { "keys": [[0, "#000000"]], "base": "#ff000080" } }]),
+    );
+    assert_eq!(color(&at(&mut rt, 0.0)), [1.0, 0.0, 0.0, 1.0], "a relative color went past an alpha of 1");
     let mut rt = runtime(solid(json!([[0, "#000000"], [2, "#ffffff"]])));
     let [r, g, b, _] = color(&at(&mut rt, 1.0));
     assert!((r - g).abs() < 1e-3 && (g - b).abs() < 1e-3 && r > 0.35 && r < 0.65, "{r} {g} {b}");
@@ -92,4 +100,40 @@ fn time_of_day_and_dates_follow_the_local_clock() {
     let frame = rt.frame(VIEW, Quality::Q3);
     assert!(matches!(&frame.draws[0].content, Content::Text { text, .. } if text == "octubre"));
     assert_eq!(frame.wake, Wake::At(43_200.0));
+}
+
+#[test]
+fn handles_time_positions_and_colors_by_their_share_of_the_way() {
+    let curve = json!([[0, [0, 0], { "out": [1, 0] }], [2, [40, 20], { "in": [1, 0] }]]);
+    let moved = json!([{ "id": "s", "type": "solid", "color": "#ffffff", "size": [10, 10],
+        "transform": { "position": { "keys": curve } } }]);
+    let mut rt = runtime(moved);
+    let world = at(&mut rt, 1.0).draws[0].world.0;
+    assert!((world[4] - 20.0).abs() < 1e-2 && (world[5] - 10.0).abs() < 1e-2, "{world:?}");
+    let world = at(&mut rt, 0.4).draws[0].world.0;
+    assert!(world[4] < 4.0 && world[5] < 2.0, "a flat handle starts slowly: {world:?}");
+    let solid = |keys: Json| json!([{ "id": "s", "type": "solid", "color": { "keys": keys } }]);
+    let mid = color(&at(&mut runtime(solid(json!([[0, "#000000"], [2, "#ffffff"]]))), 1.0))[0];
+    let mut rt = runtime(solid(json!([[0, "#000000", { "out": [1, 0.9] }], [2, "#ffffff"]])));
+    let [r, g, b, _] = color(&at(&mut rt, 1.0));
+    assert!(
+        (r - g).abs() < 1e-3 && (g - b).abs() < 1e-3 && r > mid + 0.1,
+        "an early rise is not past {mid}: {r}"
+    );
+    let text = json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] }, "layers": [{ "id": "t", "type": "text",
+        "text": { "keys": [[0, "a", { "out": [1, 0] }], [2, "b"]] } }] });
+    let refused = Scene::load(&text.to_string(), &BTreeMap::new()).unwrap_err();
+    assert!(format!("{refused:?}").contains("/layers/0/text/keys/0/2"), "{refused:?}");
+}
+
+#[test]
+fn a_seek_far_ahead_lands_on_the_value_of_its_timeline() {
+    let layers = json!([{ "id": "s", "type": "solid", "color": "#ffffff",
+        "opacity": { "keys": [[0, 0], [3, 1]], "timeline": "loop" } }]);
+    let mut rt = timed(layers, json!([{ "id": "loop", "duration": 3, "loop": "repeat" }]));
+    let started = std::time::Instant::now();
+    let far = at(&mut rt, 86_399.0).draws[0].opacity;
+    assert!((far - 2.0 / 3.0).abs() < 1e-2, "{far}");
+    assert!((at(&mut rt, 2.0).draws[0].opacity - 2.0 / 3.0).abs() < 1e-3);
+    assert!(started.elapsed() < std::time::Duration::from_secs(60), "{:?}", started.elapsed());
 }

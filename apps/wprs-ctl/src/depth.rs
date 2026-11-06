@@ -11,6 +11,7 @@ const MAX_EDGE: u32 = 4096;
 pub enum Maps {
     #[command(about = "Estimate the depth map with the downloaded model, showing progress; Ctrl-C cancels")]
     Generate {
+        #[arg(help = "Image file")]
         path: PathBuf,
         #[arg(long, help = "Estimate it again even when a map exists")]
         force: bool,
@@ -20,16 +21,26 @@ pub enum Maps {
         bench: Option<usize>,
     },
     #[command(about = "Use a picture as the depth map, saved next to the image; white is near")]
-    Import { path: PathBuf, file: PathBuf },
+    Import {
+        #[arg(help = "Image file")]
+        path: PathBuf,
+        #[arg(help = "Picture to use as the depth map")]
+        file: PathBuf,
+    },
     #[command(
         about = "Delete the depth maps of the image: the estimated one, the imported one and the one next to it"
     )]
-    Remove { path: PathBuf },
+    Remove {
+        #[arg(help = "Image file")]
+        path: PathBuf,
+    },
     #[command(
         about = "Save the depth map as a 16-bit grey PNG; next to the image without a file, except with --adjusted or --colour, which need one"
     )]
     Export {
+        #[arg(help = "Image file")]
         path: PathBuf,
+        #[arg(help = "PNG file to write")]
         file: Option<PathBuf>,
         #[arg(long, help = "With the near, far, curve, smoothing and growth of the edit")]
         adjusted: bool,

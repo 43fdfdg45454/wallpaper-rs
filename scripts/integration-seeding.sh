@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-declare scene
+declare scene WORK
 craft=$scene/craft
 ctl scene particles "$craft" dust emitter 0 --burst 20 --every 2 --periodic 1,2:0.5,1 --delay 0.5 --follow true --audio-gate true --inherit 0.3 ||
   fail "the emitter was not set"
@@ -26,12 +26,20 @@ ctl scene particles "$craft" dust render --frames life --cycles 2 --order oldest
 if ctl scene particles "$craft" dust render --order sideways 2>/dev/null; then fail "an unknown order was kept"; fi
 ctl scene particles "$craft" dust force turbulence --strength 5 --scale 0.01 --time-scale 2 --mask 0.2,0.8 || fail "the turbulence took no mask"
 if ctl scene particles "$craft" dust force turbulence --strength 5 --scale 0.01 --mask 0.2,3 2>/dev/null; then fail "a mask of 3 was kept"; fi
-for force in "noise 30" "cap 200" "torque -90" "spin-drag 0.5" "orbit p0 --strength 40 --radius 200" "vortex cursor --strength -60 --inner 5 --ring 80,20,2"; do
+for force in "noise 30" "cap 200" "torque -90" "spin-drag 0.5" "orbit p0 --strength 40 --radius 200" "vortex cursor --strength -60 --inner 5 --ring 80,20,2" "slow-near p0 --inner 10 --outer 60 --factor 0.5"; do
   read -ra words <<<"$force"
   ctl scene particles "$craft" dust force "${words[@]}" || fail "no $force force was added"
 done
 if ctl scene particles "$craft" dust force vortex p9 --strength 10 2>/dev/null; then fail "a vortex around p9 was kept"; fi
+if ctl scene particles "$craft" dust force slow-near p0 --inner 50 --outer 10 --factor 0.5 2>/dev/null; then fail "a slowing that ends before it starts was kept"; fi
+if ctl scene particles "$craft" dust force slow-near p0 --inner 1 --outer 10 --factor 2 2>/dev/null; then fail "a slowing factor of 2 was kept"; fi
 ctl scene layer "$craft" dust instance --point 10,20 --point 30,-40 || fail "the instance took no control points"
-ctl scene particles "$craft" sparks rename embers || fail "the system was not renamed"
+ctl scene layer "$craft" dust instance --unset-point 0 --move-point 2=5,6 || fail "one control point of the instance was not moved"
+ctl scene show "$craft" /scene/layers | tr -d ' \n' | grep -q '"points":\[null,\[30.0,-40.0\],\[5.0,6.0\]\]' || fail "moving one point of the instance changed the others"
+if ctl scene layer "$craft" dust instance --move-point 8=1,1 2>/dev/null; then fail "a control point p8 was kept"; fi
+printf 'const system = "sparks";\nexport function update() { return system; }\n' >"$WORK/sparks.js"
+ctl scene import-script "$craft" "$WORK/sparks.js" >/dev/null || fail "the script that names the system was not imported"
+ctl scene particles "$craft" sparks rename embers 2>"$WORK/renamed.err" || fail "the system was not renamed"
+grep -q 'names "sparks"; scripts are not rewritten' "$WORK/renamed.err" || fail "renaming did not warn about the script that names the system"
 [ "$(ctl scene show "$craft" /scene/particles/dust/children/0/system)" = '"embers"' ] || fail "the child did not follow the new name"
 ctl scene preview "$craft" -o preview:1 --time 0.5 || fail "a scene with every emitter and color field was not previewed"

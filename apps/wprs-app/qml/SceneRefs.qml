@@ -46,11 +46,14 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: refs.kind === "refs"
 
-        Repeater {
-            model: refs.kind === "refs" ? refs.field.options : []
+        SceneRepeater {
+            id: listed
+
+            rows: refs.kind === "refs" ? refs.field.options : []
 
             delegate: QQC2.CheckBox {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 text: String(modelData)
                 checked: (refs.value ?? []).includes(modelData)

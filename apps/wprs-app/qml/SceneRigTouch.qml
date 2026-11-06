@@ -14,11 +14,13 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: touch.owner.touched
+    SceneRepeater {
+        id: listed
+
+        rows: touch.owner.touched
 
         delegate: SceneRigRow {
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             text: modelData
@@ -63,7 +65,7 @@ ColumnLayout {
             text: App.tr("Depth")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 10

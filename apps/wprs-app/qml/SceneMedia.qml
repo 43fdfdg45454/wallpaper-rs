@@ -91,7 +91,7 @@ QQC2.ScrollView {
                 onToggled: player.change("playing", checked)
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Kirigami.FormData.label: App.tr("Position: %1", SceneMediaWords.clock(value))
                 from: 0
                 to: Math.max(1, player.media.duration ?? 0)
@@ -102,7 +102,7 @@ QQC2.ScrollView {
             RowLayout {
                 Kirigami.FormData.label: App.tr("Duration: %1", SceneMediaWords.clock(player.media.duration ?? 0))
 
-                QQC2.Slider {
+                SceneSlider {
                     Layout.fillWidth: true
                     from: 0
                     to: 14400

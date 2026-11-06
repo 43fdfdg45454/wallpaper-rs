@@ -43,6 +43,7 @@ pub enum Files {
     },
     #[command(about = "Download a private file from the server into the library")]
     Fetch {
+        #[arg(help = "Id or name of the private file")]
         file: String,
         #[command(flatten)]
         wait: Wait,

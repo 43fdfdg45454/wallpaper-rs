@@ -78,7 +78,7 @@ ColumnLayout {
             text: App.tr("Brush size")
         }
 
-        QQC2.Slider {
+        SceneSlider {
             id: size
 
             Layout.fillWidth: true

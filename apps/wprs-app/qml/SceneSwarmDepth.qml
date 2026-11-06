@@ -30,7 +30,7 @@ GridLayout {
         text: App.tr("Focal length")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: !!deep.focal
         from: 50
@@ -41,13 +41,16 @@ GridLayout {
         }, true)
     }
 
-    Repeater {
-        model: deep.focal ? [["depth", App.tr("Depth")], ["depth_speed", App.tr("Depth speed")]] : []
+    SceneRepeater {
+        id: listed
+
+        rows: deep.focal ? [["depth", App.tr("Depth")], ["depth_speed", App.tr("Depth speed")]] : []
 
         delegate: RowLayout {
             id: span
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property var held: deep.depth[modelData[0] === "depth" ? "depth" : "speed"] ?? [0, 0]
 
             Layout.columnSpan: 2
@@ -56,7 +59,7 @@ GridLayout {
                 text: span.modelData[1]
             }
 
-            QQC2.RangeSlider {
+            SceneRangeSlider {
                 Layout.fillWidth: true
                 from: span.modelData[0] === "depth" ? -2000 : -500
                 to: span.modelData[0] === "depth" ? 4000 : 500

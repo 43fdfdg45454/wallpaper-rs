@@ -54,11 +54,13 @@ Item {
         spacing: Kirigami.Units.smallSpacing
         visible: heat.mesh.view === "owner" && heat.shown !== null
 
-        Repeater {
-            model: heat.shown ? heat.shown.bones : []
+        SceneRepeater {
+            id: listed
+
+            rows: heat.shown ? heat.shown.bones : []
 
             delegate: RowLayout {
-                required property var modelData
+                readonly property var modelData: listed.rows[index]
                 required property int index
 
                 Rectangle {

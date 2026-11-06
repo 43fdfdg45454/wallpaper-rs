@@ -72,3 +72,50 @@ fn list_bases_keep_every_number_within_what_the_scene_accepts() {
     act(&mut p, scale(json!({"time": 0, "base": [0.5, 2]}))).unwrap();
     sound(&p);
 }
+
+#[test]
+fn a_keyframe_value_the_scene_cannot_read_is_refused_with_the_shape_it_needs() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let at_scale = |extra: serde_json::Value| {
+        let mut k = json!({"pointer": "/scene/layers/0/transform/scale", "time": 0});
+        k.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        json!({ "keyframe": k })
+    };
+    act(&mut p, at_scale(json!({"value": [1, 1]}))).unwrap();
+    let listed = refused(&mut p, at_scale(json!({"time": 1, "value": "1,1"})));
+    assert!(
+        listed.contains("a list of 2 numbers such as [1, 1]") && !listed.contains("untagged"),
+        "{listed}"
+    );
+    act(&mut p, at_scale(json!({"time": 1, "value": 2}))).unwrap();
+    act(&mut p, key(json!({"time": 0, "value": 0.5}))).unwrap();
+    let number = refused(&mut p, key(json!({"time": 1, "value": "half"})));
+    assert!(number.contains("give a number such as 0.5") && number.contains("\"half\""), "{number}");
+    act(&mut p, json!({"keyframe": {"pointer": "/scene/layers/0/color", "time": 0, "value": "#102030"}}))
+        .unwrap();
+    let color =
+        refused(&mut p, json!({"keyframe": {"pointer": "/scene/layers/0/color", "time": 1, "value": 3}}));
+    assert!(color.contains("a color such as"), "{color}");
+    sound(&p);
+}
+
+#[test]
+fn a_keyframe_on_a_field_left_at_its_default_is_refused_with_the_shape_it_needs() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let at = |field: &str, value: serde_json::Value| {
+        let pointer = format!("/scene/layers/0/transform/{field}");
+        json!({"keyframe": {"pointer": pointer, "time": 0, "value": value}})
+    };
+    assert_eq!(p.doc.pointer("/scene/layers/0/transform/skew"), None);
+    let listed = refused(&mut p, at("skew", json!("1,1")));
+    assert!(
+        listed.contains("a list of 2 numbers such as [1, 1]") && !listed.contains("untagged"),
+        "{listed}"
+    );
+    let number = refused(&mut p, at("z", json!("x")));
+    assert!(number.contains("a number such as 0.5") && !number.contains("untagged"), "{number}");
+    act(&mut p, at("tilt", json!([10, 0]))).unwrap();
+    sound(&p);
+}

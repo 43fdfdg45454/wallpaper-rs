@@ -1,9 +1,9 @@
 use crate::action::KeyframeEdit;
+use crate::blend::parts;
 use crate::ops::{Op, set};
 use anyhow::{Result, bail, ensure};
 use serde_json::{Map, Value, json};
 use wprs_core::message::said;
-use wprs_scene::Color;
 
 const SPAN: f64 = 1e6;
 
@@ -14,10 +14,12 @@ fn handle(key: &Value, side: &str) -> Option<[f64; 2]> {
 
 pub(crate) fn curve(a: &Value, b: &Value, t: f64) -> Option<Value> {
     let (out, back) = (handle(a, "out"), handle(b, "in"));
-    let ([t0, v0], [t1, v1]) = ([a[0].as_f64()?, a[1].as_f64()?], [b[0].as_f64()?, b[1].as_f64()?]);
+    let (t0, t1) = (a[0].as_f64()?, b[0].as_f64()?);
     if out.is_none() && back.is_none() {
         return None;
     }
+    let scalar = a[1].as_f64().zip(b[1].as_f64());
+    let (v0, v1) = scalar.unwrap_or((0.0, 1.0));
     let third = [(t1 - t0) / 3.0, (v1 - v0) / 3.0];
     let ([dt0, dv0], [dt1, dv1]) = (out.unwrap_or(third), back.unwrap_or(third));
     let at = |p: [f64; 4], s: f64| {
@@ -31,7 +33,10 @@ pub(crate) fn curve(a: &Value, b: &Value, t: f64) -> Option<Value> {
         (lo, hi) = if at(xs, mid) < t { (mid, hi) } else { (lo, mid) };
     }
     let v = at([v0, v0 + dv0, v1 - dv1, v1], (lo + hi) / 2.0);
-    Some(json!((v * 1e6).round() / 1e6))
+    match scalar {
+        Some(_) => Some(json!((v * 1e6).round() / 1e6)),
+        None => Some(crate::keys::mix(&a[1], &b[1], v as f32)),
+    }
 }
 
 pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
@@ -94,8 +99,12 @@ pub(crate) fn end(old: Option<&Value>, e: &KeyframeEdit, value: &Value) -> Resul
         return Ok(old.cloned());
     }
     ensure!(
-        value.is_number(),
-        said("editor.handles_numbers", "Bézier handles shape keyframes of single numbers", &[])
+        parts(value).is_some(),
+        said(
+            "editor.handles_numbers",
+            "Bézier handles shape keyframes of numbers, lists of numbers and colors",
+            &[]
+        )
     );
     let mut sides = old.and_then(Value::as_object).cloned().unwrap_or_else(Map::new);
     let round = |[dt, dv]: [f64; 2]| json!([(dt * 1000.0).round() / 1000.0, (dv * 1e6).round() / 1e6]);
@@ -105,44 +114,6 @@ pub(crate) fn end(old: Option<&Value>, e: &KeyframeEdit, value: &Value) -> Resul
         }
     }
     Ok(Some(Value::Object(sides)))
-}
-
-fn parts(v: &Value) -> Option<Vec<f64>> {
-    match v {
-        Value::Number(n) => n.as_f64().map(|n| vec![n]),
-        Value::Array(list) => list.iter().map(Value::as_f64).collect(),
-        Value::String(text) => Color::parse(text).map(|c| c.0.map(f64::from).to_vec()),
-        _ => None,
-    }
-}
-
-pub(crate) fn added(base: &Value, value: &Value) -> Option<Value> {
-    let (mut a, mut b) = (parts(base)?, parts(value)?);
-    let hexes = [base, value].map(Value::is_string);
-    let colored = hexes.contains(&true) || [a.len(), b.len()] == [3, 4] || [a.len(), b.len()] == [4, 3];
-    for side in [&mut a, &mut b] {
-        match side.len() {
-            3 if colored => side.push(1.0),
-            1 if colored => return None,
-            _ => {}
-        }
-    }
-    let n = a.len().max(b.len());
-    for side in [&mut a, &mut b] {
-        if side.len() == 1 {
-            *side = vec![side[0]; n];
-        }
-    }
-    let sum: Vec<f64> = (a.len() == b.len()).then(|| a.iter().zip(&b).map(|(a, b)| a + b).collect())?;
-    let mut sum: Vec<f64> = sum.into_iter().map(|x| (x * 1e6).round() / 1e6).collect();
-    if colored {
-        sum[3] = sum[3].clamp(0.0, 1.0);
-    }
-    Some(match (hexes, sum.as_slice()) {
-        ([true, true], _) => json!(Color(std::array::from_fn(|i| sum[i] as f32)).hex()),
-        (_, [one]) => json!(one),
-        _ => json!(sum),
-    })
 }
 
 pub(crate) fn key(time: f64, value: Value, third: Option<Value>) -> Value {

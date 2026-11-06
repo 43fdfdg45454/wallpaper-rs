@@ -24,7 +24,7 @@ class StallTest {
     fun aStaticRepositoryFolderIsOpenedFilledUnlistedAndFeaturedFromThePhone() {
         val dir = File(storage(), "stall").apply { deleteRecursively() }
         unpack("stall", dir)
-        fixture("stall-anchor.json").copyTo(File(dir, "root/1.json"), true)
+        Anchor.renew(fixture("stall-anchor.json").copyTo(File(dir, "root/1.json"), true))
         val wpak = fixture("stall-dawn.wpak")
         fun ask(op: String, vararg args: Pair<String, Any?>) = JSONObject(Native.stall(JSONObject(mapOf("op" to op, "dir" to dir.path, *args)).toString()))
         val opened = ask("open")

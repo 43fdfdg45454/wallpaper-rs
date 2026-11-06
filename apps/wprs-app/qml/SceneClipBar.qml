@@ -83,7 +83,7 @@ QQC2.ToolBar {
                 text: App.tr("%1 s", clipBar.line.now.toFixed(2))
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: 0
                 to: clipBar.line.length

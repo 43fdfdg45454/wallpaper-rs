@@ -50,14 +50,19 @@ ColumnLayout {
         text: App.tr("Emitters")
     }
 
-    Repeater {
-        model: tools.info?.emitters ?? []
+    SceneRepeater {
+        id: listed
+
+        readonly property var host: tools
+
+        rows: tools.info?.emitters ?? []
 
         delegate: SceneSwarmEmitter {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
-            tools: tools
+            tools: listed.host
             emitter: modelData
         }
     }
@@ -109,6 +114,11 @@ ColumnLayout {
     }
 
     SceneSwarmBudget {
+        Layout.fillWidth: true
+        tools: tools
+    }
+
+    SceneSwarmStack {
         Layout.fillWidth: true
         tools: tools
     }

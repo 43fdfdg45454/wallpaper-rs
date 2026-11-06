@@ -12,11 +12,13 @@ GridLayout {
 
     columns: 3
 
-    Repeater {
-        model: sliders.rows
+    SceneRepeater {
+        id: listed3
+
+        rows: sliders.rows
 
         delegate: QQC2.Label {
-            required property var modelData
+            readonly property var modelData: listed3.rows[index]
             required property int index
 
             Layout.row: index
@@ -25,11 +27,13 @@ GridLayout {
         }
     }
 
-    Repeater {
-        model: sliders.rows
+    SceneRepeater {
+        id: listed2
 
-        delegate: QQC2.Slider {
-            required property var modelData
+        rows: sliders.rows
+
+        delegate: SceneSlider {
+            readonly property var modelData: listed2.rows[index]
             required property int index
 
             Layout.row: index
@@ -43,11 +47,13 @@ GridLayout {
         }
     }
 
-    Repeater {
-        model: sliders.rows
+    SceneRepeater {
+        id: listed
+
+        rows: sliders.rows
 
         delegate: QQC2.Label {
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             Layout.row: index

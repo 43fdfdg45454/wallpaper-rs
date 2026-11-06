@@ -39,11 +39,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: remaps.list
+    SceneRepeater {
+        id: listed
+
+        rows: remaps.list
 
         delegate: SceneSwarmRemap {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             tools: remaps.tools

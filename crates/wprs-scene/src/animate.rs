@@ -1,9 +1,11 @@
 use crate::Color;
 use crate::resolve::binding::key;
-use crate::value::{Param, Vec2, Vec3};
+use crate::value::{Vec2, Vec3};
 use serde_json::Value as Json;
 
-fn floats<const N: usize>(v: &Json) -> Option<[f32; N]> {
+mod param;
+
+pub(crate) fn floats<const N: usize>(v: &Json) -> Option<[f32; N]> {
     let list = v.as_array().filter(|list| list.len() == N)?;
     let mut out = [0.0; N];
     for (slot, x) in out.iter_mut().zip(list) {
@@ -35,6 +37,15 @@ pub trait Animate: Clone + PartialEq + Default {
     fn with_parts(&self, parts: [f32; 4]) -> Self {
         self.with_comps(parts)
     }
+    fn plus(&self, more: &Self) -> Self {
+        summed(self, more)
+    }
+}
+
+pub(crate) fn summed<T: Animate>(base: &T, more: &T) -> T {
+    let ((mut parts, n), (more, _)) = (base.parts(), more.parts());
+    parts[..n].iter_mut().zip(more).for_each(|(p, m)| *p += m);
+    base.with_parts(parts)
 }
 
 impl Animate for f32 {
@@ -113,6 +124,10 @@ impl Animate for Color {
     fn with_parts(&self, parts: [f32; 4]) -> Color {
         Color(parts)
     }
+    fn plus(&self, more: &Color) -> Color {
+        let Color([r, g, b, a]) = summed(self, more);
+        Color([r, g, b, a.clamp(0.0, 1.0)])
+    }
     fn from_json(v: &Json) -> Option<Color> {
         match v {
             Json::String(hex) => Color::parse(hex),
@@ -121,60 +136,5 @@ impl Animate for Color {
     }
     fn from_signal(x: f32) -> Option<Color> {
         Some(Color([x, x, x, 1.0]))
-    }
-}
-
-impl Animate for Param {
-    fn lerp(&self, to: &Param, f: f32) -> Param {
-        match (self, to) {
-            (Param::Number(a), Param::Number(b)) => Param::Number(a.lerp(b, f)),
-            (Param::Vec2(a), Param::Vec2(b)) => Param::Vec2(Vec2(*a).lerp(&Vec2(*b), f).0),
-            (Param::Color(a), Param::Color(b)) => Param::Color(a.lerp(b, f)),
-            _ if f < 1.0 => self.clone(),
-            _ => to.clone(),
-        }
-    }
-    fn from_json(v: &Json) -> Option<Param> {
-        match v {
-            Json::Bool(b) => Some(Param::Bool(*b)),
-            Json::Number(n) => n.as_f64().map(|n| Param::Number(n as f32)),
-            Json::String(s) => Some(Color::parse(s).map_or_else(|| Param::Text(s.clone()), Param::Color)),
-            _ => floats(v).map(Param::Vec2).or_else(|| Color::from_json(v).map(Param::Color)),
-        }
-    }
-    fn from_signal(x: f32) -> Option<Param> {
-        Some(Param::Number(x))
-    }
-    fn comps(&self) -> ([f32; 4], usize) {
-        match self {
-            Param::Number(n) => n.comps(),
-            Param::Vec2(v) => Vec2(*v).comps(),
-            _ => ([0.0; 4], 0),
-        }
-    }
-    fn with_comps(&self, c: [f32; 4]) -> Param {
-        match self {
-            Param::Number(_) => Param::Number(c[0]),
-            Param::Vec2(_) => Param::Vec2([c[0], c[1]]),
-            other => other.clone(),
-        }
-    }
-    fn parts(&self) -> ([f32; 4], usize) {
-        match self {
-            Param::Color(c) => c.parts(),
-            other => other.comps(),
-        }
-    }
-    fn with_parts(&self, parts: [f32; 4]) -> Param {
-        match self {
-            Param::Color(_) => Param::Color(Color(parts)),
-            other => other.with_comps(parts),
-        }
-    }
-}
-
-impl Default for Param {
-    fn default() -> Self {
-        Param::Number(0.0)
     }
 }

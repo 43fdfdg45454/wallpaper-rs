@@ -62,11 +62,14 @@ ColumnLayout {
         text: App.tr("%1 alive of %2 at %3 s; %4 slots on the processor", budget.census?.alive ?? 0, budget.census?.capacity ?? 0, Math.round((budget.census?.time ?? 0) * 10) / 10, budget.census?.slots ?? 0)
     }
 
-    Repeater {
-        model: budget.census?.levels ?? []
+    SceneRepeater {
+        id: listed3
+
+        rows: budget.census?.levels ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed3.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -74,11 +77,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: budget.census?.tiers ?? []
+    SceneRepeater {
+        id: listed2
+
+        rows: budget.census?.tiers ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -86,11 +92,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: glow ? glow.levels : []
+    SceneRepeater {
+        id: listed
+
+        rows: glow ? glow.levels : []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap

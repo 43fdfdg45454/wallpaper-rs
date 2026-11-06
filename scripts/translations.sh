@@ -76,3 +76,15 @@ sed -i -E 's/^(\s*)\("[a-z0-9_.]+", ("[^"]*"), \[[A-Za-z, ]+\]\),?$/\1w(\2);/' "
 (cd "$TMP/rs" && xgettext --c++ --from-code=UTF-8 -k -ksaid:2 -kw:1 -kknown:2 -kpointed:2 -krequire:3 -kwithin:1 \
   -kUnsupported:2 -kSignature:1 --add-location=file --force-po --package-name=wallpaper-rs -o "$TMP/wprs-messages.pot" "${sources[@]}")
 catalog wprs-messages ""
+
+mapfile -t sources < <(find apps/wprs-ctl/src -name '*.rs' | LC_ALL=C sort)
+helps=$(grep -hoE '(help|about|after_long_help) = ([a-z_]+::)*[A-Z][A-Z_]+' "${sources[@]}" | sed -E 's/.*[ :]([A-Z][A-Z_]+)$/\1/' | sort -u | paste -sd'|')
+for f in "${sources[@]}"; do
+  mkdir -p "$TMP/ctl/$(dirname "$f")"
+  perl -0pe 's/\\\n\s*//g; s/(const [A-Z_]+: &str =)\s*\n\s*/$1 /g' "$f" | sed -E -e 's/^(\s*)#!?\[/\1[/' \
+    -e "s/(^|[^A-Za-z])'([a-z_]+)([^a-z_'])/\1\3/g" -e 's/(help|about|long_about) = ("([^"\\]|\\.)*")/w(\2)/g' \
+    -e "s/^(pub(\(crate\)|\(super\))? )?const ($helps): &str = (\"([^\"\\\\]|\\\\.)*\");/w(\4);/" >"$TMP/ctl/$f"
+done
+(cd "$TMP/ctl" && xgettext --c++ --from-code=UTF-8 -k -kw:1 -ktold:1 --add-location=file --force-po --package-name=wallpaper-rs \
+  -o "$TMP/wprs-ctl.pot" "${sources[@]}")
+catalog wprs-ctl ""

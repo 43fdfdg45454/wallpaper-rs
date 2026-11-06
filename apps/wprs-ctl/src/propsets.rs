@@ -18,31 +18,37 @@ pub enum PropPreset {
     },
     #[command(about = "Save the current values under a name; saving the same name again replaces it")]
     Save {
+        #[arg(help = "Name of the new preset")]
         name: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Apply a preset of the package or one you saved")]
     Load {
+        #[arg(help = "Name or uid of the preset")]
         preset: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Rename a preset you saved")]
     Rename {
+        #[arg(help = "Name or uid of the preset")]
         preset: String,
+        #[arg(help = "New name")]
         name: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Delete a preset you saved")]
     Rm {
+        #[arg(help = "Name or uid of the preset")]
         preset: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
     },
     #[command(about = "Write the current values, or those of a preset, to a small file or to the screen")]
     Export {
+        #[arg(help = "Name or uid of the preset; the current values when left out")]
         preset: Option<String>,
         #[arg(short, long, help = "File to write; the screen when omitted")]
         file: Option<PathBuf>,

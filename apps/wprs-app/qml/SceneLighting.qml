@@ -50,11 +50,13 @@ ColumnLayout {
         visible: lit.block !== null && !lit.sprites
         columns: 2
 
-        Repeater {
-            model: lit.fields
+        SceneRepeater {
+            id: listed2
+
+            rows: lit.fields
 
             delegate: QQC2.Label {
-                required property var modelData
+                readonly property var modelData: listed2.rows[index]
                 required property int index
 
                 Layout.row: index
@@ -63,11 +65,13 @@ ColumnLayout {
             }
         }
 
-        Repeater {
-            model: lit.fields
+        SceneRepeater {
+            id: listed
+
+            rows: lit.fields
 
             delegate: QQC2.ComboBox {
-                required property var modelData
+                readonly property var modelData: listed.rows[index]
                 required property int index
 
                 Layout.row: index

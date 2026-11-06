@@ -53,8 +53,9 @@ pub enum Lamping {
     PaintMap {
         #[arg(help = DIR)]
         dir: PathBuf,
+        #[arg(help = "The layer to paint on")]
         layer: String,
-        #[arg(value_parser = ["roughness", "emissive"])]
+        #[arg(help = "The map: roughness or emissive", value_parser = ["roughness", "emissive"])]
         map: String,
         #[arg(
             long,
@@ -65,7 +66,7 @@ pub enum Lamping {
         points: Option<String>,
         #[arg(long, default_value_t = 0.05, help = "Brush radius as a part of the shorter side")]
         radius: f32,
-        #[arg(long, default_value_t = 0.5)]
+        #[arg(help = "Edge of the brush, 0 soft to 1 hard", long, default_value_t = 0.5)]
         hardness: f32,
         #[arg(long, default_value_t = 1.0, help = "Gray from 0 to 1")]
         value: f32,
@@ -91,14 +92,15 @@ pub enum Lamping {
 pub struct Lit {
     #[arg(help = DIR)]
     pub dir: PathBuf,
+    #[arg(help = "The layer lit by the lights")]
     pub layer: String,
-    #[arg(long)]
+    #[arg(help = "Asset of its normal map", long)]
     pub normal: Option<String>,
-    #[arg(long)]
+    #[arg(help = "Asset of a picture it reflects", long)]
     pub env: Option<String>,
-    #[arg(long)]
+    #[arg(help = "Asset of its roughness map", long)]
     pub roughness_map: Option<String>,
-    #[arg(long)]
+    #[arg(help = "Asset of its emissive map", long)]
     pub emissive_map: Option<String>,
     #[arg(long, help = "0 to 1")]
     pub roughness: Option<f64>,
@@ -116,7 +118,7 @@ pub struct Lit {
 pub enum Lamp {
     #[command(about = "Add a light layer with the defaults of its type")]
     Add {
-        #[arg(long = "type", default_value = "point", value_parser = ["point", "spot", "tube", "directional"])]
+        #[arg(help = "point, spot, tube or directional", long = "type", default_value = "point", value_parser = ["point", "spot", "tube", "directional"])]
         light: String,
         #[arg(long, help = "A group to add it to")]
         into: Option<String>,
@@ -129,12 +131,12 @@ pub enum Lamp {
     Remove,
     #[command(about = "Light the preview with this light alone, or with all of them again with --off")]
     Solo {
-        #[arg(long)]
+        #[arg(help = "Light the preview with every light again", long)]
         off: bool,
     },
     #[command(about = "Leave this light out of the preview, or bring it back with --off")]
     Mute {
-        #[arg(long)]
+        #[arg(help = "Bring the light back", long)]
         off: bool,
     },
     #[command(about = "Light the air around a point or spot light, or --off")]
@@ -143,16 +145,16 @@ pub enum Lamp {
     Projection(crate::glowing::Cast),
     #[command(about = "Show the intensity of the light against the distance as points")]
     Falloff {
-        #[arg(long, default_value_t = 0.0)]
+        #[arg(help = "Seconds into the scene", long, default_value_t = 0.0)]
         time: f64,
     },
 }
 
 #[derive(Args, Debug)]
 pub struct Setting {
-    #[arg(long = "type", value_parser = ["point", "spot", "tube", "directional"])]
+    #[arg(help = "point, spot, tube or directional", long = "type", value_parser = ["point", "spot", "tube", "directional"])]
     pub light: Option<String>,
-    #[arg(long)]
+    #[arg(help = "Color such as #ffcc88", long)]
     pub color: Option<String>,
     #[arg(long, help = "0 to 100")]
     pub intensity: Option<f64>,
@@ -164,7 +166,7 @@ pub struct Setting {
     pub cone: Option<String>,
     #[arg(long, help = "Pixels of a tube light")]
     pub length: Option<f64>,
-    #[arg(long, allow_hyphen_values = true, value_name = "X,Y")]
+    #[arg(help = "Position in pixels of the canvas", long, allow_hyphen_values = true, value_name = "X,Y")]
     pub at: Option<String>,
     #[arg(long, allow_hyphen_values = true, value_name = "X,Y", help = "A point the light turns to")]
     pub aim: Option<String>,

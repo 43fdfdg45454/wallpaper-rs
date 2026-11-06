@@ -47,7 +47,7 @@ pub async fn run(command: Command) -> Result<()> {
             daemon.set_muted(false).await?
         }
         c @ (Command::Mute | Command::Unmute) => daemon.set_muted(matches!(c, Command::Mute)).await?,
-        Command::Stream { output, width, height, wait } => {
+        Command::Stream(crate::args::Streaming { output, width, height, wait }) => {
             let interrupted = wait.then(crate::args::interrupted).transpose()?;
             let (node, serial) = match wait {
                 true => daemon.request_stream(&output, width, height).await?,
@@ -60,7 +60,9 @@ pub async fn run(command: Command) -> Result<()> {
             }
         }
         Command::Release { output } => daemon.release_stream(&output).await?,
-        Command::Covered { output, covered } => daemon.set_output_covered(&output, covered).await?,
+        Command::Covered(crate::args::Cover { output, covered }) => {
+            daemon.set_output_covered(&output, covered).await?
+        }
         Command::Screen(placement) => placement.tell(daemon).await?,
         Command::Schema { json } => show::reply(daemon.get_schema().await?, json, show::schema)?,
         Command::Watch { json } => watch(client, json).await?,
@@ -80,7 +82,7 @@ pub async fn run(command: Command) -> Result<()> {
         Command::Cancel { id } => daemon.cancel_job(id).await?,
         Command::Prop(command) => props::run(client, command).await?,
         Command::Lib(command) => library::run(client, command).await?,
-        Command::Preset(command) => profiles::preset(client, command).await?,
+        Command::Preset(command) => crate::presets::preset(client, command).await?,
         Command::Playlist(command) => playlists::run(client, command).await?,
         Command::Next(out) => inputs::asking(client, &out.output, client.playlists.next(&out.output)).await?,
         Command::Prev(out) => {

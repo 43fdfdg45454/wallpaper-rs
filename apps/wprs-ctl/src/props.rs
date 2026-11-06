@@ -20,6 +20,7 @@ pub enum Prop {
     },
     #[command(about = "Print the value of one setting")]
     Get {
+        #[arg(help = "Id of the setting")]
         id: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
@@ -27,8 +28,12 @@ pub enum Prop {
     #[command(about = "Set a setting to JSON or plain text such as #ff8800, asked for when left out; \
         file and folder settings take a path, which may be relative to the current folder")]
     Set {
+        #[arg(help = "Id of the setting")]
         id: String,
-        #[arg(allow_negative_numbers = true)]
+        #[arg(
+            allow_negative_numbers = true,
+            help = "New value as JSON or plain text; asked for when left out"
+        )]
         value: Option<String>,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,
@@ -40,6 +45,7 @@ pub enum Prop {
     },
     #[command(about = "Press a button of the scene")]
     Press {
+        #[arg(help = "Id of the button")]
         id: String,
         #[arg(short, long, default_value = "", help = OUTPUT)]
         output: String,

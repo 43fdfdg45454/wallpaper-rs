@@ -1,18 +1,29 @@
 use crate::sowed::pair;
 use crate::steps::value;
+use crate::told::{fill, told};
 use clap::Subcommand;
 use serde_json::{Map, Value, json};
 use wprs_editor::actions::LayerEdit as L;
 
 const XY: &str = "X,Y";
 
+fn indexed(text: &str) -> Result<(usize, [f64; 2]), String> {
+    let (k, at) = text.split_once('=').ok_or_else(|| fill(told("%1 is not K=X,Y"), &[&text]))?;
+    let k = k
+        .trim()
+        .trim_start_matches('p')
+        .parse()
+        .map_err(|_| fill(told("%1 is not a control point"), &[&k]))?;
+    Ok((k, pair(at)?))
+}
+
 fn mode(text: &str) -> Result<wprs_scene::Blend, String> {
-    serde_json::from_value(json!(text)).map_err(|_| format!("{text} is not a blend mode"))
+    serde_json::from_value(json!(text)).map_err(|_| fill(told("%1 is not a blend mode"), &[&text]))
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Stage {
-    #[command(about = "Place, turn, scale, skew or size the layer; what is not given stays")]
+    #[command(about = "Place, turn, scale, skew, tilt, lift or size the layer; what is not given stays")]
     Transform {
         #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Pixels of the canvas")]
         position: Option<[f64; 2]>,
@@ -24,8 +35,19 @@ pub enum Stage {
         skew: Option<[f64; 2]>,
         #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Point it turns and scales around, in fractions of the layer")]
         origin: Option<[f64; 2]>,
+        #[arg(long, value_name = XY, value_parser = pair, allow_hyphen_values = true, help = "Degrees from -89 to 89 the layer leans in depth around its position: X turns the bottom edge towards the viewer, Y the left edge")]
+        tilt: Option<[f64; 2]>,
+        #[arg(long, allow_hyphen_values = true, help = "Pixels towards the viewer, from -100000 to 100000")]
+        z: Option<f64>,
         #[arg(allow_hyphen_values = true, long, value_name = "W,H", value_parser = pair, help = "Pixels of an image, video, solid, adjustment or spectrum layer")]
         size: Option<[f64; 2]>,
+        #[arg(
+            long,
+            value_name = "S",
+            conflicts_with = "replace",
+            help = "Second of the scene at which a value with keyframes, or a part keyed on its own, takes a keyframe instead of being refused"
+        )]
+        at: Option<f64>,
         #[arg(long, help = crate::sowing::REPLACE)]
         replace: bool,
     },
@@ -33,7 +55,7 @@ pub enum Stage {
         about = "Blend the layer over what is below it with a mode such as normal, add, multiply or screen"
     )]
     Blend {
-        #[arg(value_parser = mode)]
+        #[arg(help = "A blend mode such as normal, add, multiply or screen", value_parser = mode)]
         blend: wprs_scene::Blend,
     },
     #[command(
@@ -58,6 +80,15 @@ pub enum Stage {
         color: Option<String>,
         #[arg(long = "point", value_name = "X,Y", value_parser = pair, allow_hyphen_values = true, help = "A control point of this layer in pixels, p0 first; repeat it for the next ones")]
         points: Vec<[f64; 2]>,
+        #[arg(long = "move-point", value_name = "K=X,Y", value_parser = indexed, allow_hyphen_values = true, conflicts_with = "points", help = "Move control point K of this layer only in pixels, the others staying as they are; repeat it for more")]
+        moved: Vec<(usize, [f64; 2])>,
+        #[arg(
+            long = "unset-point",
+            value_name = "K",
+            conflicts_with = "points",
+            help = "Draw control point K as the system does again"
+        )]
+        unset_points: Vec<usize>,
         #[arg(long, value_name = "VALUE", help = "Draw this value as the system does again")]
         unset: Vec<String>,
         #[arg(long, help = "Draw the layer as the system does in every value")]
@@ -67,8 +98,8 @@ pub enum Stage {
 
 pub(crate) fn edit(layer: String, what: Stage) -> L {
     match what {
-        Stage::Transform { position, rotation, scale, skew, origin, size, replace } => {
-            L::Transform { layer, position, rotation, scale, skew, origin, size, replace }
+        Stage::Transform { position, rotation, scale, skew, origin, tilt, z, size, at, replace } => {
+            L::Transform { layer, position, rotation, scale, skew, origin, tilt, z, size, at, replace }
         }
         Stage::Blend { blend } => L::Blend { layer, blend },
         Stage::Instance {
@@ -81,6 +112,8 @@ pub(crate) fn edit(layer: String, what: Stage) -> L {
             brightness,
             color,
             points,
+            moved,
+            unset_points,
             unset,
             clear,
         } => {
@@ -92,6 +125,14 @@ pub(crate) fn edit(layer: String, what: Stage) -> L {
             color.iter().for_each(|c| drop(values.insert("color".into(), value(c))));
             if !points.is_empty() {
                 values.insert("points".into(), json!(points));
+            }
+            let each = moved.into_iter().map(|(k, at)| (k, json!(at)));
+            let each: Map<String, Value> = each
+                .chain(unset_points.into_iter().map(|k| (k, Value::Null)))
+                .map(|(k, v)| (k.to_string(), v))
+                .collect();
+            if !each.is_empty() {
+                values.insert("points".into(), Value::Object(each));
             }
             unset.into_iter().for_each(|k| drop(values.insert(k, Value::Null)));
             L::Instance { layer, values, clear }

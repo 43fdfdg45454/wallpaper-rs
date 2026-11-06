@@ -23,7 +23,7 @@ pub struct Flock {
 impl Instance {
     pub fn moves(&self) -> bool {
         let set = [&self.count, &self.speed, &self.life, &self.time_scale];
-        set.iter().any(|v| v.is_some()) || !self.points.is_empty()
+        set.iter().any(|v| v.is_some()) || self.points.iter().any(Option::is_some)
     }
 }
 

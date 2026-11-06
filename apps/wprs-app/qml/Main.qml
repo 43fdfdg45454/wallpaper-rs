@@ -8,6 +8,8 @@ Kirigami.ApplicationWindow {
     property int current: 0
     property var inputs: ({})
     property var asked: ({})
+    property int waiting: 0
+    property var held: []
     readonly property var names: ["library", "playlists", "profiles", "providers", "repos", "settings", "account", "scenes"]
     readonly property list<Component> pages: [
         Component {

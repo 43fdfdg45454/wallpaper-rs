@@ -1,4 +1,5 @@
 use crate::audio::{Audio, from_output};
+use crate::wish::{Change, Gate, Wish};
 use crate::{Error, Event, Shared, Sink};
 use gstreamer as gst;
 use gstreamer::glib::WeakRef;
@@ -14,7 +15,7 @@ const STUCK: Duration = Duration::from_secs(1);
 
 pub(crate) struct Pipe {
     pub(crate) playbin: gst::Element,
-    playing: Arc<AtomicBool>,
+    wish: Arc<Wish>,
     stop: Arc<AtomicBool>,
     stopped: Receiver<()>,
 }
@@ -26,9 +27,9 @@ impl Pipe {
         sink: Sink,
         audible: bool,
     ) -> Result<Pipe, Error> {
-        let (stop, playing) = (Arc::new(AtomicBool::new(false)), Arc::new(AtomicBool::new(true)));
+        let (stop, wish) = (Arc::new(AtomicBool::new(false)), Arc::new(Wish::new(true)));
         let bus = playbin.bus().expect("playbin has a bus");
-        let (weak, flags) = (playbin.downgrade(), (stop.clone(), playing.clone()));
+        let (weak, flags) = (playbin.downgrade(), (stop.clone(), wish.clone()));
         let (done, stopped) = mpsc::channel::<()>();
         std::thread::Builder::new()
             .name("wprs-video-bus".into())
@@ -37,7 +38,7 @@ impl Pipe {
                 watch_bus(&bus, (&weak, uri, shared), &flags.0, &flags.1, &*sink);
             })
             .map_err(Error::state)?;
-        let pipe = Pipe { playbin, playing, stop, stopped };
+        let pipe = Pipe { playbin, wish, stop, stopped };
         match pipe.playbin.set_state(gst::State::Paused) {
             Err(_) if audible => {}
             started => drop(started.map_err(Error::state)?),
@@ -46,13 +47,12 @@ impl Pipe {
     }
 
     pub(crate) fn set_playing(&self, playing: bool) {
-        self.playing.store(playing, Ordering::Relaxed);
+        self.wish.set(playing);
         self.wake();
     }
 
     pub(crate) fn paused(&self) -> bool {
-        let (_, current, pending) = self.playbin.state(gst::ClockTime::ZERO);
-        current == gst::State::Paused && pending == gst::State::VoidPending
+        self.wish.paused(&self.playbin)
     }
 
     fn wake(&self) {
@@ -85,15 +85,16 @@ pub(crate) fn watch_bus(
     bus: &gst::Bus,
     (weak, uri, shared): (&WeakRef<gst::Element>, String, Shared),
     stop: &AtomicBool,
-    playing: &AtomicBool,
+    wish: &Wish,
     sink: &dyn Fn(Event),
 ) {
+    let mut gate = Gate::new(shared.seen.clone());
     let (mut warned, mut audio, mut pausing) = (None::<Instant>, Audio::new(uri, shared), None::<Instant>);
     while !stop.load(Ordering::Relaxed) {
+        let (asked, wanted) = wish.read();
         if let Some(playbin) = weak.upgrade() {
-            let wanted = playing.load(Ordering::Relaxed);
-            match (!audio.holding()).then(|| apply_wanted_state(&playbin, wanted)) {
-                Some(Ok(true)) => pausing = Some(Instant::now() + STUCK),
+            match (!audio.holding()).then(|| gate.apply(&playbin, (asked, wanted), wish)) {
+                Some(Ok(Some(Change::Paused))) => pausing = Some(Instant::now() + STUCK),
                 Some(Err(e)) if warned.is_none_or(|t| t.elapsed() >= LOG_PERIOD) => {
                     warned = Some(Instant::now());
                     tracing::warn!("cannot change the video state: {e}");
@@ -106,7 +107,7 @@ pub(crate) fn watch_bus(
             }
             audio.tick(&playbin, bus);
         }
-        let wait = pausing.map(|at| gst::ClockTime::from_mseconds(remaining(at)));
+        let wait = pausing.map(|at| gst::ClockTime::from_mseconds(remaining(at))).or(gate.wait(wanted));
         let Some(message) = bus.timed_pop(audio.wait().into_iter().chain(wait).min()) else { continue };
         let Some(playbin) = weak.upgrade() else { continue };
         match message.view() {
@@ -142,16 +143,6 @@ pub(crate) fn watch_bus(
     if let Some(playbin) = weak.upgrade() {
         let _ = playbin.set_state(gst::State::Null);
     }
-}
-
-fn apply_wanted_state(playbin: &gst::Element, playing: bool) -> Result<bool, gst::StateChangeError> {
-    let wanted = if playing { gst::State::Playing } else { gst::State::Paused };
-    let (_, current, pending) = playbin.state(gst::ClockTime::ZERO);
-    let settled = pending == gst::State::VoidPending && current >= gst::State::Paused;
-    if !settled || current == wanted {
-        return Ok(false);
-    }
-    playbin.set_state(wanted).map(|_| !playing)
 }
 
 fn unstick(playbin: &gst::Element, audio: &mut Audio) {

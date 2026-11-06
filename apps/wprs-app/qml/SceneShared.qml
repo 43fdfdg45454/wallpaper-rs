@@ -68,11 +68,14 @@ Kirigami.Dialog {
             Layout.fillWidth: true
             columns: 2
 
-            Repeater {
-                model: dialog.info?.parts ?? []
+            SceneRepeater {
+                id: listed
+
+                rows: dialog.info?.parts ?? []
 
                 delegate: SceneSharedPart {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     part: modelData
                     chosen: dialog.chosen.includes(modelData.key)

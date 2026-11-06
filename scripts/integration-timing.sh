@@ -12,6 +12,11 @@ if ctl scene clip "$timed" body wave --length 1 --play 2>/dev/null; then fail "-
 ctl scene timeline "$timed" intro --add --duration 4 --loop repeat || fail "no timeline was added"
 if ctl scene timeline "$timed" intro --add 2>/dev/null; then fail "a timeline was added twice"; fi
 if ctl scene timeline "$timed" intro --fps 900 --frames 10 2>/dev/null; then fail "900 frames a second were kept"; fi
+ctl scene timeline "$timed" intro --event 1.5:boom --event 3:spark || fail "the timeline took no events"
+ctl scene timeline "$timed" intro --drop-event boom@1.5 --event 2:boom || fail "an event was not moved"
+[ "$(ctl scene show "$timed" /scene/timelines/0/events/0/t)" = 2.0 ] || fail "the moved event is not at 2 s"
+if ctl scene timeline "$timed" intro --event 9:late 2>/dev/null; then fail "an event past the end was kept"; fi
+if ctl scene timeline "$timed" intro --drop-event nothing 2>/dev/null; then fail "a missing event was dropped"; fi
 ctl scene keyframe "$timed" /scene/layers/0/opacity 0 1 --timeline intro || fail "no keyframe on the timeline"
 ctl scene keyframe "$timed" /scene/layers/0/opacity 3 -0.5 --base 0.75 || fail "the keyframes took no base"
 ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle 1,0 || fail "the keyframe took no handle"
@@ -20,6 +25,9 @@ if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle -1,0 2>/de
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle 5,0 2>/dev/null; then fail "a handle reached past the next keyframe"; fi
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 3 --out-handle 1,0 2>/dev/null; then fail "the last keyframe took a handle out of it"; fi
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 0.5 --from 3 2>/dev/null; then fail "a move left a handle past its neighbour"; fi
+ctl scene keyframe "$timed" /scene/layers/0/transform/position 0 '[0,0]' >/dev/null || fail "the position took no keyframe"
+ctl scene keyframe "$timed" /scene/layers/0/transform/position 2 '[100,50]' >/dev/null || fail "the position took no second keyframe"
+ctl scene keyframe "$timed" /scene/layers/0/transform/position 0 --out-handle 1,0.5 || fail "a position keyframe took no handle"
 ctl scene validate "$timed" >/dev/null || fail "keyframes with handles left the scene invalid"
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 0 --out-handle 1,2000000 2>/dev/null; then fail "a handle reached past the values a scene takes"; fi
 if ctl scene keyframe "$timed" /scene/layers/0/opacity 3 --in-handle 1,-2000000 2>/dev/null; then fail "a handle into a keyframe reached past the values a scene takes"; fi

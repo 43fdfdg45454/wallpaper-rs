@@ -11,11 +11,14 @@ ColumnLayout {
     required property var fields
     required property var toggles
 
-    Repeater {
-        model: strand.fields
+    SceneRepeater {
+        id: listed2
+
+        rows: strand.fields
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
 
@@ -23,7 +26,7 @@ ColumnLayout {
                 text: modelData[1]
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: modelData[2]
                 to: modelData[3]
@@ -36,11 +39,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: strand.toggles
+    SceneRepeater {
+        id: listed
+
+        rows: strand.toggles
 
         delegate: QQC2.CheckBox {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             text: modelData[1]
             checked: strand.value[modelData[0]] ?? modelData[2]

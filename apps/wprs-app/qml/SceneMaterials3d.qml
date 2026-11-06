@@ -45,14 +45,19 @@ ColumnLayout {
         text: App.tr("Materials")
     }
 
-    Repeater {
-        model: panel.info?.materials ?? []
+    SceneRepeater {
+        id: listed
+
+        readonly property var host: panel
+
+        rows: panel.info?.materials ?? []
 
         delegate: SceneMaterial3d {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
-            panel: panel
+            panel: listed.host
             material: modelData
         }
     }

@@ -31,7 +31,7 @@ GridLayout {
         } : {})
     }
 
-    QQC2.RangeSlider {
+    SceneRangeSlider {
         id: cutRange
 
         Layout.columnSpan: 2
@@ -54,7 +54,7 @@ GridLayout {
         text: App.tr("Opacity")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: look.cut !== null
         from: 0
@@ -83,7 +83,7 @@ GridLayout {
             })
     }
 
-    QQC2.Dial {
+    SceneDial {
         enabled: look.turn.mode === "fixed"
         implicitWidth: Kirigami.Units.gridUnit * 2.5
         implicitHeight: implicitWidth

@@ -18,7 +18,7 @@ fn put<T: Clone>(keys: &mut Vec<Key<T>>, t: f32, v: Option<T>) {
     let Some(v) = v else { return };
     keys.retain(|k| (k.t - t).abs() >= 1e-3);
     let at = keys.partition_point(|k| k.t <= t);
-    keys.insert(at, Key { t, v, ease: Default::default(), handles: None });
+    keys.insert(at, Key { t, v, ease: Default::default(), handles: None, one: None });
 }
 
 pub fn locals(rig: &Rigged, c: &AnimClip, t: f32) -> Vec<Trs> {

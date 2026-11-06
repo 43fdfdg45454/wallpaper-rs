@@ -22,7 +22,7 @@ QQC2.ToolBar {
             text: App.tr("%1 s", timeline.page.clock.toFixed(2))
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: timeline.length

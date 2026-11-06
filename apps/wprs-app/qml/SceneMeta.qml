@@ -24,11 +24,14 @@ Loader {
         Flow {
             spacing: Kirigami.Units.smallSpacing
 
-            Repeater {
-                model: meta.host.field.options
+            SceneRepeater {
+                id: listed2
+
+                rows: meta.host.field.options
 
                 delegate: QQC2.CheckBox {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed2.rows[index]
 
                     text: (meta.host.field.key === "inputs" ? ManifestWords.inputs[modelData] : undefined) ?? SceneWords.value(modelData)
                     checked: meta.list.includes(modelData)
@@ -66,11 +69,14 @@ Loader {
                 color: Kirigami.Theme.disabledTextColor
             }
 
-            Repeater {
-                model: meta.host.field.options
+            SceneRepeater {
+                id: listed
+
+                rows: meta.host.field.options
 
                 delegate: QQC2.CheckBox {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     text: Labels.feature(modelData)
                     checked: meta.list.includes(modelData)

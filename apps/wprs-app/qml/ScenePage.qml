@@ -18,6 +18,7 @@ Kirigami.Page {
     property string spot
     property var picked: []
     property bool moving
+    property bool overwrite
     property var brush: null
     property bool lightBoxes
     readonly property SceneMeshState mesh: SceneMeshState {

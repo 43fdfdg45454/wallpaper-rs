@@ -9,6 +9,7 @@ Kirigami.Dialog {
     id: publishing
 
     property string key: ""
+    property alias secret: password.text
 
     signal publish(string key, string password, int days)
 

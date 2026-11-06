@@ -9,13 +9,16 @@ Item {
     required property var host
     readonly property var size: host.shown.size ?? [1, 1]
 
-    Repeater {
-        model: knobs.visible ? knobs.host.pins : []
+    SceneRepeater {
+        id: listed
+
+        rows: knobs.visible ? knobs.host.pins : []
 
         delegate: Rectangle {
             id: knob
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             property point start
 
             x: modelData.to[0] * knobs.width - width / 2

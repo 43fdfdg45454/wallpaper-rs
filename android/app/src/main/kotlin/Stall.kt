@@ -18,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -28,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -48,26 +50,35 @@ fun Main.stallSaid(reply: JSONObject): String = when {
 
 @Composable
 fun Stall(main: Main) {
-    var tree by rememberSaveable { mutableStateOf<String?>(null) }
+    var tree by rememberSaveable { mutableStateOf(main.keptStall()) }
     var shown by remember(tree) { mutableStateOf<JSONObject?>(null) }
     var said by remember(tree) { mutableStateOf("") }
     var asked by remember { mutableStateOf<Asked?>(null) }
     var publishing by remember { mutableStateOf(false) }
     var unlisted by rememberSaveable { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
+    var jobs by remember { mutableIntStateOf(0) }
+    val busy = jobs > 0
     val scope = rememberCoroutineScope()
     fun act(op: String, vararg args: Pair<String, Any?>, wpaks: List<Uri> = emptyList()) {
         val at = Uri.parse(tree ?: return)
-        busy = true
+        jobs++
         scope.launch {
-            runCatching { main.stalled(at, op, *args, wpaks = wpaks) }.onFailure { if (it !is CancellationException) main.toast(it) }.onSuccess { reply ->
-                shown = reply
-                said = if (op == "open") "" else main.stallSaid(reply)
+            try {
+                runCatching { main.stalled(at, op, *args, wpaks = wpaks) }.onFailure { if (it !is CancellationException) main.toast(it) }.onSuccess { reply ->
+                    shown = reply
+                    said = if (op == "open") "" else main.stallSaid(reply)
+                }
+            } finally {
+                jobs--
             }
-            busy = false
         }
     }
-    val folder = rememberLauncherForActivityResult(OpenDocumentTree()) { picked -> picked?.let { tree = it.toString() } }
+    val folder = rememberLauncherForActivityResult(OpenDocumentTree()) { picked ->
+        picked?.let {
+            scope.launch(Dispatchers.IO) { main.keepStall(it) }
+            tree = it.toString()
+        }
+    }
     val wpaks = rememberLauncherForActivityResult(OpenMultipleDocuments()) { files -> if (files.isNotEmpty()) act("add", "unlisted" to unlisted, wpaks = files) }
     LaunchedEffect(tree) { if (tree != null) act("open") }
     Column(Modifier.padding(horizontal = 16.dp), Arrangement.spacedBy(8.dp)) {

@@ -22,7 +22,7 @@ pub enum Media {
         output: String,
         #[arg(required_unless_present = "stop", help = MEDIA)]
         file: Option<std::path::PathBuf>,
-        #[arg(long, conflicts_with = "file")]
+        #[arg(long, conflicts_with = "file", help = "Stop the simulated playback")]
         stop: bool,
     },
 }

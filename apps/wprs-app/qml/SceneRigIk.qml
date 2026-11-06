@@ -39,13 +39,15 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: reach.owner.chains
+    SceneRepeater {
+        id: listed
+
+        rows: reach.owner.chains
 
         delegate: ColumnLayout {
             id: chain
 
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
             readonly property var target: modelData.target
 
@@ -95,7 +97,7 @@ ColumnLayout {
                     text: App.tr("Weight")
                 }
 
-                QQC2.Slider {
+                SceneSlider {
                     Layout.fillWidth: true
                     value: chain.modelData.weight ?? 1
                     onMoved: reach.run(chain.index, {

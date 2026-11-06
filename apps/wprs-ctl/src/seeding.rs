@@ -1,4 +1,5 @@
 use crate::sowed::pair;
+use crate::told::{fill, told};
 use clap::{ArgAction, Args, Subcommand};
 use serde_json::{Map, Value, json};
 use wprs_editor::actions::{ParticleEdit as P, SowEdit as S};
@@ -7,13 +8,14 @@ fn quad(text: &str) -> Result<String, String> {
     let n: Vec<f64> = text.split(',').filter_map(|v| v.trim().parse().ok()).collect();
     match n.len() == 4 || text == "none" {
         true => Ok(text.to_owned()),
-        false => Err(format!("{text} is not none or FADE_IN,FULL,FADE_OUT,GONE")),
+        false => Err(fill(told("%1 is not none or FADE_IN,FULL,FADE_OUT,GONE"), &[&text])),
     }
 }
 
 fn waves(text: &str) -> Result<[[f64; 2]; 2], String> {
-    let (on, off) =
-        text.split_once(':').ok_or_else(|| format!("{text} is not ON_MIN,ON_MAX:OFF_MIN,OFF_MAX"))?;
+    let (on, off) = text
+        .split_once(':')
+        .ok_or_else(|| fill(told("%1 is not ON_MIN,ON_MAX:OFF_MIN,OFF_MAX"), &[&text]))?;
     Ok([pair(on)?, pair(off)?])
 }
 
@@ -88,7 +90,7 @@ pub struct Tint {
 
 pub(crate) fn three(text: &str) -> Result<[f64; 3], String> {
     let n: Vec<f64> = text.split(',').filter_map(|v| v.trim().parse().ok()).collect();
-    <[f64; 3]>::try_from(n).map_err(|_| format!("{text} is not three numbers H,S,V"))
+    <[f64; 3]>::try_from(n).map_err(|_| fill(told("%1 is not three numbers H,S,V"), &[&text]))
 }
 
 impl Tint {

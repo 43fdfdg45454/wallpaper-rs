@@ -120,6 +120,18 @@ QtObject {
         if (shown?.emitters[0]?.places?.length !== 8 || shown.remaps.length !== 1 || shown.points.length !== 2)
             throw new Error("particles: the handles of the system do not show its shape, remap and points");
         tend();
+        const steps = page.view.history.done.length;
+        Qt.createComponent("SceneSwarmPullCheck.qml").createObject(page, {
+            "page": page
+        }).exercise(check);
+        Qt.createComponent("SceneEmitCheck.qml").createObject(page, {
+            "page": page
+        }).exercise(check);
+        Qt.createComponent("SceneKeptCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
+        while (page.view.history.done.length > steps)
+            page.run("undo");
         page.editor.select("/scene/layers/1");
         for (let k = 0; k < 9; k++)
             page.run("undo");

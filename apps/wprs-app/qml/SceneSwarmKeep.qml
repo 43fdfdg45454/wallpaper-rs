@@ -18,11 +18,14 @@ GridLayout {
         text: row.ring ? App.tr("Keep a distance from") : App.tr("Keep between")
     }
 
-    Repeater {
-        model: row.ring ? [["target", row.keep.target]] : [["from", row.keep.from_ref], ["to", row.keep.to_ref]]
+    SceneRepeater {
+        id: listed
+
+        rows: row.ring ? [["target", row.keep.target]] : [["from", row.keep.from_ref], ["to", row.keep.to_ref]]
 
         delegate: QQC2.ComboBox {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property var value: modelData[1]
 
             Layout.fillWidth: true
@@ -41,7 +44,7 @@ GridLayout {
         text: App.tr("Distance %1 px", Math.round(row.keep.distance ?? 0))
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: row.ring
         from: 0
@@ -54,7 +57,7 @@ GridLayout {
         text: App.tr("Strength")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         from: -50
         to: 50

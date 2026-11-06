@@ -139,11 +139,14 @@ Kirigami.Dialog {
                 detail: App.tr("%1 on the card", App.bytes(dialog.trial?.classes?.[3]?.gpu ?? 0))
             }
 
-            Repeater {
-                model: dialog.trial?.classes ?? []
+            SceneRepeater {
+                id: listed
+
+                rows: dialog.trial?.classes ?? []
 
                 delegate: SceneKtx2Look {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     source: modelData.look ?? ""
                     label: dialog.classes[modelData.target] ?? modelData.target

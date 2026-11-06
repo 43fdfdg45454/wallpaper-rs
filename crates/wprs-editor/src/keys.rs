@@ -1,5 +1,6 @@
 use crate::action::KeyframeEdit;
-use crate::handles::{added, based, end, key, reach, shaped};
+use crate::blend::added;
+use crate::handles::{based, end, key, reach, shaped};
 use crate::ops::{Op, set};
 use anyhow::{Result, anyhow, bail, ensure};
 use serde_json::{Value, json};
@@ -10,7 +11,7 @@ pub(crate) fn time_of(key: &Value) -> f64 {
     key[0].as_f64().unwrap_or(0.0)
 }
 
-fn mix(a: &Value, b: &Value, f: f32) -> Value {
+pub(crate) fn mix(a: &Value, b: &Value, f: f32) -> Value {
     let lerp = |x: f64, y: f64| ((x + (y - x) * f64::from(f)) * 1e6).round() / 1e6;
     match (a, b) {
         (Value::Number(x), Value::Number(y)) => {
@@ -163,5 +164,36 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
         crate::ops::apply(&mut staged, &ops[ops.len() - 1..])?;
     }
     ops.extend(based(&staged, e)?);
+    fits(doc, e, &ops)?;
     Ok(ops)
+}
+
+fn reads(doc: &Value) -> bool {
+    serde_json::from_value::<wprs_scene::Scene>(doc["scene"].clone()).is_ok()
+}
+
+fn fits(doc: &Value, e: &KeyframeEdit, ops: &[Op]) -> Result<()> {
+    let Some(value) = &e.value else { return Ok(()) };
+    let mut staged = doc.clone();
+    crate::ops::apply(&mut staged, ops)?;
+    if reads(&staged) || !reads(doc) {
+        return Ok(());
+    }
+    let like = match doc.pointer(&e.pointer) {
+        Some(like) => Some(like.pointer("/keys/0/1").unwrap_or(like).clone()),
+        None => taken(doc, &e.pointer),
+    };
+    bail!(match like {
+        Some(like) => crate::blend::fitting(&e.pointer, value, &like),
+        None => said("editor.keyframe_unread", "%1 cannot take the keyframe value %2", &[&e.pointer, value]),
+    })
+}
+
+fn taken(doc: &Value, pointer: &str) -> Option<Value> {
+    let shapes =
+        [json!("#ff8800"), json!([1, 1]), json!([1, 1, 1]), json!([1, 1, 1, 1]), json!(0.5), json!(true)];
+    shapes.into_iter().find(|shape| {
+        let mut tried = doc.clone();
+        crate::ops::apply(&mut tried, &set(doc, pointer, shape.clone())).is_ok() && reads(&tried)
+    })
 }

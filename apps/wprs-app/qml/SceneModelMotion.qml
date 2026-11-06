@@ -73,11 +73,14 @@ ColumnLayout {
         text: App.tr("Animation")
     }
 
-    Repeater {
-        model: motion.info?.clips ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: motion.info?.clips ?? []
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             QQC2.Label {
                 Layout.fillWidth: true

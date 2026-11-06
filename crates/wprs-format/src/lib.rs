@@ -6,6 +6,7 @@ mod broken;
 mod browse;
 mod build;
 mod catalog;
+mod charter;
 mod check;
 mod client;
 mod closer;
@@ -60,6 +61,7 @@ pub use authors::{AUTHORS_FORMAT, Authors, ONLINE, OnlineAuthor, Rotation, Trust
 pub use browse::{Item, browse, browse_with};
 pub use build::{build, sha256, sha256_file};
 pub use catalog::{Added, add, hide, list, revoke, revoke_key, unrevoke};
+pub use charter::{Charter, key_text};
 pub use client::{Outcome, RepoInfo, Update, add_repo, remove_repo, repos, update_repo, verify};
 pub use closer::{PHONE_BYTES, PHONE_PIXELS, PHONE_SIDE};
 pub use display::{Accent, Display, Flip, Follow, FrameRate, Span};

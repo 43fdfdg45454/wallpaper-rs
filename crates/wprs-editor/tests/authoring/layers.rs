@@ -100,3 +100,51 @@ fn a_transform_over_keyframes_is_refused_unless_it_replaces_them() {
     act(&mut p, place(true)).unwrap();
     assert_eq!(at(&p, "/scene/layers/0/transform/position"), json!([50.0, 50.0]));
 }
+
+#[test]
+fn a_layer_is_tilted_and_lifted_within_their_ranges() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let lean = json!({"layer": {"transform": {"layer": "card", "tilt": [30, -10], "z": 250}}});
+    act(&mut p, lean).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/tilt"), json!([30.0, -10.0]));
+    assert_eq!(at(&p, "/scene/layers/0/transform/z"), json!(250.0));
+    for bad in [json!({"tilt": [90, 0]}), json!({"tilt": [0, -120]}), json!({"z": 2e5}), json!({"z": -1e6})] {
+        let mut edit = json!({"layer": "card"});
+        edit.as_object_mut().unwrap().extend(bad.as_object().unwrap().clone());
+        let words = refused(&mut p, json!({"layer": {"transform": edit}}));
+        assert!(words.contains("tilt") || words.contains("z goes"), "{words}");
+    }
+    let key = json!({"keyframe": {"pointer": "/scene/layers/0/transform/z", "time": 1, "value": 10}});
+    act(&mut p, key).unwrap();
+    let words = refused(&mut p, json!({"layer": {"transform": {"layer": "card", "z": 5}}}));
+    assert!(words.contains("another source"), "{words}");
+    act(&mut p, json!({"layer": {"transform": {"layer": "card", "z": 5, "replace": true}}})).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/z"), json!(5.0));
+}
+
+#[test]
+fn a_transform_at_a_second_keys_what_has_keyframes_and_each_part_keyed_alone() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    let position = "/scene/layers/0/transform/position";
+    let place = |at: f64| json!({"layer": {"transform": {"layer": "card", "position": [50, 60], "at": at}}});
+    let key = |t: f64, v: [f64; 2]| json!({"keyframe": {"pointer": position, "time": t, "value": v}});
+    act(&mut p, key(0.0, [0.0, 0.0])).unwrap();
+    act(&mut p, key(2.0, [100.0, 0.0])).unwrap();
+    act(&mut p, place(1.0)).unwrap();
+    assert_eq!(at(&p, &format!("{position}/keys/1")), json!([1.0, [50.0, 60.0]]));
+    let split = json!({"x": {"keys": [[0, 0], [2, 100]]}, "y": 540});
+    act(&mut p, json!({"set": {"pointer": position, "value": split}})).unwrap();
+    act(&mut p, place(1.0)).unwrap();
+    assert_eq!(at(&p, &format!("{position}/x/keys/1")), json!([1.0, 50.0]));
+    assert_eq!(at(&p, &format!("{position}/y")), json!(60.0));
+    let linked = json!({"x": {"cursor": "x", "scale": 100}, "y": 5});
+    act(&mut p, json!({"set": {"pointer": position, "value": linked}})).unwrap();
+    let words = refused(&mut p, place(1.0));
+    assert!(words.contains("a part of"), "{words}");
+    let words = refused(&mut p, place(-1.0));
+    assert!(words.contains("0 or more"), "{words}");
+    act(&mut p, json!({"layer": {"transform": {"layer": "card", "rotation": 20, "at": 3}}})).unwrap();
+    assert_eq!(at(&p, "/scene/layers/0/transform/rotation"), json!(20.0));
+}

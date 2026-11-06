@@ -1,3 +1,4 @@
+use crate::told::{fill, told};
 use anyhow::{Context, Result, anyhow, ensure};
 use image::{Rgba, RgbaImage, imageops};
 use std::collections::BTreeMap;
@@ -77,8 +78,8 @@ pub fn preview(dir: &Path, layout: &str, out: &Path, time: Option<f64>) -> Resul
 
 pub(crate) fn second(text: &str) -> Result<f64, String> {
     let most = f64::from(wprs_scene::MAX_POSTER_TIME);
-    let time: f64 = text.parse().map_err(|_| format!("{text} is not a number of seconds"))?;
+    let time: f64 = text.parse().map_err(|_| fill(told("%1 is not a number of seconds"), &[&text]))?;
     let fits = time.is_finite() && time <= most;
     fits.then_some(time)
-        .ok_or_else(|| format!("the time is a finite number of seconds up to {most}, not {text}"))
+        .ok_or_else(|| fill(told("the time is a finite number of seconds up to %1, not %2"), &[&most, &text]))
 }

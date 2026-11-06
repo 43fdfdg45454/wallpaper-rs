@@ -47,9 +47,10 @@ Kirigami.Dialog {
                 text: App.tr("Strength")
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 id: strength
 
+                editor: dialog.page.editor
                 Layout.fillWidth: true
                 from: 0
                 to: 16
@@ -61,9 +62,10 @@ Kirigami.Dialog {
                 text: App.tr("Blur")
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 id: blur
 
+                editor: dialog.page.editor
                 Layout.fillWidth: true
                 from: 0
                 to: 32

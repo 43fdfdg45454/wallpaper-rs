@@ -98,3 +98,19 @@ fn scripts_pause_emit_stop_and_play_particles() {
     fly.run(0.5);
     assert!(fly.alive(0).len() >= 25, "{}", fly.alive(0).len());
 }
+
+#[test]
+fn a_gap_in_the_points_of_an_instance_keeps_the_point_of_the_system() {
+    let points = json!([{ "at": [40, 20] }, { "at": [0, 0] }]);
+    let shape = json!({ "box": { "from": [0, 0], "to": [0.01, 0.01], "at": "p0" } });
+    let system =
+        still(json!({ "points": points, "emitters": [{ "shape": shape, "burst": { "count": 10 } }] }));
+    for (own, x) in [(json!([null, [150, 80]]), 40.0), (json!([[150, 80], null]), 150.0)] {
+        let layers =
+            json!([{ "id": "p", "type": "particles", "system": "a", "instance": { "points": own } }]);
+        let mut fly = Fly::new(runtime(json!({ "a": system }), layers));
+        fly.frame(0.0);
+        let born = fly.alive(0);
+        assert!(!born.is_empty() && born.iter().all(|p| (p.pos[0] - x).abs() < 0.1), "{own}: {born:?}");
+    }
+}

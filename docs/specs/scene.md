@@ -55,6 +55,11 @@ degrees (36 by default).
   quality level, and the one drawn as the library thumbnail of a package without a preview picture (with clocks and
 dates at the local time it is drawn), `seed` feeds procedural effects; `"seed": null` picks a new seed each time the
   scene starts, so its random patterns differ every time (`fresh_seed`, which every platform runs).
+  Reaching an instant far into the scene (a poster or a held preview, up to a day) runs the
+  timelines, videos and bones step by step but poses the bones every step only in the last 10
+  seconds (before that, once every 10 minutes), so the
+  springs of the bones settle as they would after a long pause; a looping timeline keeps its place
+  exact however long it plays.
 - `assets` maps at most 256 ids (`[a-z0-9_]{1,32}`) to `{ "path", "linear", "atlas" }`. Images
   (PNG, JPEG, WebP, GIF, BMP), fonts (TTF, OTF), videos (WebM, MP4, MKV, stored uncompressed),
   sounds (Ogg Vorbis, Opus, FLAC or WAV, see "Sound") and color lookup tables (`.cube`,
@@ -828,9 +833,9 @@ Newer values add these forms, each with its feature:
 
 | Form | Example | Feature |
 |------|---------|---------|
-| Keyframe handles | `[2, 1, { "in": [0.5, 0], "out": [0.5, 0.2] }]`: Bézier handles in time and value around a key of a number, the time of each within the neighbouring segment; `out: [dt, dv]` is the point (t + dt, v + dv) and `in: [dt, dv]` the point (t − dt, v − dv), so equal handles make a smooth key and `dv: 0` a flat one; a side without a handle points a third of the way to the next key | `tangents` |
+| Keyframe handles | `[2, 1, { "in": [0.5, 0], "out": [0.5, 0.2] }]`: Bézier handles in time and value around a key of a number, the time of each within the neighbouring segment; `out: [dt, dv]` is the point (t + dt, v + dv) and `in: [dt, dv]` the point (t − dt, v − dv), so equal handles make a smooth key and `dv: 0` a flat one; a side without a handle points a third of the way to the next key. Keys of positions, sizes, colors and other lists of numbers take handles too: there `dv` is a share of the way between the two keys (0 at the first, 1 at the second), so the curve shapes how fast every part moves at once and the value between is the usual blend of the two keys at that share; when both keys of a segment of such a field are written as one number (a pair or triple taken from one number, such as a `scale` of `2`), `dv` is in value units as for a number, every part follows that one curve and the key is written back as the number it was; texts and switches take no handles | `tangents` |
 | Parts on their own | `{ "x": { "keys": [[0, 0], [2, 100]] }, "y": { "cursor": "y", "scale": 100 } }` for a position, `r`, `g`, `b`, `a` for a color; each part is a value of its own and a missing part is that of `base`, or 0 (alpha 1) | `tracks` |
-| Relative | `{ "keys": [[0, 0], [1, 30]], "base": 120 }` adds the animation to `base` (numbers, positions and colors, part by part) | `relative_values` |
+| Relative | `{ "keys": [[0, 0], [1, 30]], "base": 120 }` adds the animation to `base` (numbers, positions and colors, part by part; a lone number in an effect or script parameter is added to both parts of a pair and to the red, green and blue of a color, and the alpha of a sum stays within 0 to 1) | `relative_values` |
 | Time as a number | `{ "clock": "day" }` from 0 at midnight to almost 1 before the next; also `hour` (0 to 23), `minute` and `second` (0 to 59), `weekday` (1 for Monday to 7 for Sunday) and `month` (1 to 12), all in local time; a value that follows `day` changes at most once a minute, or every `clock.step` seconds (1 to 3600), and the others when they change | `clock_values` |
 | Dates | `{ "date": "EEEE d 'de' MMMM yyyy" }` (text only) with `yyyy`, `yy`, `MMMM`, `MMM`, `MM`, `M`, `dd`, `d`, `EEEE`, `EEE`, `D` (day of the year) and `w` (ISO week) besides the tokens of a clock, names in the language of the package (English or Spanish, English for the others); text between single quotes stays as written and `''` writes a quote; a text without hours, minutes or seconds changes at midnight. A `clock` text keeps only the tokens of the time, and every other letter stays as written | `clock_dates` |
 | Frequency ranges | `{ "audio": [0, 3], "of": 16, "reduce": "max" }` follows bands 0 to 3 of 16 (`of` is 16, 32 or 64, default 64, also for a single band) and takes their `mean` (default) or `max` | `audio_ranges` |
@@ -1481,7 +1486,8 @@ The newer fields behave as follows.
 - **Control points.** `at` is in pixels of the layer, or of the canvas with `space: world`; a point
   that follows the cursor goes back to the center of the canvas when the pointer leaves. A shape
   with `at` is drawn around that point, turned by its `angle`. The `points` of a layer's `instance`
-  and the `point(n, [x, y])` of scripts move points `p0` to `p7` for that layer.
+  and the `point(n, [x, y])` of scripts move points `p0` to `p7` for that layer; a `null` entry
+  of `points` leaves that point to the system.
 - **Shapes.** `inner` cuts a box of that size out of the middle of a `box`, which births fill evenly.
   `scale` stretches a `circle` into an ellipse and `sign` keeps its positive (1) or negative (−1)
   half along x and along y.

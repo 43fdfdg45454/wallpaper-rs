@@ -49,5 +49,5 @@ pub(crate) fn moved(cx: &Context, layer: Option<&Layer>, s: &System, k: usize) -
         return None;
     }
     let script = layer.and_then(|l| cx.script.particles.get(&l.id)?.points.get(&(k as u8)).copied());
-    script.or_else(|| instance(layer)?.points.get(k).map(|v| v.get(cx).0))
+    script.or_else(|| instance(layer)?.points.get(k)?.as_ref().map(|v| v.get(cx).0))
 }

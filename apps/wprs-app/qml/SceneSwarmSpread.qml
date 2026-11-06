@@ -45,7 +45,7 @@ ColumnLayout {
             text: spread.row[1]
         }
 
-        QQC2.RangeSlider {
+        SceneRangeSlider {
             id: range
 
             Layout.fillWidth: true
@@ -103,7 +103,7 @@ ColumnLayout {
             }
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0.1
             to: 8

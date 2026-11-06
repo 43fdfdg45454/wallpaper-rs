@@ -68,7 +68,7 @@ GridLayout {
         text: App.tr("Bounce")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: row.wall.response === "bounce"
         from: 0.01
@@ -84,7 +84,7 @@ GridLayout {
         text: App.tr("Friction")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         visible: row.wall.response === "bounce" || row.wall.response === "slide"
         from: 0

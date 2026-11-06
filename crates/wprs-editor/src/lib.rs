@@ -3,6 +3,7 @@ pub mod actions;
 pub mod arrange;
 pub mod assets;
 mod attach;
+mod blend;
 mod bodies;
 mod bring;
 mod cache;

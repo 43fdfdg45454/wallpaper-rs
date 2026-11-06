@@ -28,6 +28,7 @@ pub struct Page {
 
 #[derive(Args, Debug)]
 pub struct Placement {
+    #[arg(help = "Name of the output")]
     output: String,
     #[arg(
         long,
@@ -39,7 +40,7 @@ pub struct Placement {
     pos: String,
     #[arg(long, value_name = "WxH", help = "Logical size")]
     size: String,
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, default_value_t = 1.0, help = "Scale of the screen: physical pixels per logical pixel")]
     scale: f64,
     #[arg(long, default_value_t = 0.0, help = "Physical pixels per millimetre, 0 when unknown")]
     density: f64,
@@ -66,4 +67,24 @@ pub fn interrupted() -> std::io::Result<impl Future<Output = ()>> {
             _ = terminate.recv() => {}
         }
     })
+}
+
+#[derive(Args, Debug)]
+pub struct Streaming {
+    #[arg(help = "Name of the output, such as TEST-1")]
+    pub output: String,
+    #[arg(help = "Width of the stream in pixels")]
+    pub width: u32,
+    #[arg(help = "Height of the stream in pixels")]
+    pub height: u32,
+    #[arg(long, help = "Keep the stream only until this command is interrupted, like a desktop client")]
+    pub wait: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct Cover {
+    #[arg(help = "Name of the output")]
+    pub output: String,
+    #[arg(action = clap::ArgAction::Set, help = "true when a window covers the output, false when not")]
+    pub covered: bool,
 }

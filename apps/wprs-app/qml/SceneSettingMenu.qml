@@ -71,11 +71,14 @@ Item {
                 onTriggered: tools.move(tools.row, ((tools.page.view.properties ?? []).find(p => p.id === tools.row.group)?.index ?? 998) + 1, "")
             }
 
-            Repeater {
-                model: tools.groups
+            SceneRepeater {
+                id: listed
+
+                rows: tools.groups
 
                 delegate: QQC2.MenuItem {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     text: modelData.label
                     enabled: tools.row.group !== modelData.id

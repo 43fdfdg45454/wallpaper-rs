@@ -16,6 +16,7 @@ pub enum Remote {
     },
     #[command(about = "Add a repository by a URL that carries fingerprint= or repo_id=")]
     Add {
+        #[arg(help = "URL of the repository with its anchor query, or a folder")]
         url: String,
         #[command(flatten)]
         wait: Wait,
@@ -45,7 +46,7 @@ pub enum Remote {
     Vote {
         #[arg(help = "A package id of the server's repository, or REPO/ID; other repositories are refused")]
         id: String,
-        #[arg(value_parser = ["up", "down", "none"])]
+        #[arg(value_parser = ["up", "down", "none"], help = "Vote up, down or take your vote back with none")]
         vote: String,
     },
     #[command(

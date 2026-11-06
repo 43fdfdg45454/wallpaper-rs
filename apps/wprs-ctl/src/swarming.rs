@@ -20,10 +20,15 @@ pub enum Particle {
     #[command(
         about = "Set the shape of an emitter as JSON, such as '{\"around\": {\"at\": \"p1\", \"count\": 12, \"radius\": 40}}'; the next index adds an emitter"
     )]
-    Shape { emitter: usize, shape: String },
+    Shape {
+        #[arg(help = "The emitter, 0 first; the next index adds one")]
+        emitter: usize,
+        #[arg(help = "The shape as JSON")]
+        shape: String,
+    },
     #[command(about = "Place, turn, let follow the pointer or remove a control point p0 to p7")]
     ControlPoint {
-        #[arg(value_parser = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"])]
+        #[arg(help = "p0 to p7", value_parser = ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7"])]
         point: String,
         #[arg(long, allow_hyphen_values = true, value_name = "X,Y", help = "Pixels of the layer")]
         at: Option<String>,
@@ -38,13 +43,14 @@ pub enum Particle {
     Remap(Remap),
     #[command(about = "Cut out the alpha of the texture: START,END,OPACITY, or none")]
     Cutout {
+        #[arg(help = "START,END,OPACITY from 0 to 1, or none")]
         range: String,
         #[arg(long, help = "A particles layer whose own render changes")]
         layer: Option<String>,
     },
     #[command(about = "Turn sprites to the screen, along their motion or to a fixed angle, or none")]
     Orient {
-        #[arg(value_parser = ["screen", "velocity", "fixed", "none"])]
+        #[arg(help = "screen, velocity, fixed or none", value_parser = ["screen", "velocity", "fixed", "none"])]
         orient: String,
         #[arg(long, allow_hyphen_values = true, help = "Degrees on the screen, with fixed")]
         angle: Option<f64>,
@@ -53,7 +59,7 @@ pub enum Particle {
     },
     #[command(about = "Give the particles depth seen with a focal length in pixels")]
     Perspective {
-        #[arg(allow_negative_numbers = true, long)]
+        #[arg(help = "Focal length in pixels", allow_negative_numbers = true, long)]
         focal: Option<f64>,
         #[arg(long, allow_hyphen_values = true, value_name = "MIN,MAX", help = "Starting depth in pixels")]
         depth: Option<String>,
@@ -64,7 +70,9 @@ pub enum Particle {
     },
     #[command(about = "Emit from the opaque pixels of a layer that does not hold the system")]
     EmitFromLayer {
+        #[arg(help = "The emitter, 0 first")]
         emitter: usize,
+        #[arg(help = "The layer whose opaque pixels emit")]
         layer: String,
         #[arg(allow_negative_numbers = true, long, help = "Alpha from 0 to 1 above which a pixel emits")]
         threshold: Option<f64>,
@@ -74,15 +82,16 @@ pub enum Particle {
         inherit: bool,
         #[arg(allow_negative_numbers = true, long, help = "Pixels births spread over")]
         jitter: Option<f64>,
-        #[arg(long, value_parser = ["static", "on_change"])]
+        #[arg(help = "Read the layer once (static) or each time it changes (on_change)", long, value_parser = ["static", "on_change"])]
         refresh: Option<String>,
     },
     #[command(
         about = "Choose what a child system takes from its parent particle: color, size, alpha, velocity"
     )]
     Inherit {
+        #[arg(help = "The child system, 0 first")]
         child: usize,
-        #[arg(value_parser = ["color", "size", "alpha", "velocity"])]
+        #[arg(help = "What it takes: color, size, alpha or velocity", value_parser = ["color", "size", "alpha", "velocity"])]
         take: Vec<String>,
         #[arg(long, help = "Take them every step, for follow children")]
         follow: bool,
@@ -101,6 +110,7 @@ pub enum Particle {
     Refract(crate::glowing::Bend),
     #[command(about = "Draw with a package effect whose stage is particle, or none")]
     Shader {
+        #[arg(help = "Id of a package effect whose stage is particle, or none")]
         shader: String,
         #[arg(long, help = "A particles layer whose own render changes")]
         layer: Option<String>,
@@ -119,6 +129,7 @@ pub enum Particle {
     Trail(crate::tending::Trail),
     #[command(about = "Draw particles, ropes and textured trails with an image asset, or none")]
     Texture {
+        #[arg(help = "Id of an image asset, or none")]
         texture: String,
         #[arg(long, help = "A particles layer whose own render changes")]
         layer: Option<String>,
@@ -131,18 +142,23 @@ pub enum Particle {
         about = "Print the particle budget as JSON: particles alive at a time on the processor, slots by device tier and path, and what each quality level keeps"
     )]
     Budget {
-        #[arg(allow_negative_numbers = true, long, default_value_t = 2.0)]
+        #[arg(
+            help = "Seconds simulated before counting",
+            allow_negative_numbers = true,
+            long,
+            default_value_t = 2.0
+        )]
         time: f64,
-        #[arg(long, value_parser = ["q0", "q1", "q2", "q3"])]
+        #[arg(help = "Count for this quality level only: q0, q1, q2 or q3", long, value_parser = ["q0", "q1", "q2", "q3"])]
         quality: Option<String>,
-        #[arg(long)]
+        #[arg(help = "A particles layer showing the system", long)]
         layer: Option<String>,
     },
     #[command(about = "Print what the editor draws over the preview for the system as JSON")]
     Handles {
-        #[arg(long)]
+        #[arg(help = "A particles layer showing the system", long)]
         layer: Option<String>,
-        #[arg(allow_negative_numbers = true, long, default_value_t = 0.0)]
+        #[arg(help = "Seconds into the scene", allow_negative_numbers = true, long, default_value_t = 0.0)]
         time: f64,
     },
 }
@@ -152,9 +168,20 @@ pub enum Remap {
     #[command(
         about = "Add a remap as JSON, such as '{\"input\": \"random\", \"in\": [0, 1], \"output\": \"size\", \"out\": [2, 8]}'"
     )]
-    Add { remap: String },
+    Add {
+        #[arg(help = "The remap as JSON")]
+        remap: String,
+    },
     #[command(about = "Replace the remap at INDEX")]
-    Set { index: usize, remap: String },
+    Set {
+        #[arg(help = "Its place in the list, 0 first")]
+        index: usize,
+        #[arg(help = "The remap as JSON")]
+        remap: String,
+    },
     #[command(about = "Remove the remap at INDEX")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "Its place in the list, 0 first")]
+        index: usize,
+    },
 }

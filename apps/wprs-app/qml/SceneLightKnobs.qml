@@ -45,11 +45,14 @@ Item {
         onMoved: (to, done) => knobs.gizmo.tilt(to)
     }
 
-    Repeater {
-        model: knobs.light.type === "spot" ? [[knobs.light.outer[1], false], [knobs.light.inner[1], true]] : []
+    SceneRepeater {
+        id: listed2
+
+        rows: knobs.light.type === "spot" ? [[knobs.light.outer[1], false], [knobs.light.inner[1], true]] : []
 
         delegate: SceneKnob {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             at: modelData[0]
             ratio: knobs.ratio
@@ -60,11 +63,13 @@ Item {
         }
     }
 
-    Repeater {
-        model: knobs.light.ends ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: knobs.light.ends ?? []
 
         delegate: SceneKnob {
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             at: modelData

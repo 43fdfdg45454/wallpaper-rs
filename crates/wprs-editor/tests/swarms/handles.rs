@@ -59,3 +59,50 @@ fn layer_sources_list_only_layers_that_may_feed_the_system_and_show_their_pixels
     );
     assert!(edit(&mut p, "layer", json!({ "emitter": 0, "id": "pack" })).is_err());
 }
+
+#[test]
+fn pulls_show_their_center_and_rings_where_the_preview_draws_them() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    edit(&mut p, "point", json!({ "point": 0, "at": [100, 50] })).unwrap();
+    let forces = [
+        json!({ "attractor": { "target": "p0", "strength": 30, "radius": 40 } }),
+        json!({ "vortex": { "center": [10, 20], "strength": 5, "radius": 80, "inner": 5, "outer": 60,
+            "ring": { "radius": 30, "width": 4, "pull": 2 } } }),
+        json!({ "orbit": { "center": "cursor", "strength": 10 } }),
+        json!({ "slow_near": { "target": [0, 0], "inner": 10, "outer": 20, "factor": 0.5 } }),
+    ];
+    for force in forces {
+        edit(&mut p, "force", json!({ "force": force })).unwrap();
+    }
+    let h = handles(&p);
+    let pulls = h["pulls"].as_array().unwrap();
+    let kinds: Vec<&str> = pulls.iter().map(|e| e["kind"].as_str().unwrap()).collect();
+    assert_eq!(kinds, ["attractor", "vortex", "orbit", "slow_near"]);
+    assert!(near(&pulls[0]["at"], [100.0, 50.0]) && pulls[0]["ref"] == "p0", "{}", pulls[0]);
+    let ring = &pulls[0]["rings"][0];
+    assert!(ring["key"] == "radius" && near(&ring["at"], [100.0, 10.0]), "{ring}");
+    let keys: Vec<&str> =
+        pulls[1]["rings"].as_array().unwrap().iter().map(|r| r["key"].as_str().unwrap()).collect();
+    assert_eq!(keys, ["radius", "inner", "outer", "ring"]);
+    assert!(pulls[2]["at"].is_null() && pulls[2]["field"] == "center");
+    assert_eq!(pulls[3]["factor"], 0.5);
+}
+
+#[test]
+fn a_particles_layer_shows_its_own_control_points() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    edit(&mut p, "point", json!({ "point": 0, "at": [100, 50] })).unwrap();
+    let layer = wprs_editor::swarms::handles(&p.dir, &p.doc, "flakes", None, 0.0)["layer"].clone();
+    let id = layer.as_str().unwrap().to_owned();
+    let own =
+        json!({ "layer": { "instance": { "layer": id, "values": { "points": [[10, 20], [30, 40]] } } } });
+    act(&mut p, own).unwrap();
+    let h = wprs_editor::swarms::handles(&p.dir, &p.doc, "flakes", Some(&id), 0.0);
+    let points = h["points"].as_array().unwrap();
+    assert_eq!(points.len(), 2, "{points:?}");
+    assert_eq!((&points[0]["local"], &points[0]["own"]), (&json!([10.0, 20.0]), &json!(true)));
+    assert_eq!(points[1]["local"], json!([30.0, 40.0]));
+    assert_eq!(handles(&p)["points"][0]["local"], json!([100.0, 50.0]), "the system keeps its own point");
+}

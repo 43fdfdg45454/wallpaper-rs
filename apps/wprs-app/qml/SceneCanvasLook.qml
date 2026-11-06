@@ -42,7 +42,7 @@ Kirigami.FormLayout {
     Repeater {
         model: look.glows
 
-        delegate: QQC2.Slider {
+        delegate: SceneSlider {
             required property var modelData
 
             visible: look.bloom !== null
@@ -67,7 +67,7 @@ Kirigami.FormLayout {
     Repeater {
         model: look.moves
 
-        delegate: QQC2.Slider {
+        delegate: SceneSlider {
             required property var modelData
 
             visible: look.glide !== null

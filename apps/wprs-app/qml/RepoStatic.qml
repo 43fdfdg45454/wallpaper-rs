@@ -14,6 +14,9 @@ ColumnLayout {
     property bool failed: false
     property var pending: null
     readonly property bool busy: backend.busy
+    readonly property alias backend: backend
+    readonly property alias admin: admin
+    readonly property alias publishing: publishing
 
     function take(answer) {
         const reply = JSON.parse(answer);
@@ -25,6 +28,12 @@ ColumnLayout {
         shown = reply;
         if (reply.published)
             message = App.tr("Published index %1 with %2 packages; it expires %3", reply.published.version, reply.published.packages, reply.published.expires);
+        else if (reply.done)
+            message = ({
+                    "created": App.tr("Created. Sign its root with a root key next."),
+                    "signed": reply.root?.complete ? App.tr("The root is signed by enough root keys. Publish next.") : App.tr("Signed; the root needs %1 root keys in all.", reply.root?.threshold ?? 1),
+                    "rotated": App.tr("Wrote root %1. Sign it with keys of the old and of the new root, then publish.", reply.root?.version ?? "")
+                })[reply.done] ?? "";
         else if (reply.added)
             message = App.tr("Added %1. Publish the repository next.", reply.added.join(", "));
         else
@@ -43,6 +52,14 @@ ColumnLayout {
 
     function feature(id, note, on) {
         backend.feature(folder, id, note, on);
+    }
+
+    function revoke(id, version) {
+        admin.revokePackage(id, version);
+    }
+
+    function unrevoke(id, version) {
+        backend.unrevoke(folder, id, version);
     }
 
     Stall {
@@ -95,6 +112,13 @@ ColumnLayout {
         }
     }
 
+    RepoAdmin {
+        id: admin
+
+        stall: stall
+        backend: backend
+    }
+
     Kirigami.InlineMessage {
         Layout.fillWidth: true
         visible: stall.message !== ""
@@ -107,13 +131,17 @@ ColumnLayout {
         Layout.fillHeight: true
 
         ListView {
+            id: hosted
+
+            readonly property var host: stall
+
             model: stall.shown?.packages ?? []
             spacing: Kirigami.Units.smallSpacing
             clip: true
 
             delegate: RepoStock {
                 width: ListView.view.width
-                stall: stall
+                stall: hosted.host
             }
         }
     }

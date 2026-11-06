@@ -101,6 +101,7 @@ impl Runtime {
     pub(crate) fn tick(&mut self, step: f32) {
         let mut names = Vec::new();
         for (tl, head) in &mut self.timelines {
+            tl.fold(head);
             let (from, was) = (head.t, head.playing);
             tl.advance(head, step);
             heard(tl, head, from, was, &mut names);

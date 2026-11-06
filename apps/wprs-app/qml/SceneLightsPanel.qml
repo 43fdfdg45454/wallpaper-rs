@@ -69,11 +69,14 @@ ColumnLayout {
         text: App.tr("Lights")
     }
 
-    Repeater {
-        model: panel.info?.lights ?? []
+    SceneRepeater {
+        id: listed3
+
+        rows: panel.info?.lights ?? []
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed3.rows[index]
 
             Layout.fillWidth: true
 
@@ -116,11 +119,14 @@ ColumnLayout {
         text: App.tr("%1 of at most %2 lights", panel.info?.count ?? 0, panel.info?.max ?? 12)
     }
 
-    Repeater {
-        model: panel.info?.tiers ?? []
+    SceneRepeater {
+        id: listed2
+
+        rows: panel.info?.tiers ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -151,11 +157,14 @@ ColumnLayout {
         info: panel.cost?.models ?? null
     }
 
-    Repeater {
-        model: panel.cost?.levels ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: panel.cost?.levels ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap

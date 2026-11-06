@@ -52,13 +52,16 @@ ColumnLayout {
         text: App.tr("Add a clip first; each layer plays one clip and they mix in order.")
     }
 
-    Repeater {
-        model: plays.info?.layers ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: plays.info?.layers ?? []
 
         delegate: ColumnLayout {
             id: one
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
 

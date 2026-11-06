@@ -9,28 +9,31 @@ const FALLOFF: [&str; 3] = ["constant", "linear", "inverse_square"];
 pub enum Pull {
     #[command(about = "Shake the particles at random, in pixels a second squared")]
     Noise {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Pixels a second squared", allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Keep the particles below a speed, in pixels a second")]
     Cap {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Most pixels a second", allow_negative_numbers = true)]
         speed: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Turn the particles faster, in degrees a second squared; negative turns the other way")]
     Torque {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(
+            help = "Degrees a second squared; negative turns the other way",
+            allow_negative_numbers = true
+        )]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Slow the turning of the particles down, a share of their spin a second")]
     SpinDrag {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Share of the spin lost a second, 0 to 1 or more", allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
@@ -63,6 +66,23 @@ pub enum Pull {
         outer: Option<f64>,
         #[arg(long, value_name = "RADIUS,WIDTH,PULL", value_parser = crate::seeding::three, help = "Hold the particles on a ring of this radius and width with this pull")]
         ring: Option<[f64; 3]>,
+        #[arg(long, help = REPLACE)]
+        index: Option<usize>,
+    },
+    #[command(about = "Slow the particles down near a point, a control point or the pointer")]
+    SlowNear {
+        #[arg(allow_hyphen_values = true, help = "X,Y in pixels of the layer, p0 to p7, or cursor")]
+        target: String,
+        #[arg(long, allow_negative_numbers = true, help = "Pixels within which the slowing is whole")]
+        inner: f64,
+        #[arg(long, allow_negative_numbers = true, help = "Pixels beyond which it does not slow them")]
+        outer: f64,
+        #[arg(
+            long,
+            allow_negative_numbers = true,
+            help = "Share of the speed kept every sixtieth of a second, from 0 to 1"
+        )]
+        factor: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
@@ -99,6 +119,10 @@ pub(crate) fn pull(what: Pull) -> (Option<usize>, Option<Value>) {
             outer.iter().for_each(|o| v["outer"] = json!(o));
             ring.iter().for_each(|[r, w, p]| v["ring"] = json!({ "radius": r, "width": w, "pull": p }));
             (index, Some(json!({ "vortex": v })))
+        }
+        Pull::SlowNear { target, inner, outer, factor, index } => {
+            let near = json!({ "target": place(&target), "inner": inner, "outer": outer, "factor": factor });
+            (index, Some(json!({ "slow_near": near })))
         }
         Pull::Orbit { center, strength, radius, falloff, index } => {
             let mut o = json!({ "center": place(&center), "strength": strength });

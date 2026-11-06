@@ -73,11 +73,14 @@ Item {
                         QQC2.Menu {
                             id: kinds
 
-                            Repeater {
-                                model: panel.page.view.property_kinds ?? []
+                            SceneRepeater {
+                                id: listed2
+
+                                rows: panel.page.view.property_kinds ?? []
 
                                 delegate: QQC2.MenuItem {
-                                    required property string modelData
+                                    required property int index
+                                    readonly property var modelData: listed2.rows[index]
 
                                     text: SceneWords.label(modelData)
                                     onTriggered: panel.add(modelData)
@@ -92,13 +95,16 @@ Item {
                         text: App.tr("Presets")
                     }
 
-                    Repeater {
-                        model: panel.presets
+                    SceneRepeater {
+                        id: listed
+
+                        rows: panel.presets
 
                         delegate: QQC2.ItemDelegate {
                             id: preset
 
-                            required property var modelData
+                            required property int index
+                            readonly property var modelData: listed.rows[index]
 
                             Layout.fillWidth: true
                             highlighted: panel.page.editor.selected === modelData.pointer

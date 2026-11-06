@@ -14,6 +14,9 @@ Item {
         "size": [0, 0],
         "scale": [1, 1],
         "rotation": 0,
+        "tilt": [0, 0],
+        "z": 0,
+        "corners": null,
         "locked": true
     }
     readonly property bool chosen: page.editor.selected === modelData.pointer
@@ -31,7 +34,15 @@ Item {
     }
 
     function commit(field, value) {
-        page.change(base + "/" + field, value.map(v => Math.round(v * 100) / 100), true);
+        const rounded = Array.isArray(value) ? value.map(v => Math.round(v * 100) / 100) : Math.round(value * 100) / 100;
+        page.run("layer", {
+                "transform": {
+                    "layer": modelData.id,
+                    [field]: rounded,
+                    "at": page.editor.time,
+                    "replace": page.overwrite
+                }
+            }, true);
     }
 
     x: center[0] * ratio - width / 2
@@ -46,7 +57,7 @@ Item {
         color: "transparent"
         border.color: gizmo.chosen ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
         border.width: gizmo.chosen ? 2 : 1
-        opacity: gizmo.chosen ? 1 : 0.5
+        opacity: (gizmo.chosen ? 1 : 0.5) * (gizmo.modelData.corners ? 0.4 : 1)
 
         HoverHandler {
             id: hover
@@ -105,50 +116,13 @@ Item {
         }
     }
 
-    Rectangle {
-        id: turn
-
-        visible: gizmo.movable
-        x: gizmo.width / 2 - width / 2
-        y: -Kirigami.Units.gridUnit * 1.5
-        width: Kirigami.Units.gridUnit * 0.8
-        height: width
-        radius: width / 2
-        color: Kirigami.Theme.highlightColor
-
-        DragHandler {
-            target: null
-            onCentroidChanged: {
-                if (!active)
-                    return;
-                const point = turn.mapToItem(gizmo.parent, centroid.position.x, centroid.position.y);
-                const dx = point.x - gizmo.center[0] * gizmo.ratio, dy = point.y - gizmo.center[1] * gizmo.ratio;
-                gizmo.page.change(gizmo.base + "/rotation", Math.round(Math.atan2(dx, -dy) * 1800 / Math.PI) / 10, true);
-            }
-        }
+    SceneGizmoKnobs {
+        anchors.fill: parent
+        gizmo: gizmo
     }
 
-    Rectangle {
-        id: grow
-
-        visible: gizmo.movable
-        x: gizmo.width - width / 2
-        y: gizmo.height - height / 2
-        width: Kirigami.Units.gridUnit * 0.8
-        height: width
-        color: Kirigami.Theme.highlightColor
-
-        DragHandler {
-            target: null
-            onActiveChanged: gizmo.grabbed = gizmo.modelData.scale
-            onCentroidChanged: {
-                if (!active || !gizmo.grabbed)
-                    return;
-                const delta = gizmo.moved(centroid);
-                const w = Math.max(1, gizmo.modelData.size[0] * gizmo.grabbed[0]), h = Math.max(1, gizmo.modelData.size[1] * gizmo.grabbed[1]);
-                gizmo.commit("scale", [gizmo.grabbed[0] * (1 + 2 * delta[2] / w), gizmo.grabbed[1] * (1 + 2 * delta[3] / h)]);
-            }
-        }
+    SceneGizmoLean {
+        gizmo: gizmo
     }
 
     SceneBones {

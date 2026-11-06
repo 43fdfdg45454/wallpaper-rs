@@ -45,11 +45,14 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: pins.followers
+    SceneRepeater {
+        id: listed2
+
+        rows: pins.followers
 
         delegate: SceneRigRow {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             text: App.tr("%1 follows %2", modelData.id, modelData.attach.bone ?? modelData.attach.point)
             onRemoved: pins.page.run("attach", {
@@ -85,13 +88,16 @@ ColumnLayout {
         visible: pins.active
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: pins.active ? pins.others : []
+        SceneRepeater {
+            id: listed
+
+            rows: pins.active ? pins.others : []
 
             delegate: Item {
                 id: slot
 
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 width: chip.width
                 height: chip.height

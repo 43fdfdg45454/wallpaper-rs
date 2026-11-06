@@ -3,7 +3,7 @@ use anyhow::{Result, ensure};
 use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
-use wprs_editor::actions::{Action, MaskStroke, ScriptFile, UpgradeEdit};
+use wprs_editor::actions::{Action, MaskStroke, ParticleEdit, ScriptFile, SowEdit, UpgradeEdit};
 use wprs_editor::{Op, Project, references};
 
 pub(crate) const OPEN: &str = "Describe a scene folder, or first extract a .wpak scene package into it as an unsigned copy with the id <id>.copy";
@@ -18,7 +18,9 @@ pub(crate) fn edit(dir: &Path, action: Action) -> Result<()> {
     let mut project = Project::open(dir)?;
     let undoing = matches!(action, Action::Undo {} | Action::Redo {});
     let named = match &action {
-        Action::RenameProperty { id, .. } | Action::RemoveProperty { id } => {
+        Action::RenameProperty { id, .. }
+        | Action::RemoveProperty { id }
+        | Action::Particles(ParticleEdit::Sow(SowEdit::Rename { system: id, .. })) => {
             references::scripts(&project.dir, &project.doc, id).into_iter().map(|p| (p, id.clone())).collect()
         }
         _ => Vec::new(),

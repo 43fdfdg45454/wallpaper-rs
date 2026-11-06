@@ -42,11 +42,15 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: shapes.names
+    SceneRepeater {
+        id: listed2
+
+        rows: shapes.names
 
         delegate: RowLayout {
-            required property string modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
+
 
             QQC2.Label {
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 5
@@ -54,7 +58,7 @@ ColumnLayout {
                 elide: Text.ElideRight
             }
 
-            QQC2.Slider {
+            SceneSlider {
                 Layout.fillWidth: true
                 from: -1
                 to: 1
@@ -75,11 +79,15 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: Object.keys(shapes.expressions)
+    SceneRepeater {
+        id: listed
+
+        rows: Object.keys(shapes.expressions)
 
         delegate: RowLayout {
-            required property string modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
+
 
             QQC2.Label {
                 Layout.fillWidth: true

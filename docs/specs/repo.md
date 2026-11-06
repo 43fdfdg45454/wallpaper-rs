@@ -137,7 +137,18 @@ revoked), adds `.wpak` files with *Add unlisted* as `repo add --unlisted` does, 
 again a package or one version and features (with an optional note) or unfeatures a package, each
 after a confirmation that says what the CLI says, through the same `wprs_format` functions. *Publish…*
 takes a secret key file of an online key, its password when it has one, and the days until the index
-expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. Every change to the
+expires (7 by default), and calls `publish` as `wprs-ctl repo publish` does. The same tab revokes a
+package or one version with a reason and a message (`stall::revoked`, as `repo revoke`), withdraws a
+revocation (`stall::unrevoked`, as `repo unrevoke DIR ID [--version V]`, which `unrevoke` the whole
+package without a version) and, from *Author keys…*, revokes an author key by its fingerprint
+(`stall::key_revoked`, as `repo revoke-key`). *New repository…* writes `root/1.json` in an empty
+folder from a name, root and online `.pub` files, the root threshold, an author with its keys and the
+policy (`stall::made` with a `wprs_format::Charter`, as `repo init`); *Root…* shows the version of the
+root, how many root keys signed it of its threshold and the anchor query, signs it with a root key file
+and its password (`stall::root_signed`, as `repo sign-root`) and *Rotate the root…* writes the next
+root with other keys, removed or added authors and another policy (`stall::rotated`, as `repo
+rotate-root`). `stall::opened` also answers the root status, the fingerprints of the root, online and
+author keys, the revoked keys and the policy. Every change to the
 catalog runs off the window thread, one after another, and answers when done; the page shows that it
 is busy meanwhile and keeps the other changes and *Open* disabled until then. The phone does the
 same from *Static repository* in *Devices*: it opens a folder picked through the system picker, copies
@@ -145,7 +156,11 @@ its files except `packages/` and `previews/` into its cache, runs the same `wprs
 functions there (`Native.stall`, ops `open`, `add`, `list`, `feature` and `publish`, each answering
 with the files it changed), writes those files back into the folder and clears the copy; the
 picked `.wpak` files and the online key are read only for that step. Its steps run one at a time, and
-the buttons that change the catalog stay disabled while one runs.
+the buttons that change the catalog stay disabled until every step that runs has ended. The picked
+folder is kept with a persistable read and write grant: its tree URI stays in the app's private
+preferences, it is forgotten once that grant is gone, and picking another folder releases the grant
+of the previous one, except the read grant while a folder setting of a wallpaper mirrors the same
+folder; dropping such a folder setting likewise keeps the grant the repository folder needs.
 
 `featured/<sha256>.json` (optional): `format` (`wpak-repo-featured/1.0`), `repo_id` and `items`: at
 most 64 `{id, note?}`, ids of packages of the repository, each once, with a note of at most 200
@@ -210,7 +225,12 @@ revoked through `revoked`.
 | Check a tree as a client would, without storing anything | `verify(fetch, url_or_dir, now)` |
 
 `status(dir)` reports the signers of the newest root, whether it is complete and the share
-URL query. `settings(dir)` returns the current settings for editing before a rotation.
+URL query. `settings(dir)` returns the current settings for editing before a rotation, with the
+lifetime the current root was written with: `init` and `rotate_root` keep `root_days` in
+`catalog.json`, and a catalog without it means 365. A `Charter` changes those settings: the keys it
+names for an author replace the keys that author had, `removed` drops authors before that, and
+`mirrors` replaces the mirrors when present, so an empty list drops them all
+(`repo rotate-root --no-mirrors`) and a missing one keeps them.
 
 ## Client update
 

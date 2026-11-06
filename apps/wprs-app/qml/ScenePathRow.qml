@@ -48,11 +48,14 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: row.modelData.keys
+        SceneRepeater {
+            id: listed
+
+            rows: row.modelData.keys
 
             delegate: QQC2.Button {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 text: App.tr("%1 s", modelData.t)
                 icon.name: "edit-delete-remove"

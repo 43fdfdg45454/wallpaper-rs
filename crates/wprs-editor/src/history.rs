@@ -26,6 +26,10 @@ pub struct History {
     pub saved: Option<usize>,
     #[serde(skip)]
     pub limits: Option<(usize, usize)>,
+    #[serde(skip)]
+    pub open: bool,
+    #[serde(skip)]
+    pub begun: bool,
 }
 
 fn size(ops: &[Op]) -> usize {
@@ -55,15 +59,18 @@ impl History {
         gesture: bool,
     ) -> Result<Vec<Op>> {
         let undo = apply(doc, &ops)?;
+        let (open, begun) = (self.open, self.begun);
+        self.open = open && gesture;
+        self.begun = self.open;
         if self.saved.is_some_and(|s| s > self.done.len()) {
             self.saved = None;
         }
         self.undone.clear();
         let len = self.done.len();
-        let last = self
-            .done
-            .last_mut()
-            .filter(|l| gesture && l.gesture && l.label == label && at.saturating_sub(l.at) < MERGE_MS);
+        let last = self.done.last_mut().filter(|l| {
+            let recent = if open { begun } else { at.saturating_sub(l.at) < MERGE_MS };
+            gesture && l.gesture && l.label == label && recent
+        });
         match last.and_then(|l| merged(&l.redo, &ops).map(|redo| (l, redo))) {
             Some((last, redo)) => {
                 (last.size, last.redo, last.at) = (size(&last.undo) + size(&redo), redo, at);
@@ -104,6 +111,7 @@ impl History {
     }
 
     pub fn undo(&mut self, doc: &mut Value) -> Result<Option<(String, Vec<Op>)>> {
+        self.begun = false;
         let Some(step) = self.done.pop() else { return Ok(None) };
         if let Err(e) = apply(doc, &step.undo) {
             self.done.push(step);
@@ -115,6 +123,7 @@ impl History {
     }
 
     pub fn redo(&mut self, doc: &mut Value) -> Result<Option<(String, Vec<Op>)>> {
+        self.begun = false;
         let Some(step) = self.undone.pop() else { return Ok(None) };
         if let Err(e) = apply(doc, &step.redo) {
             self.undone.push(step);

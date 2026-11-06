@@ -35,6 +35,21 @@ fn frames(slot: &PlayerSlot, span: Duration) -> Vec<(Instant, Duration)> {
     seen
 }
 
+fn playing(slot: &PlayerSlot, within: impl Fn(Duration) -> bool) {
+    let (start, mut last) = (Instant::now(), None::<Duration>);
+    while start.elapsed() < Duration::from_secs(10) {
+        let pts = lock(&slot.inbox.frame).take().and_then(|f| f.pts).filter(|pts| within(*pts));
+        if let (Some(pts), Some(was)) = (pts, last)
+            && pts > was
+        {
+            return;
+        }
+        last = pts.or(last);
+        std::thread::sleep(Duration::from_millis(4));
+    }
+    panic!("the video did not play within 10 s");
+}
+
 #[test]
 fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
     if let Err(e) = wprs_video::init() {
@@ -46,13 +61,14 @@ fn a_steered_part_and_speed_reach_a_video_with_sound_opened_plain() {
     slot.shares = false;
     slot.tick(&reel, heard(), &tx, now);
     assert!(slot.player.as_ref().is_some_and(Player::audio_enabled), "the video opened without sound");
-    frames(&slot, Duration::from_millis(300));
+    playing(&slot, |_| true);
     let cut = Cut { speed: 200, start: 300, end: 700 };
     slot.steer(Some(Steer { cut, jumps: 0, at: 0.0, wants: true }));
     assert_eq!(slot.steered, Some((cut, 0)));
+    let range = Duration::from_millis(300) - FRAME..Duration::from_millis(700) + FRAME;
+    playing(&slot, |pts| range.contains(&pts));
     frames(&slot, Duration::from_millis(400));
     let seen = frames(&slot, Duration::from_secs(2));
-    let range = Duration::from_millis(300) - FRAME..Duration::from_millis(700) + FRAME;
     assert!(seen.len() > 10, "only {} frames after steering", seen.len());
     assert!(seen.iter().all(|(_, pts)| range.contains(pts)), "{seen:?}");
     let steps = seen.windows(2).filter(|w| w[1].1 > w[0].1);

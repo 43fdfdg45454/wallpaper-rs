@@ -23,6 +23,8 @@ pub(crate) struct Catalog {
     pub authors: Vec<OnlineAuthor>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub featured: Vec<crate::Pick>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_days: Option<u32>,
 }
 
 impl Catalog {

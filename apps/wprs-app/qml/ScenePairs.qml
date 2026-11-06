@@ -20,13 +20,15 @@ ColumnLayout {
         return String(Number(Number(value).toFixed(4)));
     }
 
-    Repeater {
-        model: pairs.rows
+    SceneRepeater {
+        id: listed
+
+        rows: pairs.rows
 
         delegate: RowLayout {
             id: pair
 
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             Layout.fillWidth: true

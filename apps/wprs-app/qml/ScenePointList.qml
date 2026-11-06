@@ -31,13 +31,16 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: marks.points
+    SceneRepeater {
+        id: listed
+
+        rows: marks.points
 
         delegate: RowLayout {
             id: row
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
 

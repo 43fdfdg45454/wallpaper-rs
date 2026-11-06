@@ -25,7 +25,7 @@ pub enum Flying {
         dir: PathBuf,
         #[arg(help = ID)]
         layer: String,
-        #[arg(long, action = ArgAction::Set)]
+        #[arg(help = "true to let the light cast shadows", long, action = ArgAction::Set)]
         on: Option<bool>,
         #[arg(long, help = "Pixels a side of its map, 256 to 4096")]
         resolution: Option<u32>,
@@ -58,7 +58,7 @@ pub enum Flying {
     Debug3d {
         #[arg(help = DIR)]
         dir: PathBuf,
-        #[arg(value_parser = ["mask", "matte", "shadows", "none"])]
+        #[arg(help = "Show the mask, the matte or the shadows of the 3D layers, or none", value_parser = ["mask", "matte", "shadows", "none"])]
         show: String,
     },
 }

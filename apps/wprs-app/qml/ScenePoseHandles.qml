@@ -137,8 +137,10 @@ Item {
         }
     }
 
-    Repeater {
-        model: poser.picked && !poser.page.editor.playing ? ["move", "turn", "grow"] : []
+    SceneRepeater {
+        id: listed
+
+        rows: poser.picked && !poser.page.editor.playing ? ["move", "turn", "grow"] : []
 
         delegate: ScenePoseKnob {
             handles: poser

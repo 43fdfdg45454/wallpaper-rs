@@ -408,7 +408,7 @@ Shows a scene that is being edited on `output`, or on every output when `output`
 instead of what the output shows, without saving or applying anything (see `editor.md`).
 `dir` is the absolute path of the scene folder, whose files provide the assets, and `document`
 is `{"manifest": …, "scene": …}`, the unsaved manifest and `scene.json`. A `time` of 0 or more
-holds the scene at that second, as a still frame that only renders again when the call changes;
+holds the scene at that second (up to 86400, a day), as a still frame that only renders again when the call changes;
 a negative `time` plays it. The scene is checked for what it needs to render: the id, the user
 properties, the presets and the scene itself, while texts, rating, origin and credits may still be
 incomplete; an invalid document, a path outside `dir` or an asset over the limits return

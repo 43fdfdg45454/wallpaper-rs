@@ -1,5 +1,6 @@
 use crate::effecting::Effect;
 use crate::steps::value;
+use crate::told::{fill, told};
 use serde_json::{Map, Value, json};
 use wprs_editor::actions::EffectsEdit as E;
 
@@ -13,7 +14,7 @@ fn params(given: &[String], unset: &[String]) -> Map<String, Value> {
 pub(crate) fn keyed(text: &str) -> Result<String, String> {
     match text.split_once('=') {
         Some((k, _)) if !k.trim().is_empty() => Ok(text.to_owned()),
-        _ => Err(format!("{text} is not KEY=VALUE")),
+        _ => Err(fill(told("%1 is not KEY=VALUE"), &[&text])),
     }
 }
 

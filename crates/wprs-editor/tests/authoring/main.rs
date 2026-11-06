@@ -6,6 +6,7 @@ use wprs_editor::actions::Action;
 use wprs_editor::starters::starter;
 
 mod effects;
+mod events;
 mod layers;
 mod marks;
 mod masking;

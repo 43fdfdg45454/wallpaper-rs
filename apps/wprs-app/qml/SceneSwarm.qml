@@ -41,6 +41,24 @@ Item {
             }, true);
     }
 
+    function move(k, at) {
+        if (!own)
+            return edit("point", {
+                    "point": k,
+                    "at": at
+                });
+        page.run("layer", {
+                "instance": {
+                    "layer": own,
+                    "values": {
+                        "points": {
+                            [String(k)]: at
+                        }
+                    }
+                }
+            }, true);
+    }
+
     function forceOf(i) {
         return JSON.parse(page.editor.value(SceneSwarmKnobs.pointer(system, "/forces/" + i)) || "null");
     }
@@ -62,34 +80,39 @@ Item {
         target: swarm.page.editor
     }
 
-    Repeater {
-        model: swarm.info?.emitters ?? []
+    SceneRepeater {
+        id: listed2
+
+        readonly property var host: swarm
+
+        rows: swarm.info?.emitters ?? []
 
         delegate: SceneSwarmShape {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             anchors.fill: parent
-            swarm: swarm
+            swarm: listed2.host
             emitter: modelData
         }
     }
 
-    Repeater {
-        model: swarm.info?.points ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: swarm.info?.points ?? []
 
         delegate: SceneKnob {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             at: modelData.at
             ratio: swarm.ratio
             square: true
             label: modelData.name
             tint: Kirigami.Theme.neutralTextColor
-            tip: modelData.bound ? App.tr("This control point follows a value; moving it replaces the value") : App.tr("Drag to move the control point")
-            onMoved: (to, done) => swarm.edit("point", {
-                        "point": Number(modelData.name.slice(1)),
-                        "at": modelData.world ? to : swarm.local(to)
-                    })
+            tip: swarm.own ? App.tr("Drag to move this control point for this layer only") : modelData.bound ? App.tr("This control point follows a value; moving it replaces the value") : App.tr("Drag to move the control point")
+            onMoved: (to, done) => swarm.move(Number(modelData.name.slice(1)), modelData.world ? to : swarm.local(to))
         }
     }
 
@@ -104,6 +127,11 @@ Item {
     }
 
     SceneSwarmKeeps {
+        anchors.fill: parent
+        swarm: swarm
+    }
+
+    SceneSwarmPulls {
         anchors.fill: parent
         swarm: swarm
     }

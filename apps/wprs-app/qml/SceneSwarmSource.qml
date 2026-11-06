@@ -44,7 +44,7 @@ GridLayout {
         text: App.tr("Threshold")
     }
 
-    QQC2.Slider {
+    SceneSlider {
         Layout.fillWidth: true
         from: 0
         to: 1

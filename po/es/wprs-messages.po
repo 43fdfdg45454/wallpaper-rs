@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -343,6 +343,34 @@ msgstr "una capa se mueve con dos números de píxeles"
 msgid "there is no bone \"%1\""
 msgstr "no hay ningún hueso «%1»"
 
+#: crates/wprs-editor/src/blend.rs
+msgid "a number such as 0.5"
+msgstr "un número como 0.5"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "true or false"
+msgstr "true o false"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a color such as \"#ff8800\" or [1, 0.5, 0]"
+msgstr "un color como \"#ff8800\" o [1, 0.5, 0]"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a text"
+msgstr "un texto"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a list of %1 numbers such as [%2]"
+msgstr "una lista de %1 números como [%2]"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "a value like %1"
+msgstr "un valor como %1"
+
+#: crates/wprs-editor/src/blend.rs
+msgid "%1 cannot take the keyframe value %2; give %3"
+msgstr "%1 no admite el valor de clave %2; da %3"
+
 #: crates/wprs-editor/src/bodies.rs
 msgid "%1 goes from 0 to 1"
 msgstr "%1 va de 0 a 1"
@@ -446,7 +474,8 @@ msgid "the file has no animation \"%1\""
 msgstr "el archivo no tiene ninguna animación «%1»"
 
 #: crates/wprs-editor/src/clips.rs crates/wprs-editor/src/clips/keyed.rs
-#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/stage3d/paths.rs
+#: crates/wprs-editor/src/keys.rs crates/wprs-editor/src/shaping/layers.rs
+#: crates/wprs-editor/src/stage3d/paths.rs
 msgid "the time must be 0 or more seconds"
 msgstr "el tiempo debe ser de 0 segundos o más"
 
@@ -557,8 +586,9 @@ msgstr ""
 "vecino; llega hasta %3 s"
 
 #: crates/wprs-editor/src/handles.rs
-msgid "Bézier handles shape keyframes of single numbers"
-msgstr "los tiradores Bézier dan forma a fotogramas clave de un solo número"
+msgid "Bézier handles shape keyframes of numbers, lists of numbers and colors"
+msgstr ""
+"las asas Bézier dan forma a claves de números, listas de números y colores"
 
 #: crates/wprs-editor/src/handles.rs
 msgid "only a value with keyframes adds them to a base"
@@ -714,6 +744,10 @@ msgstr "%1 aún no tiene valor; da uno"
 #: crates/wprs-editor/src/keys.rs
 msgid "there is no timeline \"%1\"; add it with the timeline action first"
 msgstr "no hay una línea de tiempo «%1»; añádela antes con la acción timeline"
+
+#: crates/wprs-editor/src/keys.rs
+msgid "%1 cannot take the keyframe value %2"
+msgstr "%1 no admite el valor de clave %2"
 
 #: crates/wprs-editor/src/lamps/air.rs
 msgid "only point and spot lights light the air"
@@ -1201,6 +1235,10 @@ msgstr "la capa %1 no tiene el efecto %2"
 msgid "a sound or light layer takes no effects"
 msgstr "una capa de sonido o de luz no lleva efectos"
 
+#: crates/wprs-editor/src/shaping/keyed.rs
+msgid "a part of %1 follows another source; write over it with replace"
+msgstr "una parte de %1 sigue a otra fuente; escríbela encima con replace"
+
 #: crates/wprs-editor/src/shaping/layers.rs
 msgid "only a particles layer has an instance"
 msgstr "solo una capa de partículas tiene instancia"
@@ -1210,8 +1248,20 @@ msgid "%1 is not a value of an instance: %2"
 msgstr "%1 no es un valor de una instancia: %2"
 
 #: crates/wprs-editor/src/shaping/layers.rs
+msgid "a control point goes from 0 to %1, not %2"
+msgstr "un punto de control va de 0 a %1, no %2"
+
+#: crates/wprs-editor/src/shaping/layers.rs
 msgid "the rotation goes from -360 to 360 degrees"
 msgstr "el giro va de -360 a 360 grados"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "a tilt goes from -89 to 89 degrees"
+msgstr "una inclinación va de -89 a 89 grados"
+
+#: crates/wprs-editor/src/shaping/layers.rs
+msgid "z goes from -100000 to 100000 pixels"
+msgstr "z va de -100000 a 100000 píxeles"
 
 #: crates/wprs-editor/src/shaping/layers.rs
 msgid "a size is above 0 pixels"
@@ -1594,33 +1644,57 @@ msgstr ""
 msgid "the title needs a text"
 msgstr "el título necesita un texto"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "an event name has 1 to 32 small letters, digits or _"
+msgstr "el nombre de un evento tiene de 1 a 32 minúsculas, dígitos o _"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "the timeline has no event %1"
+msgstr "la línea de tiempo no tiene el evento %1"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "an event fires from 0 s to the end of the timeline, %1 s"
+msgstr "un evento salta entre 0 s y el final de la línea de tiempo, %1 s"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "the event %1 is already at %2 s"
+msgstr "el evento %1 ya está a los %2 s"
+
+#: crates/wprs-editor/src/timelines/events.rs
+msgid "a timeline has at most %1 events"
+msgstr "una línea de tiempo tiene como mucho %1 eventos"
+
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a timeline id has 1 to 32 small letters, digits or _"
 msgstr "el id de una línea de tiempo tiene de 1 a 32 minúsculas, cifras o _"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "%1 of a timeline is a finite number"
 msgstr "%1 de una línea de tiempo es un número finito"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a timeline lasts seconds or frames, not both"
 msgstr "una línea de tiempo dura segundos o fotogramas, no ambos"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "there is already a timeline \"%1\""
 msgstr "ya hay una línea de tiempo «%1»"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "a scene has at most %1 timelines"
 msgstr "una escena tiene como mucho %1 líneas de tiempo"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "there is no timeline \"%1\""
 msgstr "no hay ninguna línea de tiempo «%1»"
 
-#: crates/wprs-editor/src/timelines.rs
+#: crates/wprs-editor/src/timelines/mod.rs
 msgid "add or remove a timeline, not both"
 msgstr "añade o quita una línea de tiempo, no ambas cosas"
+
+#: crates/wprs-format/src/admin.rs
+msgid "no folder was given for the repository"
+msgstr "no se indicó la carpeta del repositorio"
 
 #: crates/wprs-format/src/admin.rs
 msgid "already holds a repository"
@@ -1674,6 +1748,10 @@ msgstr "el paquete debe llevar una firma de autor"
 #: crates/wprs-format/src/catalog.rs
 msgid "no author key of this repository signed it"
 msgstr "no lo firmó ninguna clave de autor de este repositorio"
+
+#: crates/wprs-format/src/charter.rs
+msgid "is not an author of the root"
+msgstr "no es un autor de la raíz"
 
 #: crates/wprs-format/src/check.rs
 msgid "is required: a rating of general or mature and its reasons"

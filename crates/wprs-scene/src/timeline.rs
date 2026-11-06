@@ -92,6 +92,21 @@ impl Timeline {
         }
     }
 
+    pub(crate) fn fold(&self, head: &mut Playhead) {
+        let period = match self.repeat {
+            Loop::Once => return,
+            Loop::Repeat => self.length(),
+            Loop::Pingpong => 2.0 * self.length(),
+        };
+        let back = head.reversed != (head.rate < 0.0);
+        if period > 0.0 && back && head.t < 0.0 {
+            head.t = head.t.rem_euclid(period);
+        } else if period > 0.0 && !back && head.t > period {
+            let t = head.t.rem_euclid(period);
+            head.t = if t > 0.0 { t } else { period };
+        }
+    }
+
     pub(crate) fn position(&self, head: &Playhead) -> f32 {
         let t = if head.reversed != (head.rate < 0.0) { head.t } else { head.t.max(0.0) };
         local(t, self.length(), self.repeat)

@@ -47,6 +47,32 @@ fn a_picture_becomes_a_ktx2_texture_as_one_undoable_step() {
     act(&mut p, json!({ "redo": {} })).unwrap();
     assert_eq!(p.doc["scene"]["assets"]["sky"]["path"], json!(path));
     assert_eq!(wprs_editor::pictures::dimensions(p.dir.join(&path)).unwrap(), (72, 32));
+    let cache = root.path().join("shown");
+    let shown = wprs_editor::pictures::shown(p.dir.join(&path), &cache).unwrap();
+    assert!(shown.starts_with(&cache) && shown.extension().is_some_and(|e| e == "png"), "{shown:?}");
+    assert_eq!(image::image_dimensions(&shown).unwrap(), (72, 32));
+    assert_eq!(wprs_editor::pictures::shown(p.dir.join(&path), &cache).unwrap(), shown, "decoded again");
+    let png = p.dir.join("assets/sky.png");
+    assert_eq!(wprs_editor::pictures::shown(&png, &cache).unwrap(), png);
+}
+
+#[test]
+fn the_decoded_pictures_keep_only_the_newest_ones() {
+    let root = tempfile::tempdir().unwrap();
+    let mut p = project(&root);
+    act(&mut p, json!({ "asset": { "asset": "sky", "ktx2": true } })).unwrap();
+    let path = p.dir.join(p.doc["scene"]["assets"]["sky"]["path"].as_str().unwrap());
+    let cache = root.path().join("shown");
+    std::fs::create_dir_all(&cache).unwrap();
+    let old = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+    for k in 0..wprs_editor::pictures::SHOWN_KEPT + 4 {
+        let f = std::fs::File::create(cache.join(format!("old{k}.png"))).unwrap();
+        f.set_modified(old + std::time::Duration::from_secs(k as u64)).unwrap();
+    }
+    let shown = wprs_editor::pictures::shown(&path, &cache).unwrap();
+    let left = std::fs::read_dir(&cache).unwrap().count();
+    assert_eq!(left, wprs_editor::pictures::SHOWN_KEPT);
+    assert!(shown.is_file() && !cache.join("old0.png").exists() && cache.join("old19.png").exists());
 }
 
 #[test]

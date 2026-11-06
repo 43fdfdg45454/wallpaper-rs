@@ -28,11 +28,14 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: pick.names
+        SceneRepeater {
+            id: listed
+
+            rows: pick.names
 
             delegate: QQC2.Button {
-                required property string modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 text: modelData
                 checkable: true

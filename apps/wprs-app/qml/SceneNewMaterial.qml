@@ -59,11 +59,15 @@ ColumnLayout {
         text: App.tr("Material shaders write fn material(s: Surface) -> Surface in effects/NAME.wgsl of the package; they read frame and param(0u) to param(7u).")
     }
 
-    Repeater {
-        model: made.packages
+    SceneRepeater {
+        id: listed
+
+        rows: made.packages
 
         delegate: Kirigami.InlineMessage {
-            required property string modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
+
             readonly property var found: made.checks[modelData] ?? null
 
             Layout.fillWidth: true

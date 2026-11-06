@@ -46,6 +46,7 @@ wait "$held"
 frames=$(sed -n 's/^frames //p' "$WORK/gpu.out")
 [ "${frames:-0}" -gt 12 ] || fail "GPU stream buffers were not recycled: $(cat "$WORK/gpu.out")"
 echo "GPU stream buffer checks passed ($frames frames through 4 buffers)"
+ctl set "$ROOT/tests/fixtures/green-64x32.png" --fit fit && expect "${output}['kind']" image
 
 kill "$daemon"
 wait "$daemon" 2>/dev/null || true

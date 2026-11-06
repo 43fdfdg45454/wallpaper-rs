@@ -33,11 +33,13 @@ ColumnLayout {
         text: App.tr("When in the life each force acts")
     }
 
-    Repeater {
-        model: windows.forces
+    SceneRepeater {
+        id: listed
+
+        rows: windows.forces
 
         delegate: ColumnLayout {
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             Layout.fillWidth: true

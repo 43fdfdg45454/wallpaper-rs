@@ -79,7 +79,7 @@ RowLayout {
             font: Kirigami.Theme.smallFont
         }
 
-        QQC2.Slider {
+        SceneSlider {
             from: -1
             to: 1
             value: comb.comb[2]

@@ -10,6 +10,9 @@ noon=org.example.noon
   ctl repo add repo noon.wpak --unlisted >/dev/null
   if ctl repo unlist repo org.example.missing 2>/dev/null; then fail "an unknown package was unlisted"; fi
   if ctl repo unlist repo "$noon" --version 9.0.0 2>/dev/null; then fail "an unknown version was unlisted"; fi
+  ctl repo revoke repo "$noon" --version 1.0.0 --reason broken
+  ctl repo unrevoke repo "$noon" --version 1.0.0 || fail "the revocation of a version was not withdrawn"
+  [ "$(jq_ "len(r['revoked'])" < repo/catalog.json)" = 0 ] || fail "a withdrawn revocation stayed in the catalog"
   ctl repo publish repo --key online.key >/dev/null
 )
 ctl remote refresh --wait >/dev/null

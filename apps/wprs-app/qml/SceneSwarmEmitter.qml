@@ -82,11 +82,15 @@ ColumnLayout {
     RowLayout {
         visible: row.emitter.kind === "around" || row.emitter.kind === "between"
 
-        Repeater {
-            model: row.emitter.kind === "around" ? ["at"] : ["from_ref", "to_ref"]
+        SceneRepeater {
+            id: listed
+
+            rows: row.emitter.kind === "around" ? ["at"] : ["from_ref", "to_ref"]
 
             delegate: QQC2.ComboBox {
-                required property string modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
+
                 readonly property var value: row.emitter[modelData === "at" ? "at" : modelData]
 
                 Layout.fillWidth: true
@@ -112,5 +116,11 @@ ColumnLayout {
         visible: row.emitter.kind === "layer"
         tools: row.tools
         emitter: row.emitter
+    }
+
+    SceneSwarmEmission {
+        Layout.fillWidth: true
+        tools: row.tools
+        index: row.emitter.index
     }
 }

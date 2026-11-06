@@ -40,7 +40,7 @@ ColumnLayout {
                 })
         }
 
-        QQC2.Slider {
+        SceneSlider {
             Layout.fillWidth: true
             from: 0
             to: 1
@@ -70,11 +70,14 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: bend.bent !== null ? bend.info.levels : []
+    SceneRepeater {
+        id: listed
+
+        rows: bend.bent !== null ? bend.info.levels : []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             font.bold: modelData.quality === SceneLook.quality
