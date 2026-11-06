@@ -1152,7 +1152,8 @@ De esa lista, el escritorio y el teléfono ya dibujan la cámara 2D (centro, zoo
 sacudida de ruido que se apaga con «reducir movimiento» y en la calidad más baja), el resplandor de
 escena con tinte y su juego HDR (solo en la calidad más alta, o en la siguiente con corriente), los
 fotogramas que se dibujan sobre el anterior (más caros, porque cada cambio redibuja la imagen
-entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual, la captura
+entera), la inclinación en profundidad de capas y grupos con su máscara proyectada igual (una capa
+inclinada dentro de un grupo inclinado gira como un solo cuerpo visto por una sola cámara), la captura
 de una región por una capa de ajuste para cambiarla en su sitio o dibujarla de nuevo como lupa o
 espejo, el espaciado entre letras, el contorno, la sombra y el desenfoque del texto desde un campo de
 distancias que la GPU construye una vez por cada cambio del texto en texturas de 8 bits, que todas las

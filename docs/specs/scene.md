@@ -363,7 +363,7 @@ instead of the flat one, so the GPU spreads its picture with the right perspecti
 nothing more. The projection follows the camera, so zooming the camera zooms a tilted layer as a
 picture of it. The effects of a tilted layer run in its own plane before it is projected, and its
 mask leans with it. A tilted group is drawn apart first (one more pass over its box) and then
-projected, and its layers lean with it; tilts nested in groups add up. The pointer finds a tilted
+projected, and its layers lean with it; a layer tilted inside a tilted group turns in the plane of the group as one rigid body seen by one camera (its tilt and `z` are 3D turns and moves within that plane, and the group's tilt then turns both), never as a picture of a picture. The pointer finds a tilted
 layer where it shows.
 
 ### Text
