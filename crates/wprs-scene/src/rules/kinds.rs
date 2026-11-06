@@ -21,6 +21,12 @@ impl Check<'_> {
                 self.size(&format!("{p}/size"), *size);
                 self.tint(p, color.as_ref());
                 playback.iter().for_each(|b| self.playback(&format!("{p}/playback"), b));
+                if playback.as_ref().is_some_and(|b| b.own_clock) {
+                    match field == "video" && !pooled && matches!(named, crate::Value::Fixed(_)) {
+                        true => self.uses(true, "video_clocks"),
+                        false => self.issues.push(Issue::Clock(format!("{p}/playback/own_clock"))),
+                    }
+                }
             }
             Kind::Text(t) => self.text(p, t),
             Kind::Shape { shape, fill, gradient, stroke } => {

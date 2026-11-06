@@ -24,7 +24,7 @@ pub(crate) fn content<'a>(
             Content::Image { asset, size: boxed(*size), frame }
         }
         Kind::Video { video, size, .. } => {
-            let own = || crate::footage::lane(layer).map(Cow::Owned);
+            let own = || crate::footage::lane(cx.scene, layer).map(Cow::Owned);
             let asset =
                 set.file.as_deref().map(Cow::Borrowed).or_else(own).unwrap_or_else(|| named(cx, video));
             Content::Video { asset, size: boxed(*size) }

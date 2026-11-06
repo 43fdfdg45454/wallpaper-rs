@@ -37,6 +37,7 @@ pub enum Issue {
     Wrap(String),
     Unlinked(String),
     Hatched(String),
+    Clock(String),
 }
 
 impl Issue {
@@ -134,6 +135,9 @@ impl Issue {
                 "%1 names a system that starts particles from a layer, which a child born from its parent cannot do",
                 &[p],
             ),
+            Issue::Clock(p) => {
+                said("scene.clock", "%1 applies to video layers that name one video file only", &[p])
+            }
         }
     }
 }

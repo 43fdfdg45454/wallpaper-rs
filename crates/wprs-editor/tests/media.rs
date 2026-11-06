@@ -145,3 +145,19 @@ fn choosing_the_cover_for_a_field_never_turns_a_plain_picture_into_one_and_undoe
     let none = json!({ "asset": "cover", "cover": "none", "field": field });
     assert!(refused(&mut p, none).contains("current or the previous cover"));
 }
+
+#[test]
+fn the_own_clock_switch_shows_only_where_a_named_video_file_plays() {
+    let mut doc = starter("empty", "org.example.clocks", "Clocks", "en").unwrap();
+    let clock = json!({ "own_clock": false });
+    doc["scene"]["pools"] = json!({ "bars": { "type": "mesh", "max": 2, "max_vertices": 8 } });
+    doc["scene"]["layers"] = json!([
+        { "id": "film", "type": "video", "video": "clip", "playback": clock },
+        { "id": "still", "type": "image", "image": "sky", "playback": clock },
+        { "id": "bars", "type": "video", "video": "bars", "playback": clock },
+        { "id": "picked", "type": "video", "video": { "prop": "film", "map": { "x": "clip" } }, "playback": clock }
+    ]);
+    let shows =
+        |i: usize| fields(&doc, &format!("/scene/layers/{i}/playback")).iter().any(|f| f.key == "own_clock");
+    assert_eq!([0, 1, 2, 3].map(shows), [true, false, false, false]);
+}

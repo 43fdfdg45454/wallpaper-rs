@@ -60,3 +60,26 @@ fn own_clocks_are_a_feature_and_take_only_a_flag() {
     assert!(!shared.features().contains("video_clocks"));
     assert!(Scene::from_json(&doc(json!("own"))).is_err());
 }
+
+#[test]
+fn own_clocks_are_refused_where_no_named_video_file_plays() {
+    let doc = |layer: serde_json::Value| {
+        json!({ "schema": SCHEMA, "canvas": { "size": [100, 50] },
+            "assets": { "clip": { "path": "clip.webm" }, "sky": { "path": "sky.png" } },
+            "pools": { "bars": { "type": "mesh", "max": 2, "max_vertices": 8 } }, "layers": [layer] })
+        .to_string()
+    };
+    let clock = json!({ "own_clock": true });
+    let refused = [
+        json!({ "id": "a", "type": "image", "image": "sky", "playback": clock }),
+        json!({ "id": "a", "type": "video", "video": "bars", "playback": clock }),
+        json!({ "id": "a", "type": "video", "video": { "prop": "film", "map": { "x": "clip" } }, "playback": clock }),
+    ];
+    for layer in refused {
+        let issues = Scene::from_json(&doc(layer.clone())).unwrap().validate(&Default::default());
+        let said: Vec<String> = issues.iter().map(ToString::to_string).collect();
+        assert!(said.iter().any(|i| i.contains("/layers/0/playback/own_clock")), "{layer}: {said:?}");
+    }
+    let shared = json!({ "id": "a", "type": "video", "video": "bars", "playback": { "own_clock": false } });
+    assert!(!Scene::load(&doc(shared), &Default::default()).unwrap().features().contains("video_clocks"));
+}

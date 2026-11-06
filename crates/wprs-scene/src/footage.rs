@@ -29,9 +29,9 @@ fn named(v: &Value<String>, asset: &str) -> bool {
     }
 }
 
-fn shows<'a>(layer: &'a Layer, asset: &str) -> Option<Option<&'a Playback>> {
+fn shows<'a>(scene: &Scene, layer: &'a Layer, asset: &str) -> Option<Option<&'a Playback>> {
     match &layer.kind {
-        _ if lane(layer).is_some() => None,
+        _ if lane(scene, layer).is_some() => None,
         Kind::Video { video: v, playback, .. } | Kind::Image { image: v, playback, .. }
             if named(v, asset) =>
         {
@@ -41,9 +41,11 @@ fn shows<'a>(layer: &'a Layer, asset: &str) -> Option<Option<&'a Playback>> {
     }
 }
 
-pub fn lane(layer: &Layer) -> Option<String> {
+pub fn lane(scene: &Scene, layer: &Layer) -> Option<String> {
     match &layer.kind {
-        Kind::Video { video: Value::Fixed(asset), playback: Some(p), .. } if p.own_clock => {
+        Kind::Video { video: Value::Fixed(asset), playback: Some(p), .. }
+            if p.own_clock && !scene.pools.contains_key(asset) =>
+        {
             Some(format!("{asset}@{}", layer.id))
         }
         _ => None,
@@ -52,7 +54,7 @@ pub fn lane(layer: &Layer) -> Option<String> {
 
 impl Scene {
     pub fn lanes(&self) -> Vec<(String, String)> {
-        let own = self.layers().filter_map(|l| Some((lane(l)?, l)));
+        let own = self.layers().filter_map(|l| Some((lane(self, l)?, l)));
         own.filter_map(|(key, l)| match &l.kind {
             Kind::Video { video: Value::Fixed(asset), .. } => Some((key, asset.clone())),
             _ => None,
@@ -84,9 +86,9 @@ pub(crate) fn tapes(scene: &Scene) -> Vec<Tape> {
             speed,
         }
     };
-    let shared = videos.map(|(id, _)| tape(id, scene.layers().find_map(|l| Some((l, shows(l, id)?)))));
+    let shared = videos.map(|(id, _)| tape(id, scene.layers().find_map(|l| Some((l, shows(scene, l, id)?)))));
     let own = scene.layers().filter_map(|l| match &l.kind {
-        Kind::Video { playback, .. } => Some(tape(&lane(l)?, Some((l, playback.as_ref())))),
+        Kind::Video { playback, .. } => Some(tape(&lane(scene, l)?, Some((l, playback.as_ref())))),
         _ => None,
     });
     shared.collect::<Vec<_>>().into_iter().chain(own).collect()

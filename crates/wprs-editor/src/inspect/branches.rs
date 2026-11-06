@@ -39,7 +39,10 @@ impl Walk<'_> {
         all.sort_by_key(|(key, _)| rank(key));
         for (key, meta) in all {
             let first = self.out.len();
-            if self.hidden.contains(&key.as_str()) && depth == 0 || key == "ext" {
+            if self.hidden.contains(&key.as_str()) && depth == 0
+                || key == "ext"
+                || !clocked(self.doc, pointer, &key)
+            {
                 continue;
             }
             let path = format!("{pointer}/{}", escape(&key));
@@ -58,6 +61,12 @@ impl Walk<'_> {
             }
         }
     }
+}
+
+fn clocked(doc: &Value, pointer: &str, key: &str) -> bool {
+    let layer = pointer.strip_suffix("/playback").and_then(|p| doc.pointer(p)).filter(|_| key == "own_clock");
+    let pooled = |id: &str| doc["scene"]["pools"].get(id).is_some();
+    layer.is_none_or(|l| l["type"] == "video" && l["video"].as_str().is_some_and(|v| !pooled(v)))
 }
 
 fn tag(root: &Value, branch: &Value) -> Option<Value> {
