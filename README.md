@@ -1577,7 +1577,12 @@ derecha, al revés, de arriba abajo o de abajo arriba), *Toda la imagen*, *Dejar
 paz* (no se le toca el modo) o *Dejar la zona apagada*. En la terminal es `wprs-ctl rgb place
 "NOMBRE" "x y ancho alto [right|left|down|up]"` (fracciones de la imagen; `--zone N` para una zona,
 `off` o `none`), y `wprs-ctl rgb place` lista lo ubicado; se guarda en este equipo y no se
-sincroniza. Cada zona con matriz (las teclas) toma la celda de
+sincroniza. Para probar una página web con sus luces, su ficha de la biblioteca tiene *Probar la
+página y sus luces…*: la muestra en una vista previa con la tira que mandaría a las luces, aunque la
+iluminación esté apagada o el paquete no tenga permiso (ahí `setImage` devuelve `true` y los colores
+solo se ven); al cerrarla se olvida. Desde la terminal, `wprs-ctl stream preview:NOMBRE`, `wprs-ctl
+lib apply ID -o preview:NOMBRE`, `wprs-ctl rgb strip -o preview:NOMBRE` y `wprs-ctl release
+preview:NOMBRE` hacen lo mismo. Cada zona con matriz (las teclas) toma la celda de
 la tira que le cae encima y las demás, la columna de cada luz. En el editor, el inspector de una capa
 `adjustment` tiene *Enviar a la iluminación RGB* (activa también el permiso del paquete, `wprs-ctl
 scene rgb DIR CAPA --on true`), *Todo el lienzo* o *Una franja*, la región con asas en la vista

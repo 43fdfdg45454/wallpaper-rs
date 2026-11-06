@@ -76,6 +76,13 @@ else
   ctl config rgb.enabled true && ctl input revoke org.example.glow-page rgb
   seen "$web" "255, 0, 0"
   ctl config rgb.enabled false
+  read -r _ _ _ pv < <(ctl stream preview:page-lights 160 90)
+  ctl lib apply "$(uid org.example.glow-page)" -o preview:page-lights 2>/dev/null
+  previewed() { "$BIN/probe" "$pv" 3 >/dev/null 2>&1; [ "$(ctl rgb strip -o preview:page-lights --json 2>/dev/null | from "r['colors']")" = "['#00ff00', '#00ff00']" ]; }
+  wait_for 20 previewed || fail "a page preview showed no strip with the lights off and no grant"
+  seen "$pv" "0, 255, 0"
+  ctl release preview:page-lights
+  if grep -q "page-lights" "$XDG_CONFIG_HOME/wallpaper-rs/config.toml"; then fail "a released preview stayed in the settings"; fi
   ctl lib apply "$lights" -o TEST-W 2>/dev/null
   expect "s['outputs']['TEST-W']['kind'], s['outputs']['TEST-W']['error']" "('web', None)"
   wait_for 10 fresh "$old" || fail "no single new web helper runs for the example page: $(helper), $(helpers) running"

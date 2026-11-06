@@ -37,3 +37,18 @@ fn the_lights_board_places_devices_and_zones_by_their_own_keys() {
     assert!(picture.contains("drag.target: handle") && picture.contains("onPositionChanged"));
     assert!(text("SettingsRgb.qml").contains("RgbBoard {"));
 }
+
+#[test]
+fn a_page_preview_shows_its_lights_and_gives_its_stream_back() {
+    let files = qml_files();
+    let text = |name: &str| files.iter().find(|(n, _)| n == name).map(|(_, t)| t.clone()).unwrap();
+    let lights = text("PageLights.qml");
+    assert!(lights.contains(r#""preview:page-lights-" + Date.now()"#), "the preview is not a preview output");
+    assert!(lights.contains(r#"App.query("GetStrip", [trial.output], "Rgb1""#));
+    assert!(
+        lights.contains(r#"App.act("ReleaseStream", [output], "Daemon1")"#)
+            && lights.contains("onClosed: stop()")
+    );
+    assert!(lights.contains("running: trial.opened"), "the strip was read while closed");
+    assert!(text("ItemDrawer.qml").contains("lights.start(drawer.uid)"));
+}

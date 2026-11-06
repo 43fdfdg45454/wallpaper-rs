@@ -1751,6 +1751,10 @@ msgstr "Mostrar el contenido para adultos"
 msgid "Keep moving when the desktop asks for reduced motion"
 msgstr "Seguir en movimiento cuando el escritorio pide reducir el movimiento"
 
+#: apps/wprs-app/qml/ItemDrawer.qml
+msgid "Try the page and its lights…"
+msgstr "Probar la página y sus luces…"
+
 #: apps/wprs-app/qml/ItemDrawer.qml apps/wprs-app/qml/SceneEditors.qml
 msgid "Edit…"
 msgstr "Editar…"
@@ -2359,6 +2363,31 @@ msgstr ""
 msgid "Open this address in the browser?"
 msgstr "¿Abrir esta dirección en el navegador?"
 
+#: apps/wprs-app/qml/PageLights.qml
+msgid "The page and its lights"
+msgstr "La página y sus luces"
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid "Install the KPipeWire QML module to see the page here."
+msgstr "Instala el módulo QML de KPipeWire para ver aquí la página."
+
+#: apps/wprs-app/qml/PageLights.qml apps/wprs-app/qml/SceneRgb.qml
+msgid "What the lights get, %1 × %2:"
+msgstr "Lo que reciben las luces, %1 × %2:"
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid ""
+"The page has sent no colors to the lights yet; pages that call window.wprs."
+"rgb.setImage show them here."
+msgstr "La página todavía no mandó colores a las luces; las páginas que llaman a window.wprs.rgb.setImage los muestran aquí."
+
+#: apps/wprs-app/qml/PageLights.qml
+msgid ""
+"Here window.wprs.rgb.setImage returns true and its colors are only shown, "
+"never sent. On the desktop it returns false and sends nothing until RGB "
+"lighting is on and you allow it for this package."
+msgstr "Aquí window.wprs.rgb.setImage devuelve true y sus colores solo se muestran, nunca se mandan. En el escritorio devuelve false y no manda nada hasta que enciendas la iluminación RGB y lo permitas para este paquete."
+
 #: apps/wprs-app/qml/PlaylistEditor.qml apps/wprs-app/qml/PlaylistsPage.qml
 #: apps/wprs-app/qml/PresetDialog.qml apps/wprs-app/qml/ProfilesPage.qml
 #: apps/wprs-app/qml/ProviderDialog.qml
@@ -2926,7 +2955,10 @@ msgid ""
 "Every device takes the whole picture until you place it. Choose a device or "
 "one of its zones, drag its frame over the picture and pull its corner to "
 "size it."
-msgstr "Cada dispositivo toma toda la imagen hasta que lo ubicas. Elige un dispositivo o una de sus zonas, arrastra su marco sobre la imagen y tira de su esquina para darle tamaño."
+msgstr ""
+"Cada dispositivo toma toda la imagen hasta que lo ubicas. Elige un "
+"dispositivo o una de sus zonas, arrastra su marco sobre la imagen y tira de "
+"su esquina para darle tamaño."
 
 #: apps/wprs-app/qml/RgbBoard.qml
 msgid "Device or zone to place"
@@ -2947,7 +2979,8 @@ msgstr "Dejar el dispositivo en paz"
 #: apps/wprs-app/qml/RgbBoard.qml
 msgid ""
 "This zone stays dark while the rest of the device follows the wallpaper."
-msgstr "Esta zona queda apagada mientras el resto del dispositivo sigue al fondo."
+msgstr ""
+"Esta zona queda apagada mientras el resto del dispositivo sigue al fondo."
 
 #: apps/wprs-app/qml/RgbBoard.qml
 msgid "This device keeps its own mode and gets no colors."
@@ -5035,10 +5068,6 @@ msgstr "Todo el lienzo"
 #: apps/wprs-app/qml/SceneRgb.qml
 msgid "A strip of it"
 msgstr "Una franja"
-
-#: apps/wprs-app/qml/SceneRgb.qml
-msgid "What the lights get, %1 × %2:"
-msgstr "Lo que reciben las luces, %1 × %2:"
 
 #: apps/wprs-app/qml/SceneRgb.qml
 msgid "Play the preview to see what the lights get."
