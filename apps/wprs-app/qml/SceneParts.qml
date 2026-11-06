@@ -82,13 +82,15 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: parts.sorted.length * parts.tall
 
-        Repeater {
-            model: parts.sorted
+        SceneRepeater {
+            id: listed
+
+            rows: parts.sorted
 
             delegate: RowLayout {
                 id: row
 
-                required property var modelData
+                readonly property var modelData: listed.rows[index]
                 required property int index
 
                 width: list.width

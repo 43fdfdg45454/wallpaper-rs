@@ -47,13 +47,16 @@ Item {
         target: paths.stage.page.editor
     }
 
-    Repeater {
-        model: paths.info?.paths ?? []
+    SceneRepeater {
+        id: listed3
+
+        rows: paths.info?.paths ?? []
 
         delegate: Item {
             id: one
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed3.rows[index]
 
             anchors.fill: parent
 
@@ -64,11 +67,14 @@ Item {
                 segments: one.modelData.spline.slice(1).map((p, i) => [one.modelData.spline[i], p])
             }
 
-            Repeater {
-                model: one.modelData.keys.filter(k => k.at)
+            SceneRepeater {
+                id: listed2
+
+                rows: one.modelData.keys.filter(k => k.at)
 
                 delegate: SceneKnob {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed2.rows[index]
 
                     at: modelData.at
                     ratio: paths.stage.ratio
@@ -90,11 +96,14 @@ Item {
                 segments: one.modelData.keys.filter(k => k.at && k.aim).map(k => [k.at, k.aim])
             }
 
-            Repeater {
-                model: one.modelData.keys.filter(k => k.aim)
+            SceneRepeater {
+                id: listed
+
+                rows: one.modelData.keys.filter(k => k.aim)
 
                 delegate: SceneKnob {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     at: modelData.aim
                     ratio: paths.stage.ratio

@@ -73,13 +73,16 @@ RowLayout {
             color: Kirigami.Theme.negativeTextColor
         }
 
-        Repeater {
-            model: row.keys
+        SceneRepeater {
+            id: listed
+
+            rows: row.keys
 
             delegate: QQC2.Label {
                 id: mark
 
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
                 property real moved: -1
                 property bool copying: false
 

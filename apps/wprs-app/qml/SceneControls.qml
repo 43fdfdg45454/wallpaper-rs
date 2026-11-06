@@ -166,10 +166,15 @@ ColumnLayout {
         props: scene.props
     }
 
-    Repeater {
-        model: scene.fields
+    SceneRepeater {
+        id: listed
+
+        rows: scene.fields
 
         delegate: SceneField {
+            required property int index
+            modelData: listed.rows[index]
+
             Layout.fillWidth: true
             daemon: scene.daemon
             output: scene.output

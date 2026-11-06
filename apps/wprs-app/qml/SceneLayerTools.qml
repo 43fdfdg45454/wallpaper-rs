@@ -15,11 +15,14 @@ Flow {
         QQC2.Menu {
             id: kinds
 
-            Repeater {
-                model: tools.owner.page.view.kinds ?? []
+            SceneRepeater {
+                id: listed2
+
+                rows: tools.owner.page.view.kinds ?? []
 
                 delegate: QQC2.MenuItem {
-                    required property string modelData
+                    required property int index
+                    readonly property var modelData: listed2.rows[index]
 
                     visible: modelData !== "light"
                     height: visible ? implicitHeight : 0
@@ -127,11 +130,14 @@ Flow {
         QQC2.Menu {
             id: into
 
-            Repeater {
-                model: tools.owner.groups
+            SceneRepeater {
+                id: listed
+
+                rows: tools.owner.groups
 
                 delegate: QQC2.MenuItem {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     text: modelData.id
                     onTriggered: tools.owner.move(1000, modelData.id)

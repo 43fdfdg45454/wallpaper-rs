@@ -41,13 +41,16 @@ GridLayout {
         }, true)
     }
 
-    Repeater {
-        model: deep.focal ? [["depth", App.tr("Depth")], ["depth_speed", App.tr("Depth speed")]] : []
+    SceneRepeater {
+        id: listed
+
+        rows: deep.focal ? [["depth", App.tr("Depth")], ["depth_speed", App.tr("Depth speed")]] : []
 
         delegate: RowLayout {
             id: span
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property var held: deep.depth[modelData[0] === "depth" ? "depth" : "speed"] ?? [0, 0]
 
             Layout.columnSpan: 2

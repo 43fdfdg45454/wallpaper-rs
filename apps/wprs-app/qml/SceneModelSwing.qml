@@ -50,11 +50,14 @@ ColumnLayout {
         Layout.fillWidth: true
         enabled: swing.motion.bone !== ""
 
-        Repeater {
-            model: swing.presets
+        SceneRepeater {
+            id: listed2
+
+            rows: swing.presets
 
             delegate: QQC2.Button {
-                required property string modelData
+                required property int index
+                readonly property var modelData: listed2.rows[index]
 
                 text: swing.words[modelData] ?? modelData
                 onClicked: swing.motion.animate("preset", {
@@ -65,13 +68,16 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: swing.bodies
+    SceneRepeater {
+        id: listed
+
+        rows: swing.bodies
 
         delegate: ColumnLayout {
             id: body
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
 

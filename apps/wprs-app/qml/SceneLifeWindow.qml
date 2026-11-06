@@ -19,6 +19,12 @@ Item {
 
     implicitHeight: Kirigami.Units.gridUnit * 3
 
+    SceneHold {
+        id: holding
+
+        item: life
+    }
+
     Canvas {
         id: paint
 
@@ -65,6 +71,9 @@ Item {
                 anchors.fill: parent
                 anchors.margins: -Kirigami.Units.smallSpacing
                 preventStealing: true
+                onPressed: holding.hold(true)
+                onReleased: holding.hold(false)
+                onCanceled: holding.hold(false)
                 onPositionChanged: mouse => {
                     if (pressed)
                         life.put(index, mapToItem(life, mouse.x, mouse.y).x / life.width, true);

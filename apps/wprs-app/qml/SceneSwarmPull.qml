@@ -46,11 +46,14 @@ GridLayout {
             }, true)
     }
 
-    Repeater {
-        model: row.pull.rings
+    SceneRepeater {
+        id: listed
+
+        rows: row.pull.rings
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.columnSpan: 2
 

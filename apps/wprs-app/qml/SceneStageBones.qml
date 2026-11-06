@@ -39,11 +39,14 @@ Item {
         bones: bones
     }
 
-    Repeater {
-        model: bones.list
+    SceneRepeater {
+        id: listed
+
+        rows: bones.list
 
         delegate: Rectangle {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property bool chosen: bones.stage.page.mesh.bone === modelData.name
 
             x: modelData.at[0] * bones.stage.ratio - width / 2

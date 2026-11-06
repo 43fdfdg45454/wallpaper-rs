@@ -43,11 +43,14 @@ ColumnLayout {
         onToggled: card.toggled(checked)
     }
 
-    Repeater {
-        model: card.part.files ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: card.part.files ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap

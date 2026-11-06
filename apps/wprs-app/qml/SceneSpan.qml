@@ -71,13 +71,16 @@ Item {
         }
     }
 
-    Repeater {
-        model: span.shown.parts ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: span.shown.parts ?? []
 
         delegate: Rectangle {
             id: frame
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             x: modelData.rect[0] * span.ratio
             y: modelData.rect[1] * span.ratio

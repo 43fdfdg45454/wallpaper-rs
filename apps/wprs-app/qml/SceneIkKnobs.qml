@@ -30,14 +30,18 @@ Item {
         }, args));
     }
 
-    Repeater {
-        model: knobs.aims
+    SceneRepeater {
+        id: listed2
+
+        rows: knobs.aims
 
         delegate: Rectangle {
             id: aim
 
-            required property var modelData
-            property point held: Qt.point(modelData.at[0] * knobs.width, modelData.at[1] * knobs.height)
+            required property int index
+            readonly property var modelData: listed2.rows[index]
+            property var dragged: null
+            readonly property point held: dragged ?? Qt.point(modelData.at[0] * knobs.width, modelData.at[1] * knobs.height)
 
             x: held.x - width / 2
             y: held.y - height / 2
@@ -52,27 +56,33 @@ Item {
                 target: null
                 onCentroidChanged: {
                     if (active)
-                        aim.held = aim.mapToItem(knobs, centroid.position.x, centroid.position.y);
+                        aim.dragged = aim.mapToItem(knobs, centroid.position.x, centroid.position.y);
                 }
                 onActiveChanged: {
-                    if (!active)
-                        knobs.run(aim.modelData.index, {
-                            "target": [Math.round(aim.held.x / knobs.width * knobs.size[0] * 10) / 10, Math.round(aim.held.y / knobs.height * knobs.size[1] * 10) / 10]
-                        });
+                    if (active)
+                        return;
+                    knobs.run(aim.modelData.index, {
+                        "target": [Math.round(aim.held.x / knobs.width * knobs.size[0] * 10) / 10, Math.round(aim.held.y / knobs.height * knobs.size[1] * 10) / 10]
+                    });
+                    aim.dragged = null;
                 }
             }
         }
     }
 
-    Repeater {
-        model: knobs.ends
+    SceneRepeater {
+        id: listed
+
+        rows: knobs.ends
 
         delegate: Rectangle {
             id: end
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
             readonly property var limit: modelData.limit
-            property real turn: modelData.side === 0 ? limit.min : limit.max
+            property var turned: null
+            readonly property real turn: turned ?? (modelData.side === 0 ? limit.min : limit.max)
             readonly property real angle: (limit.rest + turn) * Math.PI / 180
 
             x: limit.at[0] * knobs.width + knobs.reach * Math.cos(angle) - width / 2
@@ -90,7 +100,7 @@ Item {
                     const p = end.mapToItem(knobs, centroid.position.x, centroid.position.y);
                     const deg = Math.atan2(p.y - end.limit.at[1] * knobs.height, p.x - end.limit.at[0] * knobs.width) * 180 / Math.PI - end.limit.rest;
                     const wrapped = Math.round(((deg + 540) % 360) - 180);
-                    end.turn = end.modelData.side === 0 ? Math.min(wrapped, end.limit.max) : Math.max(wrapped, end.limit.min);
+                    end.turned = end.modelData.side === 0 ? Math.min(wrapped, end.limit.max) : Math.max(wrapped, end.limit.min);
                 }
                 onActiveChanged: {
                     if (active)
@@ -101,6 +111,7 @@ Item {
                     knobs.run(end.modelData.index, {
                         "limits": limits
                     });
+                    end.turned = null;
                 }
             }
         }

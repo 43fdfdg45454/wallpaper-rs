@@ -80,23 +80,31 @@ Item {
         target: swarm.page.editor
     }
 
-    Repeater {
-        model: swarm.info?.emitters ?? []
+    SceneRepeater {
+        id: listed2
+
+        readonly property var host: swarm
+
+        rows: swarm.info?.emitters ?? []
 
         delegate: SceneSwarmShape {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             anchors.fill: parent
-            swarm: swarm
+            swarm: listed2.host
             emitter: modelData
         }
     }
 
-    Repeater {
-        model: swarm.info?.points ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: swarm.info?.points ?? []
 
         delegate: SceneKnob {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             at: modelData.at
             ratio: swarm.ratio

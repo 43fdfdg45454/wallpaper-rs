@@ -50,11 +50,13 @@ Item {
         segments: gizmo.model.arms.map(arm => [gizmo.model.at, arm])
     }
 
-    Repeater {
-        model: gizmo.chosen ? gizmo.model.arms : []
+    SceneRepeater {
+        id: listed
+
+        rows: gizmo.chosen ? gizmo.model.arms : []
 
         delegate: SceneKnob {
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
 
             at: modelData

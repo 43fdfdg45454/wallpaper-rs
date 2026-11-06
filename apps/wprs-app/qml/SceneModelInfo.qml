@@ -29,11 +29,14 @@ ColumnLayout {
         text: (card.info?.clips ?? []).map(c => App.tr("%1 (%2 s)", c.name, c.length)).join(" · ")
     }
 
-    Repeater {
-        model: card.info?.tiers ?? []
+    SceneRepeater {
+        id: listed2
+
+        rows: card.info?.tiers ?? []
 
         delegate: QQC2.Label {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap
@@ -42,11 +45,15 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: card.info?.notes ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: card.info?.notes ?? []
 
         delegate: QQC2.Label {
-            required property string modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
+
 
             Layout.fillWidth: true
             wrapMode: Text.Wrap

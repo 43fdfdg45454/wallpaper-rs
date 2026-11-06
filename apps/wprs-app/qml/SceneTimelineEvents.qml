@@ -53,13 +53,15 @@ ColumnLayout {
             }
         }
 
-        Repeater {
-            model: events.list
+        SceneRepeater {
+            id: listed
+
+            rows: events.list
 
             delegate: Rectangle {
                 id: mark
 
-                required property var modelData
+                readonly property var modelData: listed.rows[index]
                 required property int index
 
                 x: lane.width * Math.min(1, modelData.t / Math.max(1e-6, events.panel.length)) - width / 2

@@ -13,11 +13,14 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: tint.colors
+        SceneRepeater {
+            id: listed
+
+            rows: tint.colors
 
             delegate: RowLayout {
-                required property string modelData
+                readonly property var modelData: listed.rows[index]
+
                 required property int index
 
                 SceneColor {

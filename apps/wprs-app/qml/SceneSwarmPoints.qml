@@ -29,13 +29,15 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: points.list
+    SceneRepeater {
+        id: listed
+
+        rows: points.list
 
         delegate: RowLayout {
             id: spot
 
-            required property var modelData
+            readonly property var modelData: listed.rows[index]
             required property int index
             readonly property int number: Number(modelData.name.slice(1))
 
@@ -52,7 +54,7 @@ ColumnLayout {
                 })
             }
 
-            QQC2.Dial {
+            SceneDial {
                 implicitWidth: Kirigami.Units.gridUnit * 2
                 implicitHeight: implicitWidth
                 from: -180

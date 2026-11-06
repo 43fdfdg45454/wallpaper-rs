@@ -28,11 +28,14 @@ Item {
         target: frusta.stage.page.editor
     }
 
-    Repeater {
-        model: frusta.info?.lights ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: frusta.info?.lights ?? []
 
         delegate: SceneLightLines {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             anchors.fill: parent
             ratio: frusta.stage.ratio

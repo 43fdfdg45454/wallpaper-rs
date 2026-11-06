@@ -52,6 +52,12 @@ ColumnLayout {
         edited(list, false);
     }
 
+    SceneHold {
+        id: holding
+
+        item: bar
+    }
+
     Item {
         Layout.fillWidth: true
         Layout.preferredHeight: Kirigami.Units.gridUnit * 2
@@ -79,12 +85,21 @@ ColumnLayout {
                 dragging = bar.near(mouse.x / width, Kirigami.Units.gridUnit / Math.max(1, width));
                 if (dragging < 0)
                     bar.added(mouse.x / width);
+                else
+                    holding.hold(true);
             }
             onPositionChanged: mouse => {
                 if (dragging >= 0)
                     dragging = bar.moved(dragging, mouse.x / width, true);
             }
-            onReleased: dragging = -1
+            onReleased: {
+                dragging = -1;
+                holding.hold(false);
+            }
+            onCanceled: {
+                dragging = -1;
+                holding.hold(false);
+            }
         }
 
         Connections {
@@ -95,11 +110,13 @@ ColumnLayout {
             target: bar
         }
 
-        Repeater {
-            model: bar.stops
+        SceneRepeater {
+            id: listed2
+
+            rows: bar.stops
 
             delegate: Rectangle {
-                required property var modelData
+                readonly property var modelData: listed2.rows[index]
                 required property int index
 
                 x: modelData[0] * (parent.width - width)
@@ -117,11 +134,13 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: bar.stops
+        SceneRepeater {
+            id: listed
+
+            rows: bar.stops
 
             delegate: RowLayout {
-                required property var modelData
+                readonly property var modelData: listed.rows[index]
                 required property int index
 
                 QQC2.Label {

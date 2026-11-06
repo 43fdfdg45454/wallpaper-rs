@@ -29,13 +29,16 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: swing.owner.bodies
+    SceneRepeater {
+        id: listed
+
+        rows: swing.owner.bodies
 
         delegate: ColumnLayout {
             id: body
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
 

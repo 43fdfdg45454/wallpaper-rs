@@ -131,13 +131,17 @@ ColumnLayout {
         Layout.fillHeight: true
 
         ListView {
+            id: hosted
+
+            readonly property var host: stall
+
             model: stall.shown?.packages ?? []
             spacing: Kirigami.Units.smallSpacing
             clip: true
 
             delegate: RepoStock {
                 width: ListView.view.width
-                stall: stall
+                stall: hosted.host
             }
         }
     }

@@ -61,11 +61,14 @@ QQC2.ToolButton {
         QQC2.Menu {
             title: App.tr("Follow a user property")
 
-            Repeater {
-                model: (bind.page.view.properties ?? []).filter(p => !["button", "group", "label", "divider"].includes(p.type))
+            SceneRepeater {
+                id: listed
+
+                rows: (bind.page.view.properties ?? []).filter(p => !["button", "group", "label", "divider"].includes(p.type))
 
                 delegate: QQC2.MenuItem {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     text: modelData.label
                     onTriggered: bind.bound({
@@ -96,13 +99,14 @@ QQC2.ToolButton {
             title: App.tr("Follow the media player")
             enabled: media.count > 0
 
-            Repeater {
+            SceneRepeater {
                 id: media
 
-                model: SceneMediaWords.sources(bind.field.widget)
+                rows: SceneMediaWords.sources(bind.field.widget)
 
                 delegate: QQC2.MenuItem {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: media.rows[index]
 
                     text: modelData[2] !== "" ? App.tr("%1 (now %2)", modelData[1], modelData[2]) : modelData[1]
                     onTriggered: bind.bound({

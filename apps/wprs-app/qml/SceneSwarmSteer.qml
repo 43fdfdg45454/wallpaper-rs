@@ -80,26 +80,36 @@ ColumnLayout {
         }
     }
 
-    Repeater {
-        model: steer.keeps
+    SceneRepeater {
+        id: listed3
+
+        readonly property var host: steer
+
+        rows: steer.keeps
 
         delegate: SceneSwarmKeep {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed3.rows[index]
 
             Layout.fillWidth: true
-            steer: steer
+            steer: listed3.host
             keep: modelData
         }
     }
 
-    Repeater {
-        model: steer.pulls
+    SceneRepeater {
+        id: listed2
+
+        readonly property var host: steer
+
+        rows: steer.pulls
 
         delegate: SceneSwarmPull {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             Layout.fillWidth: true
-            steer: steer
+            steer: listed2.host
             pull: modelData
         }
     }
@@ -112,11 +122,14 @@ ColumnLayout {
             })
     }
 
-    Repeater {
-        model: steer.flock ? [["radius", App.tr("Neighbour radius"), 1, 400], ["separation", App.tr("Separation"), 0, 10], ["alignment", App.tr("Alignment"), 0, 10], ["cohesion", App.tr("Cohesion"), 0, 10], ["max_speed", App.tr("Most speed"), 0, 1000]] : []
+    SceneRepeater {
+        id: listed
+
+        rows: steer.flock ? [["radius", App.tr("Neighbour radius"), 1, 400], ["separation", App.tr("Separation"), 0, 10], ["alignment", App.tr("Alignment"), 0, 10], ["cohesion", App.tr("Cohesion"), 0, 10], ["max_speed", App.tr("Most speed"), 0, 1000]] : []
 
         delegate: RowLayout {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             QQC2.Label {
                 text: modelData[1]

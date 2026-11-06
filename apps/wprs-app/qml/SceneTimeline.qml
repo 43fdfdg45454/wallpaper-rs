@@ -116,13 +116,15 @@ ColumnLayout {
                         color: Kirigami.Theme.negativeTextColor
                     }
 
-                    Repeater {
-                        model: track.modelData.keys
+                    SceneRepeater {
+                        id: listed
+
+                        rows: track.modelData.keys
 
                         delegate: QQC2.Label {
                             id: key
 
-                            required property var modelData
+                            readonly property var modelData: listed.rows[index]
                             required property int index
                             property real moved: -1
 

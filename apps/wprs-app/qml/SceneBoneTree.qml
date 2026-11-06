@@ -37,11 +37,14 @@ ColumnLayout {
         font.bold: true
     }
 
-    Repeater {
-        model: boneTree.rows
+    SceneRepeater {
+        id: listed
+
+        rows: boneTree.rows
 
         delegate: SceneBoneRow {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             Layout.fillWidth: true
             tree: boneTree

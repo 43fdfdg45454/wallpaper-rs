@@ -180,8 +180,10 @@ ColumnLayout {
                 system: /^\/scene\/particles\/[^\/]+$/.test(inspector.pointer) ? inspector.parts[2].replace(/~1/g, "/").replace(/~0/g, "~") : ""
             }
 
-            Repeater {
-                model: inspector.page.fields
+            SceneRepeater {
+                id: listed
+
+                rows: inspector.page.fields
 
                 delegate: SceneInput {
                     required property int index

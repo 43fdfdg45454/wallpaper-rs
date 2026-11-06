@@ -10,11 +10,14 @@ Item {
 
     visible: SceneSwarmGlow.shown && !!info?.field && census !== null
 
-    Repeater {
-        model: shift.visible ? shift.census.particles : []
+    SceneRepeater {
+        id: listed
+
+        rows: shift.visible ? shift.census.particles : []
 
         delegate: Image {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             readonly property real side: Math.max(4, shift.info.size * shift.swarm.ratio)
 

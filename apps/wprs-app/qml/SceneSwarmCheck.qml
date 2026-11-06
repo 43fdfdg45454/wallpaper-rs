@@ -127,6 +127,9 @@ QtObject {
         Qt.createComponent("SceneEmitCheck.qml").createObject(page, {
             "page": page
         }).exercise(check);
+        Qt.createComponent("SceneKeptCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
         while (page.view.history.done.length > steps)
             page.run("undo");
         page.editor.select("/scene/layers/1");

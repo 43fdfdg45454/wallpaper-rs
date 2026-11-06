@@ -15,11 +15,14 @@ Kirigami.FormLayout {
 
     visible: prop?.type === "slider"
 
-    Repeater {
-        model: range.keys
+    SceneRepeater {
+        id: listed
+
+        rows: range.keys
 
         delegate: QQC2.TextField {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             visible: range.visible
             Kirigami.FormData.label: modelData[1] + ":"

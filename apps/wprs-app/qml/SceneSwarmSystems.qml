@@ -44,11 +44,15 @@ ColumnLayout {
         text: App.tr("Particle systems of the scene")
     }
 
-    Repeater {
-        model: systems.ids
+    SceneRepeater {
+        id: listed
+
+        rows: systems.ids
 
         delegate: RowLayout {
-            required property string modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
+
 
             Layout.fillWidth: true
 

@@ -23,13 +23,16 @@ ColumnLayout {
         return base + "_" + n;
     }
 
-    Repeater {
-        model: kin.kids
+    SceneRepeater {
+        id: listed2
+
+        rows: kin.kids
 
         delegate: ColumnLayout {
             id: child
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             RowLayout {
                 Layout.fillWidth: true
@@ -53,11 +56,14 @@ ColumnLayout {
             Flow {
                 Layout.fillWidth: true
 
-                Repeater {
-                    model: kin.takes
+                SceneRepeater {
+                    id: listed
+
+                    rows: kin.takes
 
                     delegate: QQC2.CheckBox {
-                        required property string modelData
+                        required property int index
+                        readonly property var modelData: listed.rows[index]
 
                         text: ({
                                 "color": App.tr("Color"),

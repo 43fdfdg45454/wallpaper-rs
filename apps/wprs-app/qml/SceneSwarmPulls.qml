@@ -50,13 +50,16 @@ Item {
         }
     }
 
-    Repeater {
-        model: pulls.list
+    SceneRepeater {
+        id: listed2
+
+        rows: pulls.list
 
         delegate: Item {
             id: pull
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             anchors.fill: parent
 
@@ -69,11 +72,14 @@ Item {
                 onMoved: (to, done) => SceneSwarmGrips.spot(pulls, pull.modelData, pull.modelData.ref, to, (v, p) => v[pull.modelData.field] = p)
             }
 
-            Repeater {
-                model: pull.modelData.rings
+            SceneRepeater {
+                id: listed
+
+                rows: pull.modelData.rings
 
                 delegate: SceneKnob {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     at: modelData.at
                     ratio: pulls.r

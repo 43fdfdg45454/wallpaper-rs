@@ -131,11 +131,14 @@ GridLayout {
         Layout.columnSpan: 2
         Layout.fillWidth: true
 
-        Repeater {
-            model: row.material.maps ?? []
+        SceneRepeater {
+            id: listed
+
+            rows: row.material.maps ?? []
 
             delegate: ColumnLayout {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 Image {
                     Layout.preferredWidth: Kirigami.Units.gridUnit * 2.5

@@ -133,11 +133,14 @@ Kirigami.Dialog {
             }
         }
 
-        Repeater {
-            model: dialog.offered()
+        SceneRepeater {
+            id: listed
+
+            rows: dialog.offered()
 
             delegate: SceneOfferPart {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 Layout.fillWidth: true
                 part: modelData

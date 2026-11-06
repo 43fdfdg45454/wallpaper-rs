@@ -77,11 +77,14 @@ Item {
         dashed: true
     }
 
-    Repeater {
-        model: frame.shaped && (frame.overlay.mask.feather ?? 0) > 0 ? [-1, 1] : []
+    SceneRepeater {
+        id: listed
+
+        rows: frame.shaped && (frame.overlay.mask.feather ?? 0) > 0 ? [-1, 1] : []
 
         delegate: SceneMaskShape {
-            required property int modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             kind: frame.overlay.kind
             spec: frame.overlay.spec

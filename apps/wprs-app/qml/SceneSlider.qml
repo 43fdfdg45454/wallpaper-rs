@@ -5,19 +5,17 @@ QQC2.Slider {
     id: slider
 
     property var editor: null
+    readonly property SceneHold holding: SceneHold {
+        item: slider
+        editor: slider.editor
+    }
 
     function owner() {
-        for (let item = slider.parent; item; item = item.parent) {
-            if (item.editor?.hold)
-                return item.editor;
-            if (item.page?.editor?.hold)
-                return item.page.editor;
-        }
-        return null;
+        return holding.owner();
     }
 
     function hold(on) {
-        (slider.editor ?? owner())?.hold(on);
+        holding.hold(on);
     }
 
     onPressedChanged: hold(pressed)

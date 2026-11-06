@@ -44,21 +44,27 @@ Item {
         }
     }
 
-    Repeater {
-        model: keeps.list
+    SceneRepeater {
+        id: listed2
+
+        rows: keeps.list
 
         delegate: Item {
             id: keep
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
 
             anchors.fill: parent
 
-            Repeater {
-                model: SceneSwarmGrips.keeps(keeps, keep.modelData)
+            SceneRepeater {
+                id: listed
+
+                rows: SceneSwarmGrips.keeps(keeps, keep.modelData)
 
                 delegate: SceneKnob {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     at: modelData.at
                     ratio: keeps.r

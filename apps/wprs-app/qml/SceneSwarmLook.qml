@@ -83,7 +83,7 @@ GridLayout {
             })
     }
 
-    QQC2.Dial {
+    SceneDial {
         enabled: look.turn.mode === "fixed"
         implicitWidth: Kirigami.Units.gridUnit * 2.5
         implicitHeight: implicitWidth

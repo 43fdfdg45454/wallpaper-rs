@@ -102,13 +102,16 @@ Item {
         visible: !bones.posing
     }
 
-    Repeater {
-        model: bones.posing ? [] : bones.list
+    SceneRepeater {
+        id: listed
+
+        rows: bones.posing ? [] : bones.list
 
         delegate: Rectangle {
             id: knob
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             x: (modelData.at ?? [0.5, 0.5])[0] * bones.width - width / 2
             y: (modelData.at ?? [0.5, 0.5])[1] * bones.height - height / 2

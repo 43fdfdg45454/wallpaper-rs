@@ -41,6 +41,13 @@ ColumnLayout {
     onEChanged: art.requestPaint()
     onSpanChanged: art.requestPaint()
 
+    SceneHold {
+        id: holding
+
+        editor: lane.emission.tools.page.editor
+        item: lane
+    }
+
     Rectangle {
         id: strip
 
@@ -88,13 +95,16 @@ ColumnLayout {
             }
         }
 
-        Repeater {
-            model: [["delay", lane.delay, App.tr("Start after %1 s", lane.delay)], ["duration", lane.length > 0 ? lane.delay + lane.length : -1, App.tr("Stop after %1 s", lane.length)], ["on", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 : -1, App.tr("Bursts of emission last %1 to %2 s; the top row shows the shortest, the bottom row the longest", lane.on?.[0] ?? 0, lane.on?.[1] ?? 0)], ["off", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 + (lane.off[0] + lane.off[1]) / 2 : -1, App.tr("Pauses last %1 to %2 s", lane.off?.[0] ?? 0, lane.off?.[1] ?? 0)], ["every", lane.every > 0 && !lane.e.burst?.on ? lane.delay + lane.every : -1, App.tr("A burst every %1 s", lane.every)]]
+        SceneRepeater {
+            id: knobs
+
+            rows: [["delay", lane.delay, App.tr("Start after %1 s", lane.delay)], ["duration", lane.length > 0 ? lane.delay + lane.length : -1, App.tr("Stop after %1 s", lane.length)], ["on", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 : -1, App.tr("Bursts of emission last %1 to %2 s; the top row shows the shortest, the bottom row the longest", lane.on?.[0] ?? 0, lane.on?.[1] ?? 0)], ["off", lane.on ? lane.delay + (lane.on[0] + lane.on[1]) / 2 + (lane.off[0] + lane.off[1]) / 2 : -1, App.tr("Pauses last %1 to %2 s", lane.off?.[0] ?? 0, lane.off?.[1] ?? 0)], ["every", lane.every > 0 && !lane.e.burst?.on ? lane.delay + lane.every : -1, App.tr("A burst every %1 s", lane.every)]]
 
             delegate: Rectangle {
                 id: knob
 
-                required property var modelData
+                required property int index
+                readonly property var modelData: knobs.rows[index]
                 property real moved: -1
 
                 visible: modelData[1] >= 0
@@ -117,7 +127,7 @@ ColumnLayout {
 
                     target: null
                     onActiveChanged: {
-                        lane.emission.tools.page.editor.hold(active);
+                        holding.hold(active);
                         lane.held = active ? lane.fitted : 0;
                         if (!active)
                             knob.moved = -1;

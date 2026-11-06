@@ -25,11 +25,14 @@ RowLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
 
-        Repeater {
-            model: events.list
+        SceneRepeater {
+            id: listed
+
+            rows: events.list
 
             delegate: Rectangle {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 x: lane.width * Math.min(1, modelData.t / events.line.length) - width / 2
                 y: 2

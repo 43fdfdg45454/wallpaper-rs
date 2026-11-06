@@ -32,6 +32,12 @@ ColumnLayout {
         plot.requestPaint();
     }
 
+    SceneHold {
+        id: holding
+
+        item: curve
+    }
+
     Canvas {
         id: plot
 
@@ -75,14 +81,24 @@ ColumnLayout {
                 MouseArea {
                     anchors.fill: parent
                     anchors.margins: -Kirigami.Units.smallSpacing
-                    onPressed: curve.held = curve.points.slice()
+                    onPressed: {
+                        curve.held = curve.points.slice();
+                        holding.hold(true);
+                    }
                     onPositionChanged: mouse => {
                         const p = mapToItem(plot, mouse.x, mouse.y), points = curve.held.slice();
                         points[knob.index] = curve.at(p.x, p.y);
                         curve.held = points;
                         curve.send(points, true);
                     }
-                    onReleased: curve.held = null
+                    onReleased: {
+                        curve.held = null;
+                        holding.hold(false);
+                    }
+                    onCanceled: {
+                        curve.held = null;
+                        holding.hold(false);
+                    }
                     onDoubleClicked: curve.send(curve.points.filter((_, i) => i !== knob.index), false)
                 }
             }

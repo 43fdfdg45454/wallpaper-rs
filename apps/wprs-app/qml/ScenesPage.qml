@@ -57,11 +57,14 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
             spacing: Kirigami.Units.largeSpacing
 
-            Repeater {
-                model: page.starters
+            SceneRepeater {
+                id: listed3
+
+                rows: page.starters
 
                 delegate: QQC2.Button {
-                    required property var modelData
+                    required property int index
+                    readonly property var modelData: listed3.rows[index]
 
                     text: SceneWords.kind(modelData[0])
                     icon.name: modelData[1]
@@ -84,11 +87,14 @@ Kirigami.ScrollablePage {
             onClicked: folders.open()
         }
 
-        Repeater {
-            model: page.projects
+        SceneRepeater {
+            id: listed2
+
+            rows: page.projects
 
             delegate: QQC2.ItemDelegate {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed2.rows[index]
 
                 Layout.fillWidth: true
                 text: (modelData.title || "") + " — " + modelData.folder
@@ -103,11 +109,14 @@ Kirigami.ScrollablePage {
             visible: page.scenes.length > 0
         }
 
-        Repeater {
-            model: page.scenes
+        SceneRepeater {
+            id: listed
+
+            rows: page.scenes
 
             delegate: QQC2.ItemDelegate {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 Layout.fillWidth: true
                 text: modelData.title

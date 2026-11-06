@@ -31,13 +31,16 @@ Item {
 
     visible: list.length > 0 && !page.editor.playing
 
-    Repeater {
-        model: swing.list
+    SceneRepeater {
+        id: listed2
+
+        rows: swing.list
 
         delegate: Item {
             id: entry
 
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed2.rows[index]
             readonly property bool chosen: swing.page.mesh.bone === modelData.bone
 
             anchors.fill: parent
@@ -50,11 +53,14 @@ Item {
                 segments: entry.modelData.arc.slice(1).map((p, i) => [entry.modelData.arc[i], p]).concat(entry.modelData.rotation ? [[entry.modelData.at, entry.modelData.arc[0]], [entry.modelData.at, entry.modelData.arc[entry.modelData.arc.length - 1]]] : [])
             }
 
-            Repeater {
-                model: entry.chosen && entry.modelData.rotation ? [0, 1] : []
+            SceneRepeater {
+                id: listed
+
+                rows: entry.chosen && entry.modelData.rotation ? [0, 1] : []
 
                 delegate: SceneKnob {
-                    required property int modelData
+                    required property int index
+                    readonly property var modelData: listed.rows[index]
 
                     at: entry.modelData.ends[modelData]
                     ratio: swing.bones.stage.ratio

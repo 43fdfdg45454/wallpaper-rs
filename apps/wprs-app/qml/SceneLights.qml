@@ -33,11 +33,14 @@ Item {
         target: lights.page.editor
     }
 
-    Repeater {
-        model: lights.info?.lights ?? []
+    SceneRepeater {
+        id: listed
+
+        rows: lights.info?.lights ?? []
 
         delegate: SceneLightGizmo {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             anchors.fill: parent
             owner: lights

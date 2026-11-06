@@ -78,11 +78,14 @@ Item {
         }
     }
 
-    Repeater {
-        model: shape.knobs
+    SceneRepeater {
+        id: listed
+
+        rows: shape.knobs
 
         delegate: SceneKnob {
-            required property var modelData
+            required property int index
+            readonly property var modelData: listed.rows[index]
 
             at: modelData.at
             ratio: shape.r

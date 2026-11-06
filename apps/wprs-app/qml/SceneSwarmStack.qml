@@ -60,11 +60,14 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Repeater {
-            model: stack.tunables
+        SceneRepeater {
+            id: listed
+
+            rows: stack.tunables
 
             delegate: QQC2.CheckBox {
-                required property string modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 text: SceneWords.label(modelData)
                 checked: !stack.locked.includes(modelData)

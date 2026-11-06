@@ -128,11 +128,14 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: weights.painting
 
-        Repeater {
-            model: weights.host.bones.filter(b => b.name !== weights.mesh.bone)
+        SceneRepeater {
+            id: listed
+
+            rows: weights.host.bones.filter(b => b.name !== weights.mesh.bone)
 
             delegate: QQC2.CheckBox {
-                required property var modelData
+                required property int index
+                readonly property var modelData: listed.rows[index]
 
                 text: modelData.name
                 checked: weights.locked.includes(modelData.name)
