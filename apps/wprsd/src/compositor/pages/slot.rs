@@ -45,7 +45,7 @@ pub(in crate::compositor) struct PageSlot {
 }
 
 impl PageSlot {
-    pub(super) fn new(spec: PageSpec, now: Instant) -> PageSlot {
+    pub(in crate::compositor) fn new(spec: PageSpec, now: Instant) -> PageSlot {
         let mut salt = [0u8; 32];
         let _ = getrandom_fill(&mut salt);
         PageSlot {

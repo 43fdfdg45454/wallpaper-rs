@@ -154,7 +154,7 @@ impl State {
                     (flashes, particles, level, decode),
                     (sandbox, helper),
                 ) = status(name, o);
-                let frames = published.get(name).map_or(0, |s| s.frames);
+                let (frames, page_frames) = published.get(name).map_or((0, 0), |s| (s.frames, s.page_frames));
                 let (left_out, console) = (left(o).to_vec(), console(name, o).cloned().collect());
                 let status = OutputStatus {
                     kind,
@@ -162,6 +162,7 @@ impl State {
                     error,
                     parallax,
                     frames,
+                    page_frames,
                     fps,
                     sound,
                     flashes,

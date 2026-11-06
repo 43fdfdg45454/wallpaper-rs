@@ -1,0 +1,15 @@
+{
+  "schema": "wallpaper-rs.wpak/2",
+  "id": "org.example.pulse-page",
+  "version": "1.0.0",
+  "title": "Pulse",
+  "license": "CC0-1.0",
+  "origin": { "kind": "original" },
+  "content": { "rating": "general" },
+  "photosensitive": false,
+  "kind": "web",
+  "entry": "index.html",
+  "inputs": [],
+  "web": { "background": "#000000" },
+  "requires": { "features": ["web"] }
+}

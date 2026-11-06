@@ -38,12 +38,19 @@ fn deadline(output: &Output, open: bool, power: Power, now: Instant) -> Option<I
     (output.dirty && open).then(|| output.last_render.map_or(now, |t| t + wait))
 }
 
+pub(super) fn painted(output: &Output, page: Option<Option<&super::pages::PageSlot>>) -> bool {
+    let first = |slot: &super::pages::PageSlot| slot.waiting.is_none() || slot.error.is_some();
+    page.is_none_or(|slot| output.shown.image.is_some() || slot.is_none_or(first))
+}
+
 impl State {
     pub(super) fn start_fades(&mut self) {
         let now = Instant::now();
         for output in self.outputs.values_mut() {
             let slot = output.shown.content.video().and_then(|p| self.players.get(p));
-            let ready = slot.is_none_or(|s| s.texture.is_some() || s.error.is_some());
+            let page = output.shown.content.page().map(|p| self.pages.get(&p.key()));
+            let ready =
+                slot.is_none_or(|s| s.texture.is_some() || s.error.is_some()) && painted(output, page);
             if let Some((_, start @ None)) = &mut output.fade
                 && ready
             {

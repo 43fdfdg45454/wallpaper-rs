@@ -174,3 +174,24 @@ fn a_scene_frame_that_changed_nothing_is_not_composed_again() {
     output.fade = Some((color, None));
     assert!(!frame(&mut output, false, later), "a fade was skipped");
 }
+
+#[test]
+fn a_fade_to_a_page_waits_for_its_first_frame_unless_the_page_cannot_draw() {
+    let spec = super::super::pages::tests::page(true, serde_json::json!({}));
+    let (content, fit, background) = (Content::Web(spec.clone()), Fit::Stretch, [0; 3]);
+    let (image, transition, uv, relief, scene) = (None, None, None, None, None);
+    let shown =
+        Shown { content, fit, background, image, transition, uv, relief, scene, tone: Default::default() };
+    let output = Output::new((16, 9), shown, Sink::Stream(None), 60);
+    let mut slot = super::super::pages::PageSlot::new(spec, Instant::now());
+    assert!(painted(&output, None), "a wallpaper that is no page waited for one");
+    assert!(painted(&output, Some(None)), "a fade waited for a page that is not running");
+    (slot.waiting, slot.error) = (Some(Instant::now()), None);
+    assert!(!painted(&output, Some(Some(&slot))), "a fade started before the first frame of the page");
+    slot.error = Some("the web helper stopped".into());
+    assert!(painted(&output, Some(Some(&slot))), "a fade waited for a page that failed");
+    slot.error = None;
+    let mut drawn = output;
+    drawn.shown.image = None;
+    assert!(!painted(&drawn, Some(Some(&slot))));
+}

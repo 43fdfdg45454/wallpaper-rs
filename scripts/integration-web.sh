@@ -39,6 +39,7 @@ else
   echo "web page drawn (decode, sandbox): $drawn"
   [[ $drawn != *"''"* ]] || fail "no frame or sandbox state: $drawn"
   source "$(dirname "$0")"/integration-web-quality.sh
+  source "$(dirname "$0")"/integration-web-pace.sh
   ctl lib confirm hide_zone "$tint"
   [ "$(ctl lib show "$tint" --json | from "r['item']['package']['exposes']")" = "['language', 'gpu', 'storage']" ] ||
     fail "the time zone is still exposed"

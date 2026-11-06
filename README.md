@@ -1500,7 +1500,13 @@ servicio arranca para cada página que se ve y para en cuanto ninguna pantalla l
 WPE WebKit 2.54 o posterior (`wpewebkit` en Arch y Fedora); donde no está (Ubuntu 24.04, el Flatpak)
 el fondo se rechaza con el motivo en lugar de quedarse en blanco. `docs/specs/web.md` explica el
 motor, el aislamiento y la interfaz de la página, y `docs/guia-fondos-web.md` es la guía para quien
-los hace.
+los hace. El fundido hacia una página empieza cuando la página dibuja su primer fotograma (o falla),
+así que el fondo anterior no se funde en una pantalla vacía, y al salir de una página se funde desde
+su último fotograma. El límite de FPS frena todos los fotogramas de la página, no solo
+`requestAnimationFrame`: el motor web no dibuja el siguiente hasta que pasa el periodo, también para
+animaciones CSS, vídeos y lienzos; `wprs-ctl state` cuenta los que dibujó cada pantalla
+(`page_frames`). En el teléfono la página se dibuja directamente en la superficie del fondo, sin
+fundido, y el límite solo frena `requestAnimationFrame`.
 
 La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
 (`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,

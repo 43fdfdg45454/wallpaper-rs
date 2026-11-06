@@ -134,6 +134,7 @@ impl Daemon {
                 follows: st.config.layout.follow.get(name).cloned(),
                 parallax: s.parallax,
                 frames: s.frames,
+                page_frames: s.page_frames,
                 refresh: st.refresh(name),
                 fps: s.fps,
                 buffers: self.exporter.buffers(name).into(),

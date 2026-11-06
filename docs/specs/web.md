@@ -31,7 +31,11 @@ The daemon finds the helper in `WPRS_WEB`, next to `wprsd` or in `PATH`, and run
 The helper takes over the `render_buffer` and `buffers_changed` steps of the headless view, so it
 decides when a frame is done: it reports a frame as presented only at the frame rate the daemon asks
 for (the output's cap, battery and power saving included), and WebKit paces animation frames, CSS
-animations and video by that. A page that does not change draws nothing.
+animations and video by that, so the cap limits every frame the page draws, not only
+`requestAnimationFrame`. A page that does not change draws nothing. `GetState().outputs[x].page_frames`
+counts the frames the page drew for an output. A fade to a page waits for its first frame (or for
+the page to fail), so the wallpaper before it never fades into an empty output; a fade from a page
+starts from its last frame.
 
 When the daemon's GPU can import them, the helper asks WebKit to render into the formats and
 modifiers that GPU samples in place (`XRGB8888`/`ARGB8888` with one plane, on the render node of the

@@ -199,7 +199,8 @@ often than the lowest of:
 - for parallax images with software rendering, 15;
 - for videos with `display` and software rendering, 30.
 
-A fade between two wallpapers runs at 60 frames per second on mains power, or faster when the
+A fade to a video or a web page starts once its first frame is there, or once it failed. A fade
+between two wallpapers runs at 60 frames per second on mains power, or faster when the
 rate above is higher, never above a known refresh rate; on battery it keeps the rate above.
 Videos play at their own frame rate and drop the frames above the rate of the fastest output that
 shows them, never repeating one. Nothing is rendered while nothing changes, whatever the rate. A
@@ -2379,7 +2380,8 @@ removing, renaming or retyping something increases it. Times are Unix seconds; `
 spanning"), or `null` before `SetOutputInfo`. `calibrating` tells whether `ShowCalibration` shows
 its pattern.
 `parallax` tells whether the image moves in depth and `frames` counts the frames rendered for the
-output since it appeared. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
+output since it appeared; `page_frames` counts the frames the web page of the output drew (`0` for
+other wallpapers), which the frame rate cap limits. `refresh` is the refresh rate of its screen in Hz (`0` while unknown)
 and `fps` the most frames per second it renders now (see "Frame rate"). `buffers` is `"dmabuf"`
 or `"memfd"` while a consumer streams the output, and `""` otherwise (see "Stream buffers").
 `sound` is `""`, `"off"`, `"playing"`, `"paused"` or `"elsewhere"` (see "Scene sound").
@@ -2450,7 +2452,7 @@ struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,
     item: Option<Uid>, preset: Option<Uid>, playlist: Option<OutputPlaylist>, credit: Option<Credit>,
-    edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, refresh: u32, fps: u32,
+    edited: bool, screen: Option<Screen>, mm: Option<[f64; 4]>, parallax: bool, frames: u64, page_frames: u64, refresh: u32, fps: u32,
     buffers: String, sound: String, shown_fit: Fit, flashes: String, left_out: Vec<String>,
     particles: String, quality: String, quality_reason: String, quality_choice: Option<String>,
     quality_cost: f64, quality_budget: f64, quality_auto: String, console: Vec<String>, sandbox: String,

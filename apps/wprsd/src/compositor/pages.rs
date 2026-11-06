@@ -14,7 +14,7 @@ mod heard;
 mod lit;
 mod slot;
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 mod view;
 
 pub(super) use ending::settle;

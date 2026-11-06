@@ -83,6 +83,8 @@ model! {
         #[serde(default)]
         pub frames: u64,
         #[serde(default)]
+        pub page_frames: u64,
+        #[serde(default)]
         pub refresh: u32,
         #[serde(default)]
         pub fps: u32,
