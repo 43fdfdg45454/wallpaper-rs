@@ -42,8 +42,10 @@ pub(crate) struct Clock {
     sim: (bool, f64),
     pub(crate) gpu_ms: f64,
     pub(crate) sim_ms: f64,
+    pub(crate) span_ms: f64,
     pub(crate) fresh: bool,
     pub(crate) samples: u64,
+    edge: u64,
 }
 
 impl Clock {
@@ -64,8 +66,10 @@ impl Clock {
             sim,
             gpu_ms,
             sim_ms,
+            span_ms: 0.0,
             fresh,
             samples,
+            edge: 0,
         }
     }
 
@@ -119,10 +123,18 @@ impl Clock {
         let Some(stamps) = self.stamps.as_mut() else { return Vec::new() };
         let (judge, now, mut charged) = (&mut self.judge, std::time::Instant::now(), Vec::new());
         let (gpu, fresh, samples) = (&mut self.gpu_ms, &mut self.fresh, &mut self.samples);
-        let sim_ms = &mut self.sim_ms;
+        let (sim_ms, span, edge, period) =
+            (&mut self.sim_ms, &mut self.span_ms, &mut self.edge, stamps.period);
         stamps.collect(&mut self.timed, |runs, [whole, sim], wide| {
-            (*gpu, *sim_ms, *fresh, *samples) = (whole + sim, sim, true, *samples + 1);
-            charged.extend(judge.frame(runs, (Some(whole), wide), now));
+            let ms = |ticks: u64| ticks as f64 * period / 1e6;
+            let ticks;
+            (ticks, *edge) = stamps::busy([whole, sim], *edge);
+            let (busy, sim) = (ms(ticks), ms(sim.1.saturating_sub(sim.0)));
+            (*span, *sim_ms) = (ms(whole.1.saturating_sub(whole.0)) + sim, sim);
+            if ticks > 0 {
+                (*gpu, *fresh, *samples) = (busy, true, *samples + 1);
+            }
+            charged.extend(judge.frame(runs, ((ticks > 0).then_some(busy), wide), now));
         });
         charged
     }
@@ -130,6 +142,7 @@ impl Clock {
     pub(crate) fn watched(&mut self, keys: &[u64], ms: f64) -> Vec<(u64, String)> {
         self.sim_ms = std::mem::take(&mut self.sim).1;
         (self.gpu_ms, self.fresh, self.samples) = (ms + self.sim_ms, true, self.samples + 1);
+        self.span_ms = self.gpu_ms;
         self.judge.watched(keys, ms)
     }
 }

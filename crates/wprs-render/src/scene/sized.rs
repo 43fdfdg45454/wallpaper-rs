@@ -17,6 +17,10 @@ impl SceneView {
         (self.clock.samples, self.clock.gpu_ms)
     }
 
+    pub fn gpu_span(&self) -> f64 {
+        self.clock.span_ms
+    }
+
     pub(super) fn pace(&mut self, r: &Renderer) {
         if std::mem::take(&mut self.clock.fresh) {
             self.shrink = crate::timeout::shrink(self.shrink, self.clock.gpu_ms, r.gpu_timeout());

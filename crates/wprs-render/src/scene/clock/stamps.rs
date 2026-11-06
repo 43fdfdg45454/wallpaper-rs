@@ -11,9 +11,15 @@ const BUSY: u8 = 1;
 const READY: u8 = 2;
 const FAILED: u8 = 3;
 
-fn ms(t: &[u8; 16], period: f64) -> f64 {
+fn ticks(t: &[u8; 16]) -> (u64, u64) {
     let tick = |b: &[u8]| u64::from_le_bytes(b.try_into().unwrap_or_default());
-    tick(&t[8..]).saturating_sub(tick(&t[..8])) as f64 * period / 1e6
+    (tick(&t[..8]), tick(&t[8..]))
+}
+
+pub(super) fn busy(spans: [(u64, u64); 2], edge: u64) -> (u64, u64) {
+    let [a, b] = spans.map(|(s, e)| (s.max(edge), e.max(s).max(edge)));
+    let [a, b] = if a.0 <= b.0 { [a, b] } else { [b, a] };
+    (a.1 - a.0 + b.1.saturating_sub(b.0.max(a.1)), a.1.max(b.1))
 }
 
 struct Back {
@@ -22,13 +28,15 @@ struct Back {
     runs: Vec<(u64, bool)>,
     wide: bool,
     sim: bool,
+    serial: u64,
 }
 
 pub(super) struct Stamps {
     pub(super) set: wgpu::QuerySet,
     resolve: wgpu::Buffer,
     backs: Vec<Back>,
-    period: f64,
+    pub(super) period: f64,
+    sent: u64,
 }
 
 impl Stamps {
@@ -47,9 +55,10 @@ impl Stamps {
                 runs: Vec::new(),
                 wide: false,
                 sim: false,
+                serial: 0,
             })
             .collect();
-        Stamps { set, resolve, backs, period: f64::from(r.queue.get_timestamp_period()) }
+        Stamps { set, resolve, backs, period: f64::from(r.queue.get_timestamp_period()), sent: 0 }
     }
 
     pub(super) fn free(&self) -> Option<usize> {
@@ -58,7 +67,9 @@ impl Stamps {
 
     pub(super) fn take(&mut self, back: usize, runs: &mut Vec<(u64, bool)>, (wide, sim): (bool, bool)) {
         std::mem::swap(&mut self.backs[back].runs, runs);
-        (self.backs[back].wide, self.backs[back].sim) = (wide, sim);
+        self.sent += 1;
+        let b = &mut self.backs[back];
+        (b.wide, b.sim, b.serial) = (wide, sim, self.sent);
     }
 
     pub(super) fn mark(&self, encoder: &mut wgpu::CommandEncoder, end: bool) {
@@ -92,24 +103,31 @@ impl Stamps {
     pub(super) fn collect(
         &mut self,
         out: &mut Vec<(u64, bool, f64)>,
-        mut each: impl FnMut(&[(u64, bool, f64)], [f64; 2], bool),
+        mut each: impl FnMut(&[(u64, bool, f64)], [(u64, u64); 2], bool),
     ) {
-        let period = self.period;
-        for back in &mut self.backs {
-            match back.state.load(Relaxed) {
-                READY => {
-                    if let Ok(data) = back.buffer.slice(..).get_mapped_range() {
-                        let times = data.as_chunks::<16>().0;
-                        out.clear();
-                        let runs = back.runs.iter().zip(times.iter().skip(1));
-                        out.extend(runs.map(|(&(key, own), t)| (key, own, ms(t, period))));
-                        let at = |k: usize| times.get(k).map_or(0.0, |t| ms(t, period));
-                        each(out, [at(0), if back.sim { at(SLOTS) } else { 0.0 }], back.wide);
-                    }
-                    back.buffer.unmap();
+        let (period, mut done, mut n) = (self.period, [0; BACKS], 0);
+        for (k, back) in self.backs.iter().enumerate() {
+            if matches!(back.state.load(Relaxed), READY | FAILED) {
+                (done[n], n) = (k, n + 1);
+            }
+        }
+        done[..n].sort_unstable_by_key(|k| self.backs[*k].serial);
+        for &k in &done[..n] {
+            let back = &mut self.backs[k];
+            if back.state.load(Relaxed) == READY {
+                if let Ok(data) = back.buffer.slice(..).get_mapped_range() {
+                    let times = data.as_chunks::<16>().0;
+                    let ms = |t: &[u8; 16]| {
+                        let (s, e) = ticks(t);
+                        e.saturating_sub(s) as f64 * period / 1e6
+                    };
+                    out.clear();
+                    let runs = back.runs.iter().zip(times.iter().skip(1));
+                    out.extend(runs.map(|(&(key, own), t)| (key, own, ms(t))));
+                    let at = |k: usize| times.get(k).map_or((0, 0), ticks);
+                    each(out, [at(0), if back.sim { at(SLOTS) } else { (0, 0) }], back.wide);
                 }
-                FAILED => {}
-                _ => continue,
+                back.buffer.unmap();
             }
             back.runs.clear();
             back.state.store(FREE, Relaxed);

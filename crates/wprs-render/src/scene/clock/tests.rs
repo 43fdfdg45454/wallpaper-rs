@@ -57,6 +57,38 @@ fn cheap_frames_in_between_do_not_clear_the_count() {
 }
 
 #[test]
+fn a_frame_costs_the_gpu_time_it_adds_after_the_previous_one_ended_not_its_whole_span() {
+    use super::stamps::busy;
+    assert_eq!(busy([(100, 160), (0, 0)], 0), (60, 160), "a frame alone costs its span");
+    assert_eq!(busy([(150, 230), (0, 0)], 160), (70, 230), "the wait behind the frame before is left out");
+    assert_eq!(
+        busy([(140, 150), (100, 120)], 0),
+        (30, 150),
+        "a gap between the particles and the scene is idle"
+    );
+    assert_eq!(busy([(110, 150), (100, 130)], 0), (50, 150), "overlapping submissions count once");
+    assert_eq!(busy([(100, 90), (0, 0)], 120), (0, 120), "a frame that ended before the edge adds nothing");
+    let (mut edge, mut total) = (0, 0);
+    for k in 0..10u64 {
+        let (ticks, end) = busy([(k * 10, k * 10 + 30), (0, 0)], edge);
+        (edge, total) = (end, total + ticks);
+    }
+    assert_eq!(total, 120, "three frames in flight at 10 ticks a frame cost 10 ticks each, not 30");
+}
+
+#[test]
+fn per_pass_times_that_overlap_are_scaled_down_to_the_measured_frame() {
+    let (mut judge, start) = (Judge::new(Tier::T3), Instant::now());
+    let at = |k: u64| start + Duration::from_millis(k * 16);
+    let overlapped = [(1, true, 30.0), (2, true, 30.0), (3, false, 30.0)];
+    let none = (0..6u64).flat_map(|k| judge.frame(&overlapped, (Some(20.0), false), at(k)));
+    assert_eq!(none.count(), 0, "passes that ran side by side were charged as if one after the other");
+    let charged: Vec<_> =
+        (6..9u64).flat_map(|k| judge.frame(&overlapped, (Some(90.0), false), at(k))).collect();
+    assert_eq!(keys(charged), [1], "a frame as slow as its passes still charges the slowest");
+}
+
+#[test]
 fn frames_timed_on_the_cpu_only_charge_past_a_second() {
     let mut judge = Judge::new(Tier::T3);
     for _ in 0..10 {

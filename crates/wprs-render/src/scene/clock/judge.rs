@@ -63,8 +63,11 @@ impl Judge {
             units.iter().filter(|u| u.1 == own).map(|u| u.2).sum::<f64>()
         };
         let (mine, theirs) = (sum(&self.units, true), sum(&self.units, false));
-        let total = whole.map_or(mine + theirs, |w| w.max(mine + theirs));
-        if wide && mine > 0.0 {
+        let total = whole.unwrap_or(mine + theirs);
+        let overlap = (mine + theirs > total).then(|| total / (mine + theirs));
+        if let Some(k) = overlap {
+            self.units.iter_mut().for_each(|u| u.2 *= k);
+        } else if wide && mine > 0.0 {
             let k = (total - theirs).max(mine) / mine;
             self.units.iter_mut().filter(|u| u.1).for_each(|u| u.2 *= k);
         }

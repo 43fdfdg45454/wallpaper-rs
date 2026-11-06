@@ -1217,8 +1217,15 @@ particle simulation and sorting sent before it, and each run of passes of one ef
 packaged, on every frame (31 runs a frame; a frame
 with more takes turns among them, and then shares the time of the frame not spent in timed built-in
 effects among the timed package effects by their part of the timed time), and reads the times back
-when the frame has finished, without waiting for it; the GPU time of a frame is the frame plus its
-particles, and `wprs-ctl scene bench` shows it as `gpu` and the particle part in its simulation line.
+when the frame has finished, without waiting for it, in the order they were sent. The GPU time of a
+frame is what it adds: the union of the spans of its particle submission and of the frame, cut at
+the end of the frame before, so neither the wait behind a frame still on the GPU (with two or three
+frames in flight the span of a frame holds the tail of the one before) nor passes that run side by
+side on tile-based GPUs count twice. When the timed runs of a frame add up to more than that, as
+they do where passes overlap, they are scaled down to it before any effect is judged, so the runs
+only share the frame among the effects and never decide alone. `wprs-ctl scene bench` shows it as
+`gpu_ms`, the old span sum (first to last timestamp of the frame plus its particles) as `span_ms`,
+and the particle part in its simulation line.
 Elsewhere it waits for the GPU before and after every fifteenth frame of a scene that draws (and
 around its particle simulation), every frame with package effects of a trial or while one of them is
 suspected, and counts the whole frame. When the package effects of a frame take more than 400, 60, 40

@@ -634,8 +634,10 @@ corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en
 `~/.local/state/wallpaper-rs/gpu-tier.json`, una por tarjeta, y se vuelve a medir solo si cambia el
 driver de esa tarjeta. La medida mueve la clase un paso como mucho, y si la baja (un arranque con el equipo ocupado
 puede hacerlo) se repite en los arranques siguientes, hasta tres veces, y cuenta la mejor. Mientras
-la escena se mueve, el tiempo que pasa cada fotograma en la GPU, partículas incluidas, guía la
-calidad: si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con
+la escena se mueve, el tiempo que cada fotograma añade en la GPU, partículas incluidas, guía la
+calidad (lo que va desde que la GPU termina el fotograma anterior hasta que termina este, así que no
+cuentan ni la espera detrás de un fotograma que sigue en la GPU ni las pasadas que corren a la vez en
+las GPU de teselas; las medidas por pasada solo reparten ese tiempo entre los efectos): si durante 2 s pasa de la mitad del intervalo entre fotogramas (de una cuarta parte con
 batería), baja un nivel, y solo vuelve a subir si, con lo que costaba el nivel de arriba, durante
 15 s no llegaría a la mitad del intervalo de ese nivel, así que una escena no salta entre dos
 niveles cuando el de abajo además dibuja menos fotogramas por segundo. Cuánto más caro se toma el

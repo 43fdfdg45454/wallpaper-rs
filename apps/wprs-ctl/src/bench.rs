@@ -125,6 +125,9 @@ fn text(report: &Value) -> String {
         out += &format!("render       {}\n", ms("render_ms", "ms"));
     }
     out += &format!("gpu          {}\n", ms("gpu_ms", "ms"));
+    if report["span_ms"].is_object() {
+        out += &format!("gpu span     {}\n", ms("span_ms", "ms"));
+    }
     if let Some(paced) = report["paced"].as_object() {
         let at = |key: &str| paced.get(key).and_then(Value::as_f64).unwrap_or(0.0);
         out += &format!(
