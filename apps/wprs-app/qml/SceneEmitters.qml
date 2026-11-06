@@ -37,10 +37,32 @@ Item {
         return out;
     }
 
-    function place(spot, x, y) {
+    function reach(strength) {
+        return Kirigami.Units.gridUnit * (0.8 + Math.min(strength ?? 0, 64) / 16);
+    }
+
+    function tip(spot) {
+        const a = (spot.emitter.angle ?? -90) * Math.PI / 180, r = reach(spot.emitter.strength);
+        return [spot.at[0] * width + r * Math.cos(a), spot.at[1] * height + r * Math.sin(a)];
+    }
+
+    function write(spot, change) {
         const list = effects[spot.effect].params.emitters.map(m => Object.assign({}, m));
-        list[spot.index][spot.end] = [Math.round(x / width * 1000) / 1000, Math.round(y / height * 1000) / 1000];
+        change(list[spot.index]);
         page.change(pointer + "/effects/" + spot.effect + "/params/emitters", list, true);
+    }
+
+    function place(spot, x, y) {
+        write(spot, m => m[spot.end] = [Math.round(x / width * 1000) / 1000, Math.round(y / height * 1000) / 1000]);
+    }
+
+    function aim(spot, x, y) {
+        const dx = x - spot.at[0] * width, dy = y - spot.at[1] * height;
+        const strength = (Math.hypot(dx, dy) / Kirigami.Units.gridUnit - 0.8) * 16;
+        write(spot, m => {
+            m.angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
+            m.strength = Math.round(Math.max(0, Math.min(64, strength)) * 10) / 10;
+        });
     }
 
     onSpotsChanged: lines.requestPaint()
@@ -56,15 +78,14 @@ Item {
             ctx.lineWidth = 2;
             ctx.strokeStyle = Kirigami.Theme.positiveTextColor;
             emitters.spots.forEach(s => {
-                const x = s.at[0] * width, y = s.at[1] * height, a = (s.emitter.angle ?? -90) * Math.PI / 180;
-                const reach = Kirigami.Units.gridUnit * (0.8 + Math.min(s.emitter.strength ?? 0, 64) / 16);
+                const x = s.at[0] * width, y = s.at[1] * height, end = emitters.tip(s);
                 ctx.beginPath();
                 if (s.end === "from" && s.line) {
                     ctx.moveTo(x, y);
                     ctx.lineTo(s.emitter.to[0] * width, s.emitter.to[1] * height);
                 }
                 ctx.moveTo(x, y);
-                ctx.lineTo(x + reach * Math.cos(a), y + reach * Math.sin(a));
+                ctx.lineTo(end[0], end[1]);
                 ctx.stroke();
             });
         }
@@ -98,6 +119,40 @@ Item {
                 onActiveChanged: {
                     if (!active)
                         emitters.place(knob.modelData, knob.x + knob.width / 2, knob.y + knob.height / 2);
+                }
+            }
+        }
+    }
+
+    Repeater {
+        model: emitters.spots.filter(s => s.end === "from")
+
+        delegate: Rectangle {
+            id: grip
+
+            required property var modelData
+
+            x: emitters.tip(modelData)[0] - width / 2
+            y: emitters.tip(modelData)[1] - height / 2
+            width: Kirigami.Units.gridUnit * 0.6
+            height: width
+            radius: width / 2
+            color: Kirigami.Theme.backgroundColor
+            border.color: Kirigami.Theme.positiveTextColor
+            border.width: 2
+
+            HoverHandler {
+                id: hover
+            }
+
+            QQC2.ToolTip.visible: hover.hovered
+            QQC2.ToolTip.text: App.tr("Fluid emitter %1: drag to turn it and change its strength", grip.modelData.index + 1)
+
+            DragHandler {
+                target: grip
+                onActiveChanged: {
+                    if (!active)
+                        emitters.aim(grip.modelData, grip.x + grip.width / 2, grip.y + grip.height / 2);
                 }
             }
         }

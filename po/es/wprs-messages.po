@@ -2843,7 +2843,8 @@ msgstr ""
 
 #: crates/wprs-scene/src/issue.rs
 msgid "%1 applies to video layers that name one video file only"
-msgstr "%1 solo se aplica a capas de vídeo que nombran un único archivo de vídeo"
+msgstr ""
+"%1 solo se aplica a capas de vídeo que nombran un único archivo de vídeo"
 
 #: crates/wprs-scene/src/issue.rs
 msgid "invalid scene: %1"

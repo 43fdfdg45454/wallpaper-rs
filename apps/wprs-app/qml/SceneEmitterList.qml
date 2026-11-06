@@ -75,7 +75,8 @@ ColumnLayout {
                 implicitHeight: implicitWidth
                 from: -180
                 to: 180
-                value: row.modelData.angle ?? -90
+                wrap: true
+                value: (((row.modelData.angle ?? -90) % 360) + 540) % 360 - 180
                 onMoved: list.put(row.index, "angle", Math.round(value), true)
                 QQC2.ToolTip.visible: hovered
                 QQC2.ToolTip.text: App.tr("Direction %1°", Math.round(value))

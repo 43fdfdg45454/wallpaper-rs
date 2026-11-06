@@ -3306,6 +3306,10 @@ msgstr "Fuerza %1"
 msgid "Fluid emitter %1: drag to move it"
 msgstr "Emisor de fluido %1: arrástralo para moverlo"
 
+#: apps/wprs-app/qml/SceneEmitters.qml
+msgid "Fluid emitter %1: drag to turn it and change its strength"
+msgstr "Emisor de fluido %1: arrástralo para girarlo y cambiar su fuerza"
+
 #: apps/wprs-app/qml/SceneEntry.qml
 msgid "Stored in the keyring"
 msgstr "Guardado en el depósito de claves"

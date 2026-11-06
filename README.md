@@ -1441,7 +1441,8 @@ El escritorio y el teléfono dibujan también la mezcla por degradado, el revela
 el desplazamiento por mapa o por un ruido propio, las cáusticas, los destellos, el fuego, el giro,
 la transformación, el pulso (también al ritmo de una banda de sonido), el contraste local, la estela
 de movimiento, el VHS, los fluidos (con tantos emisores de punto y de línea como haga falta, hasta 64,
-que el editor coloca con asas sobre el lienzo), el destello de lente y el chisporroteo eléctrico, y los parámetros
+que el editor coloca con asas sobre el lienzo y gira y refuerza desde la punta de su flecha; quietos
+mientras su fuerza es 0), el destello de lente y el chisporroteo eléctrico, y los parámetros
 nuevos de los efectos que ya existían: rayos de luz direccionales o en estrella, aberración cromática
 en cuatro modos, grano en blanco y negro o con otro modo de fusión, desenfoque mezclado con la imagen,
 fondo visible en el iris y la lente, reflejo inclinado, desplazamiento sin repetición, sacudida con
