@@ -17,6 +17,7 @@ pub(crate) use setup::sprites;
 mod sort;
 mod sprite;
 mod stage;
+mod stages;
 mod staging;
 mod step;
 mod store;
@@ -42,6 +43,7 @@ struct Stamp {
     set: Option<wgpu::QuerySet>,
     begun: bool,
     open: Option<wgpu::CommandEncoder>,
+    done: Vec<wgpu::CommandBuffer>,
 }
 
 struct Store {

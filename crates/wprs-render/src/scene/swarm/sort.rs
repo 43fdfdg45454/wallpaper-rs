@@ -31,7 +31,7 @@ impl Swarms {
     ) -> Stacked {
         let sorted = buffer(r, u64::from(alloc) * PARTICLE, B::VERTEX | B::STORAGE | B::COPY_DST);
         let gpu = self.gpu.then(|| {
-            let bins = buffer(r, 1024, B::STORAGE | B::COPY_DST);
+            let bins = buffer(r, 4096, B::STORAGE);
             let key = [order as u32, alloc, size.to_bits(), self.canvas[1].to_bits()];
             let key = crate::filled::filled(
                 (&r.device, &r.queue),
@@ -56,37 +56,11 @@ impl Swarms {
     }
 }
 
-pub(super) fn sort(
-    r: &Renderer,
-    (sorts, height): (Option<&[wgpu::ComputePipeline; 3]>, f32),
-    stores: &mut [Store],
-    (clouds, allocs): (&[Cloud], &[u32]),
-    stamp: &mut super::Stamp,
-) {
+pub(super) fn stack(r: &Renderer, height: f32, stores: &mut [Store], clouds: &[Cloud]) {
     for (store, cloud) in stores.iter_mut().zip(clouds) {
         for st in &mut store.stacks {
             stacked(&cloud.particles, (st.order, st.size, height), &mut st.cpu);
             r.queue.write_buffer(&st.sorted, 0, bytemuck::cast_slice(&st.cpu));
-        }
-    }
-    let Some(pipelines) = sorts.filter(|_| clouds.is_empty() && stores.iter().any(|s| !s.stacks.is_empty()))
-    else {
-        return;
-    };
-    let encoder = stamp.encoder(r);
-    for (p, store) in stores.iter().enumerate() {
-        for st in &store.stacks {
-            let Some((bins, group)) = &st.gpu else { continue };
-            encoder.clear_buffer(&st.sorted, 0, None);
-            encoder.clear_buffer(bins, 0, None);
-            let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_bind_group(0, group, &[]);
-            for (pipeline, groups) in
-                pipelines.iter().zip([allocs[p].div_ceil(64), 1, allocs[p].div_ceil(64)])
-            {
-                pass.set_pipeline(pipeline);
-                pass.dispatch_workgroups(groups, 1, 1);
-            }
         }
     }
 }

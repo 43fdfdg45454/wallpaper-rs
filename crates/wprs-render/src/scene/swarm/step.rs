@@ -1,4 +1,5 @@
 use super::super::clock::SIM_AT;
+use super::dispatch::Job;
 use super::{Stamp, Swarms};
 use crate::{RenderError, Renderer};
 use std::time::{Duration, Instant};
@@ -23,6 +24,7 @@ impl Swarms {
         self.stamp = Stamp { set: stamp.cloned(), ..Stamp::default() };
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();
+        let mut jobs = Vec::new();
         self.kitted.clear();
         for i in 0..self.herds.len() {
             let shown =
@@ -64,17 +66,12 @@ impl Swarms {
                         r.queue.write_buffer(trail, 16, bytemuck::cast_slice(&cloud.trail));
                     }
                 }
-                super::sort::sort(
-                    r,
-                    (self.sorts.as_ref(), self.canvas[1]),
-                    &mut flight.stores,
-                    (&flight.clouds, &bake.allocs),
-                    &mut self.stamp,
-                );
+                super::sort::stack(r, self.canvas[1], &mut flight.stores, &flight.clouds);
                 continue;
             }
-            self.dispatch(r, i, &swarm, (count, reset), start)?;
+            jobs.push(Job { herd: i, count, reset });
         }
+        self.dispatch(r, runtime, &jobs, start)?;
         self.stamp.submit(r);
         if self.profile {
             r.finish()?;
@@ -94,10 +91,21 @@ impl Stamp {
         })
     }
 
+    pub(super) fn cut(&mut self) {
+        if let Some(encoder) = self.open.take() {
+            self.done.push(encoder.finish());
+        }
+    }
+
     pub(super) fn submit(&mut self, r: &Renderer) {
-        let Some(mut encoder) = self.open.take() else { return };
+        if self.open.is_none() && self.done.is_empty() {
+            return;
+        }
+        let mut encoder =
+            self.open.take().unwrap_or_else(|| r.device.create_command_encoder(&Default::default()));
         mark(self.set.as_ref(), &mut self.begun, &mut encoder, true);
-        r.queue.submit([encoder.finish()]);
+        self.done.push(encoder.finish());
+        r.queue.submit(self.done.drain(..));
     }
 }
 
