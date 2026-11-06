@@ -22,6 +22,7 @@ struct Waiting {
     period: f64,
     ready: Arc<AtomicBool>,
     asked: bool,
+    at: Instant,
 }
 
 pub(crate) struct Profile {
@@ -139,7 +140,8 @@ impl Profile {
         encoder.copy_buffer_to_buffer(&resolved, 0, &read, 0, size);
         let period = f64::from(queue.get_timestamp_period());
         let ready = Arc::new(AtomicBool::new(false));
-        let waiting = Waiting { read, labels: self.labels, period, ready, asked: false };
+        let at = Instant::now();
+        let waiting = Waiting { read, labels: self.labels, period, ready, asked: false, at };
         WAITS.lock().unwrap_or_else(PoisonError::into_inner).push(waiting);
     }
 }
@@ -164,11 +166,17 @@ fn gather() {
             Err(_) => continue,
         };
         w.read.unmap();
-        let ms = |i: usize| ticks[2 * i + 1].saturating_sub(ticks[2 * i]) as f64 * w.period / 1e6;
-        let passes = w.labels.into_iter().enumerate().map(|(i, l)| (l, ms(i))).collect();
-        samples.push_back((Instant::now(), passes));
+        samples.push_back(sampled(w.at, w.labels, &ticks, w.period));
         while samples.len() > KEPT {
             samples.pop_front();
         }
     }
 }
+
+fn sampled(at: Instant, labels: Vec<String>, ticks: &[u64], period: f64) -> Sample {
+    let ms = |i: usize| ticks[2 * i + 1].saturating_sub(ticks[2 * i]) as f64 * period / 1e6;
+    (at, labels.into_iter().enumerate().map(|(i, l)| (l, ms(i))).collect())
+}
+
+#[cfg(test)]
+mod tests;
