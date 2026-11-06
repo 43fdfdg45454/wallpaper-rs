@@ -31,14 +31,14 @@ impl Renderer {
         ops: &[Op],
         resolve: Option<(u32, &'static str)>,
         (clock, timing): (&Clock, Timing),
-        (view, serial): (usize, u64),
+        (view, serial, timed): (usize, u64, bool),
     ) -> (SceneStats, wgpu::SubmissionIndex, Instant) {
         let pipes = self.scene.get().expect("created with the view");
         let mut encoder = self.device.create_command_encoder(&Default::default());
         clock.open(&mut encoder, timing);
         let mut stats = SceneStats::default();
         let frame = pool.frame_groups().clone();
-        let (mut k, mut profile) = (0, super::profile::Profile::begin(&self.device));
+        let (mut k, mut profile) = (0, super::profile::Profile::begin(&self.device, timed));
         while k < ops.len() {
             if let Some(p) = profile.as_mut() {
                 let (op, target) = (&ops[k], super::profile::target(&ops[k]));
@@ -166,6 +166,7 @@ impl Renderer {
             pass.draw(0..4, 0..1);
             (stats.passes, stats.draws) = (stats.passes + 1, stats.draws + 1);
         }
+        let profiled = profile.is_some();
         if let Some(p) = profile {
             p.finish(&self.device, &self.queue, &mut encoder);
         }
@@ -173,7 +174,9 @@ impl Renderer {
         encoder.on_submitted_work_done(move || super::flight::done(view, serial));
         let at = Instant::now();
         let submitted = self.queue.submit([encoder.finish()]);
-        super::profile::submitted();
+        if profiled {
+            super::profile::submitted();
+        }
         (stats, submitted, at)
     }
 }

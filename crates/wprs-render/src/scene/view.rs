@@ -52,6 +52,7 @@ pub struct SceneView {
     pub(super) tone: u8,
     pub(super) split: f32,
     pub(super) debug3d: u8,
+    pub(super) timed: bool,
 }
 
 impl Drop for SceneView {
@@ -114,6 +115,10 @@ impl SceneView {
         let again = !self.refused.is_empty();
         self.refused.clear();
         again
+    }
+
+    pub fn time_passes(&mut self, on: bool) {
+        self.timed = on;
     }
 
     pub fn stats(&self) -> SceneStats {

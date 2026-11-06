@@ -1,6 +1,6 @@
 use crate::clips::Clips;
 use crate::framing::Framed;
-use crate::gpu::{self, Gpu, Key};
+use crate::gpu::{Gpu, Key};
 use crate::power::Power;
 use crate::relief::{Raised, Tilted};
 use crate::settings::{self, Look};
@@ -57,6 +57,7 @@ pub(crate) struct Engine {
     direct: Option<PathBuf>,
     handover: bool,
     hidden: bool,
+    measured: bool,
     window: NativeWindow,
     steered: steer::Steered,
     reel: crate::reel::Reel,
@@ -72,6 +73,9 @@ impl Engine {
     pub(crate) fn open(window: NativeWindow, preview: bool, lock: bool, visible: bool) -> Self {
         let size = size(window.width(), window.height());
         let kept = parked::take(preview, lock);
+        if !preview {
+            crate::perf::split(lock);
+        }
         let (stage, image, raised, epoch) =
             kept.map_or((None, None, None, 0), |k| (k.stage, k.image, k.raised, k.epoch));
         let chosen = choice::shown_on(preview, lock).map(|shown| shown.uid);
@@ -107,6 +111,7 @@ impl Engine {
             direct: None,
             handover: false,
             hidden: !visible,
+            measured: false,
             window,
             steered: Default::default(),
             reel: Default::default(),
@@ -117,6 +122,9 @@ impl Engine {
 
     pub(crate) fn screen(&mut self, lock: bool) {
         if self.lock != lock {
+            if !self.preview {
+                crate::perf::split(lock);
+            }
             (self.lock, self.checked, self.dirty, self.tilted) =
                 (lock, (0, 0, (0, 0)), true, Tilted::default());
         }
@@ -145,7 +153,7 @@ impl Engine {
         if self.video || self.paged.is_some() { 0 } else { self.tilted.rate(self.preview, self.lock) }
     }
 
-    pub(crate) fn draw(&mut self, nanos: i64, force: bool) -> Result<i64, Error> {
+    pub(crate) fn draw(&mut self, nanos: i64, force: bool, measured: bool) -> Result<i64, Error> {
         if self.video || self.paged.is_some() {
             return Ok(0);
         }
@@ -156,12 +164,14 @@ impl Engine {
             return Ok(wait);
         }
         self.dirty |= force;
-        let (shown, mark) = (self.presented, crate::perf::enter(!self.preview));
+        self.measured = crate::perf::measures(measured, self.preview, self.hidden);
+        let (shown, mark) = (self.presented, crate::perf::enter(self.measured));
         let next = self.frame(nanos, fps, power).inspect_err(|e| {
             (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
             log::warn!("{e}");
         });
         self.failures = if next.as_ref().is_ok_and(|_| !self.dirty) { 0 } else { self.failures + 1 };
+        crate::perf::leave(mark, self.lock, nanos, self.presented != shown);
         if std::mem::take(&mut self.handover) {
             return Ok(-1);
         }
@@ -170,7 +180,6 @@ impl Engine {
             result => result.unwrap_or((0, 0)),
         };
         self.paced.shown(nanos, self.presented != shown);
-        crate::perf::leave(mark, nanos, self.presented != shown);
         self.hint(hint);
         Ok(match () {
             _ if delay > 0 && hint > 0 => delay.min(self.paced.armed(nanos, hint.min(fps.max(1)))).max(1),
@@ -178,16 +187,6 @@ impl Engine {
             _ if self.dirty && self.failures < ATTEMPTS => RETRY_MS,
             _ => 0,
         })
-    }
-
-    fn forget_old_gpu(&mut self) {
-        if self.target.as_ref().is_some_and(|(gpu, _)| !gpu.current()) {
-            (self.target, self.image, self.fading, self.raised, self.dirty) = (None, None, None, None, true);
-            self.checked = (0, 0, (0, 0));
-            self.stage.iter_mut().for_each(Stage::drop_view);
-            self.clips.forget();
-            gpu::trim();
-        }
     }
 
     fn hint(&mut self, fps: u32) {

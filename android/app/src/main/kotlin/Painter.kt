@@ -23,10 +23,10 @@ class Painter(
     private var hears = false
     private var touches = false
     private val handover = Runnable { refresh() }
-    private val frames = Frames { nanos ->
+    private val frames = Frames(::looped) { nanos, measured ->
         if (hears) hearing.poll()
         if (page != null) return@Frames listen()
-        Native.draw(handle, nanos, false).also {
+        Native.draw(handle, nanos, false, measured && !preview).also {
             Native.steer(handle)?.let { list -> Render.post { steer(JSONArray(list)) } }
             if (it < 0L) Render.handler.post(handover) else if (it == 0L && playing) follow()
         }
@@ -90,7 +90,7 @@ class Painter(
         if (page != null) refresh()
     }
 
-    fun redraw() = Native.draw(handle, System.nanoTime(), true).let { if (shown) frames.schedule(it) }
+    fun redraw() = Native.draw(handle, System.nanoTime(), true, Perf.on && !preview).let { if (shown) frames.schedule(it) }
 
     fun show(visible: Boolean) {
         shown = visible
@@ -176,6 +176,10 @@ class Painter(
         touches = touch
         tilt.follow(this, if (shown && video == null) Native.parallax(handle) else 0)
         if (page != null && hears) frames.start()
+    }
+
+    private fun looped(nanos: Long, ms: Float) {
+        if (!preview && page == null) Native.looped(handle, nanos, ms)
     }
 
     private fun listen(): Long {

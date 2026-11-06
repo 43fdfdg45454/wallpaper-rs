@@ -140,6 +140,10 @@ pub(crate) fn refresh(hz: f32) {
     REFRESH.store(millihertz, Relaxed);
 }
 
+pub(crate) fn hz() -> f32 {
+    REFRESH.load(Relaxed) as f32 / 1000.0
+}
+
 pub(crate) fn vsync_ns() -> i64 {
     1_000_000_000_000 / i64::from(REFRESH.load(Relaxed).max(1000))
 }

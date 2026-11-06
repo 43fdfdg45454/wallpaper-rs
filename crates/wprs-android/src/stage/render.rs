@@ -23,7 +23,7 @@ impl Stage {
         videos: &[(&str, &GpuImage)],
         force: bool,
     ) -> Result<Shot<'a>, RenderError> {
-        let started = (crate::perf::on() && self.reports.is_some()).then(std::time::Instant::now);
+        let started = self.measured.then(std::time::Instant::now);
         let budget =
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
@@ -129,6 +129,7 @@ impl Stage {
             self.view = Some(r.scene_view(&self.pack.scene, &self.assets, self.runtime.props())?);
         }
         let view = self.view.as_mut().expect("created above");
+        view.time_passes(self.measured);
         let inner = view.inner(r, size, quality);
         self.rect = view.view(inner);
         let presses = std::mem::take(&mut self.presses);

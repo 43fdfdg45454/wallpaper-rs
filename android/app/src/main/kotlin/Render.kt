@@ -31,7 +31,7 @@ object Native {
 
     external fun listen(engine: Long): String?
 
-    external fun draw(engine: Long, nanos: Long, force: Boolean): Long
+    external fun draw(engine: Long, nanos: Long, force: Boolean, measured: Boolean): Long
 
     external fun ended(engine: Long, path: String, over: Boolean): Boolean
 
@@ -116,6 +116,8 @@ object Native {
     external fun perf(record: Boolean)
 
     external fun performance(): String
+
+    external fun looped(engine: Long, nanos: Long, ms: Float)
 }
 
 object Render {
@@ -135,10 +137,13 @@ object Render {
 }
 
 fun interface Draw {
-    fun frame(nanos: Long): Long
+    fun frame(nanos: Long, measured: Boolean): Long
 }
 
-class Frames(private val draw: Draw) : Choreographer.FrameCallback {
+class Frames(
+    private val looped: (Long, Float) -> Unit = { _, _ -> },
+    private val draw: Draw,
+) : Choreographer.FrameCallback {
     private var at = Long.MAX_VALUE
 
     fun start() {
@@ -160,9 +165,10 @@ class Frames(private val draw: Draw) : Choreographer.FrameCallback {
     }
 
     override fun doFrame(frameTimeNanos: Long) {
-        val start = if (Perf.on) System.nanoTime() else 0L
-        val delay = draw.frame(frameTimeNanos)
-        if (start != 0L) Perf.frame((System.nanoTime() - start) / NANOS_PER_MS.toFloat())
+        val measured = Perf.on
+        val start = if (measured) System.nanoTime() else 0L
+        val delay = draw.frame(frameTimeNanos, measured)
+        if (measured) looped(frameTimeNanos, (System.nanoTime() - start) / NANOS_PER_MS.toFloat())
         schedule(delay, frameTimeNanos)
     }
 }

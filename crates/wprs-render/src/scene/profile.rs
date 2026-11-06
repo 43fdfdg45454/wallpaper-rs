@@ -1,18 +1,20 @@
 use super::pipes::Shader;
 use super::{Op, Src};
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering::Relaxed};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 const EVERY: u64 = 15;
 const MOST: u32 = 256;
 const WAITING: usize = 3;
+const KEPT: usize = 1_024;
 
-static ON: AtomicBool = AtomicBool::new(false);
 static TURN: AtomicU64 = AtomicU64::new(0);
 static WAITS: Mutex<Vec<Waiting>> = Mutex::new(Vec::new());
-type Sums = (u32, Vec<(String, f64, u32)>);
+type Sample = (Instant, Vec<(String, f64)>);
 
-static SUMS: Mutex<Sums> = Mutex::new((0, Vec::new()));
+static SAMPLES: Mutex<VecDeque<Sample>> = Mutex::new(VecDeque::new());
 
 struct Waiting {
     read: wgpu::Buffer,
@@ -28,18 +30,28 @@ pub(crate) struct Profile {
     open: bool,
 }
 
-pub fn profile_passes(on: bool) {
-    if on != ON.swap(on, Relaxed) {
-        *SUMS.lock().unwrap_or_else(PoisonError::into_inner) = (0, Vec::new());
-    }
+pub fn reset_profiled_passes() {
+    WAITS.lock().unwrap_or_else(PoisonError::into_inner).clear();
+    SAMPLES.lock().unwrap_or_else(PoisonError::into_inner).clear();
 }
 
-pub fn profiled_passes() -> (u32, Vec<(String, f64)>) {
+pub fn profiled_passes(within: Option<Duration>) -> (u32, Vec<(String, f64)>) {
     gather();
-    let sums = SUMS.lock().unwrap_or_else(PoisonError::into_inner);
-    let frames = sums.0.max(1);
-    let mean = |(label, ms, _): &(String, f64, u32)| (label.clone(), ms / f64::from(frames));
-    (sums.0, sums.1.iter().map(mean).collect())
+    let samples = SAMPLES.lock().unwrap_or_else(PoisonError::into_inner);
+    let recent = |s: &&Sample| within.is_none_or(|w| s.0.elapsed() <= w);
+    let mut sums: Vec<(String, f64)> = Vec::new();
+    let mut frames = 0;
+    for (_, passes) in samples.iter().filter(recent) {
+        frames += 1;
+        for (label, ms) in passes {
+            match sums.iter_mut().find(|(l, _)| l == label) {
+                Some(found) => found.1 += ms,
+                None => sums.push((label.clone(), *ms)),
+            }
+        }
+    }
+    let mean = |(label, ms): (String, f64)| (label, ms / f64::from(frames.max(1)));
+    (frames, sums.into_iter().map(mean).collect())
 }
 
 pub(crate) fn label(op: &Op, size: (u32, u32), format: wgpu::TextureFormat) -> String {
@@ -69,9 +81,9 @@ pub(crate) fn target(op: &Op) -> Option<Src> {
 }
 
 impl Profile {
-    pub(crate) fn begin(device: &wgpu::Device) -> Option<Profile> {
+    pub(crate) fn begin(device: &wgpu::Device, on: bool) -> Option<Profile> {
         let inside = wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS;
-        if !ON.load(Relaxed) || !device.features().contains(inside) {
+        if !on || !device.features().contains(inside) {
             return None;
         }
         gather();
@@ -145,20 +157,18 @@ fn gather() {
     let mut waits = WAITS.lock().unwrap_or_else(PoisonError::into_inner);
     let (done, left): (Vec<_>, Vec<_>) = waits.drain(..).partition(|w| w.ready.load(Relaxed));
     *waits = left;
-    let mut sums = SUMS.lock().unwrap_or_else(PoisonError::into_inner);
+    let mut samples = SAMPLES.lock().unwrap_or_else(PoisonError::into_inner);
     for w in done {
         let ticks: Vec<u64> = match w.read.slice(..).get_mapped_range() {
             Ok(data) => data.as_chunks::<8>().0.iter().map(|b| u64::from_le_bytes(*b)).collect(),
             Err(_) => continue,
         };
         w.read.unmap();
-        sums.0 += 1;
-        for (i, label) in w.labels.into_iter().enumerate() {
-            let ms = ticks[2 * i + 1].saturating_sub(ticks[2 * i]) as f64 * w.period / 1e6;
-            match sums.1.iter_mut().find(|(l, ..)| *l == label) {
-                Some(found) => (found.1, found.2) = (found.1 + ms, found.2 + 1),
-                None => sums.1.push((label, ms, 1)),
-            }
+        let ms = |i: usize| ticks[2 * i + 1].saturating_sub(ticks[2 * i]) as f64 * w.period / 1e6;
+        let passes = w.labels.into_iter().enumerate().map(|(i, l)| (l, ms(i))).collect();
+        samples.push_back((Instant::now(), passes));
+        while samples.len() > KEPT {
+            samples.pop_front();
         }
     }
 }

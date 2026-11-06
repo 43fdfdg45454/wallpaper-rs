@@ -14,7 +14,7 @@ pub(crate) fn ms_of(value: &serde_json::Value, unit: &str) -> String {
 }
 
 pub(crate) fn passes(report: &mut serde_json::Value) -> String {
-    let (frames, mut passes) = wprs_render::profiled_passes();
+    let (frames, mut passes) = wprs_render::profiled_passes(None);
     passes.sort_by(|a, b| b.1.total_cmp(&a.1));
     let total: f64 = passes.iter().map(|p| p.1).sum();
     report["pass_ms"] = json!({ "frames": frames, "total": total, "passes": passes });

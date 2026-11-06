@@ -160,9 +160,8 @@ impl Renderer {
         let scissor = clip.map(|c| [c.x as u32, c.y as u32, c.w as u32, c.h as u32]);
         let sets = &scratch.sets;
         let sources = encode::Sources { caches, states, luts, exts, canvas, output, swarms, scissor, sets };
-        let clock = (&v.clock, timing);
-        let encoded =
-            self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, (v.id, serial)));
+        let (clock, at) = ((&v.clock, timing), (v.id, serial, v.timed));
+        let encoded = self.scoped(|| self.encode_scene(pool, &sources, &scratch.ops, resolve, clock, at));
         let index = encoded.as_ref().ok().map(|(_, index, _)| index.clone());
         super::flight::sent(self, v.id, serial, index)
             .map_err(|keys| timed::stuck(&mut v.refused, frame, keys))?;

@@ -89,7 +89,8 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let load_ms = start.elapsed().as_secs_f64() * 1e3;
     drop(assets);
     view.profile_particles(true);
-    wprs_render::profile_passes(passes);
+    view.time_passes(passes);
+    wprs_render::reset_profiled_passes();
     let (mut eval, mut render, mut needed, mut created) = (Vec::new(), Vec::new(), 0, 0);
     let (mut sim, mut steps, mut compiled, mut gpu, mut sim_gpu) = (Vec::new(), 0, 0, Vec::new(), Vec::new());
     let (mut wake, mut spare) = (Wake::Frame, Spare::default());

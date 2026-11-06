@@ -70,7 +70,7 @@ pub use readback::TargetLimits;
 pub use save::{FORMATS, save};
 pub use scene::{
     MAX_FONT, MAX_SCENE_BUILD, Pixels, RGB_MOST, SceneAssets, SceneStats, SceneView, drawn_effects,
-    finish_builds, font, lit, profile_passes, profiled_passes, retry_effects, set_build_timeout,
+    finish_builds, font, lit, profiled_passes, reset_profiled_passes, retry_effects, set_build_timeout,
     set_gpu_budget, stop_builds, stop_effects,
 };
 use std::sync::OnceLock;

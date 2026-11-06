@@ -90,8 +90,9 @@ pub fn draw<'a>(
     handle: jlong,
     nanos: jlong,
     force: jboolean,
+    measured: jboolean,
 ) -> jlong {
-    on(&mut env, |_| engine(handle, |e| e.draw(nanos, force)))
+    on(&mut env, |_| engine(handle, |e| e.draw(nanos, force, measured)))
 }
 
 #[jni_mangle("io.github.wallpaper_rs.Native")]

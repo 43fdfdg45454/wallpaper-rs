@@ -187,12 +187,15 @@ three times in all, and the fastest one counts (`runs` in the file).
 `GetState().tier` (`"t0"` to `"t3"`) and `tier_measured` tell the result, and the phone lists it
 among its diagnostics. A phone takes the tier of its GPU and this measure, at most that of newer
 integrated GPUs, and the lowest tier when Android marks it as a low-memory device. Its settings can
-record the performance of the shown wallpaper: while that switch is on, each presented frame keeps
-its time, the delay of its callback after the vsync, the processor time of the scene, of encoding
-and of presenting, its GPU time, passes, draws and allocations, and every 15th frame times each
-pass, as `wprs-ctl scene bench --passes` does; a button copies a report of the last 30 seconds,
-with the level, its reason, the render and screen sizes, the rate, its cap and the present mode.
-With the switch off nothing is measured.
+record the performance of the shown wallpaper: while that switch is on, each frame that the home
+or the lock screen presents while it is visible (never a preview) keeps its time, the delay of its
+callback after the vsync, the time of the whole frame loop, the processor time of the scene, of
+encoding and of presenting, its GPU time, passes, draws, allocations and the refresh rate of the
+display, and every 15th frame times each pass, as `wprs-ctl scene bench --passes` does. A button
+copies a report of the last 30 seconds for the screen shown last: hiding the wallpaper starts a new
+run, and the rate and the intervals count only the time it was shown. It also gives the level, its
+reason, the render and screen sizes, the rate, its cap and the present mode. With the switch off a
+frame costs one atomic read and nothing is measured.
 
 While a scene plays, the GPU time of its frames (measured as described below) moves the quality
 level: when their average (an exponential average over the measured frames, started again after

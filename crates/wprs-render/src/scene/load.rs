@@ -182,6 +182,7 @@ impl Renderer {
                 tone: if scene.canvas.hdr { scene.canvas.tonemap.map_or(0, |t| t as u8) } else { 0 },
                 split: scene.draft.split,
                 debug3d: scene.draft.debug3d,
+                timed: false,
             }
         })
         .inspect_err(|_| super::flight::forget(id))
