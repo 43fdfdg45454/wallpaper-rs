@@ -1,6 +1,7 @@
 package io.github.wallpaper_rs
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
 import java.util.Collections
@@ -55,7 +56,7 @@ object Duck : AudioManager.AudioPlaybackCallback() {
     }
 
     override fun onPlaybackConfigChanged(configs: List<AudioPlaybackConfiguration>) =
-        aim(if (Ducking.others(configs.size, wanting.size)) 0f else 1f)
+        aim(if (Ducking.others(configs.count { it.audioAttributes.usage in PLAYERS }, wanting.size)) 0f else 1f)
 
     private fun aim(goal: Float) {
         target = goal
@@ -72,4 +73,5 @@ object Duck : AudioManager.AudioPlaybackCallback() {
     }
 
     private const val KEY = "playback.duck"
+    private val PLAYERS = setOf(AudioAttributes.USAGE_MEDIA, AudioAttributes.USAGE_GAME, AudioAttributes.USAGE_UNKNOWN)
 }
