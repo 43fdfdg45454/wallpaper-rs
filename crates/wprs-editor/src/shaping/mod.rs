@@ -28,6 +28,14 @@ pub(crate) fn refused(dir: &Path, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> 
 }
 
 pub(crate) fn checked(dir: Option<&Path>, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
+    if let Some(real) = crate::outside::real(doc) {
+        let mapped = crate::scope::ops(ops.clone(), crate::outside::name().as_deref())?;
+        return probed(dir, &real, mapped).map(|_| ops);
+    }
+    probed(dir, doc, ops)
+}
+
+fn probed(dir: Option<&Path>, doc: &Value, ops: Vec<Op>) -> Result<Vec<Op>> {
     let mut probe = doc.clone();
     apply(&mut probe, &ops)?;
     let before: Vec<String> = review(doc, dir).into_iter().map(|p| p.message).collect();

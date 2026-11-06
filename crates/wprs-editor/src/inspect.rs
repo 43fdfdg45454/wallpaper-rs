@@ -55,7 +55,13 @@ pub(crate) fn candidates(doc: &Value, reference: &str, pointer: &str) -> Vec<Val
     match reference {
         "layer" => match pointer.strip_prefix("/scene/particles/").and_then(|p| p.split('/').next()) {
             Some(id) => crate::swarms::sources(doc, &id.replace("~1", "/").replace("~0", "~")),
-            None => walk(doc).into_iter().map(|(_, l)| l["id"].clone()).collect(),
+            None => {
+                let template = pointer.strip_prefix("/scene/templates/").and_then(|p| p.split('/').next());
+                let own = template
+                    .and_then(|t| doc["scene"]["templates"].get(t.replace("~1", "/").replace("~0", "~")));
+                let wrapped = own.map(|l| json!({ "scene": { "layers": [l] } })).unwrap_or_default();
+                walk(&wrapped).into_iter().chain(walk(doc)).map(|(_, l)| l["id"].clone()).collect()
+            }
         },
         "system" => keys("/scene/particles").unwrap_or_default(),
         "control" => crate::swarms::controls(doc, pointer),

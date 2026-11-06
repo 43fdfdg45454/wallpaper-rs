@@ -64,7 +64,7 @@ fn target(doc: &Value, j: &Joints, own: &str, t: &Value) -> Result<Value> {
         Value::String(s) if s == "cursor" => {}
         Value::String(s) if s.starts_with("bone:") => drop(joint(j, &s[5..])?),
         Value::String(s) if s.starts_with("layer:") && &s[6..] != own => {
-            drop(crate::actions::layer(doc, &s[6..])?)
+            drop(crate::outside::layer(doc, &s[6..])?)
         }
         Value::Array(p) if p.len() == 2 && p.iter().all(|v| v.as_f64().is_some_and(f64::is_finite)) => {}
         _ => return Err(bad()),

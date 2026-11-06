@@ -121,11 +121,19 @@ every action and query that names layers, from `bone`, `ik`, `attach`, `weights`
 `hide` and `add_layer`, works on the layers of that template by their own ids, so an attachment, a
 parent or a chain target names a layer of the same template as each copy needs; a template holds one
 layer, so new layers go inside its group (`group` on its layer makes one) and an action that would
-add a second one beside it is refused. Its fields are the fields of `/scene/templates/<name>` in the
-inspector. Bones, weights and points live in the mesh asset, so a mesh layer in a template and the
-layers of the scene that name the same asset change together, as any two layers sharing a mesh do;
-chains, attachments, parts and depth live in the layer and stay its own. `wprs-ctl scene --inside TEMPLATE …` does the same for every scene
-command, and `wprs-ctl scene open DIR --json --inside TEMPLATE` prints what the editor shows.
+add a second one beside it is refused. An attachment, a chain target `layer:<id>` or a mask may also
+name a layer of the scene: the lookup tries the template first and then the scene, a point placed on a
+mesh of the scene goes into that mesh, the inspector of a template layer offers *Follow a mesh of the
+scene* (a mesh, then one of its bones or points), the chain target picker lists the layers of the
+scene after those of the template, and `wprs-ctl scene --inside TEMPLATE attach DIR LAYER --to MESH`
+does the same. Actions that are not about layers (properties, conditions, presets, assets, imports,
+the manifest, the canvas, timelines, wind, ambient light, particle systems and every `set`, `add`,
+`remove`, `move` or `translate` outside `/scene/layers`) act on the whole scene while a template is
+shown, so renaming or removing a property sees and changes the bindings of the scene too. Its fields
+are the fields of `/scene/templates/<name>` in the inspector. Bones, weights and points live in the
+mesh asset, so a mesh layer in a template and the layers of the scene that name the same asset change
+together, as any two layers sharing a mesh do; chains, attachments, parts and depth live in the layer
+and stay its own. `wprs-ctl scene --inside TEMPLATE …` does the same for every scene command, and `wprs-ctl scene open DIR --json --inside TEMPLATE` prints what the editor shows.
 
 The timeline shows a lane for each own video clock (`playback.own_clock`): a strip of eight frames
 taken evenly over the video (decoded once off the interface thread and kept in the cache of the

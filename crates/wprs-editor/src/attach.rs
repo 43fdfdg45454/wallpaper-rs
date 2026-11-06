@@ -13,7 +13,7 @@ mod nudge;
 fn follows(doc: &Value, from: &str, own: &str) -> bool {
     let mut at = from.to_owned();
     for _ in 0..64 {
-        let Ok((_, l)) = crate::actions::layer(doc, &at) else { return false };
+        let Ok(l) = crate::outside::layer(doc, &at) else { return false };
         match l["attach"]["layer"].as_str() {
             Some(next) if next == own => return true,
             Some(next) => at = next.to_owned(),
@@ -25,10 +25,10 @@ fn follows(doc: &Value, from: &str, own: &str) -> bool {
 
 fn orphan(doc: &Value, own: &str, old: &Value) -> Option<(String, String)> {
     let (mesh, name) = (old["layer"].as_str()?, old["point"].as_str()?);
-    let shared = crate::layers::walk(doc)
+    let shared = crate::outside::every(doc)
         .iter()
-        .any(|(_, l)| l["id"] != own && l["attach"]["layer"] == mesh && l["attach"]["point"] == name);
-    let (_, m) = crate::actions::layer(doc, mesh).ok()?;
+        .any(|l| l["id"] != own && l["attach"]["layer"] == mesh && l["attach"]["point"] == name);
+    let m = crate::outside::layer(doc, mesh).ok()?;
     let aim = json!(format!("bone:{name}"));
     let aimed = m["ik"].as_array().into_iter().flatten().any(|c| c["target"] == aim);
     (!shared && !aimed && m["type"] == "mesh").then(|| (mesh.to_owned(), name.to_owned()))
@@ -68,8 +68,8 @@ fn point(
 }
 
 fn unpin(dir: &Path, doc: &Value, mesh: &str, name: &str) -> Result<Vec<Op>> {
-    let (_, layer) = crate::actions::layer(doc, mesh)?;
-    let (id, mut skin) = Skin::load(dir, doc, layer)?;
+    let layer = crate::outside::layer(doc, mesh)?;
+    let (id, mut skin) = Skin::load(dir, doc, &layer)?;
     let Ok(k) = skin.point(name) else { return Ok(Vec::new()) };
     skin.remove_bone(k)?;
     skin.save(dir, doc, &id)
@@ -95,7 +95,7 @@ pub(crate) fn attach(dir: &Path, doc: &Value, a: &AttachEdit) -> Result<Vec<Op>>
         to != a.layer && !follows(doc, &to, &a.layer),
         said("editor.attach_self", "a layer cannot follow itself, through other layers either", &[])
     );
-    let (_, mesh) = crate::actions::layer(doc, &to)?;
+    let mesh = &crate::outside::layer(doc, &to)?;
     ensure!(
         ["mesh", "model"].contains(&mesh["type"].as_str().unwrap_or_default()),
         said("editor.attach_mesh", "a layer follows a bone or point of a mesh or model layer", &[])

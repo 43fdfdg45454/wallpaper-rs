@@ -91,4 +91,12 @@ impl crate::project::Project {
     pub fn seen(&self) -> Cow<'_, Value> {
         seen(&self.doc, self.scope.as_deref()).unwrap_or(Cow::Borrowed(&self.doc))
     }
+
+    pub fn holding(&self, id: &str) -> Cow<'_, Value> {
+        let seen = self.seen();
+        match id.is_empty() || crate::layers::find(&seen, id).is_ok() {
+            true => seen,
+            false => Cow::Borrowed(&self.doc),
+        }
+    }
 }

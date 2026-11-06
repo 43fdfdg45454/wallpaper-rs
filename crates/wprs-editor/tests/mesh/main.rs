@@ -3,6 +3,7 @@ mod cutouts;
 mod kit;
 mod limbs;
 mod many;
+mod outside;
 mod parts;
 mod pins;
 mod points;

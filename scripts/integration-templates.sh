@@ -30,3 +30,11 @@ if ctl scene --inside fill_template add-layer "$made" solid --id loose 2>/dev/nu
 ctl scene open "$made" --json --inside fill_template | grep -F '"pointer":"/scene/templates/fill_template/layers/1"' >/dev/null ||
   fail "the outline of the template did not list its layers"
 ctl scene clocks "$made" --strip 3 | grep -c '"file":' | grep -x 3 >/dev/null || fail "the own clock did not get a strip of three frames"
+ctl scene add-property "$made" slider --id amount >/dev/null
+ctl scene add-layer "$made" solid --id other >/dev/null
+other=$(ctl scene open "$made" --json | grep -o '"id":"other"[^}]*"pointer":"[^"]*"' | grep -o '/scene/layers/[0-9]*' | head -1)
+ctl scene set "$made" "$other/opacity" '{"prop": "amount"}'
+if ctl scene --inside fill_template remove-property "$made" amount 2>/dev/null; then fail "a property bound in the scene was removed from inside a template"; fi
+ctl scene --inside fill_template rename-property "$made" amount level || fail "the property was not renamed from inside a template"
+ctl scene show "$made" "$other/opacity" | grep '"level"' >/dev/null || fail "a binding of the scene kept the old property id"
+ctl scene validate "$made" >/dev/null || fail "a rename inside a template broke the scene"

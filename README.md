@@ -2655,7 +2655,11 @@ interfaz completa; lo esencial:
   mientras se ve, el panel de capas, las manijas del lienzo (mover, huesos, cadenas, pesos, puntos y
   enganches) y cada acción de capas trabajan sobre las capas de esa plantilla con sus propios ids
   (`wprs-ctl scene --inside PLANTILLA …` igual), y como una plantilla tiene una sola capa las nuevas van
-  dentro de su grupo.
+  dentro de su grupo. Un enganche, un objetivo de cadena o una máscara de una capa de la plantilla
+  pueden nombrar también una capa de la escena (el inspector ofrece *Seguir una malla de la escena*,
+  con su hueso o punto), y lo que no trata de capas (propiedades, condiciones, ajustes, recursos,
+  lienzo, partículas…) actúa sobre toda la escena aunque se vea una plantilla, así que renombrar o
+  quitar una propiedad ve y cambia también los enlaces de la escena.
 - **Datos de entrada**: `audio.buffers(32)` devuelve las bandas izquierda, derecha y media en
   `Float32Array` que el motor rellena solas en cada fotograma; `input.cursor` da la posición en
   fracciones, en píxeles del lienzo y de la pantalla y el botón izquierdo; `engine` da el tamaño del

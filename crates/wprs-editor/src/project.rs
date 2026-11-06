@@ -130,12 +130,15 @@ impl Project {
                 return Ok(moved.map(|(_, o)| o).unwrap_or_default());
             }
             action => {
-                let seen = crate::scope::seen(&self.doc, self.scope.as_deref())?;
-                let ops = match crate::files::act(&self.dir, &seen, action) {
-                    Some(ops) => ops?,
-                    None => plan(&seen, action)?,
-                };
-                crate::scope::ops(ops, self.scope.as_deref())?
+                let scope = self.scope.as_deref().filter(|_| !crate::outside::whole(action));
+                let seen = crate::scope::seen(&self.doc, scope)?;
+                let ops = crate::outside::within(&self.doc, scope, || {
+                    match crate::files::act(&self.dir, &seen, action) {
+                        Some(ops) => ops,
+                        None => plan(&seen, action),
+                    }
+                })?;
+                crate::scope::ops(ops, scope)?
             }
         };
         self.commit(&action.name(), ops, gesture, at)

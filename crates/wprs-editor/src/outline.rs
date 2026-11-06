@@ -89,11 +89,15 @@ pub fn outline(project: &Project, time: f64, files: &[Problem]) -> Value {
     let (undo, redo) = (step(done.last()), step(undone.first()));
     let mut shown = gizmos(&project.dir, &seen, time);
     shown.iter_mut().for_each(|g| g.pointer = crate::scope::shown(&g.pointer, scope));
+    let outside: Vec<Value> = match scope {
+        Some(_) => walk(doc).into_iter().map(|(_, l)| json!({"id": l["id"], "type": l["type"]})).collect(),
+        None => Vec::new(),
+    };
     let m = &doc["manifest"];
     let title = crate::meta::title(doc, &wprs_core::locale::languages());
     json!({"title": title, "id": m["id"], "version": m["version"], "license": m["license"], "canvas": doc["scene"]["canvas"],
         "v2": m["schema"] == wprs_format::SCHEMA, "rating": m["content"]["rating"], "photosensitive": m["photosensitive"],
-        "layers": layers, "gizmos": shown, "problems": problems, "assets": assets,
+        "layers": layers, "outside": outside, "gizmos": shown, "problems": problems, "assets": assets,
         "properties": crate::listing::rows(doc), "presets": crate::listing::presets(doc),
         "property_kinds": crate::props::PROPERTY_KINDS, "timelines": timelines, "tracks": tracks, "length": length, "systems": systems,
         "history": {"done": done, "undone": undone, "undo": undo, "redo": redo}, "dirty": project.dirty(), "recoverable": project.pending.is_some(),
