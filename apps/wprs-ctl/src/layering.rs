@@ -11,6 +11,9 @@ pub enum Layering {
     AddLayer {
         #[arg(help = DIR)]
         dir: PathBuf,
+        #[arg(
+            help = "image, video, text, shape, solid, spectrum, particles, sound, group, adjustment, mesh, model, light or group3d"
+        )]
         kind: String,
         #[arg(long, help = "Id of the new layer; made from the name, or else the kind, when omitted")]
         id: Option<String>,
@@ -55,6 +58,7 @@ pub enum Layering {
         dir: PathBuf,
         #[arg(help = ID)]
         id: String,
+        #[arg(help = "Position among its siblings, 0 at the bottom")]
         to: usize,
         #[arg(long, help = "Group to move the layer into")]
         into: Option<String>,
@@ -63,7 +67,7 @@ pub enum Layering {
     Group {
         #[arg(help = DIR)]
         dir: PathBuf,
-        #[arg(required = true)]
+        #[arg(help = "The layers to put in the group", required = true)]
         ids: Vec<String>,
         #[arg(long, help = "Id of the new group")]
         id: Option<String>,
@@ -81,7 +85,7 @@ pub enum Layering {
         dir: PathBuf,
         #[arg(help = ID)]
         id: String,
-        #[arg(long, default_value_t = true, action = ArgAction::Set)]
+        #[arg(help = "false shows the layer again", long, default_value_t = true, action = ArgAction::Set)]
         hidden: bool,
     },
     #[command(about = "Lock a layer against changes on the canvas; --locked false unlocks it")]
@@ -90,7 +94,7 @@ pub enum Layering {
         dir: PathBuf,
         #[arg(help = ID)]
         id: String,
-        #[arg(long, default_value_t = true, action = ArgAction::Set)]
+        #[arg(help = "false unlocks the layer", long, default_value_t = true, action = ArgAction::Set)]
         locked: bool,
     },
     #[command(about = "Show only this layer in previews, or every layer again without an id")]

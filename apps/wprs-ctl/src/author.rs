@@ -74,7 +74,9 @@ pub enum Author {
     Move {
         #[arg(help = DIR)]
         dir: PathBuf,
+        #[arg(help = "JSON Pointer of the value to move")]
         from: String,
+        #[arg(help = "JSON Pointer of its new place")]
         to: String,
     },
     #[command(flatten)]
@@ -147,6 +149,7 @@ pub enum Author {
     Thumbnail {
         #[arg(help = DIR)]
         dir: PathBuf,
+        #[arg(help = "A picture, or with --animated a gif or webp")]
         file: PathBuf,
         #[arg(long, help = "A gif or webp of at most 640 pixels a side, 15 s and 8 MiB")]
         animated: bool,

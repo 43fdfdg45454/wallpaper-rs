@@ -37,7 +37,7 @@ pub enum Stage {
         about = "Blend the layer over what is below it with a mode such as normal, add, multiply or screen"
     )]
     Blend {
-        #[arg(value_parser = mode)]
+        #[arg(help = "A blend mode such as normal, add, multiply or screen", value_parser = mode)]
         blend: wprs_scene::Blend,
     },
     #[command(

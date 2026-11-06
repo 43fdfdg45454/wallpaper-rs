@@ -7,14 +7,14 @@ const REPLACE: &str = "Replace the force at this place instead of adding one, ke
 pub enum Force {
     #[command(about = "Pull the particles in a direction, in pixels a second squared")]
     Gravity {
-        #[arg(value_name = "X,Y", value_parser = pair, allow_hyphen_values = true)]
+        #[arg(help = "Pull in pixels a second squared along X and Y", value_name = "X,Y", value_parser = pair, allow_hyphen_values = true)]
         pull: [f64; 2],
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Slow the particles down, a share of their speed a second")]
     Drag {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Share of the speed lost a second, 0 to 1 or more", allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
@@ -40,7 +40,7 @@ pub enum Force {
     },
     #[command(about = "Make the position, alpha or size of the particles swing")]
     Oscillate {
-        #[arg(value_parser = ["position", "alpha", "size"])]
+        #[arg(help = "position, alpha or size", value_parser = ["position", "alpha", "size"])]
         what: String,
         #[arg(allow_hyphen_values = true, long, value_name = "MIN,MAX", value_parser = pair, help = "Swings a second")]
         freq: [f64; 2],
@@ -59,13 +59,16 @@ pub enum Force {
         strength: f64,
         #[arg(allow_negative_numbers = true, long, help = "Pixels beyond which it does not pull")]
         radius: Option<f64>,
-        #[arg(long, value_parser = ["constant", "linear", "inverse_square"])]
+        #[arg(help = "How the pull weakens with distance", long, value_parser = ["constant", "linear", "inverse_square"])]
         falloff: Option<String>,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Remove the force at INDEX")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "Its place in the list of forces, 0 first")]
+        index: usize,
+    },
     #[command(flatten)]
     Pull(crate::pulling::Pull),
 }
@@ -96,10 +99,14 @@ pub enum Child {
     Add(Kin),
     #[command(about = "Replace the child system at INDEX")]
     Set {
+        #[arg(help = "Its place in the list of child systems, 0 first")]
         index: usize,
         #[command(flatten)]
         kin: Kin,
     },
     #[command(about = "Remove the child system at INDEX")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "Its place in the list of child systems, 0 first")]
+        index: usize,
+    },
 }

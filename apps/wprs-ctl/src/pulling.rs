@@ -9,28 +9,31 @@ const FALLOFF: [&str; 3] = ["constant", "linear", "inverse_square"];
 pub enum Pull {
     #[command(about = "Shake the particles at random, in pixels a second squared")]
     Noise {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Pixels a second squared", allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Keep the particles below a speed, in pixels a second")]
     Cap {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Most pixels a second", allow_negative_numbers = true)]
         speed: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Turn the particles faster, in degrees a second squared; negative turns the other way")]
     Torque {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(
+            help = "Degrees a second squared; negative turns the other way",
+            allow_negative_numbers = true
+        )]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,
     },
     #[command(about = "Slow the turning of the particles down, a share of their spin a second")]
     SpinDrag {
-        #[arg(allow_negative_numbers = true)]
+        #[arg(help = "Share of the spin lost a second, 0 to 1 or more", allow_negative_numbers = true)]
         amount: f64,
         #[arg(long, help = REPLACE)]
         index: Option<usize>,

@@ -9,7 +9,7 @@ pub enum Meta {
         about = "Say whether the package is original, derived from other works, imported or from a provider"
     )]
     Origin {
-        #[arg(value_parser = ["original", "derived", "imported", "provider"])]
+        #[arg(help = "original, derived, imported or provider", value_parser = ["original", "derived", "imported", "provider"])]
         kind: String,
         #[arg(
             long = "derived-from",

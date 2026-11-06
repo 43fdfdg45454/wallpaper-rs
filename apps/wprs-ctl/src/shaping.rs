@@ -17,6 +17,7 @@ pub enum Shaping {
     Import {
         #[arg(help = DIR)]
         dir: PathBuf,
+        #[arg(help = "The file to copy")]
         file: PathBuf,
         #[arg(long, help = "Asset id; made from the file name when omitted")]
         id: Option<String>,

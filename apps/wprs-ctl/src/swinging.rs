@@ -39,7 +39,7 @@ pub struct Tuning {
 pub enum Swing {
     #[command(about = "Make bones swing, or change how they swing")]
     Add {
-        #[arg(required = true, value_name = "BONE")]
+        #[arg(help = "The bones to swing", required = true, value_name = "BONE")]
         bones: Vec<String>,
         #[command(flatten)]
         tune: Tuning,
@@ -48,9 +48,9 @@ pub enum Swing {
         about = "Draw a rope of new bones NAME_1, NAME_2... along X,Y;X,Y;... in fractions of the layer, swinging as a rope"
     )]
     Rope {
-        #[arg(value_name = "NAME")]
+        #[arg(help = "The name the new bones share, numbered from 1", value_name = "NAME")]
         bones: String,
-        #[arg(value_name = "X,Y;X,Y;...")]
+        #[arg(help = "Points the rope goes through, in fractions of the layer", value_name = "X,Y;X,Y;...")]
         rope: String,
         #[arg(long, help = "The bone the rope hangs from")]
         parent: Option<String>,
@@ -59,7 +59,7 @@ pub enum Swing {
     },
     #[command(about = "Stop bones swinging")]
     Remove {
-        #[arg(required = true, value_name = "BONE")]
+        #[arg(help = "The bones to stop", required = true, value_name = "BONE")]
         bones: Vec<String>,
     },
 }

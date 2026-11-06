@@ -5,17 +5,29 @@ pub enum Collider {
     #[command(
         about = "Add a collider as JSON, such as '{\"bounds\": {\"box\": {\"from\": [0, 0], \"to\": [400, 300], \"inside\": true}}, \"bounce\": 0.5}'"
     )]
-    Add { collider: String },
+    Add {
+        #[arg(help = "The collider as JSON")]
+        collider: String,
+    },
     #[command(about = "Replace the collider at INDEX")]
-    Set { index: usize, collider: String },
+    Set {
+        #[arg(help = "Its place in the list, 0 first")]
+        index: usize,
+        #[arg(help = "The collider as JSON")]
+        collider: String,
+    },
     #[command(about = "Remove the collider at INDEX")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "Its place in the list, 0 first")]
+        index: usize,
+    },
     #[command(
         about = "Make particles bounce, slide, stop, stick or die where they touch the collider at INDEX"
     )]
     Response {
+        #[arg(help = "Its place in the list, 0 first")]
         index: usize,
-        #[arg(value_parser = ["bounce", "slide", "stop", "stick", "kill"])]
+        #[arg(help = "bounce, slide, stop, stick or kill", value_parser = ["bounce", "slide", "stop", "stick", "kill"])]
         response: String,
         #[arg(long, help = "From 0 to 1, with bounce")]
         bounce: Option<f64>,
@@ -28,28 +40,41 @@ pub enum Collider {
 pub enum Keep {
     #[command(about = "Keep particles at a distance from TARGET: p0 to p7, cursor or X,Y")]
     Distance {
-        #[arg(allow_hyphen_values = true)]
+        #[arg(help = "p0 to p7, cursor or X,Y in pixels of the layer", allow_hyphen_values = true)]
         target: String,
-        #[arg(long, default_value_t = 100.0)]
+        #[arg(help = "Pixels to keep from it", long, default_value_t = 100.0)]
         distance: f64,
-        #[arg(long, default_value_t = 4.0, allow_hyphen_values = true)]
+        #[arg(
+            help = "How hard they are kept there; negative pushes away",
+            long,
+            default_value_t = 4.0,
+            allow_hyphen_values = true
+        )]
         strength: f64,
         #[arg(long, help = "Replace the force at this index instead of adding one")]
         index: Option<usize>,
     },
     #[command(about = "Draw particles to the segment between FROM and TO: p0 to p7, cursor or X,Y")]
     Between {
-        #[arg(allow_hyphen_values = true)]
+        #[arg(help = "p0 to p7, cursor or X,Y in pixels of the layer", allow_hyphen_values = true)]
         from: String,
-        #[arg(allow_hyphen_values = true)]
+        #[arg(help = "p0 to p7, cursor or X,Y in pixels of the layer", allow_hyphen_values = true)]
         to: String,
-        #[arg(long, default_value_t = 4.0, allow_hyphen_values = true)]
+        #[arg(
+            help = "How hard they are drawn; negative pushes away",
+            long,
+            default_value_t = 4.0,
+            allow_hyphen_values = true
+        )]
         strength: f64,
         #[arg(long, help = "Replace the force at this index instead of adding one")]
         index: Option<usize>,
     },
     #[command(about = "Remove the force at INDEX")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "Its place in the list, 0 first")]
+        index: usize,
+    },
 }
 
 #[derive(Args, Debug)]
@@ -74,9 +99,13 @@ pub struct Rope {
     pub subdivide: Option<u32>,
     #[arg(long, help = "Pixels")]
     pub width: Option<f64>,
-    #[arg(long)]
+    #[arg(help = "How many times the texture repeats along the rope", long)]
     pub uv_scale: Option<f64>,
-    #[arg(long, allow_hyphen_values = true)]
+    #[arg(
+        help = "How fast the texture slides along the rope, repeats a second",
+        long,
+        allow_hyphen_values = true
+    )]
     pub uv_scroll: Option<f64>,
     #[arg(long, help = "A Catmull-Rom curve (true) or straight lines (false)")]
     pub smooth: Option<bool>,
@@ -96,9 +125,13 @@ pub struct Trail {
     pub segments: Option<u32>,
     #[arg(long, help = "Points between two kept positions, 0 to 7")]
     pub subdivide: Option<u32>,
-    #[arg(long)]
+    #[arg(help = "How many times the texture repeats along the trail", long)]
     pub uv_scale: Option<f64>,
-    #[arg(long, allow_hyphen_values = true)]
+    #[arg(
+        help = "How fast the texture slides along the trail, repeats a second",
+        long,
+        allow_hyphen_values = true
+    )]
     pub uv_scroll: Option<f64>,
     #[arg(long, help = "Show the texture along the trail")]
     pub textured: Option<bool>,

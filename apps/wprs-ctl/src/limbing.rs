@@ -93,23 +93,29 @@ pub struct Reaching {
 pub enum Chain {
     #[command(about = "A new chain from ROOT down to TIP")]
     Add {
+        #[arg(help = "The first bone of the chain")]
         root: String,
+        #[arg(help = "The last bone of the chain, the one that reaches")]
         tip: String,
         #[command(flatten)]
         reach: Reaching,
     },
     #[command(about = "Change chain N, 0 first")]
     Set {
+        #[arg(help = "The chain, 0 first")]
         index: usize,
-        #[arg(long, requires = "tip")]
+        #[arg(help = "Another first bone, given with --tip", long, requires = "tip")]
         root: Option<String>,
-        #[arg(long, requires = "root")]
+        #[arg(help = "Another last bone, given with --root", long, requires = "root")]
         tip: Option<String>,
         #[command(flatten)]
         reach: Reaching,
     },
     #[command(about = "Remove chain N, 0 first")]
-    Remove { index: usize },
+    Remove {
+        #[arg(help = "The chain, 0 first")]
+        index: usize,
+    },
 }
 
 fn target(t: &str) -> serde_json::Value {

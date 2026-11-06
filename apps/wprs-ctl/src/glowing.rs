@@ -15,7 +15,7 @@ pub struct Air {
     pub off: bool,
     #[arg(long, help = "Show the glow against the distance and what each quality level keeps instead")]
     pub show: bool,
-    #[arg(long, default_value_t = 0.0)]
+    #[arg(help = "Seconds into the scene", long, default_value_t = 0.0)]
     pub time: f64,
 }
 
@@ -29,7 +29,7 @@ pub struct Cast {
     pub off: bool,
     #[arg(long, help = "Show what can be projected and where the picture lands instead")]
     pub show: bool,
-    #[arg(long, default_value_t = 0.0)]
+    #[arg(help = "Seconds into the scene", long, default_value_t = 0.0)]
     pub time: f64,
 }
 

@@ -17,6 +17,7 @@ const WARMUP: usize = 10;
 pub enum SceneCommand {
     #[command(about = "Render a scene package offscreen and report the cost of each frame; needs no daemon")]
     Bench {
+        #[arg(help = "A scene package (.wpak)")]
         path: PathBuf,
         #[arg(long, default_value_t = 300, help = "Number of frames to render")]
         frames: usize,

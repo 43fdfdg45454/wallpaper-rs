@@ -14,7 +14,7 @@ pub struct Turbulent {
     pub offset: Option<f64>,
     #[arg(long, allow_hyphen_values = true, value_name = "MIN,MAX", help = "Pixels a second")]
     pub speed: Option<String>,
-    #[arg(long, allow_hyphen_values = true)]
+    #[arg(help = "Where in the noise the directions start", long, allow_hyphen_values = true)]
     pub phase: Option<f64>,
     #[arg(long, help = "A band such as bass, mid, treble, level, beat or 0 to 63 that multiplies the phase")]
     pub audio: Option<String>,

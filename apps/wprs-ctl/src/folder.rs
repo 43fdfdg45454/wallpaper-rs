@@ -25,7 +25,7 @@ pub enum Folder {
     Recover {
         #[arg(help = DIR)]
         dir: PathBuf,
-        #[arg(long)]
+        #[arg(help = "Drop the kept changes instead of restoring them", long)]
         discard: bool,
     },
     #[command(about = "Check the scene and its files; exits with 1 when something is wrong")]
@@ -80,9 +80,9 @@ pub enum Folder {
         about = "Print the JSON Schema of scenes, of user properties with --property or of manifests with --manifest"
     )]
     Schema {
-        #[arg(long)]
+        #[arg(help = "Print the schema of user properties", long)]
         property: bool,
-        #[arg(long, conflicts_with = "property")]
+        #[arg(help = "Print the schema of manifests", long, conflicts_with = "property")]
         manifest: bool,
     },
 }
