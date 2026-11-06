@@ -95,7 +95,8 @@ impl Painter<'_, '_, '_> {
         let mut tex = self.sets[f.tex as usize];
         tex.iter_mut().filter(|t| **t == current).for_each(|t| *t = copy);
         let tex = self.set(tex);
-        self.ops[at] = Op::Effect(Fill { target: current, load: true, scissor: Some([x, y, w, h]), tex, ..f });
+        self.ops[at] =
+            Op::Effect(Fill { target: current, load: true, scissor: Some([x, y, w, h]), tex, ..f });
         self.ops.insert(at, Op::Copy { from: current, to: copy, origin: [x, y], size: (w, h), at: [x, y] });
         self.release(next);
         self.release(copy);
