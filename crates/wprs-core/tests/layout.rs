@@ -137,6 +137,8 @@ fn outputs_without_a_place_follow_another_or_are_placed_by_hand() {
     c.set_option("layout.monitors.STREAM-1", "80,0,40,22.5").unwrap();
     let loose = c.layout.loose(["STREAM-1", "STREAM-2"]);
     assert_eq!(loose, [Monitor { id: "STREAM-1".into(), mm: [80.0, 0.0, 40.0, 22.5] }]);
+    assert!(c.layout.placed("STREAM-1") && c.layout.placed("S-0"), "a preview placed by hand spread nothing");
+    assert!(!c.layout.placed("STREAM-2"));
     let text = "[layout.follow]\nA = \"A\"\nB = \"C\"\n\"\" = \"C\"\n";
     let mut read: Config = toml::from_str(text).unwrap();
     read.normalize();

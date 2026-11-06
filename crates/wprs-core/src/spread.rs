@@ -92,6 +92,10 @@ impl Layout {
         self.follow.get(output).map_or(output, String::as_str)
     }
 
+    pub fn placed(&self, output: &str) -> bool {
+        self.follow.contains_key(output) || !self.loose([output]).is_empty()
+    }
+
     pub fn loose<'a>(&self, outputs: impl IntoIterator<Item = &'a str>) -> Vec<Monitor> {
         let fine = |mm: &[f64; 4]| mm.iter().all(|v| v.is_finite()) && mm[2] > 0.0 && mm[3] > 0.0;
         let placed = |id: &str| self.monitors.get(id).map(|p| p.mm).filter(fine);

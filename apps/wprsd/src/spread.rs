@@ -10,8 +10,8 @@ impl OutputInfo {
 
 impl Daemon {
     pub(crate) fn scene_span(&self, output: &str, fit: Fit, canvas: [u32; 2]) -> Option<[f32; 4]> {
-        let follows = self.state().config.layout.follow.contains_key(output);
-        if fit != Fit::Span || (crate::drafts::virtual_output(output) && !follows) {
+        let placed = self.state().config.layout.placed(output);
+        if fit != Fit::Span || (crate::drafts::virtual_output(output) && !placed) {
             return None;
         }
         let Place::Span { monitors, output: lead, .. } = self.place(output, Fit::Span, None) else {
