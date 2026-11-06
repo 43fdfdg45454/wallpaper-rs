@@ -104,7 +104,7 @@ impl Painter<'_, '_, '_> {
         let m = rect.affine().then(invert(uv));
         let cap = self.full.w.max(self.full.h).max(1.0);
         let side = |a: f32, b: f32| a.hypot(b).ceil().clamp(1.0, cap) as u32;
-        let size = (side(m.0[0], m.0[1]), side(m.0[2], m.0[3]));
+        let size = self.dense((side(m.0[0], m.0[1]), side(m.0[2], m.0[3])));
         for ((param, id), slot) in bound(e).zip(&mut fed.textures) {
             *slot = self.drawn(id, m, size).map(|src| (param, src));
         }

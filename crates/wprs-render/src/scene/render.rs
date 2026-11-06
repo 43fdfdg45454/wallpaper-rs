@@ -88,6 +88,7 @@ impl Renderer {
             flocks: &scratch.flocks,
             flat: std::cell::Cell::new(None),
             aired: (0, None),
+            density: 1.0,
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
             painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);

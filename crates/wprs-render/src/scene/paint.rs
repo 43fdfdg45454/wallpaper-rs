@@ -11,6 +11,7 @@ use std::ops::Range;
 use wprs_scene::{Affine, Frame};
 
 mod air;
+mod density;
 mod geometry;
 mod passes;
 
@@ -56,6 +57,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) flocks: &'a [u64],
     pub(crate) flat: std::cell::Cell<Option<(wprs_scene::Lean, wprs_scene::Lean)>>,
     pub(crate) aired: (usize, Option<Src>),
+    pub(crate) density: f32,
 }
 
 #[derive(Clone, Copy)]

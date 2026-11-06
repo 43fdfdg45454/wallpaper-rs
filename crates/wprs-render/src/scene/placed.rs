@@ -41,7 +41,9 @@ impl Painter<'_, '_, '_> {
         first: Src,
         fx: Fx,
     ) -> Option<(Src, u32)> {
-        let size = ((rect.w * scale).ceil().max(1.0) as u32, (rect.h * scale).ceil().max(1.0) as u32);
+        let scale = scale * self.density;
+        let side = |v: f32| ((v * scale - 1e-3).ceil().max(1.0)) as u32;
+        let size = (side(rect.w), side(rect.h));
         let out = out.or_else(|| self.acquire(size))?;
         let (w, h) = self.size_of(first);
         let px = scale_of(self.screen) * w as f32 / rect.w.max(1.0);

@@ -31,6 +31,10 @@ impl Quality {
         [0.5, 0.75, 1.0, 1.0][self as usize]
     }
 
+    pub fn density(self) -> f32 {
+        [0.5, 0.6, 0.75, 1.0][self as usize]
+    }
+
     pub fn effect_scale(self, class: Class, optional: bool) -> Option<f32> {
         match (self, class) {
             (_, Class::Light) | (Quality::Q3, _) => Some(1.0),

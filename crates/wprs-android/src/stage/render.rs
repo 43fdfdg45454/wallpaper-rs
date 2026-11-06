@@ -27,6 +27,7 @@ impl Stage {
         let budget =
             Budget { choice: crate::power::choice(), ..Budget::new(tier, !power.charging, cap.max(1)) };
         self.runtime.set_battery(!power.charging);
+        self.runtime.set_magnify(self.runtime.scene.magnify(size));
         self.heavy = budget.still(&self.runtime);
         let turned = std::mem::replace(&mut self.posed, self.heavy) != self.heavy;
         if turned && self.heavy {

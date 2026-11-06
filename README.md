@@ -612,7 +612,11 @@ muestra la frecuencia (`refresh`) y el tope (`fps`) de cada pantalla.
 
 Las escenas calculan antes de dibujar cuánto cuesta cada fotograma: cuentan sus efectos, las capas
 que se dibujan aparte y las mezclas que copian el fondo, cada una por la parte de la pantalla que
-ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Las GPU integradas antiguas (Intel
+ocupa, y eligen el nivel de calidad más alto que cabe en la GPU. Los efectos de una imagen, un vídeo
+o una malla corren a la densidad de su imagen: si la pantalla la amplía (un lienzo de 2560×1440 en un
+teléfono de 1440×3040 muestra cada texel en 2,1 píxeles), trabajan sobre sus propios texeles y el
+resultado se amplía al componer, como la imagen misma, así que en Q3 se ven igual y cuestan una
+cuarta parte; Q2, Q1 y Q0 bajan esa densidad a 0,75, 0,6 y 0,5, y el coste las cuenta así. Las GPU integradas antiguas (Intel
 HD y UHD, las APU de AMD con Vega y similares) y los equipos con menos de 4 GiB de memoria tienen un
 nivel intermedio propio. La primera vez que se usa una tarjeta gráfica con un driver, un render
 corto de unos 300 ms mide cuánto tarda y ajusta su clase, que se guarda en

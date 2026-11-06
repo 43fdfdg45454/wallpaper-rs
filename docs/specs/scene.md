@@ -161,7 +161,17 @@ whose place can change while it plays (a bound or animated `position`, `rotation
 in the scene) counts as the whole canvas. A
 layer that masks or feeds others adds one more unit times its share, once however many read it,
 since it is drawn on its own at most once a frame. Particles add their overdraw, `canvas.bloom` adds the units of its effect over the whole canvas, a
-`canvas.camera` makes every layer count as the whole canvas, and every frame costs 1.5 units for composing and copying. A scene
+`canvas.camera` makes every layer count as the whole canvas, and every frame costs 1.5 units for composing and copying.
+An image, video or mesh layer with effects runs them at the density of its picture: its target holds
+at most one texel of the picture per pixel of the screen, so a picture that the screen magnifies
+(a 2560×1440 canvas filling a 1440×3040 phone shows each texel on 2.1 pixels) runs its effects on
+its own texels and the composite scales the result up, as it scales the picture itself. At Q3 an
+image that is neither turned nor stretched lines its target up with its texels, so the picture is
+copied as it is and only the effects change; a turned image or a mesh keeps one and a half times
+that density. Lower levels multiply the density by 0.75 at Q2, 0.6 at Q1 and 0.5 at Q0, also on a
+screen that does not magnify the canvas. The cost counts each such layer at that density, from the
+magnification of the screen (pixels per canvas unit), the fixed scale of the layer and one texel
+per unit of its `size`. A scene
 that costs more at level `q2` than the 8 units of older integrated and phone GPUs gets a warning
 from `wprs-ctl pack check`, `pack build` and the scene editor, since those devices show it with
 fewer details. The quality level is the highest whose cost fits the budget of the device: 4, 8, 16

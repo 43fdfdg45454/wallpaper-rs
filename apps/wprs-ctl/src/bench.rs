@@ -57,12 +57,14 @@ pub fn run(command: SceneCommand) -> Result<()> {
         r.force_tier(Some(serde_json::from_value(json!(t))?));
     }
     let (tier, unit_ms) = (r.tier(), calibrated.unit_ms);
+    let magnify = scene.magnify(size);
     let quality = match quality.as_deref() {
         Some(q) => serde_json::from_value(json!(q))?,
-        None => Quality::fit(&scene, tier, tier.quality(false)),
+        None => Quality::fitting(|q| scene.cost_at(q, magnify), tier, tier.quality(false)),
     };
-    let cost = scene.cost(quality);
+    let cost = scene.cost_at(quality, magnify);
     let mut runtime = Runtime::new(Arc::new(scene), values);
+    runtime.set_magnify(magnify);
     runtime.set_quality(quality);
     assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
     let start = Instant::now();

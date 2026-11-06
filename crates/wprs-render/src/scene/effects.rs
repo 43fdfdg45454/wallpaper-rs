@@ -79,7 +79,7 @@ impl Painter<'_, '_, '_> {
         let mut ticks = 0;
         let sim = match &d.state {
             Some(s) => {
-                let side = |v: f32| (v * s.scale * tune).ceil().max(1.0) as u32;
+                let side = |v: f32| (v * s.scale * tune * self.density - 1e-3).ceil().max(1.0) as u32;
                 let Some((sim, _, n)) = self.state(i, e, (side(rect.w), side(rect.h))) else {
                     fed.all().for_each(|s| self.release(s));
                     return current;
@@ -152,7 +152,8 @@ impl Painter<'_, '_, '_> {
         }
         let state = pass.output == Output::State;
         let scale = if n == at.last { pass.scale } else { pass.scale * at.scale };
-        let side = |v: f32| (v * scale.clamp(0.05, 1.0)).ceil().max(1.0) as u32;
+        let dense = self.density;
+        let side = |v: f32| (v * scale.clamp(0.05, 1.0) * dense - 1e-3).ceil().max(1.0) as u32;
         let temp = (pass.output == Output::Step)
             .then(|| self.borrow((side(at.rect.w), side(at.rect.h)), self.state_format));
         let out = front.filter(|_| state).map(|(id, side)| Src::State(id, 1 - side));

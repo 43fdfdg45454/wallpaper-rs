@@ -70,6 +70,11 @@ impl SceneView {
         }
     }
 
+    pub fn magnify(&self, size: (u32, u32)) -> f32 {
+        let [_, _, w, h] = self.view(size);
+        (size.0 as f32 / w.max(1e-3) * size.1 as f32 / h.max(1e-3)).sqrt()
+    }
+
     pub fn view(&self, size: (u32, u32)) -> [f32; 4] {
         if let Some(part) = self.span {
             return part;

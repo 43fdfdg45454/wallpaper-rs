@@ -94,7 +94,7 @@ impl<'a> Painter<'a, '_, '_> {
     fn isolated(&mut self, i: usize) -> Option<(Src, Rect)> {
         let frame = self.frame;
         let d = &frame.draws[i];
-        let rect = self.extent(i)?.pixels(self.full)?.bucket();
+        let (rect, dense, size) = self.fitted(i, self.extent(i)?.pixels(self.full)?);
         let id = d.layer as *const Layer as usize;
         let (fed, moving) = self.feeding(i..d.end);
         let still = !d.dynamic && self.backdrop.is_none() && !moving && !self.shifting(i..d.end);
@@ -104,7 +104,11 @@ impl<'a> Painter<'a, '_, '_> {
             self.kept.push(id);
             return Some((Src::Cache(id), rect));
         }
-        let src = self.hold(i, rect.size())?;
+        let outer = std::mem::replace(&mut self.density, dense);
+        let Some(src) = self.hold(i, size) else {
+            self.density = outer;
+            return None;
+        };
         self.ops.push(Op::Clear(src, [0.0; 4]));
         let target = Target { src, rect };
         match d.content {
@@ -114,6 +118,7 @@ impl<'a> Painter<'a, '_, '_> {
         let layer = self.geometry(i).map_or(rect.affine(), |(size, _)| self.local(i, size));
         let uv = invert(layer).then(rect.affine());
         let out = self.effects(i, src, rect, uv);
+        self.density = outer;
         if out != src {
             self.release(src);
         }
