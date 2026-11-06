@@ -105,6 +105,10 @@ impl Project {
         self.step(action, true)
     }
 
+    pub fn hold(&mut self, on: bool) {
+        self.history.open = on;
+    }
+
     pub fn held(&mut self) {
         if let Some(stamp) = self.recorded.take() {
             self.history.held(stamp, now());

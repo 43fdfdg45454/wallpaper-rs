@@ -129,7 +129,9 @@ history names.
 Each action that changes something is one step `{label, undo, redo}`. Only gestures merge: the
 app marks the changes it sends while a slider or a canvas handle is dragged, and such a change
 merges into the previous gesture with the same label, recorded less than 500 ms before, when its
-operations only replace values that step set. Dragging is one step, while typed values, moves,
+operations only replace values that step set; while a press holds a gesture open (`Project::hold`,
+the `hold` of the app on press and release), its changes merge however long the drag pauses, and an
+action that is not part of the gesture closes it. Dragging is one step, while typed values, moves,
 insertions, removals and every `wprs-ctl scene` command are steps of their own. A new step drops
 the steps that were undone; an action that changes nothing once the computed fields follow it,
 such as unticking an input the scene uses, records no step. The history keeps at most 500 steps

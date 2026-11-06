@@ -7,6 +7,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 use wprs_editor::actions::visible;
+use wprs_editor::references;
 
 const THROTTLE: Duration = Duration::from_millis(50);
 const REFRESH: Duration = Duration::from_secs(30);
@@ -14,6 +15,24 @@ const EDGE: f64 = 1280.0;
 static STREAMS: AtomicU32 = AtomicU32::new(0);
 
 impl SceneEditor {
+    pub fn hold(mut self: Pin<&mut Self>, on: bool) {
+        if let Some(project) = self.as_mut().rust_mut().project.as_mut() {
+            project.hold(on);
+        }
+    }
+
+    pub fn condition(&self, pointer: &QString, text: &QString) -> QString {
+        let doc = self.project.as_ref().map(|p| &p.doc);
+        let found =
+            doc.and_then(|d| wprs_editor::settings::condition(d, &pointer.to_string(), &text.to_string()));
+        QString::from(&found.unwrap_or_default())
+    }
+
+    pub fn scripts(&self, id: &QString) -> QString {
+        let found = self.project.as_ref().map(|p| references::scripts(&p.dir, &p.doc, &id.to_string()));
+        QString::from(&serde_json::to_string(&found.unwrap_or_default()).unwrap_or_default())
+    }
+
     pub fn attach(mut self: Pin<&mut Self>) {
         let Some(project) = self.project.as_ref() else { return };
         let size = &project.doc["scene"]["canvas"]["size"];
