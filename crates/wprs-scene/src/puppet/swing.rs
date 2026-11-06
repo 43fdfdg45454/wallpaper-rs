@@ -3,10 +3,10 @@ use super::limb::{end, pivot, tip};
 use crate::Body as Mode;
 use crate::rigged::Rigged;
 
-pub const STEP: f32 = 1.0 / 120.0;
-pub const MAX_STEPS: u32 = 30;
-pub const QUIET_STEPS: u32 = 60;
-pub const QUIET: f32 = 0.002;
+pub const LONGEST_STEP: f32 = 1.0 / 30.0;
+pub const CATCH_UP: f32 = 0.25;
+pub const QUIET_TIME: f32 = 0.5;
+pub const QUIET: f32 = 0.3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Body {
@@ -19,7 +19,8 @@ pub(crate) struct Body {
     pub pins: Vec<[f32; 2]>,
     pub before: Vec<[f32; 2]>,
     pub fresh: bool,
-    pub quiet: u32,
+    pub quiet: f32,
+    pub step: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -58,7 +59,19 @@ pub(super) fn bodies(rig: &Rigged, m: &Fig, order: &[u16]) -> Vec<Body> {
                 .collect();
             let points = vec![[0.0; 2]; nodes.len() + 1];
             let (at, was, pins, before) = (points.clone(), points.clone(), points.clone(), points);
-            Some(Body { entry, mode: p.mode, nodes, tips, at, was, pins, before, fresh: true, quiet: 0 })
+            Some(Body {
+                entry,
+                mode: p.mode,
+                nodes,
+                tips,
+                at,
+                was,
+                pins,
+                before,
+                fresh: true,
+                quiet: 0.0,
+                step: LONGEST_STEP,
+            })
         })
         .take(crate::MAX_BODIES)
         .collect();
@@ -85,17 +98,17 @@ impl Body {
         self.at.clone_from_slice(&self.pins);
         self.was.clone_from_slice(&self.pins);
         self.before.clone_from_slice(&self.pins);
-        self.quiet = QUIET_STEPS;
+        (self.quiet, self.step) = (QUIET_TIME, LONGEST_STEP);
     }
 
     pub(crate) fn still(&self) -> bool {
-        self.quiet >= QUIET_STEPS && self.before == self.pins
+        self.quiet >= QUIET_TIME && self.before == self.pins
     }
 
-    pub(crate) fn push(&mut self, node: u16, v: [f32; 2], h: f32) {
+    pub(crate) fn push(&mut self, node: u16, v: [f32; 2]) {
         let Some(i) = self.nodes.iter().position(|n| *n == node) else { return };
-        let p = &mut self.was[i + 1];
+        let (p, h) = (&mut self.was[i + 1], self.step);
         (p[0], p[1]) = (p[0] - v[0] * h, p[1] - v[1] * h);
-        self.quiet = 0;
+        self.quiet = 0.0;
     }
 }

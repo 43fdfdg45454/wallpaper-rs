@@ -28,7 +28,7 @@ pub(crate) use fig::{Fig, figure, mesh};
 pub(crate) use mount::Seat;
 pub use reach::IK_ROUNDS;
 pub(crate) use swing::Sim;
-pub use swing::{MAX_STEPS, QUIET, QUIET_STEPS, STEP};
+pub use swing::{CATCH_UP, LONGEST_STEP, QUIET, QUIET_TIME};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Drawn {
@@ -93,7 +93,6 @@ pub struct Puppet {
     pub(crate) chains: Vec<reach::Chain>,
     pub(crate) bodies: Vec<swing::Body>,
     pub(crate) lag: f32,
-    pub(crate) since: f32,
 }
 
 impl Puppet {
@@ -118,7 +117,6 @@ impl Puppet {
             chains,
             bodies,
             lag: 0.0,
-            since: 0.0,
             layer: layer.id.clone(),
             clips,
             heads,

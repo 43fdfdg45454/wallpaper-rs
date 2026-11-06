@@ -30,51 +30,35 @@ fn a_rope_falls_and_settles_hanging_from_its_root() {
 }
 
 #[test]
-fn the_fixed_step_does_not_depend_on_the_frame_rate() {
+fn each_frame_steps_its_own_interval_split_past_a_thirtieth_of_a_second() {
     let mut sixty = hanging(json!({}));
     let mut thirty = hanging(json!({}));
     let mut fast = hanging(json!({}));
     run(&mut sixty, 0.5, 1.0 / 60.0);
     run(&mut thirty, 0.5, 1.0 / 30.0);
     run(&mut fast, 0.5, 1.0 / 240.0);
-    assert!(
-        close(at(&sixty, "hand"), at(&thirty, "hand"), 1e-3),
-        "{:?} {:?}",
-        at(&sixty, "hand"),
-        at(&thirty, "hand")
-    );
-    assert!(
-        close(at(&sixty, "hand"), at(&fast, "hand"), 1.5),
-        "{:?} {:?}",
-        at(&sixty, "hand"),
-        at(&fast, "hand")
-    );
-    let mut gap = hanging(json!({}));
-    let mut steps = hanging(json!({}));
-    gap.advance(10.0);
-    run(&mut steps, 0.25, 1.0 / 60.0);
-    assert!(close(at(&gap, "hand"), at(&steps, "hand"), 1e-3), "a long gap runs at most a quarter second");
-}
-
-#[test]
-fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_second() {
-    let rates = [30.0, 60.0, 120.0];
-    for more in [json!({}), json!({ "mode": "spring", "stiffness": 0.3, "gravity": 1 })] {
-        let hands = rates.map(|fps| {
-            let mut rt = hanging(more.clone());
-            run(&mut rt, 1.0, 1.0 / fps);
-            at(&rt, "hand")
-        });
-        assert!(hands.iter().all(|h| close(*h, hands[0], 1e-3)), "{hands:?}");
-        let mut battery = hanging(more);
-        battery.set_battery(true);
-        run(&mut battery, 1.0, 1.0 / 60.0);
-        assert!(close(at(&battery, "hand"), hands[0], 1e-3), "{:?} {:?}", at(&battery, "hand"), hands[0]);
+    for other in [&thirty, &fast] {
+        assert!(
+            close(at(&sixty, "hand"), at(other, "hand"), 1.5),
+            "{:?} {:?}",
+            at(&sixty, "hand"),
+            at(other, "hand")
+        );
     }
+    let mut long = hanging(json!({}));
+    let mut short = hanging(json!({}));
+    run(&mut long, 0.5, 0.1);
+    run(&mut short, 0.5, 1.0 / 30.0);
+    assert!(close(at(&long, "hand"), at(&short, "hand"), 1e-3), "a long frame runs in steps of a thirtieth");
+    let mut gap = hanging(json!({}));
+    let mut quarter = hanging(json!({}));
+    gap.advance(10.0);
+    quarter.advance(0.25);
+    assert!(close(at(&gap, "hand"), at(&quarter, "hand"), 1e-3), "a long gap runs at most a quarter second");
 }
 
 #[test]
-fn puppet_motion_matches_at_every_frame_rate_on_mains_and_on_battery() {
+fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_second_and_on_battery() {
     let rates = [30.0, 60.0, 120.0];
     for more in [json!({}), json!({ "mode": "spring", "stiffness": 0.3, "gravity": 1 })] {
         let hands = rates.map(|fps| {
@@ -82,15 +66,13 @@ fn puppet_motion_matches_at_every_frame_rate_on_mains_and_on_battery() {
             run(&mut rt, 1.0, 1.0 / fps);
             at(&rt, "hand")
         });
-        assert!(hands.iter().all(|h| close(*h, hands[0], 1e-3)), "{hands:?}");
-        let battery = [30.0, 60.0].map(|fps| {
-            let mut rt = hanging(more.clone());
-            rt.set_battery(true);
-            run(&mut rt, 1.0, 1.0 / fps);
-            at(&rt, "hand")
-        });
-        assert!(close(battery[0], battery[1], 1e-3), "{battery:?}");
-        assert!(close(battery[0], hands[0], 3.0), "{battery:?} {:?}", hands[0]);
+        assert!(hands.iter().all(|h| close(*h, hands[0], 3.0)), "{hands:?}");
+        for (fps, hand) in rates.iter().zip(hands) {
+            let mut battery = hanging(more.clone());
+            battery.set_battery(true);
+            run(&mut battery, 1.0, 1.0 / fps);
+            assert_eq!(at(&battery, "hand"), hand, "the battery changes the step at {fps} fps");
+        }
     }
 }
 
@@ -128,7 +110,7 @@ fn limits_bound_the_swing_and_the_stretch() {
 }
 
 #[test]
-fn the_lowest_quality_freezes_bones_and_the_battery_halves_the_rate() {
+fn the_lowest_quality_freezes_bones_and_a_rope_on_battery_settles_too() {
     let mut rt = hanging(json!({}));
     rt.set_quality(Quality::Q0);
     run(&mut rt, 2.0, 1.0 / 60.0);
@@ -192,6 +174,6 @@ fn a_swinging_bone_follows_a_moving_parent_alike_at_every_frame_rate() {
                 f[1].atan2(f[0]).to_degrees()
             })
             .collect();
-        assert!(turns.iter().all(|t| (t - turns[0]).abs() < 1.5), "inertia {inertia}: {turns:?}");
+        assert!(turns.iter().all(|t| (t - turns[0]).abs() < 2.0), "inertia {inertia}: {turns:?}");
     }
 }

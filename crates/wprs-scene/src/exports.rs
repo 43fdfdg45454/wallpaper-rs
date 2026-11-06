@@ -105,7 +105,9 @@ pub use crate::props::{
     Choice, Condition, Control, Expr, ICONS, Leveling, Mode, Pick, Preset, Property, Slider, Text, Values,
     check_presets, cycle, effective, exposed, icon, legacy, rename, stale, tag, veiled,
 };
-pub use crate::puppet::{Drawn, IK_ROUNDS, MAX_STEPS, MODEL_UNIT, Posed, Puppet, QUIET, QUIET_STEPS};
+pub use crate::puppet::{
+    CATCH_UP, Drawn, IK_ROUNDS, LONGEST_STEP, MODEL_UNIT, Posed, Puppet, QUIET, QUIET_TIME,
+};
 pub use crate::quality::{Class, Quality, Why};
 pub use crate::released::{newer_manifest_keys, newer_scene_keys};
 pub use crate::rig::{

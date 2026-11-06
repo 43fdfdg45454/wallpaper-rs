@@ -645,11 +645,11 @@ max]` degrees of its rest pose and `weight` blends the turns with the pose. `"cu
 pointer only while the scene may read it (the pointer input, told to the user like any other use of
 the pointer); without it the chain keeps its pose. `"layer:<id>"` follows the position of that layer.
 
-Bodies of `physics` swing in substeps of 1/120 s, also on battery, so each frame interval runs as
-many substeps as it covers (one at 120 fps, two at 60, four at 30) and the motion is the same at any
-of those rates; at most 30 substeps (a quarter second) run a frame: each step follows the pose of the parent along the
-time it covers, also on frames that take no step, and a frame between steps shows the bodies where
-their last step carries them; longer gaps are dropped. A `spring` pulls the end of
+Bodies of `physics` take one step per drawn frame, as long as the frame interval (1/120 s at
+120 fps, 1/60 s at 60, 1/30 s at 30), on battery as well, so the motion matches at any of those
+rates; a frame interval longer than 1/30 s is split into equal steps of at most 1/30 s, and a frame
+catches up at most a quarter second, dropping longer gaps. Each step follows the pose of the
+parent along the time it covers. A `spring` pulls the end of
 its bone back to where the pose puts it (`stiffness`), a `rigid` bone swings like a pendulum held
 loosely to its pose, and a `rope` links the bone and its first children (those without a body of
 their own, at most 8 links) into a chain that hangs and sways. `inertia` is how much a body stays

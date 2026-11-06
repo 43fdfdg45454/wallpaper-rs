@@ -47,10 +47,10 @@ impl Puppet {
         self.worlds(cx, m);
     }
 
-    pub(crate) fn push(&mut self, set: &RigControl, h: f32) {
+    pub(crate) fn push(&mut self, set: &RigControl) {
         for (name, [x, y]) in &set.impulses {
             let Some(n) = self.rig.joint(name) else { continue };
-            self.bodies.iter_mut().for_each(|b| b.push(n as u16, [*x, -*y], h));
+            self.bodies.iter_mut().for_each(|b| b.push(n as u16, [*x, -*y]));
             self.dirty = true;
         }
     }

@@ -47,7 +47,7 @@ impl Runtime {
             for p in &mut puppets {
                 let Some(m) = self.layer(&p.layer).and_then(figure) else { continue };
                 cx.wake.set(Wake::Idle);
-                (p.lag, p.since) = ((p.lag + dt).min(1.0), (p.since + dt).min(1.0));
+                p.lag = (p.lag + dt).min(1.0);
                 p.step(&cx, &m, dt, (&mut ended, &mut heard));
                 p.wake = p.wake.min(cx.wake.get());
             }
@@ -65,10 +65,9 @@ impl Runtime {
             let camera = cx.lens(self.level);
             let cx = Context { view: self.viewed.get(), camera, ..cx };
             let [x, y] = wind.map_or([0.0; 2], |w| w.get(&cx).0);
-            let h = self.physics_step();
             let gust = self.scene.canvas.gusts.map_or([0.65, 0.35], |g| [1.0 - g, g]);
             let frozen = self.level == Quality::Q0;
-            let sim = Sim { frozen, h, wind: [x, -y], gust, t: self.t as f32, unit: 1.0 };
+            let sim = Sim { frozen, h: 0.0, wind: [x, -y], gust, t: self.t as f32, unit: 1.0 };
             let pointer = self.pointer.pos.filter(|_| self.uses().cursor);
             for (i, p) in puppets.iter_mut().enumerate() {
                 let shown = i >= 64 || seen & (1 << i) != 0;
@@ -88,14 +87,9 @@ impl Runtime {
         self.puppets = puppets;
     }
 
-    fn physics_step(&self) -> f32 {
-        crate::puppet::STEP
-    }
-
     pub(crate) fn steer_rigs(&mut self, rigs: &BTreeMap<String, RigControl>) {
-        let h = self.physics_step();
         for (id, set) in rigs.iter().filter(|(_, r)| !r.impulses.is_empty()) {
-            self.puppets.iter_mut().filter(|p| p.layer == *id).for_each(|p| p.push(set, h));
+            self.puppets.iter_mut().filter(|p| p.layer == *id).for_each(|p| p.push(set));
         }
     }
 

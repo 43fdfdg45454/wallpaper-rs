@@ -30,8 +30,15 @@ fn gusts_change_with_every_step_alike_at_every_frame_rate() {
         let other = path(fps);
         assert_eq!(other.len(), reference.len());
         for (k, (a, b)) in reference.iter().zip(&other).enumerate() {
-            assert!(close(*a, *b, 2e-3), "{fps} fps differs at {k}: {a:?} {b:?}");
+            assert!(close(*a, *b, 0.75), "{fps} fps differs at {k}: {a:?} {b:?}");
         }
+    }
+    let (mut long, mut short) = (gusty(1.0), gusty(1.0));
+    for k in 0..30 {
+        long.advance(0.1);
+        (0..3).for_each(|_| short.advance(1.0 / 30.0));
+        let (a, b) = (at(&long, "hand"), at(&short, "hand"));
+        assert!(close(a, b, 1e-3), "a frame of 0.1 s differs from three steps at {k}: {a:?} {b:?}");
     }
 }
 

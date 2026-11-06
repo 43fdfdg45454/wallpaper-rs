@@ -1,5 +1,5 @@
 use super::limb::{angle, end, gap, length, mirrored, pivot, range, turn, wrap};
-use super::swing::{Body, MAX_STEPS, QUIET, QUIET_STEPS, Sim};
+use super::swing::{Body, CATCH_UP, LONGEST_STEP, QUIET, QUIET_TIME, Sim};
 use super::{Fig, Puppet};
 use crate::resolve::Context;
 use crate::rigged::math::{Trs, invert, mul};
@@ -10,7 +10,7 @@ fn mix(a: [f32; 2], b: [f32; 2], f: f32) -> [f32; 2] {
 }
 
 fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
-    let h = sim.h;
+    let (h, scale) = (sim.h, sim.h / b.step.max(1e-6));
     let lerp = |b: &Body, i: usize, f: f32| mix(b.before[i], b.pins[i], f);
     let decay = (-e.damping * 10.0 * h).exp();
     let k = match e.mode {
@@ -20,7 +20,7 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
     let (pin, from) = (lerp(b, 0, f1), lerp(b, 0, f0));
     let carry = gap(from, pin).map(|v| v * (1.0 - e.inertia));
     let pull = |at: [f32; 2], was: [f32; 2], target: [f32; 2], drop: f32, i: usize| {
-        let v = gap(was, at).map(|v| v * decay);
+        let v = gap(was, at).map(|v| v * decay * scale);
         let gust = sim.gust[0] + sim.gust[1] * crate::camera::noise(sim.t * 0.9 + i as f32 * 0.37, 7);
         let air = [0, 1].map(|c| (sim.wind[c] * gust - v[c] / h) * 4.0 * e.wind);
         let a = [k * (target[0] - at[0]) + air[0], k * (target[1] - at[1]) + air[1] + drop];
@@ -58,20 +58,19 @@ fn advance(b: &mut Body, e: &BonePhysics, sim: &Sim, (f0, f1): (f32, f32)) {
         b.at[i] = [b.at[i - 1][0] + rest * a.cos(), b.at[i - 1][1] + rest * a.sin()];
         speed = speed.max(length(gap(b.was[i], b.at[i])));
     }
-    b.quiet = if speed < QUIET * sim.unit { (b.quiet + 1).min(QUIET_STEPS) } else { 0 };
+    b.quiet = if speed < QUIET * sim.unit * h { (b.quiet + h).min(QUIET_TIME) } else { 0.0 };
+    b.step = h;
 }
 
 impl Puppet {
     pub(crate) fn swing(&mut self, cx: &Context, m: &Fig, sim: &Sim) {
         let sim = &Sim { wind: sim.wind.map(|w| w * m.unit), unit: m.unit, ..*sim };
-        let steps = ((self.lag / sim.h + 1e-3) as u32).min(MAX_STEPS);
-        self.lag =
-            if steps == MAX_STEPS || sim.frozen { 0.0 } else { (self.lag - steps as f32 * sim.h).max(0.0) };
-        let ran = sim.h * steps as f32;
-        let span = if steps == MAX_STEPS { ran } else { self.since.max(ran) }.max(1e-6);
-        let at = |s: u32| (s as f32 * sim.h / span).min(1.0);
+        let elapsed = if sim.frozen { 0.0 } else { self.lag.min(CATCH_UP) };
+        let steps = if elapsed < 1e-3 { 0 } else { (elapsed / LONGEST_STEP - 1e-3).ceil() as u32 };
+        let sim = &Sim { h: elapsed / steps.max(1) as f32, ..*sim };
+        let at = |s: u32| s as f32 / steps.max(1) as f32;
         if steps > 0 || sim.frozen {
-            self.since = self.lag;
+            self.lag = 0.0;
         }
         for k in 0..self.bodies.len() {
             let e = &m.rig.physics[self.bodies[k].entry];
@@ -82,32 +81,31 @@ impl Puppet {
                 continue;
             }
             if body.before != body.pins {
-                body.quiet = 0;
+                body.quiet = 0.0;
             }
             let windy = e.wind > 0.0 && sim.wind != [0.0; 2];
-            let busy = windy || body.quiet < QUIET_STEPS;
+            let busy = windy || body.quiet < QUIET_TIME;
             if busy {
                 for s in 0..steps {
-                    let t = sim.t - self.lag - (steps - 1 - s) as f32 * sim.h;
+                    let t = sim.t - (steps - 1 - s) as f32 * sim.h;
                     advance(body, e, &Sim { t, ..*sim }, (at(s), at(s + 1)));
                 }
             }
             if steps > 0 {
-                let f = at(steps);
-                body.before.iter_mut().zip(&body.pins).for_each(|(b, p)| *b = mix(*b, *p, f));
+                body.before.clone_from_slice(&body.pins);
             }
-            if windy || body.quiet < QUIET_STEPS {
+            if windy || body.quiet < QUIET_TIME {
                 cx.note(Wake::Frame);
             }
-            self.lean(k, e, if sim.frozen { 0.0 } else { (self.lag / sim.h).clamp(0.0, 1.0) });
+            self.lean(k, e);
             self.worlds(cx, m);
         }
     }
 
-    fn lean(&mut self, k: usize, e: &BonePhysics, ahead: f32) {
+    fn lean(&mut self, k: usize, e: &BonePhysics) {
         let Puppet { bodies, locals, worlds, rig, .. } = self;
         let body = &bodies[k];
-        let shown = |i: usize| mix(body.was[i], body.at[i], 1.0 + ahead);
+        let shown = |i: usize| body.at[i];
         for (i, &n) in body.nodes.iter().enumerate() {
             let n = n as usize;
             let parent = rig.joints[n].parent.map(|p| worlds[p as usize]);
