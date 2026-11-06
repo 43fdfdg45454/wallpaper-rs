@@ -107,7 +107,7 @@ impl Project {
 
     pub fn hold(&mut self, on: bool) {
         let history = &mut self.history;
-        history.begun &= on && history.open;
+        history.begun = false;
         history.open = on;
     }
 

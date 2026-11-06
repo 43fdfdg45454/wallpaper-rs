@@ -65,6 +65,14 @@ fn a_held_gesture_stays_one_step_however_long_it_pauses() {
     drag(&mut project, background("#808080"));
     project.hold(false);
     assert_eq!(project.history.done.len(), steps + 2, "two presses of the same handle made one step");
+    let steps = project.history.done.len();
+    project.hold(true);
+    drag(&mut project, background("#909090"));
+    std::thread::sleep(Duration::from_millis(MERGE_MS + 100));
+    project.hold(true);
+    drag(&mut project, background("#a0a0a0"));
+    project.hold(false);
+    assert_eq!(project.history.done.len(), steps + 2, "a press without a release joined the old step");
 }
 
 #[test]
