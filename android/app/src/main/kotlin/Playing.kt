@@ -38,7 +38,9 @@ internal fun MediaGrants(form: JSONObject, grant: (String, Boolean) -> Unit) {
     Text(stringResource(note), Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodySmall)
     if (on && access) {
         val shown = Players.status
-        val word = { yes: Boolean -> context.getString(if (yes) R.string.media_yes else R.string.media_no) }
+        val yesWord = stringResource(R.string.media_yes)
+        val noWord = stringResource(R.string.media_no)
+        val word = { yes: Boolean -> if (yes) yesWord else noWord }
         val line = if (!shown.listening) stringResource(R.string.media_status_off)
         else stringResource(R.string.media_status, shown.players, word(shown.track), word(shown.playing), word(shown.cover))
         Text(line, Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodySmall)
