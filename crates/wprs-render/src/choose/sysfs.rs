@@ -10,11 +10,20 @@ fn read(path: &Path) -> Option<String> {
     std::fs::read_to_string(path).ok().map(|text| text.trim().to_owned())
 }
 
+fn bus(device: &Path) -> Option<u8> {
+    let real = std::fs::canonicalize(device).ok()?;
+    let name = real.file_name()?.to_str()?;
+    let mut parts = name.split(':');
+    let (_, bus) = (parts.next()?, parts.next()?);
+    u8::from_str_radix(bus, 16).ok()
+}
+
 fn card(device: &Path) -> Option<(u32, DeviceType)> {
     let vendor = u32::from_str_radix(read(&device.join("vendor"))?.trim_start_matches("0x"), 16).ok()?;
     let memory = read(&device.join("mem_info_vram_total")).and_then(|v| v.parse::<u64>().ok());
     let kind = match vendor {
-        INTEL => DeviceType::IntegratedGpu,
+        INTEL if bus(device) == Some(0) => DeviceType::IntegratedGpu,
+        INTEL if bus(device).is_some() => DeviceType::DiscreteGpu,
         NVIDIA => DeviceType::DiscreteGpu,
         AMD if memory.is_some_and(|m| m <= CARVED) => DeviceType::IntegratedGpu,
         AMD if memory.is_some() => DeviceType::DiscreteGpu,
@@ -86,5 +95,28 @@ mod tests {
         assert_eq!(guess(AMD, &cards(big.path())), DeviceType::DiscreteGpu);
         assert!(cards(Path::new("/nonexistent")).is_empty());
         assert_eq!(guess(INTEL, &[]), DeviceType::Other);
+    }
+
+    fn linked(root: &Path, card: &str, address: &str) {
+        let device = root.join("devices").join(address);
+        std::fs::create_dir_all(&device).unwrap();
+        std::fs::write(device.join("vendor"), "0x8086\n").unwrap();
+        let class = root.join("class/drm").join(card);
+        std::fs::create_dir_all(&class).unwrap();
+        std::os::unix::fs::symlink(&device, class.join("device")).unwrap();
+    }
+
+    #[test]
+    fn an_intel_card_on_its_own_bus_is_dedicated_and_the_one_on_bus_zero_integrated() {
+        let root = tempfile::tempdir().unwrap();
+        linked(root.path(), "card0", "0000:00:02.0");
+        linked(root.path(), "card1", "0000:03:00.0");
+        let found = cards(root.path());
+        assert_eq!(found, [(INTEL, DeviceType::IntegratedGpu), (INTEL, DeviceType::DiscreteGpu)]);
+        assert_eq!(guess(INTEL, &found), DeviceType::Other, "two Intel cards of both kinds were guessed");
+        assert_eq!(guess(INTEL, &found[1..]), DeviceType::DiscreteGpu, "a dedicated Intel card");
+        let plain = tempfile::tempdir().unwrap();
+        write(plain.path(), "card0", "0x8086", None);
+        assert_eq!(cards(plain.path()), [(INTEL, DeviceType::Other)], "an Intel card of unknown place");
     }
 }
