@@ -722,7 +722,10 @@ todas las pantallas, vídeos y escenas; hasta entonces la app, `wprs-ctl gpu` y 
 render.gpu` lo avisan (`gpu_restart` en `wprs-ctl state`); cambiar solo mayúsculas y minúsculas del
 nombre no pide reiniciar. Si ninguna tarjeta coincide, o la elegida no se puede abrir, el daemon
 arranca igual con la elección automática y lo avisa en la app, en `wprs-ctl gpu` y en
-`gpu_warning`. Con `WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
+`gpu_warning`. Una tarjeta que solo se alcanza con OpenGL ES, cuyo controlador no dice de qué tipo
+es, toma el tipo que el sistema le da en `/sys/class/drm` (Intel integrada, NVIDIA dedicada, AMD
+integrada con 2 GiB de memoria propia o menos), así que `integrated` también la elige. Con
+`WGPU_BACKEND` puesto, el daemon solo carga los controladores de esa API, también
 al listar las tarjetas. La clase de cada
 tarjeta se mide y se guarda aparte, así que volver a una no la mide otra vez. La dedicada dibuja
 las escenas pesadas con más calidad y gasta más energía. El ajuste no se sincroniza ni entra en los

@@ -217,8 +217,13 @@ frame it gave.
 with an integrated and a dedicated card renders on the integrated one. `integrated`, `dedicated`
 and `software` take the first Vulkan adapter of that kind, and any other value the first one whose
 name contains it, without regard to case, so two cards of the same kind are told apart by their
-names; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`,
-and `WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
+names; OpenGL ES is looked at only when Vulkan has no hardware adapter or the choice is `software`.
+An OpenGL ES adapter whose driver names no kind takes the kind the system gives its card in
+`/sys/class/drm` (Intel integrated, NVIDIA dedicated, AMD integrated when its own memory is at most
+2 GiB and dedicated above), matched by vendor or, with a single card, that card; with several cards
+of the vendor and different kinds it stays `other`. So `integrated` also picks an integrated card
+that only OpenGL ES reaches.
+`WGPU_BACKEND` still limits the backend, also when the daemon lists the cards, so no other
 driver is loaded. When no adapter matches, or the matching adapter cannot open a device, the daemon
 starts with the automatic choice, logs a warning and sets `GetState().gpu_warning`; it never fails
 to start because of this setting. The renderer is made once at start and shared by every output, video and scene,

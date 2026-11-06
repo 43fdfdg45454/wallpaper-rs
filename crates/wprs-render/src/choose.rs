@@ -8,6 +8,7 @@ use wprs_core::GpuChoice;
 use wprs_core::model::GpuAdapter;
 
 mod listing;
+mod sysfs;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fallback {
@@ -55,7 +56,7 @@ pub(crate) fn listed(instance: &wgpu::Instance, backends: Backends) -> Vec<wgpu:
 }
 
 fn described(adapters: &[wgpu::Adapter]) -> Vec<(String, DeviceType, Backend)> {
-    adapters.iter().map(|a| a.get_info()).map(|i| (i.name, i.device_type, i.backend)).collect()
+    adapters.iter().map(|a| a.get_info()).map(|i| (i.name.clone(), sysfs::kind_of(&i), i.backend)).collect()
 }
 
 fn hardware(adapters: &[wgpu::Adapter]) -> bool {

@@ -25,7 +25,7 @@ impl Renderer {
         }
         let made = |i: &wgpu::AdapterInfo| GpuAdapter {
             name: i.name.clone(),
-            kind: kind(i.device_type).into(),
+            kind: kind(super::sysfs::kind_of(i)).into(),
             backend: backend(i.backend),
             used: same(i),
         };

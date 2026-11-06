@@ -34,7 +34,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
         [3, 2, 2, 1].map(Some)
     );
     assert_eq!([named("venus"), named("Unknown")], [Some(4), Some(7)]);
-    assert_eq!(named("Arc A770"), None, "a missing name finds nothing");
+    assert_eq!(named("Example missing card"), None, "a missing name finds nothing");
     let laptop = vec![all[0].clone(), all[5].clone()];
     assert_eq!(pick(&GpuChoice::Software, &laptop), Some(1), "OpenGL ES when Vulkan has none");
     assert_eq!(
@@ -53,7 +53,7 @@ fn a_graphics_card_is_chosen_by_kind_or_by_part_of_its_name() {
 fn a_chosen_card_that_cannot_open_falls_back_to_the_automatic_choice() {
     let failed = Some(Err::<u8, _>(RenderError::Device("no device for these limits".into())));
     assert_eq!(settle(failed, "dedicated"), Err(Fallback::Unusable));
-    assert_eq!(settle(None::<Result<u8, RenderError>>, "Arc A770"), Err(Fallback::Missing));
+    assert_eq!(settle(None::<Result<u8, RenderError>>, "Example missing card"), Err(Fallback::Missing));
     assert_eq!(settle(Some(Ok(7)), "dedicated"), Ok(7));
 }
 
