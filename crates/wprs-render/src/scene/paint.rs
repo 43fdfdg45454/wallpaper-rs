@@ -125,7 +125,7 @@ impl<'a> Painter<'a, '_, '_> {
     }
 
     pub(crate) fn digest(&self, range: Range<usize>, extra: impl std::fmt::Debug) -> u64 {
-        self.sealed(range, extra, true)
+        self.sealed(range, (extra, self.frame.quality), true)
     }
 
     pub(crate) fn sealed(&self, range: Range<usize>, extra: impl std::fmt::Debug, lamps: bool) -> u64 {

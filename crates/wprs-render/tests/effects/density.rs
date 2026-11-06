@@ -26,3 +26,17 @@ fn a_magnified_layer_runs_its_effects_on_its_own_texels_without_blurring_them() 
     let (_, mean) = apart(&lower.shot_at(size), &b);
     assert!(mean < 24.0, "mean {mean}");
 }
+
+#[test]
+fn a_still_layer_drawn_at_a_lower_level_is_drawn_again_when_the_level_rises_at_the_same_size() {
+    let white = json!({ "color": "#ffffff", "blend": "multiply" });
+    let size = (W * 4, H * 4);
+    let Some(mut fresh) = Fx::new("tint", white.clone()).input(speckles()).run() else { return };
+    let Some(mut risen) = Fx::new("tint", white).input(speckles()).quality(Quality::Q2).run() else { return };
+    let low = risen.shot_at(size);
+    risen.quality = Quality::Q3;
+    let (high, want) = (risen.shot_at(size), fresh.shot_at(size));
+    assert!(apart(&low, &want).1 > 1.0, "the lower level should blur the picture");
+    let (most, mean) = apart(&high, &want);
+    assert!(most <= 3 && mean < 0.5, "most {most}, mean {mean}");
+}

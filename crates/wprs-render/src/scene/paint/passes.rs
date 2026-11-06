@@ -98,7 +98,7 @@ impl<'a> Painter<'a, '_, '_> {
         let id = d.layer as *const Layer as usize;
         let (fed, moving) = self.feeding(i..d.end);
         let still = !d.dynamic && self.backdrop.is_none() && !moving && !self.shifting(i..d.end);
-        let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed)));
+        let key = still.then(|| self.digest(i..d.end, (rect, self.srgb, fed, dense.to_bits(), size)));
         if key.is_some() && self.caches.get(&id).map(|c| c.key) == key {
             self.reused += 1;
             self.kept.push(id);
