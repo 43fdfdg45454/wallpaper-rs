@@ -233,8 +233,12 @@ at the level above keeps a scene from bouncing between two levels. The phone ste
 its ceiling is `q3` (one step under the tier level with power saving, lower while warm or hot), it
 starts at the level the cost model fits and its budget is three quarters of the frame interval. It
 rises, also on battery, when the measured average times the ratio of the level above (measured at
-the last step down, else from the cost model) and a 15 % margin fits that budget for 15 seconds, and
-its frame rate never depends on the level (60 on battery unless the user sets another cap). It
+the last step down, else from the cost model) and a 15 % margin fits that budget for 15 seconds.
+When that product does not fit but the average with the 15 % margin alone does, the phone tries the
+level above anyway after 15 seconds: if it is over the budget it comes back down and the ratio
+measured there replaces the model for the next decision, and every try that comes back within 30
+seconds doubles the wait for the next one, up to four times (four minutes); a try that holds for 30
+seconds resets that wait. Its frame rate never depends on the level (60 on battery unless the user sets another cap). It
 presents through three swapchain images (latency 2), so the GPU draws a frame while the next one is
 recorded.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,
