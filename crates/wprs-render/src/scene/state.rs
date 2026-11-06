@@ -109,19 +109,40 @@ fn painted(paint: &Param) -> RgbaImage {
 }
 
 impl Renderer {
-    pub(crate) fn emitted(&self, paints: &mut Vec<(String, String, Image)>, frame: &wprs_scene::Frame<'_>) {
+    pub(crate) fn emitted(&self, view: &mut super::SceneView, frame: &wprs_scene::Frame<'_>) {
         let lists = frame.effects.iter().flat_map(|e| &e.emitters).map(|(_, l)| l);
-        let mut used = Vec::new();
-        for list in lists.filter(|l| !l.is_empty()) {
-            let key = wprs_scene::emitter_key(list);
-            if !paints.iter().any(|(o, k, _)| o.starts_with(EMITTERS) && *k == key) {
-                let made =
-                    emitters(list).and_then(|i| self.upload_pixels(&Pixels::new(i), true, Some(false)));
-                paints.extend(made.map(|image| (LIVE.to_owned(), key.clone(), image)));
+        let lists: Vec<_> =
+            lists.filter(|l| !l.is_empty()).map(|l| (wprs_scene::emitter_key(l), l)).collect();
+        let paints = &mut view.paints;
+        let had = |paints: &[(String, String, Image)], key: &String| {
+            paints.iter().any(|(o, k, _)| o.starts_with(EMITTERS) && k == key)
+        };
+        for (key, list) in &lists {
+            if had(paints, key) {
+                continue;
             }
-            used.push(key);
+            let Some(image) = emitters(list) else { continue };
+            let free = |(o, k, i): &&mut (String, String, Image)| {
+                o == LIVE && i.0.size() == image.dimensions() && !lists.iter().any(|(w, _)| w == k)
+            };
+            if let Some(spare) = paints.iter_mut().find(|p| free(p)) {
+                self.rewrite(&spare.2.0, &image);
+                spare.1.clone_from(key);
+                continue;
+            }
+            let made = self.upload_pixels(&Pixels::new(image), true, Some(false));
+            view.pool.created += u32::from(made.is_some());
+            paints.extend(made.map(|image| (LIVE.to_owned(), key.clone(), image)));
         }
-        paints.retain(|(o, k, _)| o != LIVE || used.contains(k));
+        paints.retain(|(o, k, _)| o != LIVE || lists.iter().any(|(w, _)| w == k));
+    }
+
+    fn rewrite(&self, gpu: &crate::texture::GpuImage, image: &RgbaImage) {
+        let (w, h) = image.dimensions();
+        let layout =
+            wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(w * 4), rows_per_image: Some(h) };
+        let extent = wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 };
+        self.queue.write_texture(gpu.texture.as_image_copy(), image.as_raw(), layout, extent);
     }
 
     pub(crate) fn paints(&self, scene: &Scene) -> Vec<(String, String, Image)> {

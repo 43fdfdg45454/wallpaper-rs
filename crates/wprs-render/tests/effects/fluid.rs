@@ -82,3 +82,19 @@ fn fluid_draws_keyframed_emitters_as_they_are_at_each_time() {
     let Some(still) = emitted(quiet) else { return };
     assert!(still.at(54, 26)[0] < 30, "{:?}", still.at(54, 26));
 }
+
+#[test]
+fn moving_emitters_write_into_the_picture_they_already_have() {
+    let keys = json!({ "keys": [[0, [{ "from": [0.1, 0.9], "strength": 40 }]], [3, [{ "from": [0.9, 0.9], "strength": 40 }]]] });
+    let params = json!({ "emitters": keys, "color": "#ffaa00" });
+    let Some(mut run) = Fx::new("fluid", params).input(solid([20; 3])).run() else { return };
+    for _ in 0..4 {
+        run.runtime.advance(1.0 / 30.0);
+        run.shot();
+    }
+    for _ in 0..10 {
+        run.runtime.advance(1.0 / 30.0);
+        run.shot();
+        assert_eq!(run.view.stats().created, 0, "a moving emitter made a new picture: {:?}", run.view.stats());
+    }
+}
