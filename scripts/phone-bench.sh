@@ -9,7 +9,8 @@ usage: WPRS_ADB_SERIAL=<serial> scripts/phone-bench.sh build
 Renders a scene package offscreen on a phone over adb, through the renderer of the live wallpaper,
 and prints its report as JSON with the battery temperature before and after the run.
 Options of run: --level q0|q1|q2|q3|auto|fitted, --frames N, --paced SECONDS, --fps N, --size WxH,
---passes, --shot FILE.png. Environment: ADB (default adb), WPRS_PHONE_DIR (default
+--passes, --overlap, --shot FILE.png. Environment: ADB (default adb), WPRS_ABI (arm64-v8a, the
+default, or x86_64 for an emulator), WPRS_PHONE_DIR (default
 /data/local/tmp/wprs-bench), WPRS_COOL (wait until the battery is under this many degrees, default
 36), WPRS_AWAKE_TRIES (checks five minutes apart while the screen is on, default 6).
 EOF
@@ -22,7 +23,13 @@ ADB=${ADB:-adb}
 DIR=${WPRS_PHONE_DIR:-/data/local/tmp/wprs-bench}
 COOL=${WPRS_COOL:-36}
 TRIES=${WPRS_AWAKE_TRIES:-6}
-BIN=${CARGO_TARGET_DIR:-target}/aarch64-linux-android/release/examples/bench
+ABI=${WPRS_ABI:-arm64-v8a}
+case $ABI in
+  arm64-v8a) TRIPLE=aarch64-linux-android ;;
+  x86_64) TRIPLE=x86_64-linux-android ;;
+  *) echo "WPRS_ABI takes arm64-v8a or x86_64, not $ABI" >&2; exit 2 ;;
+esac
+BIN=${CARGO_TARGET_DIR:-target}/$TRIPLE/release/examples/bench
 shell() { "$ADB" -s "$WPRS_ADB_SERIAL" shell "$@"; }
 send() {
   local size n=0
@@ -63,7 +70,7 @@ case $1 in
       "$cargo_home" "$rustup_home" "$home" "$src")
     CARGO_ENCODED_RUSTFLAGS=$flags \
       CFLAGS="-ffile-prefix-map=$cargo_home=/cargo -ffile-prefix-map=$rustup_home=/rustup -ffile-prefix-map=$home=/build -ffile-prefix-map=$src=/src" \
-      cargo ndk -t arm64-v8a -P 31 build -p wprs-android --release --locked --example bench
+      cargo ndk -t "$ABI" -P 31 build -p wprs-android --release --locked --example bench
     ;;
   copy)
     shift

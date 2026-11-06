@@ -17,7 +17,7 @@ by measured GPU time as the phone does, starting where the phone would and listi
 the swapchain of the phone, and reports the rate it held and the slots it missed; it does not time
 the particle steps apart, so the CPU never waits for the GPU there). The same bench runs on a phone:
 `scripts/phone-bench.sh build` cross-compiles the `bench` example of `crates/wprs-android` for arm64
-with the NDK and the same path remaps as the Gradle build of the app, so both share one cache, `copy FILE.wpak...` copies it and the packages to
+(or x86_64 for an emulator with `WPRS_ABI=x86_64`) with the NDK and the same path remaps as the Gradle build of the app, so both share one cache, `copy FILE.wpak...` copies it and the packages to
 `/data/local/tmp/wprs-bench` (nothing else on the phone is touched and no app is installed), and
 `run NAME.wpak --level q3 --passes` or `--level auto --paced 30` loads the package the way the
 live wallpaper does (phone limits, properties, tier from its GPU, 1440x3040 unless `--size` says
