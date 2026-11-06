@@ -221,7 +221,12 @@ revoked through `revoked`.
 | Check a tree as a client would, without storing anything | `verify(fetch, url_or_dir, now)` |
 
 `status(dir)` reports the signers of the newest root, whether it is complete and the share
-URL query. `settings(dir)` returns the current settings for editing before a rotation.
+URL query. `settings(dir)` returns the current settings for editing before a rotation, with the
+lifetime the current root was written with: `init` and `rotate_root` keep `root_days` in
+`catalog.json`, and a catalog without it means 365. A `Charter` changes those settings: the keys it
+names for an author replace the keys that author had, `removed` drops authors before that, and
+`mirrors` replaces the mirrors when present, so an empty list drops them all
+(`repo rotate-root --no-mirrors`) and a missing one keeps them.
 
 ## Client update
 

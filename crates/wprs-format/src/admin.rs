@@ -19,7 +19,8 @@ pub struct RootStatus {
 pub fn init(dir: &Path, settings: &Settings, now: i64) -> Result<RootStatus> {
     require(!root_path(dir, 1).exists(), "dir", "already holds a repository")?;
     write(&root_path(dir, 1), &serde_json::to_vec(&settings.root(1, None, now)?)?, false)?;
-    Catalog { shard_bits: settings.shard_bits, ..Catalog::default() }.save(dir)?;
+    Catalog { shard_bits: settings.shard_bits, root_days: Some(settings.root_days), ..Catalog::default() }
+        .save(dir)?;
     status(dir)
 }
 
@@ -28,7 +29,8 @@ pub fn rotate_root(dir: &Path, settings: &Settings, now: i64) -> Result<RootStat
     let (repo_id, version) = latest(dir)?;
     let root = settings.root(version + 1, Some(repo_id), now)?;
     write(&root_path(dir, version + 1), &serde_json::to_vec(&root)?, false)?;
-    Catalog { shard_bits: settings.shard_bits, ..Catalog::load(dir)? }.save(dir)?;
+    let root_days = Some(settings.root_days);
+    Catalog { shard_bits: settings.shard_bits, root_days, ..Catalog::load(dir)? }.save(dir)?;
     status(dir)
 }
 

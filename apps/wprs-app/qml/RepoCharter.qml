@@ -109,7 +109,7 @@ Kirigami.Dialog {
                 required property int index
 
                 Kirigami.FormData.label: index === 0 ? App.tr("Remove authors:") : ""
-                text: modelData
+                text: App.tr("%1, keys %2", modelData, (charter.current?.authors?.[modelData] ?? []).join(", "))
                 checked: charter.removed.includes(modelData)
                 onToggled: charter.removed = checked ? charter.removed.concat([modelData]) : charter.removed.filter(id => id !== modelData)
             }
@@ -118,7 +118,7 @@ Kirigami.Dialog {
         QQC2.TextField {
             id: author
 
-            Kirigami.FormData.label: App.tr("Add an author:")
+            Kirigami.FormData.label: charter.fresh ? App.tr("Add an author:") : App.tr("Add an author or replace its keys:")
             placeholderText: App.tr("Author id")
         }
 

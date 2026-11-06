@@ -17,7 +17,7 @@ pub struct Charter {
     pub root_days: Option<u32>,
     pub entry_max_days: Option<u32>,
     pub max_package_size: Option<u64>,
-    pub mirrors: Vec<String>,
+    pub mirrors: Option<Vec<String>>,
     pub shard_bits: Option<u8>,
 }
 
@@ -45,7 +45,7 @@ impl Charter {
             crate::require(found, &format!("authors/{id}"), "is not an author of the root")?;
         }
         for (id, keys) in &self.authors {
-            s.authors.entry(id.clone()).or_default().extend(texts(keys)?);
+            s.authors.insert(id.clone(), texts(keys)?);
         }
         s.root_threshold = self.threshold.unwrap_or(s.root_threshold);
         s.require_author_signature = self.require_author_signature.unwrap_or(s.require_author_signature);
@@ -54,8 +54,8 @@ impl Charter {
         s.entry_max_days = self.entry_max_days.unwrap_or(s.entry_max_days);
         s.max_package_size = self.max_package_size.unwrap_or(s.max_package_size);
         s.shard_bits = self.shard_bits.unwrap_or(s.shard_bits);
-        if !self.mirrors.is_empty() {
-            s.mirrors = self.mirrors;
+        if let Some(mirrors) = self.mirrors {
+            s.mirrors = mirrors;
         }
         Ok(())
     }

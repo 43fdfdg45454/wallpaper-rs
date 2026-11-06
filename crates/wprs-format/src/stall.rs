@@ -99,7 +99,7 @@ fn shown(dir: &Path) -> Result<Value> {
         "policy": {
             "threshold": settings.root_threshold, "online_authors": settings.online_authors,
             "require_author_signature": settings.require_author_signature,
-            "entry_max_days": settings.entry_max_days, "max_package_size": settings.max_package_size,
+            "entry_max_days": settings.entry_max_days, "root_days": settings.root_days, "max_package_size": settings.max_package_size,
             "mirrors": settings.mirrors, "shard_bits": settings.shard_bits,
         },
     }))

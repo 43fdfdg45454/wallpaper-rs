@@ -12,7 +12,7 @@ GridLayout {
         const p = current?.policy ?? {};
         online.checked = p.online_authors ?? false;
         signed.checked = p.require_author_signature ?? false;
-        days.value = 365;
+        days.value = p.root_days ?? 365;
         entries.value = p.entry_max_days ?? 14;
         size.value = Math.round((p.max_package_size ?? 1073741824) / 1048576);
         mirrors.text = (p.mirrors ?? []).join(", ");

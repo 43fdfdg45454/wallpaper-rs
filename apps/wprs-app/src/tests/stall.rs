@@ -141,8 +141,14 @@ fn a_static_repository_is_made_signed_rotated_and_revoked_from_the_app() {
     assert_eq!(revoked(&dir, id, None, "takedown", "").unwrap()["packages"][0]["revoked"], true);
     let print = fingerprint(&author.public).unwrap();
     assert_eq!(key_revoked(&dir, &print, "malware").unwrap()["revoked_keys"][0], print.as_str());
+    let next = keygen(None).unwrap();
+    let swap = serde_json::json!({"authors": {"ana": [file("next.pub", &next.public)]}, "root_days": 45});
+    let state = chartered(&dir, &swap.to_string(), false).unwrap();
+    assert_eq!(state["authors"]["ana"], serde_json::json!([fingerprint(&next.public).unwrap()]));
+    assert_eq!(state["policy"]["root_days"], 45);
+    rooted(&dir, Path::new(&file("root.key", &root.secret)), None).unwrap();
     let state = chartered(&dir, r#"{"removed": ["ana"], "root_days": 30}"#, false).unwrap();
-    assert_eq!((&state["done"], &state["root"]["version"]), (&"rotated".into(), &2.into()));
+    assert_eq!((&state["done"], &state["root"]["version"]), (&"rotated".into(), &3.into()));
     assert_eq!((&state["authors"], &state["root"]["complete"]), (&serde_json::json!({}), &false.into()));
     assert!(chartered(&dir, r#"{"removed": ["ana"]}"#, false).is_err());
 }

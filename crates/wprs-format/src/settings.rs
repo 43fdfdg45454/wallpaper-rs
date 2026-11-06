@@ -44,7 +44,7 @@ impl Default for Settings {
 }
 
 pub fn settings(dir: &Path) -> Result<Settings> {
-    let root = load(dir, latest(dir)?.1)?;
+    let (root, catalog) = (load(dir, latest(dir)?.1)?, Catalog::load(dir)?);
     let keys = |fps: &[String]| root.material(fps).into_iter().map(|(_, k)| k.to_string()).collect();
     Ok(Settings {
         name: root.name.clone(),
@@ -56,9 +56,9 @@ pub fn settings(dir: &Path) -> Result<Settings> {
         entry_max_days: root.policy.entry_max_days,
         max_package_size: root.policy.max_package_size,
         mirrors: root.mirrors.clone(),
-        shard_bits: Catalog::load(dir)?.shard_bits,
+        shard_bits: catalog.shard_bits,
         online_authors: root.policy.online(),
-        ..Settings::default()
+        root_days: catalog.root_days.unwrap_or(Settings::default().root_days),
     })
 }
 

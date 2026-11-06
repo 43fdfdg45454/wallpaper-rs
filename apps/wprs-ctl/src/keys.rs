@@ -13,9 +13,16 @@ use wprs_format::{Charter, Signer};
 pub struct Policy {
     #[arg(long, help = "Number of root keys that must sign a root")]
     threshold: Option<usize>,
-    #[arg(long = "author", value_name = "ID=PUB", help = "Author key; repeat for several keys of an author")]
+    #[arg(
+        long = "author",
+        value_name = "ID=PUB",
+        help = "Author key; repeat for several keys of an author. The keys given replace the keys the author had"
+    )]
     authors: Vec<String>,
-    #[arg(long, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL")]
+    #[arg(
+        long, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL",
+        help = "Refuse packages that no author of the root signed"
+    )]
     require_author_signature: Option<bool>,
     #[arg(
         long,
@@ -25,14 +32,20 @@ pub struct Policy {
         help = "Let authors register online: clients trust per package the key that signed its first version"
     )]
     online_authors: Option<bool>,
-    #[arg(long, value_name = "DAYS", help = "Lifetime of the new root [default: 365]")]
+    #[arg(
+        long,
+        value_name = "DAYS",
+        help = "Lifetime of the new root; when rotating, the lifetime of the current root, 365 in a new repository"
+    )]
     root_days: Option<u32>,
     #[arg(long, value_name = "DAYS", help = "Longest lifetime of a signed index; 14 in a new repository")]
     entry_max_days: Option<u32>,
-    #[arg(long, value_name = "BYTES")]
+    #[arg(long, value_name = "BYTES", help = "Largest package the repository takes, in bytes")]
     max_package_size: Option<u64>,
     #[arg(long = "mirror", value_name = "URL", help = "HTTPS mirror; replaces the mirrors")]
     mirrors: Vec<String>,
+    #[arg(long, conflicts_with = "mirrors", help = "Drop every mirror of the root")]
+    no_mirrors: bool,
     #[arg(long, help = "Bits of the index shards; 4 in a new repository")]
     shard_bits: Option<u8>,
 }
@@ -52,7 +65,7 @@ impl Policy {
             root_days: self.root_days,
             entry_max_days: self.entry_max_days,
             max_package_size: self.max_package_size,
-            mirrors: self.mirrors,
+            mirrors: (self.no_mirrors || !self.mirrors.is_empty()).then_some(self.mirrors),
             shard_bits: self.shard_bits,
             ..Charter::default()
         })

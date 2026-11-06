@@ -1758,7 +1758,11 @@ unrevoke`), y *Claves de autor…* revoca una clave de autor por su huella (`rep
 `.pub`), cuántas claves raíz deben firmar, un autor con sus claves y la política (`repo init`); *Raíz…*
 muestra la versión de la raíz, cuántas claves la firmaron y la consulta que la ancla, la firma con un
 archivo de clave raíz y su contraseña (`repo sign-root`) y *Rotar la raíz…* escribe la siguiente con
-otras claves, autores quitados o añadidos y otra política (`repo rotate-root`). Cada cambio del catálogo
+otras claves, autores quitados o añadidos y otra política (`repo rotate-root`). Las claves que das para
+un autor reemplazan las que tenía, así una clave filtrada deja de valer (`--author ID=PUB`, repetible
+para varias claves); la raíz nueva dura lo mismo que la anterior salvo que digas otros días, conserva
+las réplicas salvo que des otras con `--mirror`, y `--no-mirrors` (o vaciar el campo en el diálogo) las
+quita todas. Cada cambio del catálogo
 trabaja fuera de la ventana, uno detrás de otro, y mientras dura los demás cambios y *Abrir* esperan
 desactivados. En el teléfono, *Repositorio estático* de
 *Dispositivos* hace lo mismo con una carpeta que eliges en el selector del sistema (por ejemplo la que
