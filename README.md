@@ -1506,9 +1506,7 @@ su último fotograma. El límite de FPS frena todos los fotogramas de la página
 `requestAnimationFrame`: el motor web no dibuja el siguiente hasta que pasa el periodo, también para
 animaciones CSS, vídeos y lienzos; `wprs-ctl state` cuenta los que dibujó cada pantalla
 (`page_frames`). En el teléfono la página se dibuja directamente en la superficie del fondo, sin
-fundido; con Android 14 o posterior su pantalla virtual pide el límite con que se abre la página y
-frena todos sus fotogramas, y en versiones anteriores, o si el límite cambia con la página abierta,
-solo frena `requestAnimationFrame`.
+fundido, y el límite solo frena `requestAnimationFrame`.
 
 La página solo lee los archivos de su paquete, no llega a la red salvo que la declare y la permitas
 (`wprs-ctl input grant <id> network`, o el interruptor de sus detalles en la app), no ve rutas,
