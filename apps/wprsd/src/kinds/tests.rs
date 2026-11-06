@@ -28,7 +28,7 @@ fn options_are_validated_and_completed_with_defaults() {
     assert!(refused("bing", &[("password", "x")]).contains("is a secret"));
     assert!(refused("bing", &[("base", "x")]).contains("no option base"));
     assert!(refused("webdav", &[("url", "https://example.org/dav")]).contains("needs the option user"));
-    assert!(refused("wallhaven", &[("purity", "123")]).contains("three digits"));
+    assert!(refused("wallhaven", &[("purity", "123")]).contains("3 digits"));
     for url in ["https://me:pw@example.org/dav", "https://example.org/dav?token=1", "https://example.org/#x"]
     {
         assert!(refused("webdav", &[("url", url), ("user", "me")]).contains("not in the URL"), "{url}");
@@ -52,4 +52,44 @@ fn entries_round_trip_through_the_configuration() {
     written.as_table_mut().unwrap().insert("password".into(), "hunter2".into());
     let error = entry(&written).unwrap_err();
     assert!(error.contains("is a secret") && !error.contains("hunter2"), "{error}");
+}
+
+#[test]
+fn wallhaven_options_are_checked_alone_and_together() {
+    let kind = kind_of("wallhaven").unwrap();
+    let all = [
+        ("ratios", "16x9,landscape"),
+        ("resolutions", "1920x1080,2560x1440"),
+        ("colors", "660000,ffffff"),
+        ("sorting", "hot"),
+        ("order", "asc"),
+        ("top_range", "1y"),
+        ("similar", "94x38z"),
+        ("page", "3"),
+        ("pages", "2"),
+        ("max_items", "48"),
+    ];
+    let given = options(&all);
+    let read = effective(&kind, &given).unwrap();
+    assert!(all.iter().all(|(key, value)| read[*key] == *value) && read["categories"] == "111");
+    for (key, value, hint) in [
+        ("ratios", "wide", "ratios"),
+        ("colors", "123456", "palette"),
+        ("resolutions", "big", "sizes"),
+        ("sorting", "newest", "toplist"),
+        ("top_range", "2d", "1d"),
+        ("pages", "11", "from 1 to 10"),
+        ("collection", "12", "USER/ID"),
+        ("tag", "anime", "number"),
+        ("purity", "10", "3 digits"),
+    ] {
+        assert!(refused("wallhaven", &[(key, value)]).contains(hint), "{key}");
+    }
+    assert!(refused("wallhaven", &[("similar", "94x38z"), ("query", "sea")]).contains("cannot be combined"));
+    assert!(
+        refused("wallhaven", &[("collection", "alice/7"), ("uploader", "bob")]).contains("takes no search")
+    );
+    assert!(refused("wallhaven", &[("seed", "ABC123")]).contains("no option seed"));
+    let kinds = wprs_core::model::FieldKind::Palette;
+    assert!(kind.options.iter().any(|field| field.kind == kinds && field.values.len() == 29));
 }

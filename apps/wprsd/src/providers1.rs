@@ -44,6 +44,16 @@ impl Providers {
         self.d()?.sync_providers(id).await
     }
 
+    #[zbus(out_args("json"))]
+    async fn collections(&self, id: String, owner: String) -> Result<String> {
+        self.d()?.wallhaven_collections(id, owner).await
+    }
+
+    #[zbus(out_args("job"))]
+    async fn reseed(&self, id: String) -> Result<u64> {
+        self.d()?.reseed(id).await
+    }
+
     async fn set_secret(&self, id: String, secret: String) -> Result<()> {
         let secret = Zeroizing::new(secret);
         self.d()?.set_secret(id, secret).await

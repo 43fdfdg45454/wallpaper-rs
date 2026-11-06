@@ -18,7 +18,8 @@ const PUBLIC: [&str; 4] = ["bing", "apod", "wikimedia", "wallhaven"];
 
 mod download;
 
-use download::{Fetched, download, failure};
+pub(crate) use download::failure;
+use download::{Fetched, download};
 
 pub async fn schedule(daemon: Arc<Daemon>) {
     loop {
@@ -87,8 +88,11 @@ impl Daemon {
         all: bool,
         ctl: &Ctl,
     ) -> Result<Option<SyncReport>> {
-        let (known, _, options) = self.provider(id)?;
+        let (known, _, mut options) = self.provider(id)?;
         let kind = known.kind.as_str();
+        if kind == "wallhaven" {
+            options.insert("seed".into(), self.seed_of(id));
+        }
         let runtime = Handle::current();
         let secret = match &known.secret {
             None => None,

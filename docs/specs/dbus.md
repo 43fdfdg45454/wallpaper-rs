@@ -1188,6 +1188,34 @@ lookup has not answered by then is listed with the last answer the daemon saw in
 or with `has_secret = false` and state `locked` when there is none, and `Changed("providers")`
 follows if the late answer differs.
 
+The `wallhaven` options go to the official API v1 (`/search`, `/collections/<user>/<id>`) as
+follows; empty ones are not sent and `GetSchema().providers` lists the allowed values:
+
+| Option | Kind | Query parameter |
+| --- | --- | --- |
+| `query` | text | `q` (tags, `-tag`, `+tag`, `type:png`) |
+| `categories` | flags (general, anime, people) | `categories`, 3 digits |
+| `purity` | flags (sfw, sketchy, nsfw) | `purity`, 3 digits; sketchy and nsfw need the API key |
+| `sorting` | enum: date_added, relevance, random, views, favorites, toplist, hot | `sorting` |
+| `order` | enum: desc, asc | `order` |
+| `top_range` | enum: 1d, 3d, 1w, 1M, 3M, 6M, 1y | `topRange`, only with `sorting = toplist` |
+| `atleast` | `WIDTHxHEIGHT` | `atleast` |
+| `resolutions` | list of `WIDTHxHEIGHT` | `resolutions` |
+| `ratios` | list: `16x9`, `16x10`, `21x9`, `32x9`, `48x9`, `9x16`, `10x16`, `9x18`, `1x1`, `3x2`, `4x3`, `5x4`, `landscape`, `portrait` | `ratios` |
+| `colors` | palette of the 29 Wallhaven colors, hex without `#` | `colors` |
+| `similar` | wallpaper id | `q=like:<id>` |
+| `tag` | tag number | `q=id:<number>` |
+| `uploader` | user name | `q=@<user>` added to `query` |
+| `collection` | `<user>/<id>` | path `/collections/<user>/<id>`; only `purity` and `page` are sent |
+| `page`, `pages`, `max_items` | whole numbers (1 to 1000, 1 to 10, 1 to 240) | `page`, first page and how many pages are read per sync; the list stops at `max_items` or the last page |
+
+`similar` and `tag` cannot be combined with each other or with `query` and `uploader`, and a
+`collection` takes no search terms (`InvalidArgs`). With `sorting = random` the daemon sends the
+session `seed` (see `Reseed`) with every page, so pages never repeat pictures. One sync makes
+`pages` requests, never more than needed; the API key travels only in the `X-API-Key` header, never in a
+URL, the configuration or the logs. A `429` is retried after `Retry-After` or 2, 4 and 8 s and
+then fails the sync, which is retried later like any failed sync.
+
 URL options (`url`, `server`) must be `https://`, or `http://` to this computer; any other
 `http://` URL needs the option `allow_plain_http = true`, given explicitly. URLs with user
 information, a query or a fragment return `InvalidArgs` (`put credentials in the secret, not in
@@ -1257,6 +1285,21 @@ once instead of waiting for the old `refresh` interval.
 Starts a `provider_sync` job; `id = ""` syncs every provider that is not `needs_secret`. A
 provider that another sync job is already syncing is skipped. `NeedsSecret` when the provider's
 required secret is missing.
+
+### `Collections(s id, s owner) → (s json)`
+
+A `CollectionsReply` for a `wallhaven` provider: the collections of the user `owner`, or, when
+`owner = ""`, those of the account of the stored API key, private ones included
+(`GET /collections`). Their `id` and the owner make the option `collection` (`<owner>/<id>`).
+`InvalidArgs` for another kind, an invalid owner, or no owner and no key. Wallhaven answers at
+most 45 requests per minute; the daemon spaces its requests to that limit.
+
+### `Reseed(s id) → (t job)`
+
+Picks a new seed for a `wallhaven` provider and starts its sync (`Sync` rules). The seed makes
+the pages of `sorting = random` consistent; it is kept in memory for the session, shared by
+every sync of the provider, and dropped when the provider is removed. `InvalidArgs` for another
+kind.
 
 ### `SetSecret(s id, s secret)`
 
@@ -2501,7 +2544,9 @@ struct Field {
     key: String, kind: FieldKind, default: Value, min: Option<f64>, max: Option<f64>,
     step: Option<f64>, values: Vec<String>, required: bool, clearable: bool,
 }
-enum FieldKind { Bool, Int, Float, Text, Enum, Color, Interval, Times, Weekdays, List, Url }
+enum FieldKind { Bool, Int, Float, Text, Enum, Color, Interval, Times, Weekdays, List, Url, Flags, Palette }
+struct WallhavenCollection { id: u64, label: String, count: u64, public: bool }
+struct CollectionsReply { model: u32, serial: u64, collections: Vec<WallhavenCollection> }
 struct ProviderKind { kind: String, hosts: Vec<String>, options: Vec<Field>, secret: Option<SecretField> }
 struct SecretField { name: String, required: bool }
 struct QueryKey { key: String, hint: String }

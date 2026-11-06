@@ -31,6 +31,7 @@ pub struct Health {
 pub struct Remote {
     pub keyring: OnceLock<Keyring>,
     pub health: Mutex<HashMap<String, Health>>,
+    pub seeds: Mutex<HashMap<String, String>>,
     pub syncing: Mutex<HashSet<String>>,
     pub adding: Mutex<HashSet<String>>,
     pub credits: Mutex<HashMap<PathBuf, Credit>>,

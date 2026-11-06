@@ -6,6 +6,7 @@ use crate::show::{self, bytes, list, table, text, when};
 use anyhow::{Context, Result, ensure};
 use clap::Subcommand;
 use futures_util::TryFutureExt;
+use std::collections::HashMap;
 use std::time::Duration;
 use wprs_client::{Client, explain, parse};
 use wprs_core::model::{ProvidersReply, Schema, SecretField};
@@ -64,6 +65,11 @@ pub enum Provider {
         #[command(flatten)]
         wait: Wait,
     },
+    #[command(
+        subcommand,
+        about = "Wallhaven providers: one flag per search option, collections and reseeding"
+    )]
+    Wallhaven(Box<crate::wallhaven::Wallhaven>),
     #[command(about = "Remove a provider and its items")]
     Rm {
         #[arg(help = "Id of the provider")]
@@ -78,20 +84,7 @@ pub async fn run(client: &Client, command: Provider) -> Result<()> {
     match command {
         Provider::Ls { json } => show::reply(providers.list().await?, json, list_providers)?,
         Provider::Add { id, kind, options, allow_plain_http, no_secret, secret_stdin } => {
-            let schema: Schema = parse(&client.daemon.get_schema().await?)?;
-            let kinds = || list(schema.providers.iter().map(|p| &p.kind));
-            let known = schema.providers.iter().find(|p| p.kind == kind);
-            let unknown = || Usage(format!("unknown provider kind {kind}; the kinds are {}", kinds()));
-            let known = known.ok_or_else(unknown)?;
-            let mut options = pairs(&options)?;
-            options.keys().try_for_each(|key| public(key))?;
-            if allow_plain_http {
-                options.insert("allow_plain_http", "true");
-            }
-            let secret =
-                known.secret.as_ref().filter(|_| !no_secret).map(|f| ask(f, &id, &kind, secret_stdin));
-            let secret = secret.transpose()?.unwrap_or_default();
-            println!("{}", patient(providers.add(&id, &kind, options, &secret)).await?)
+            add(client, &id, &kind, pairs(&options)?, allow_plain_http, (no_secret, secret_stdin)).await?
         }
         Provider::Set { id, key, value } => {
             public(&key)?;
@@ -112,8 +105,32 @@ pub async fn run(client: &Client, command: Provider) -> Result<()> {
         Provider::Sync { id, wait } => {
             job(client, providers.sync(id.as_deref().unwrap_or("")).map_ok(|id| ((), id)), &wait).await?
         }
+        Provider::Wallhaven(command) => crate::wallhaven::run(client, *command).await?,
         Provider::Rm { id, purge } => providers.remove(&id, purge).await?,
     }
+    Ok(())
+}
+
+pub async fn add(
+    client: &Client,
+    id: &str,
+    kind: &str,
+    mut options: HashMap<&str, &str>,
+    allow_plain_http: bool,
+    (no_secret, secret_stdin): (bool, bool),
+) -> Result<()> {
+    let schema: Schema = parse(&client.daemon.get_schema().await?)?;
+    let kinds = || list(schema.providers.iter().map(|p| &p.kind));
+    let known = schema.providers.iter().find(|p| p.kind == kind);
+    let unknown = || Usage(format!("unknown provider kind {kind}; the kinds are {}", kinds()));
+    let known = known.ok_or_else(unknown)?;
+    options.keys().try_for_each(|key| public(key))?;
+    if allow_plain_http {
+        options.insert("allow_plain_http", "true");
+    }
+    let secret = known.secret.as_ref().filter(|_| !no_secret).map(|f| ask(f, id, kind, secret_stdin));
+    let secret = secret.transpose()?.unwrap_or_default();
+    println!("{}", patient(client.providers.add(id, kind, options, &secret)).await?);
     Ok(())
 }
 

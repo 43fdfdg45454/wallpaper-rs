@@ -1,6 +1,7 @@
 use super::{DAY, clearable, field, interval, range, required, values};
 use serde_json::{Value, json};
 use wprs_core::model::{Field, FieldKind, ProviderKind, SecretField};
+use wprs_providers::wallhaven;
 
 fn provider(
     kind: &str,
@@ -26,7 +27,14 @@ pub fn providers() -> Vec<ProviderKind> {
     let flag = |key: &str, default: bool| field(key, FieldKind::Bool, json!(default));
     let url = |key: &str| required(field(key, FieldKind::Url, Value::Null));
     let user = || required(field("user", FieldKind::Text, Value::Null));
-    let sorting = ["date_added", "relevance", "random", "views", "favorites", "toplist"];
+    let list =
+        |key: &str, choices: &[&str]| clearable(values(field(key, FieldKind::List, json!("")), choices));
+    let flags = |key: &str, default: &str, names: &[&str]| {
+        values(field(key, FieldKind::Flags, json!(default)), names)
+    };
+    let choice = |key: &str, default: &str, choices: &[&str]| {
+        values(field(key, FieldKind::Enum, json!(default)), choices)
+    };
     vec![
         provider(
             "bing",
@@ -56,10 +64,22 @@ pub fn providers() -> Vec<ProviderKind> {
             Some(("api_key", false)),
             vec![
                 text("query", ""),
-                text("categories", "111"),
-                text("purity", "100"),
-                values(field("sorting", FieldKind::Enum, json!("toplist")), &sorting),
+                flags("categories", "111", &wallhaven::CATEGORIES),
+                flags("purity", "100", &wallhaven::PURITIES),
+                choice("sorting", "toplist", &wallhaven::SORTINGS),
+                choice("order", "desc", &wallhaven::ORDERS),
+                choice("top_range", "1M", &wallhaven::RANGES),
                 clearable(text("atleast", "")),
+                list("resolutions", &wallhaven::RESOLUTIONS),
+                list("ratios", &wallhaven::RATIOS),
+                clearable(values(field("colors", FieldKind::Palette, json!("")), &wallhaven::PALETTE)),
+                clearable(text("similar", "")),
+                clearable(text("tag", "")),
+                clearable(text("uploader", "")),
+                clearable(text("collection", "")),
+                int("page", 1, 1.0, 1000.0),
+                int("pages", 1, 1.0, 10.0),
+                int("max_items", 240, 1.0, 240.0),
             ],
         ),
         provider(

@@ -25,6 +25,12 @@ pub fn effective(kind: &ProviderKind, given: &Options) -> Result<Options> {
     }
     let plain = options.get("allow_plain_http").is_some_and(|v| v == "true");
     ["url", "server"].iter().filter_map(|key| options.get(*key)).try_for_each(|url| server(url, plain))?;
+    if kind.kind == "wallhaven" {
+        let search = wprs_providers::wallhaven::Search::from_options(|key| {
+            options.get(key).cloned().unwrap_or_default()
+        });
+        search.validate().map_err(invalid)?;
+    }
     Ok(options)
 }
 
@@ -43,11 +49,12 @@ pub(super) fn text(value: &Value, kind: FieldKind) -> String {
 
 fn checked(field: &Field, value: &str) -> Result<String> {
     let within = |n: f64| field.min.is_none_or(|min| n >= min) && field.max.is_none_or(|max| n <= max);
-    let bits = || value.len() == 3 && value.chars().all(|c| c == '0' || c == '1');
-    let size =
-        || value.split_once('x').is_some_and(|(w, h)| w.parse::<u32>().is_ok() && h.parse::<u32>().is_ok());
+    let bits = || value.len() == field.values.len() && value.chars().all(|c| c == '0' || c == '1');
     let word = || !value.is_empty() && value.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
     let plain = value.len() <= 256 && !value.chars().any(char::is_control);
+    if let Some(hint) = wprs_providers::wallhaven::option_hint(&field.key, value) {
+        return Err(invalid(format!("invalid value for {}: expected {hint}", field.key)));
+    }
     let (ok, hint) = match (field.kind, field.key.as_str()) {
         (FieldKind::Bool, _) => (value == "true" || value == "false", "true or false".into()),
         (FieldKind::Int, _) => (value.parse::<i64>().is_ok_and(|n| within(n as f64)), range(field)),
@@ -57,9 +64,8 @@ fn checked(field: &Field, value: &str) -> Result<String> {
             let off = seconds == Some(0.0) && field.values.iter().any(|v| v == "0s");
             (off || seconds.is_some_and(within), "0s or an interval from 15m to 30d".into())
         }
+        (FieldKind::Flags, _) => (bits(), format!("{} digits, each 0 or 1", field.values.len())),
         (FieldKind::Url, _) => (plain && !value.is_empty(), "a URL".into()),
-        (_, "categories" | "purity") => (bits(), "three digits, each 0 or 1".into()),
-        (_, "atleast") => (value.is_empty() || size(), "WIDTHxHEIGHT or nothing".into()),
         (_, "market" | "album") => (word(), "letters, digits and -".into()),
         (_, "folder") => (plain && !value.split('/').any(|s| s == ".."), "a folder path".into()),
         _ => (plain && (!field.required || !value.is_empty()), "a short text".into()),

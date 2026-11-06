@@ -83,6 +83,7 @@ mod thumbs;
 mod tidy;
 mod timing;
 mod variants;
+mod wallhaven;
 mod wallpaper;
 mod watch;
 mod words;

@@ -4358,11 +4358,11 @@ msgstr ""
 "Añadir un proveedor, preguntando su contraseña o clave de API; imprime el "
 "uid de su fuente en la biblioteca"
 
-#: apps/wprs-ctl/src/providers.rs
+#: apps/wprs-ctl/src/providers.rs apps/wprs-ctl/src/wallhaven.rs
 msgid "Provider id: a lowercase letter, then lowercase letters, digits, - or _"
 msgstr ""
-"Id del proveedor: una letra minúscula y luego letras minúsculas, dígitos, - "
-"o _"
+"Id del proveedor: una letra minúscula, luego letras minúsculas, dígitos, - o "
+"_"
 
 #: apps/wprs-ctl/src/providers.rs
 msgid "bing, apod, wikimedia, wallhaven, webdav, nextcloud or immich"
@@ -4387,7 +4387,7 @@ msgstr "Añadir el proveedor sin secreto"
 msgid "Change one option of a provider"
 msgstr "Cambiar una opción de un proveedor"
 
-#: apps/wprs-ctl/src/providers.rs
+#: apps/wprs-ctl/src/providers.rs apps/wprs-ctl/src/wallhaven.rs
 msgid "Id of the provider"
 msgstr "Id del proveedor"
 
@@ -4415,6 +4415,13 @@ msgstr "Descargar los fondos nuevos de un proveedor, o de todos si se omite"
 #: apps/wprs-ctl/src/providers.rs
 msgid "Id of the provider; every provider when left out"
 msgstr "Id del proveedor; todos los proveedores si se omite"
+
+#: apps/wprs-ctl/src/providers.rs
+msgid ""
+"Wallhaven providers: one flag per search option, collections and reseeding"
+msgstr ""
+"Proveedores Wallhaven: una opción por cada ajuste de búsqueda, colecciones y "
+"nueva semilla"
 
 #: apps/wprs-ctl/src/providers.rs
 msgid "Remove a provider and its items"
@@ -6928,3 +6935,145 @@ msgstr "Id del preajuste; preset_<n> si se omite"
 #: apps/wprs-ctl/src/userprops.rs
 msgid "Label in the default language"
 msgstr "Etiqueta en el idioma por defecto"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid ""
+"Read the API key from the first line of standard input instead of asking"
+msgstr ""
+"Leer la clave de API de la primera línea de la entrada estándar en vez de "
+"preguntarla"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid ""
+"Leave it out to keep the current value or the default; give \"\" to clear it"
+msgstr ""
+"Si se omite, se conserva el valor actual o el predeterminado; con \"\" se "
+"borra"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid ""
+"Add a Wallhaven provider with its search options; prints its library source "
+"uid"
+msgstr ""
+"Agregar un proveedor Wallhaven con sus opciones de búsqueda; imprime el uid "
+"de su fuente de la biblioteca"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid "Add the provider without an API key"
+msgstr "Agregar el proveedor sin clave de API"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid "Change several search options of a Wallhaven provider at once"
+msgstr "Cambiar varias opciones de búsqueda de un proveedor Wallhaven a la vez"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid "List the collections of a user, or of the account of the API key"
+msgstr ""
+"Listar las colecciones de un usuario, o las de la cuenta de la clave de API"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid "Owner of the collections; the account of the API key when left out"
+msgstr "Dueño de las colecciones; la cuenta de la clave de API si se omite"
+
+#: apps/wprs-ctl/src/wallhaven.rs
+msgid "Pick a new random order for the sorting random and sync"
+msgstr "Elegir un nuevo orden aleatorio para el orden random y sincronizar"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Search words; -word leaves a tag out, +word requires it, type:png or type:"
+"jpg picks a file type"
+msgstr ""
+"Palabras de búsqueda; -palabra excluye una etiqueta, +palabra la exige, type:"
+"png o type:jpg elige el tipo de archivo"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Categories: general, anime and people separated by commas, or three digits "
+"like 101"
+msgstr ""
+"Categorías: general, anime y people separadas por comas, o tres dígitos como "
+"101"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Purity: sfw, sketchy and nsfw separated by commas, or three digits like 110; "
+"sketchy and nsfw need the API key"
+msgstr ""
+"Pureza: sfw, sketchy y nsfw separadas por comas, o tres dígitos como 110; "
+"sketchy y nsfw necesitan la clave de API"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Sorting: date_added, relevance, random, views, favorites, toplist or hot"
+msgstr "Orden: date_added, relevance, random, views, favorites, toplist o hot"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Direction of the sorting: desc or asc"
+msgstr "Sentido del orden: desc o asc"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Time range of the toplist sorting: 1d, 3d, 1w, 1M, 3M, 6M or 1y"
+msgstr "Rango de tiempo del orden toplist: 1d, 3d, 1w, 1M, 3M, 6M o 1y"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Smallest resolution wanted"
+msgstr "Resolución mínima deseada"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Exact resolutions separated by commas, like 1920x1080,2560x1440"
+msgstr "Resoluciones exactas separadas por comas, como 1920x1080,2560x1440"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Aspect ratios separated by commas, like 16x9,16x10, or landscape and portrait"
+msgstr ""
+"Proporciones separadas por comas, como 16x9,16x10, o landscape y portrait"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Colors of the Wallhaven palette as hex without #, separated by commas, like "
+"660000,ffffff"
+msgstr ""
+"Colores de la paleta de Wallhaven en hexadecimal sin #, separados por comas, "
+"como 660000,ffffff"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Find pictures similar to the wallpaper with this id"
+msgstr "Buscar imágenes parecidas al fondo con este id"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Find the pictures of the tag with this number"
+msgstr "Buscar las imágenes de la etiqueta con este número"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Only pictures uploaded by this user"
+msgstr "Solo imágenes subidas por este usuario"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid ""
+"Read a collection instead of searching; list them with the collections "
+"command"
+msgstr ""
+"Leer una colección en vez de buscar; se listan con el comando collections"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "First page to read (1 to 1000)"
+msgstr "Primera página a leer (1 a 1000)"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Pages read on every sync (1 to 10); every page is one request"
+msgstr ""
+"Páginas leídas en cada sincronización (1 a 10); cada página es una petición"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Most pictures kept on every sync (1 to 240)"
+msgstr "Máximo de imágenes que se conservan en cada sincronización (1 a 240)"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Sync every, like 12h; 0s for only when asked"
+msgstr "Sincronizar cada, como 12h; 0s para hacerlo solo cuando se pida"
+
+#: apps/wprs-ctl/src/wallhaven_filters.rs
+msgid "Disk space for the pictures, in MB (16 to 65536)"
+msgstr "Espacio en disco para las imágenes, en MB (16 a 65536)"

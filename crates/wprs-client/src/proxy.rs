@@ -159,6 +159,8 @@ pub trait Providers1 {
     fn set(&self, id: &str, key: &str, value: &str) -> Result<()>;
     fn remove(&self, id: &str, purge: bool) -> Result<()>;
     fn sync(&self, id: &str) -> Result<u64>;
+    fn collections(&self, id: &str, owner: &str) -> Result<String>;
+    fn reseed(&self, id: &str) -> Result<u64>;
     fn set_secret(&self, id: &str, secret: &str) -> Result<()>;
     fn forget_secret(&self, id: &str) -> Result<()>;
 }

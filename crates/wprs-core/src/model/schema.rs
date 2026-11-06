@@ -29,7 +29,7 @@ model! {
 
     #[derive(Copy, Eq, Hash)]
     pub enum FieldKind {
-        Bool, Int, Float, Text, Enum, Color, Interval, Times, Weekdays, List, Url,
+        Bool, Int, Float, Text, Enum, Color, Interval, Times, Weekdays, List, Url, Flags, Palette,
         #[serde(other)] Unknown,
     }
 

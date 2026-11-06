@@ -99,6 +99,8 @@ pub const CALLS: &[(&str, &str, &str, &[&str])] = &[
     ("Providers1", "Set", "provider set", &["ID", "KEY", "VALUE"]),
     ("Providers1", "Remove", "provider rm", &["ID", "--purge"]),
     ("Providers1", "Sync", "provider sync", &["ID"]),
+    ("Providers1", "Collections", "provider wallhaven collections", &["ID", "--user"]),
+    ("Providers1", "Reseed", "provider wallhaven reseed", &["ID"]),
     ("Providers1", "SetSecret", "provider secret", &["ID", "prompt"]),
     ("Providers1", "ForgetSecret", "provider forget-secret", &["ID"]),
     ("Repos1", "List", "remote ls", &[]),

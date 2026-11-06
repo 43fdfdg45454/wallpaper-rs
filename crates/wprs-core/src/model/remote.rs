@@ -25,6 +25,14 @@ model! {
 
     pub struct ProvidersReply { pub model: u32, pub serial: u64, pub providers: Vec<Provider> }
 
+    pub struct WallhavenCollection { pub id: u64, pub label: String, pub count: u64, pub public: bool }
+
+    pub struct CollectionsReply {
+        pub model: u32,
+        pub serial: u64,
+        pub collections: Vec<WallhavenCollection>,
+    }
+
     pub struct SyncReport {
         pub provider: String,
         pub listed: u32,

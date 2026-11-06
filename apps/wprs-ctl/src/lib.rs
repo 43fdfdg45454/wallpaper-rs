@@ -87,6 +87,8 @@ pub mod told;
 mod triggering;
 mod undoing;
 mod userprops;
+pub mod wallhaven;
+mod wallhaven_filters;
 
 pub use calls::CALLS;
 pub use cli::{Cli, Command};
