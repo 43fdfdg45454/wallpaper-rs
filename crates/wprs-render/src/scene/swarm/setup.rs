@@ -1,6 +1,6 @@
 use super::binds::layouts;
 use super::kit::kit;
-use super::{B, Herd, SIM, Swarms, buffer, compute, mode, module};
+use super::{B, Herd, SIM, Stamp, Swarms, buffer, compute, mode, module};
 use crate::Renderer;
 use crate::scene::{Image, SceneAssets};
 use std::collections::HashMap;
@@ -99,7 +99,7 @@ impl Swarms {
             sprites,
             flights: Vec::new(),
             marks: Vec::new(),
-            stamp: (None, false),
+            stamp: Stamp::default(),
             module: module(
                 r,
                 &[

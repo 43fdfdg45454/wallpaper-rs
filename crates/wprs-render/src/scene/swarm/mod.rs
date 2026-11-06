@@ -37,7 +37,12 @@ const SIM: u64 = 3584;
 const LOOK: u64 = 1536;
 const PARTICLE: u64 = 96;
 
-type Stamp = (Option<wgpu::QuerySet>, bool);
+#[derive(Default)]
+struct Stamp {
+    set: Option<wgpu::QuerySet>,
+    begun: bool,
+    open: Option<wgpu::CommandEncoder>,
+}
 
 struct Store {
     particles: Buffer,

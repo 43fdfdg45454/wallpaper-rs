@@ -73,8 +73,7 @@ pub(super) fn sort(
     else {
         return;
     };
-    let mut encoder = r.device.create_command_encoder(&Default::default());
-    super::step::mark(stamp, &mut encoder, false);
+    let encoder = stamp.encoder(r);
     for (p, store) in stores.iter().enumerate() {
         for st in &store.stacks {
             let Some((bins, group)) = &st.gpu else { continue };
@@ -90,6 +89,4 @@ pub(super) fn sort(
             }
         }
     }
-    super::step::mark(stamp, &mut encoder, true);
-    r.queue.submit([encoder.finish()]);
 }

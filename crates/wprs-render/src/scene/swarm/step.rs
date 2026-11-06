@@ -20,7 +20,7 @@ impl Swarms {
             runtime.swarm(herd).filter(|s| s.count() > 0).map(|s| s.sim(0, part).emitters[4 * e + 1][0])
         };
         self.collect(r, heard);
-        self.stamp = (stamp.cloned(), false);
+        self.stamp = Stamp { set: stamp.cloned(), ..Stamp::default() };
         (self.steps, self.created, self.quality) = (0, 0, quality);
         self.looks.clear();
         self.kitted.clear();
@@ -75,16 +75,34 @@ impl Swarms {
             }
             self.dispatch(r, i, &swarm, (count, reset), start)?;
         }
+        self.stamp.submit(r);
         if self.profile {
             r.finish()?;
         }
         self.micros = start.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
-        Ok(std::mem::take(&mut self.stamp).1)
+        Ok(std::mem::take(&mut self.stamp).begun)
     }
 }
 
-pub(super) fn mark((set, begun): &mut Stamp, encoder: &mut wgpu::CommandEncoder, end: bool) {
-    let Some(query_set) = set.as_ref().filter(|_| end || !*begun) else { return };
+impl Stamp {
+    pub(super) fn encoder(&mut self, r: &Renderer) -> &mut wgpu::CommandEncoder {
+        let (set, begun) = (&self.set, &mut self.begun);
+        self.open.get_or_insert_with(|| {
+            let mut encoder = r.device.create_command_encoder(&Default::default());
+            mark(set.as_ref(), begun, &mut encoder, false);
+            encoder
+        })
+    }
+
+    pub(super) fn submit(&mut self, r: &Renderer) {
+        let Some(mut encoder) = self.open.take() else { return };
+        mark(self.set.as_ref(), &mut self.begun, &mut encoder, true);
+        r.queue.submit([encoder.finish()]);
+    }
+}
+
+fn mark(set: Option<&wgpu::QuerySet>, begun: &mut bool, encoder: &mut wgpu::CommandEncoder, end: bool) {
+    let Some(query_set) = set.filter(|_| end || !*begun) else { return };
     *begun |= !end;
     let at = Some(SIM_AT + u32::from(end));
     let (beginning_of_pass_write_index, end_of_pass_write_index) = if end { (None, at) } else { (at, None) };

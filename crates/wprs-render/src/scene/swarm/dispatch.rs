@@ -39,8 +39,7 @@ impl Swarms {
                 }
                 store.gpu.iter().for_each(|g| r.queue.write_buffer(&g.1, 0, &self.bytes));
             }
-            let mut encoder = r.device.create_command_encoder(&Default::default());
-            super::step::mark(&mut self.stamp, &mut encoder, false);
+            let encoder = self.stamp.encoder(r);
             if reset && n == 0 {
                 flight.stores.iter().for_each(|s| encoder.clear_buffer(&s.particles, 0, None));
             }
@@ -101,9 +100,8 @@ impl Swarms {
                 }
             }
             drop(pass);
-            super::step::mark(&mut self.stamp, &mut encoder, true);
-            r.queue.submit([encoder.finish()]);
             if first + CHUNK < count {
+                self.stamp.submit(r);
                 r.finish()?;
                 if start.elapsed() > CUT {
                     break;
