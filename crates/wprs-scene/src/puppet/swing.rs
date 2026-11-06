@@ -3,10 +3,11 @@ use super::limb::{end, pivot, tip};
 use crate::Body as Mode;
 use crate::rigged::Rigged;
 
-pub const STEP: f32 = 1.0 / 120.0;
-pub const MAX_STEPS: u32 = 30;
-pub const QUIET_STEPS: u32 = 60;
-pub const QUIET: f32 = 0.002;
+pub const STEP: f32 = 1.0 / 60.0;
+pub const BATTERY_STEP: f32 = 1.0 / 30.0;
+pub const MAX_STEPS: u32 = 15;
+pub const QUIET_STEPS: u32 = 30;
+pub const QUIET: f32 = 0.005;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Body {

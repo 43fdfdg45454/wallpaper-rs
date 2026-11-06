@@ -65,7 +65,7 @@ impl Runtime {
             let camera = cx.lens(self.level);
             let cx = Context { view: self.viewed.get(), camera, ..cx };
             let [x, y] = wind.map_or([0.0; 2], |w| w.get(&cx).0);
-            let h = crate::puppet::STEP;
+            let h = self.physics_step();
             let gust = self.scene.canvas.gusts.map_or([0.65, 0.35], |g| [1.0 - g, g]);
             let frozen = self.level == Quality::Q0;
             let sim = Sim { frozen, h, wind: [x, -y], gust, t: self.t as f32, unit: 1.0 };
@@ -88,8 +88,12 @@ impl Runtime {
         self.puppets = puppets;
     }
 
+    fn physics_step(&self) -> f32 {
+        if self.battery { crate::puppet::BATTERY_STEP } else { crate::puppet::STEP }
+    }
+
     pub(crate) fn steer_rigs(&mut self, rigs: &BTreeMap<String, RigControl>) {
-        let h = crate::puppet::STEP;
+        let h = self.physics_step();
         for (id, set) in rigs.iter().filter(|(_, r)| !r.impulses.is_empty()) {
             self.puppets.iter_mut().filter(|p| p.layer == *id).for_each(|p| p.push(set, h));
         }

@@ -53,11 +53,11 @@ fn the_fixed_step_does_not_depend_on_the_frame_rate() {
     let mut steps = hanging(json!({}));
     gap.advance(10.0);
     run(&mut steps, 0.25, 1.0 / 60.0);
-    assert!(close(at(&gap, "hand"), at(&steps, "hand"), 1e-3), "a long gap runs at most a quarter second");
+    assert!(close(at(&gap, "hand"), at(&steps, "hand"), 1e-3), "a long gap runs at most 15 steps");
 }
 
 #[test]
-fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_second() {
+fn puppet_motion_matches_at_every_frame_rate_on_mains_and_on_battery() {
     let rates = [30.0, 60.0, 120.0];
     for more in [json!({}), json!({ "mode": "spring", "stiffness": 0.3, "gravity": 1 })] {
         let hands = rates.map(|fps| {
@@ -66,10 +66,14 @@ fn puppet_motion_matches_at_thirty_sixty_and_a_hundred_and_twenty_frames_a_secon
             at(&rt, "hand")
         });
         assert!(hands.iter().all(|h| close(*h, hands[0], 1e-3)), "{hands:?}");
-        let mut battery = hanging(more);
-        battery.set_battery(true);
-        run(&mut battery, 1.0, 1.0 / 60.0);
-        assert!(close(at(&battery, "hand"), hands[0], 1e-3), "{:?} {:?}", at(&battery, "hand"), hands[0]);
+        let battery = [30.0, 60.0].map(|fps| {
+            let mut rt = hanging(more.clone());
+            rt.set_battery(true);
+            run(&mut rt, 1.0, 1.0 / fps);
+            at(&rt, "hand")
+        });
+        assert!(close(battery[0], battery[1], 1e-3), "{battery:?}");
+        assert!(close(battery[0], hands[0], 3.0), "{battery:?} {:?}", hands[0]);
     }
 }
 

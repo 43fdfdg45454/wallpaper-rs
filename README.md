@@ -1297,9 +1297,9 @@ una articulación al otro lado, o desde un arco parejo si la pose está recta, s
 alcanza el objetivo; cada fotograma parte de su propia pose, igual en vivo, tras saltar o al volver a
 empezar, con límites por hueso, peso y el
 sentido en que se doblan todas las articulaciones (que el editor invierte con un toque sobre la cadena). La física de huesos simula muelles, péndulos y cuerdas a
-subpasos de 1/120 s que siguen el intervalo entre fotogramas (uno a 120 fps, dos a 60, cuatro a 30,
-también con batería, así que se mueve igual a esas frecuencias, y como mucho un cuarto de segundo por
-fotograma), con inercia,
+pasos de 1/60 s (1/30 s con batería) que siguen el intervalo entre fotogramas (uno cada dos
+fotogramas a 120 fps, uno a 60, dos a 30, así que se mueve igual a esas frecuencias, y como mucho 15
+pasos por fotograma), con inercia,
 amortiguación, gravedad, límites de giro y de estiramiento y el viento de `canvas.wind` con ráfagas
 (`canvas.gusts`, de 0 a 1) tomadas en el instante de cada paso, iguales a cualquier tasa de fotogramas;
 un cuerpo quieto medio segundo deja de pedir fotogramas y en la calidad más baja los huesos se
