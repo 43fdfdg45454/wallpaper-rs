@@ -2,6 +2,7 @@ mod clips;
 mod cutouts;
 mod kit;
 mod limbs;
+mod many;
 mod parts;
 mod pins;
 mod points;

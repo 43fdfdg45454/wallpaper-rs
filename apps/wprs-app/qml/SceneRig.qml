@@ -69,7 +69,7 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: !rig.editable
             wrapMode: Text.Wrap
-            text: App.tr("Bones are placed here on meshes drawn in at most 64 primitives; a part drawn by several nodes gets a mesh of its own for each of them on the first edit.")
+            text: App.tr("The bones of a model come from its file: they are shown here and posed by its clips, and bones are placed on mesh layers.")
         }
 
         SceneRigWeights {

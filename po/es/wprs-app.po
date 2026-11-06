@@ -4700,12 +4700,9 @@ msgstr "Colocar huesos sobre la vista previa"
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid ""
-"Bones are placed here on meshes drawn in at most 64 primitives; a part drawn "
-"by several nodes gets a mesh of its own for each of them on the first edit."
-msgstr ""
-"Aquí se colocan huesos en mallas dibujadas con 64 primitivas como mucho; una "
-"parte que dibujan varios nodos recibe una malla propia para cada uno en la "
-"primera edición."
+"The bones of a model come from its file: they are shown here and posed by "
+"its clips, and bones are placed on mesh layers."
+msgstr "Los huesos de un modelo vienen de su archivo: aquí se muestran y sus clips los posan, y los huesos se colocan en capas de malla."
 
 #: apps/wprs-app/qml/SceneRig.qml
 msgid "Clip in the preview"
@@ -5901,7 +5898,9 @@ msgstr "Plantilla %1 sola"
 msgid ""
 "Show one template alone on the canvas, as a copy of it draws, and edit its "
 "layers with the layers panel and the canvas tools"
-msgstr "Muestra una plantilla sola en el lienzo, como se dibuja una copia, y edita sus capas con el panel de capas y las herramientas del lienzo"
+msgstr ""
+"Muestra una plantilla sola en el lienzo, como se dibuja una copia, y edita "
+"sus capas con el panel de capas y las herramientas del lienzo"
 
 #: apps/wprs-app/qml/SceneTexts.qml
 msgid "Remove this language"

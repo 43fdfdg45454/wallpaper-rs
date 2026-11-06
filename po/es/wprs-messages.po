@@ -1169,11 +1169,8 @@ msgid "there is no point \"%1\""
 msgstr "no hay ningún punto «%1»"
 
 #: crates/wprs-editor/src/skin/read.rs
-msgid ""
-"bones and weights are edited here on meshes drawn in at most 64 primitives"
-msgstr ""
-"aquí se editan huesos y pesos de mallas dibujadas con 64 primitivas como "
-"mucho"
+msgid "the parts of this mesh do not match the primitives of its file"
+msgstr "las partes de esta malla no coinciden con las primitivas de su archivo"
 
 #: crates/wprs-editor/src/spots.rs
 msgid "say where the new point goes"

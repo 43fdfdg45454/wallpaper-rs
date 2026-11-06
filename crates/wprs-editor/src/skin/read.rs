@@ -32,11 +32,7 @@ impl Skin {
         let primitives: usize = drawn.iter().map(|m| list(&doc["meshes"][*m]["primitives"]).len()).sum();
         ensure!(
             primitives == rig.pieces.len() && nodes.len() == rig.joints.len(),
-            said(
-                "editor.mesh_parts",
-                "bones and weights are edited here on meshes drawn in at most 64 primitives",
-                &[]
-            )
+            said("editor.mesh_parts", "the parts of this mesh do not match the primitives of its file", &[])
         );
         Ok(Skin::seen(glb, rig, size))
     }
