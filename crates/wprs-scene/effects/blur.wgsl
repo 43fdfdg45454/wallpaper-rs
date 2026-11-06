@@ -13,6 +13,6 @@ fn fs_blur_v(in: VertexOut) -> @location(0) vec4<f32> {
     }
     let b = sample(aux0, in.uv);
     let a = mix(b.a, select(max(b.a, s.a), s.a, mode == 0u), k);
-    let rgb = clamp(blend_mode(mode, straight(b).rgb, straight(s).rgb, k), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb = max(blend_mode(mode, straight(b).rgb, straight(s).rgb, k), vec3<f32>(0.0));
     return vec4<f32>(rgb * a, a);
 }

@@ -49,6 +49,6 @@ fn color_shine(color: vec4<f32>, uv: vec2<f32>) -> vec4<f32> {
         return vec4<f32>(color.rgb + tone * strength * color.a, color.a);
     }
     let c = straight(color);
-    let rgb = clamp(blend_mode(mode, c.rgb, tone, min(strength, 1.0)), vec3<f32>(0.0), vec3<f32>(1.0));
+    let rgb = max(blend_mode(mode, c.rgb, tone, min(strength, 1.0)), vec3<f32>(0.0));
     return vec4<f32>(rgb * c.a, c.a);
 }

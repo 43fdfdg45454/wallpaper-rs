@@ -27,7 +27,8 @@ pub(crate) fn walk<'a>(
     for layer in layers.into_iter().filter(|l| l.flat()) {
         let set = cx.script.layers.get(&layer.id).unwrap_or(&crate::input::UNSET);
         let outer = cx.wake.replace(Wake::Idle);
-        let place = cx.place(layer, parent);
+        let mut place = cx.place(layer, parent);
+        place.opacity = if layer.blend.faded() { place.opacity } else { 1.0 };
         let (shown, at) = (place.visible && place.opacity > 0.0, frame.draws.len());
         if shown || cx.mattes.contains(&layer.id) {
             let placed = frame.placed.len();

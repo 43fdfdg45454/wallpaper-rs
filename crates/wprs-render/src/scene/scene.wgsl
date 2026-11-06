@@ -118,7 +118,7 @@ fn finish(src: vec4<f32>, in: Out) -> vec4<f32> {
     let bd = textureSampleLevel(back_tex, samp, item.back.xy + in.position.xy * item.back.zw, 0.0);
     let cb = select(vec3<f32>(0.0), bd.rgb / bd.a, bd.a > 1e-5);
     let cs = select(vec3<f32>(0.0), c.rgb / c.a, c.a > 1e-5);
-    let blended = clamp(blend_pick(u32(item.mode.x + 0.5), cb, cs), vec3<f32>(0.0), vec3<f32>(1.0));
+    let blended = max(blend_pick(u32(item.mode.x + 0.5), cb, cs), vec3<f32>(0.0));
     let rgb = (1.0 - bd.a) * c.rgb + (1.0 - c.a) * bd.rgb + c.a * bd.a * blended;
     return vec4<f32>(rgb, c.a + bd.a - c.a * bd.a);
 }
