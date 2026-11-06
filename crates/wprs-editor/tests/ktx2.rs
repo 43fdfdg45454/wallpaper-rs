@@ -47,6 +47,13 @@ fn a_picture_becomes_a_ktx2_texture_as_one_undoable_step() {
     act(&mut p, json!({ "redo": {} })).unwrap();
     assert_eq!(p.doc["scene"]["assets"]["sky"]["path"], json!(path));
     assert_eq!(wprs_editor::pictures::dimensions(p.dir.join(&path)).unwrap(), (72, 32));
+    let cache = root.path().join("shown");
+    let shown = wprs_editor::pictures::shown(p.dir.join(&path), &cache).unwrap();
+    assert!(shown.starts_with(&cache) && shown.extension().is_some_and(|e| e == "png"), "{shown:?}");
+    assert_eq!(image::image_dimensions(&shown).unwrap(), (72, 32));
+    assert_eq!(wprs_editor::pictures::shown(p.dir.join(&path), &cache).unwrap(), shown, "decoded again");
+    let png = p.dir.join("assets/sky.png");
+    assert_eq!(wprs_editor::pictures::shown(&png, &cache).unwrap(), png);
 }
 
 #[test]

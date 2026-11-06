@@ -2096,7 +2096,8 @@ imagen nueva en `masks/`, de modo que deshacer vuelve a la anterior (`wprs-ctl s
 hace lo mismo desde la terminal). Al elegir un efecto de una capa, el inspector ofrece su máscara:
 ninguna, una imagen, otra capa o una forma (rectángulo, elipse, anillo, polígono, estrella o línea),
 el canal, invertir, el borde suave (con un deslizador de hasta 200 px y un campo de hasta 10 000) y
-la intensidad, y el lienzo la dibuja sobre la capa: la imagen encima, la capa que enmascara
+la intensidad, y el lienzo la dibuja sobre la capa: la imagen encima (también una KTX2, que la app
+descomprime una vez a un PNG en su caché), la capa que enmascara
 recuadrada y la forma con su contorno, el borde suave por dentro y por fuera en trazos, un asa
 para darle tamaño (o mover el extremo de la línea) y un punto junto al borde para suavizarlo; cada
 arrastre es un paso de deshacer y sigue la acción `effects mask`, como `wprs-ctl scene effects

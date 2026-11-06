@@ -1,5 +1,6 @@
 import QtQuick
 import org.kde.kirigami as Kirigami
+import io.github.wallpaper_rs.app
 
 Item {
     id: frame
@@ -16,6 +17,10 @@ Item {
     }
     readonly property var stretch: [width / Math.max(1, g.size[0]), height / Math.max(1, g.size[1])]
     readonly property bool shaped: !outlined && overlay.kind !== ""
+    readonly property string picture: {
+        const found = (overlay.page.view.assets ?? []).find(a => a.id === overlay.texture);
+        return found ? overlay.page.folder + "/" + found.path : "";
+    }
 
     function local(item, point) {
         const p = item.mapToItem(frame, point.x, point.y);
@@ -44,8 +49,16 @@ Item {
         opacity: 0.45
         fillMode: Image.Stretch
         asynchronous: true
-        source: visible ? "file://" + frame.overlay.page.folder + "/" + ((frame.overlay.page.view.assets ?? []).find(a => a.id === frame.overlay.texture)?.path ?? "") : ""
+        source: visible && flat.flat !== "" ? "file://" + flat.flat : ""
     }
+
+    Packer {
+        id: flat
+
+        Component.onCompleted: flatten(frame.picture)
+    }
+
+    onPictureChanged: flat.flatten(picture)
 
     SceneMaskShape {
         visible: frame.shaped
