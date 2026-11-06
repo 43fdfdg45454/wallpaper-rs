@@ -3,7 +3,7 @@ use super::paint::{Painter, Target};
 use super::pipes::Mode;
 use super::{Op, Src};
 use std::ops::Range;
-use wprs_scene::{Affine, EffectDraw, Frame, Mask};
+use wprs_scene::{Affine, Blend, Content, EffectDraw, Frame, Mask};
 
 pub(crate) struct Fed<'e> {
     pub(crate) mask: Option<Src>,
@@ -117,11 +117,18 @@ impl Painter<'_, '_, '_> {
 
     pub(crate) fn drawn(&mut self, id: &str, m: Affine, (w, h): (u32, u32)) -> Option<Src> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
-        let (src, r) = self.shared(j)?;
         let key = projection(j, m, (w, h));
         if let Some((_, Some((out, _)))) = self.isolated.iter().find(|(k, _)| *k == key) {
             return Some(*out);
         }
+        if let Some(rect) = self.straight(j, m) {
+            let out = self.acquire((w, h))?;
+            self.ops.push(Op::Clear(out, [0.0; 4]));
+            self.direct(j, Target { src: out, rect }, (1.0, Blend::Normal, None), false);
+            self.isolated.push((key, Some((out, rect))));
+            return Some(out);
+        }
+        let (src, r) = self.shared(j)?;
         let out = self.acquire((w, h));
         if let Some(out) = out {
             let full = Rect { x: 0.0, y: 0.0, w: w as f32, h: h as f32 };
@@ -131,6 +138,22 @@ impl Painter<'_, '_, '_> {
             self.isolated.push((key, Some((out, full))));
         }
         out
+    }
+
+    fn straight(&mut self, j: usize, m: Affine) -> Option<Rect> {
+        let d = &self.frame.draws[j];
+        let simple = matches!(d.content, Content::Image { .. } | Content::Mesh { .. })
+            && d.end == j + 1
+            && d.effects.is_empty()
+            && d.mask.is_none()
+            && d.lean.is_none()
+            && self.flat.get().is_none()
+            && self.backdrop.is_none();
+        let [a, b, c, e, x, y] = m.0;
+        if !simple || b != 0.0 || c != 0.0 || a <= 0.0 || e <= 0.0 || !self.upstream(j).1 {
+            return None;
+        }
+        Some(Rect { x, y, w: a, h: e })
     }
 
     fn outline(&mut self, i: usize, mask: &Mask, (w, h): (u32, u32)) -> Option<Src> {

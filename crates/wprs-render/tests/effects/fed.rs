@@ -149,3 +149,22 @@ fn groups_with_masked_children_that_feed_each_other_through_effects_draw_once_a_
     let grown = twelve - eight;
     assert!(grown <= eight - four + 2 && twelve < 4 * four, "{four}, {eight} and {twelve} passes at depth 4, 8 and 12");
 }
+
+#[test]
+fn moving_image_masks_draw_like_still_ones() {
+    let mask = json!([{ "effect": "tint", "params": { "color": "#ff0000" }, "mask": { "layer": "fed" } }]);
+    let shot = |position: Value| {
+        let fed = json!({ "id": "fed", "type": "image", "image": "dot", "size": [24, 16], "visible": false,
+            "transform": { "position": position } });
+        let fx = Fx::chain(mask.clone()).input(solid(BLUE)).image("dot", ramp(), false).layer(fed);
+        let mut run = fx.run()?;
+        run.shot();
+        run.runtime.advance(1.0);
+        Some(run.shot())
+    };
+    let (Some(moving), Some(still)) = (shot(json!({ "keys": [[0, [8, 8]], [2, [72, 32]]] })), shot(json!([40, 20])))
+    else {
+        return;
+    };
+    assert!(moving.diff(&still) < 0.5 && still.at(40, 20) != BLUE, "{} apart", moving.diff(&still));
+}
