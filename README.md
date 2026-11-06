@@ -2388,7 +2388,9 @@ interfaz completa; lo esencial:
   y el color de fondo de la escena, y `null` los devuelve a lo que dice `scene.json`. El resplandor
   también se enciende en escenas que no lo declaran (con los valores por defecto de `canvas.bloom`
   para lo que el script no nombra) y se apaga con `null`; sigue las mismas reglas de calidad y batería
-  y no cuesta nada hasta que un script lo pide.
+  y no cuesta nada hasta que un script lo pide; el script lo declara con `bloom` en `uses` (el editor
+  lo añade solo al ver `.bloom` en el código) y el costo de la escena, el de cada nivel en el editor
+  y `wprs-ctl pack check` lo cuentan desde el principio.
 - **Formas propias**: con `uses: ["geometry"]` y un `pools` en `scene.json`,
   `scene.mesh("barras").create({vertices, indices, format: "xyuv"})` crea triángulos con
   `Float32Array` que `update()` cambia y `destroy()` quita, dentro de los límites del pool y de 1 MiB

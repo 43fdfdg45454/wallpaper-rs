@@ -6,7 +6,8 @@ use std::path::Path;
 use wprs_core::message::said;
 use wprs_scene::{MAX_SCRIPT_BYTES, MAX_SCRIPTS2, ScriptApi, ScriptEvent, imported};
 
-const CALLS: [(&str, ScriptApi); 4] = [
+const CALLS: [(&str, ScriptApi); 5] = [
+    (".bloom", ScriptApi::Bloom),
     (".spawn(", ScriptApi::Layers),
     (".order(", ScriptApi::Layers),
     (".effect(", ScriptApi::Effects),

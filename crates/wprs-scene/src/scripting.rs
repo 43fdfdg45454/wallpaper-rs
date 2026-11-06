@@ -61,6 +61,7 @@ pub enum ScriptApi {
     Sounds,
     Animations,
     Camera,
+    Bloom,
     Math,
     Shortcuts,
     Console,
