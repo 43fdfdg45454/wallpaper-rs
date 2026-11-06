@@ -35,3 +35,19 @@ fn effects_that_read_only_their_own_pixel_are_told_apart_from_those_that_reach_f
         assert!(descriptor(near).unwrap().reads_its_pixel(), "{near}");
     }
 }
+
+#[test]
+fn effects_that_read_their_mask_only_under_their_pixel_are_told_apart() {
+    let shifted = "@fragment\nfn fs_p(in: VertexOut) -> @location(0) vec4<f32> {\n    \
+        return tap(in.uv + vec2<f32>(0.3, 0.0)) * mask_at(in.uv);\n}\n";
+    let masked_away = "@fragment\nfn fs_p(in: VertexOut) -> @location(0) vec4<f32> {\n    \
+        return tap(in.uv) * mask_at(in.uv * 0.5);\n}\n";
+    let direct = "@fragment\nfn fs_p(in: VertexOut) -> @location(0) vec4<f32> {\n    \
+        return tap(in.uv) * textureSampleLevel(mask_tex, samp, in.uv, 0.0).r;\n}\n";
+    assert!(single("probe_mask_shifted", shifted).reads_mask_at_its_pixel());
+    assert!(!single("probe_mask_away", masked_away).reads_mask_at_its_pixel());
+    assert!(!single("probe_mask_direct", direct).reads_mask_at_its_pixel());
+    for near in ["waves", "tint", "perspective"] {
+        assert!(descriptor(near).unwrap().reads_mask_at_its_pixel(), "{near}");
+    }
+}

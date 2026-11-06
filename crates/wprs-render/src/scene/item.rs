@@ -51,6 +51,7 @@ pub(crate) struct Fx {
     pub(crate) area: [f32; 4],
     pub(crate) clip: [f32; 4],
     pub(crate) velocity: [f32; 4],
+    pub(crate) crop: [[f32; 4]; 2],
 }
 
 #[repr(C)]

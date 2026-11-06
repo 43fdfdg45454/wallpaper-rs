@@ -1,3 +1,4 @@
+use super::crop::{cropped, window};
 use super::item::{Item, Rect, invert, ndc, scale_of};
 use super::paint::{Painter, Target};
 use super::pipes::Mode;
@@ -7,6 +8,7 @@ use wprs_scene::{Affine, Blend, Content, EffectDraw, Frame, Mask};
 
 pub(crate) struct Fed<'e> {
     pub(crate) mask: Option<Src>,
+    pub(crate) crop: [f32; 4],
     pub(crate) textures: [Option<(&'e str, Src)>; TEXTURES],
 }
 
@@ -95,8 +97,14 @@ impl Painter<'_, '_, '_> {
         }
     }
 
-    pub(crate) fn fed<'e>(&mut self, i: usize, e: &EffectDraw<'e>, rect: Rect, uv: Affine) -> Fed<'e> {
-        let mut fed = Fed { mask: None, textures: [None; TEXTURES] };
+    pub(crate) fn fed<'e>(
+        &mut self,
+        i: usize,
+        e: &EffectDraw<'e>,
+        (rect, uv): (Rect, Affine),
+        reach: Option<f32>,
+    ) -> Fed<'e> {
+        let mut fed = Fed { mask: None, crop: [0.0; 4], textures: [None; TEXTURES] };
         let mask = e.mask.filter(|m| m.layer.is_some() || m.shape.is_some());
         if mask.is_none() && bound(e).next().is_none() {
             return fed;
@@ -108,26 +116,38 @@ impl Painter<'_, '_, '_> {
         for ((param, id), slot) in bound(e).zip(&mut fed.textures) {
             *slot = self.drawn(id, m, size).map(|src| (param, src));
         }
-        fed.mask = mask.and_then(|mask| match &mask.layer {
-            Some(id) => self.drawn(id, m, size),
-            None => self.outline(i, mask, size),
+        let alone = |id: &str| !self.frame.effects.iter().any(|e| bound(e).any(|(_, l)| l == id));
+        let found = mask.and_then(|mask| match &mask.layer {
+            Some(id) => self.projected(id, m, size, reach.filter(|_| alone(id)).map(|r| window(uv, m, r))),
+            None => self.outline(i, mask, size).map(|src| (src, [0.0; 4])),
         });
+        (fed.mask, fed.crop) = found.map_or((None, [0.0; 4]), |(src, crop)| (Some(src), crop));
         fed
     }
 
     pub(crate) fn drawn(&mut self, id: &str, m: Affine, size: (u32, u32)) -> Option<Src> {
+        self.projected(id, m, size, None).map(|(src, _)| src)
+    }
+
+    fn projected(
+        &mut self,
+        id: &str,
+        m: Affine,
+        size: (u32, u32),
+        window: Option<[f32; 4]>,
+    ) -> Option<(Src, [f32; 4])> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
-        let (w, h) = self.sharp(j, m, size);
+        let (m, (w, h), crop) = cropped(m, self.sharp(j, m, size), window);
         let key = projection(j, m, (w, h));
         if let Some((_, Some((out, _)))) = self.isolated.iter().find(|(k, _)| *k == key) {
-            return Some(*out);
+            return Some((*out, crop));
         }
         if let Some(rect) = self.straight(j, m) {
             let out = self.acquire((w, h))?;
             self.ops.push(Op::Clear(out, [0.0; 4]));
             self.direct(j, Target { src: out, rect }, (1.0, Blend::Normal, None), false);
             self.isolated.push((key, Some((out, rect))));
-            return Some(out);
+            return Some((out, crop));
         }
         let (src, r) = self.shared(j)?;
         let out = self.acquire((w, h));
@@ -138,7 +158,7 @@ impl Painter<'_, '_, '_> {
             self.paint(out, item, [src, Src::White, Src::Clear]);
             self.isolated.push((key, Some((out, full))));
         }
-        out
+        out.map(|out| (out, crop))
     }
 
     fn straight(&mut self, j: usize, m: Affine) -> Option<Rect> {

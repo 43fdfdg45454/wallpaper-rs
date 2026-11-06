@@ -3,6 +3,7 @@ mod builders;
 mod capture;
 mod chains;
 mod clock;
+mod crop;
 mod damage;
 mod draw;
 mod effects;

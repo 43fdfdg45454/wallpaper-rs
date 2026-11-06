@@ -62,8 +62,9 @@ impl Painter<'_, '_, '_> {
             return current;
         }
         self.drawn.push(d.key);
-        let fed = self.fed(i, e, rect, uv);
-        let (fx, mask) = self.base(e, uv);
+        let fed = self.fed(i, e, (rect, uv), d.reads_mask_at_its_pixel().then_some(0.0));
+        let (mut fx, mask) = self.base(e, uv);
+        fx.crop[0] = fed.crop;
         let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
         let (made, start) = (self.made.len(), self.ops.len());

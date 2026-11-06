@@ -65,8 +65,9 @@ impl Painter<'_, '_, '_> {
     ) -> Src {
         let Some(d) = descriptor(&e.descriptor.id) else { return current };
         let key = self.r.pipes().chain(&self.r.device, std::iter::once(d), Some(&mut *self.lease));
-        let fed = self.fed(i, e, rect, layer_uv);
-        let (fx, mask) = self.base(e, layer_uv);
+        let fed = self.fed(i, e, (rect, layer_uv), d.reads_mask_at_its_pixel().then_some(0.0));
+        let (mut fx, mask) = self.base(e, layer_uv);
+        fx.crop[0] = fed.crop;
         let mask = fed.mask.unwrap_or(mask);
         let lut = self.lut(e);
         let tune = d.scale_at(self.frame.quality);

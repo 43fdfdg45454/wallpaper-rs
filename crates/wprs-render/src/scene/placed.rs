@@ -87,6 +87,7 @@ impl Painter<'_, '_, '_> {
             area: [0.0; 4],
             clip: [0.0, 0.0, 1.0, 1.0],
             velocity: [e.velocity[0], e.velocity[1], 0.0, 0.0],
+            crop: [[0.0; 4]; 2],
         };
         (fx, mask)
     }
