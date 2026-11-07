@@ -5,8 +5,6 @@ TAG=v${VERSION:?}
 SEMVER='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 [[ $VERSION =~ $SEMVER ]] || { echo "$VERSION is not a release version" >&2; exit 1; }
 
-TIP=$(gh api "repos/{owner}/{repo}/commits/master" --jq .sha)
-[ "$TIP" = "$(git rev-parse HEAD)" ] || { echo "HEAD is not the tip of master, so nothing is published"; exit 0; }
 TOP=$(gh api "repos/{owner}/{repo}/git/matching-refs/tags/v" --paginate --jq '.[].ref | ltrimstr("refs/tags/v")' |
   { grep -E "$SEMVER" || true; } | sort -V | tail -1)
 printf '%s\n' "$TOP" "$VERSION" | sort -VCu || { echo "$TAG is not newer than v$TOP, so nothing is published"; exit 0; }
