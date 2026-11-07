@@ -171,7 +171,7 @@ Kirigami.Page {
         }
 
         ColumnLayout {
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Layout.preferredWidth: Math.min(Kirigami.Units.gridUnit * 28, Math.max(Kirigami.Units.gridUnit * 16, page.width * 0.24))
             Layout.fillWidth: false
             Layout.fillHeight: true
 
