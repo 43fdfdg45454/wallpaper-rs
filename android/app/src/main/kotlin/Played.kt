@@ -35,6 +35,7 @@ internal class Video(
     var speed = 1f
     var looped = true
     var capped = false
+    val frames = FrameCap()
     var loudness = 1f
     var player: ExoPlayer? = null
     var output: Surface? = null
@@ -96,7 +97,8 @@ internal class Video(
         val hushed = (reel.loudness <= 0f) != (loudness <= 0f)
         speed = reel.speed
         looped = reel.looped
-        capped = reel.capped
+        capped = reel.fps > 0
+        frames.fps = reel.fps
         loudness = reel.loudness
         clip = reel.clip
         if (hushed) configure()
@@ -126,7 +128,7 @@ internal class Video(
     }
 
     private fun start(target: Surface) {
-        player = ExoPlayer.Builder(context).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false)
+        player = ExoPlayer.Builder(context, CappedRenderers(context, frames)).setBandwidthMeter(Offline).setUsePlatformDiagnostics(false)
             .setAudioAttributes(MOVIE, false).build().apply {
                 addListener(this@Video)
                 if (fixed != null) setVideoFrameMetadataListener(decoded)

@@ -13,7 +13,7 @@ internal data class Reel(
     val looped: Boolean,
     val loudness: Float,
     val clip: Pair<Long, Long>,
-    val capped: Boolean = false,
+    val fps: Int = 0,
 ) {
     companion object {
         fun of(told: JSONObject) = Reel(
@@ -21,7 +21,7 @@ internal data class Reel(
             told.getBoolean("loop"),
             told.getDouble("volume").toFloat(),
             told.getLong("start") to (told.getLong("end").takeIf { it >= 0 } ?: C.TIME_END_OF_SOURCE),
-            told.optBoolean("capped"),
+            told.optInt("fps"),
         )
     }
 }

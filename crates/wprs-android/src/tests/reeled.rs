@@ -48,7 +48,7 @@ pub(super) fn video_settings_play_on_the_phone() {
     assert!(shown.framed() && !shown.direct());
     assert_eq!(
         shown.told(),
-        json!({ "rate": 0.75, "start": 500, "end": 1250, "loop": false, "volume": 0.4, "capped": true })
+        json!({ "rate": 0.75, "start": 500, "end": 1250, "loop": false, "volume": 0.4, "fps": 24 })
     );
     let set =
         |key: &str, value: Value| ask(json!({ "op": "property", "uid": uid, "key": key, "value": value }));
@@ -83,6 +83,6 @@ pub(super) fn video_settings_play_on_the_phone() {
     assert_eq!(reel::of(Some(&path)), authored);
     assert_eq!(reel::of(None), reel::Reel::default());
     assert!(reel::Reel::default().direct() && reel::Reel::default().cap() == 0);
-    assert_eq!(reel::Reel::default().told()["capped"], json!(false));
+    assert_eq!(reel::Reel::default().told()["fps"], json!(0));
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

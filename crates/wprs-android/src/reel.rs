@@ -94,7 +94,7 @@ impl Reel {
     pub(crate) fn told(&self) -> Value {
         let end = self.end.map_or(-1, |end| end as i64);
         json!({ "rate": self.rate, "start": self.start, "end": end, "loop": !self.once, "volume": self.volume,
-            "capped": self.cap() > 0 })
+            "fps": self.cap() })
     }
 }
 

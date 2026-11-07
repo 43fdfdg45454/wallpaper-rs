@@ -165,14 +165,15 @@ author gives their defaults in the second version:
 
 Presets of a video package set these ids. The phone shows the same settings and presets on the page
 of the package; a video with a zoom or a position goes through the graphics card there instead of
-playing straight on the screen, a frame cap keeps it playing straight and only asks the screen for
-that rate (a screen that cannot run at it shows every frame of the video), and the volume applies
-while video sound is on.
+playing straight on the screen, a frame cap keeps it playing straight: the phone asks the screen for
+that rate and also skips the frames above it before showing them, so a screen that cannot run at it
+still gets no more than the cap (the decoder decodes every frame, only the showing is skipped), and the
+volume applies while video sound is on.
 Once the length of the video is known, `start` stays at least half a second before its end; a part
 that plays nothing, such as a `start` past the end of the file, loops the whole video instead.
 Speed and frame rate are independent: a faster video draws no more frames per second than the
-screen, the battery or `playback.max_fps` allow (straight on the phone's screen it only asks for
-`playback.max_fps`), and changing the speed, the part or the volume
+screen, the battery or `playback.max_fps` allow (straight on the phone's screen it asks for
+`playback.max_fps` and skips the frames above it), and changing the speed, the part or the volume
 applies to the running video without starting it again.
 
 ## Rating and photosensitivity
