@@ -70,6 +70,13 @@ fn a_folder_removed_and_made_again_is_watched_again() {
     std::fs::remove_dir_all(&dir).unwrap();
     assert!(told(&state), "removing the folder sent no notice");
     assert!(listed(&mut state, later) && !state.listed.text.contains("a.png"));
+    let armed = (0..2000).any(|_| {
+        state.listing(later);
+        let awaiting = state.listed.watch.as_ref().is_some_and(|w| w.awaiting());
+        (state.listed.scanning.is_none() && awaiting)
+            || (std::thread::sleep(Duration::from_millis(5)), false).1
+    });
+    assert!(armed, "the folder above the removed one was never watched");
     assert!(state.watching(), "a removed folder is awaited in the folder above it, not looked at every 2 s");
     std::fs::create_dir(&dir).unwrap();
     assert!(told(&state), "making the folder again sent no notice");

@@ -96,6 +96,11 @@ impl Watch {
         Some(Watch { dirs, changed, heard, born, dead, missing, waiting, remote, stop })
     }
 
+    #[cfg(test)]
+    pub(super) fn awaiting(&self) -> bool {
+        self.waiting && !self.dead.load(Ordering::Acquire)
+    }
+
     pub(super) fn whole(&self) -> bool {
         !self.waiting && !self.dead.load(Ordering::Acquire)
     }
