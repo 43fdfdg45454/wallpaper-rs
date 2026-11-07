@@ -589,6 +589,8 @@ Changes one setting and saves the configuration. Keys and their current values a
 | `playback.muted` | `true`, `false`, for videos and scenes with sound | `true` |
 | `playback.max_fps` | `1` to `240`, or `display` (also `0`) for the refresh rate of each output, up to 60 on battery (see "Frame rate") | `display` |
 | `playback.software_parallax` | move depth parallax images even when the GPU is emulated on the CPU (such as llvmpipe), with 8 steps at 15 frames per second at most | `false` |
+| `parallax.fill` | how the layers of a depth parallax picture are filled behind near objects (see "Depth layers"): `lama` (the LaMa model, when it and ONNX Runtime are installed, else `simple`), `simple` (push-pull extension of the nearest background) or `off` (no layers: the single image warp, whose stretched edges may show); not synced, because each device has its own default | `lama` (`simple` on the phone) |
+| `parallax.layers` | number of depth layers of a picture, `4` to `6` | `5` |
 | `playback.flash_guard` | measure the brightness of every scene frame and slow down, or stop, a scene that flashes more than three times a second (see "Cost and frame rate" in `scene.md`); it costs a small read back from the GPU per frame | `false` |
 | `playback.scene_sound` | let scenes play their sound layers (see "Scene sound"); `false` keeps every scene silent, whatever its permissions and volume, and leaves the sound of videos alone | `true` |
 | `playback.scene_capture` | let scenes that were granted `audio` follow the sound that plays (see "Inputs"); `false` closes the audio capture for every scene | `true` |
@@ -1750,7 +1752,7 @@ synced `device` record names the key the server lists.
 |------------|------|--------|
 | `library` | keyed hash | `title`, `rating`, `favorite`, `t:<tag>`, one field per part of the edit of a picture, so parts changed on two devices both survive: `e:geometry`, `e:ops`, `e:masks`, `e:span`, `e:depth`, `e:parallax`, `e:fit` and `e:outputs/<screen>` for each screen crop, leaving out the `source` and parts at their default (a part over 64 KiB keeps the last copy sent, parts this version does not know are kept as synced, and a received edit keeps the `source` of this computer) and `blob` `{id, hash, size, name}` for a private file on the server; only items with a tag, a rating, a favorite mark, an edit or a private file get a record |
 | `playlists` | keyed hash | `name`, `query`, `r:<rule>` (rules this version does not know are kept as synced), and for manual playlists one `e:<entry>` per entry with its item and a fractional position |
-| `settings` | keyed hash of the section | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
+| `settings` | keyed hash of the section | every option except `playback.volume`, `playback.muted`, `playback.software_parallax`, `parallax.fill`, `library.thumb_cache_mb` and `models.allow_download`; options and sections this version does not know are kept as synced |
 | `settings` | keyed hash | `kind` (`profile` or `preset`) and the profile or preset, with items, playlists and presets named by their synced ids; the options of a profile leave out the settings above that stay on each device, and a received profile keeps their values from this computer |
 | `device` | device id | `name`, `platform`, `key` (base64 of the public X25519 key); never applied, shown in `devices[].label` |
 | `repos` | keyed hash of the repo id | `url` (with its trust anchor), `repo_id`, `name`, `fingerprints` of the repositories added with an `https://` or loopback `http://` URL; a new one is only offered (`offers`) until `ConfirmRepo` |
@@ -2226,7 +2228,7 @@ of these files wins, and on equal times an import comes first. An import whose w
 ratio differs from the image's (after its EXIF orientation) by more than 2 % is refused. The cache
 keeps at most 256 MB of estimated maps and deletes the oldest first; temporary files left by an
 interrupted write or install are deleted by the next one in that folder once they are an hour
-old. The daemon never runs the model: it reads the map at
+old. The daemon never runs the depth model: it reads the map at
 1024 pixels at most, applies `depth` and reloads it when any of these files changes. A parallax
 image is rendered only while its smoothed offset moves by a quarter of a pixel or more, at most
 at the frame rate of the output, under the same pause rules as videos (`pause.when_covered`,
@@ -2245,6 +2247,47 @@ environment's switch), so it neither stores a device id nor contacts anyone.
 `models.allow_download = false` turns downloads off on this device only: it is not synced and a
 configuration that cannot be read counts as `false`, also when a setting change saves it again.
 `wprs-ctl models install` takes files fetched by other means.
+
+**Depth layers.** A picture whose `parallax` is on, with a depth map, `parallax.fill` other than `off` and an edit that
+does not develop it (no `geometry` and no enabled `ops`), moves as a stack of layers computed once,
+never per frame. The daemon starts a `layers` job (target: the picture path) when it shows such a
+picture and finds no set for its settings; until it ends, and when it fails (once per run), the
+picture moves with the single image warp. The job runs on its own thread at the lowest priority,
+with at most four threads for LaMa, and reloads the screens when it ends. It computes, at 1920
+pixels on the long side at most:
+
+1. the depth map at the size of the picture, refined with a guided filter that takes the picture
+   as its guide (colour guide, radius 8 pixels, epsilon 0.002), then the `near`, `far` and `gamma` of
+   `depth` (`dilate` and `smooth` only serve the single image warp);
+2. `parallax.layers` depth layers, from a one dimensional k-means on the refined depth, each with a
+   mean depth that drives its offset (`(depth - focus) × shift`, as the depth search does) and a soft
+   edge of about 2 pixels; clusters under 0.2 % of the picture are dropped, so a flat picture can
+   have fewer;
+3. for every layer except the nearest, the band that moving can uncover: the pixels under the layers
+   in front of it (and 2 pixels around them, which hold their colours) within
+   `ceil(strength × width × (nearest depth - layer depth)) + 2` pixels of what the layer knows;
+4. the fill of those bands, with `lama` (512 pixel crops around each band, at most 8 per layer, the
+   crops covering 1024 pixels or more and reduced when more are needed, blended back with a feathered
+   edge over a push-pull base) or `simple` (push-pull pyramid from the known pixels followed by a
+   blur of radius 2 over the filled pixels only, so the edge of a near object never stretches). The
+   farthest layer is opaque everywhere.
+
+The set is one PNG with the layers stacked from the farthest, `<SHA-256>-<key>.layers.png`, and its
+`<SHA-256>-<key>.layers.json` (`format`, `size`, `fill`, `cuts`, `depths` and `bands` with the layer,
+the reach in pixels and the pixels filled), in the cache of depth maps (written first the JSON and
+then the PNG, which the daemon watches). The key hashes the picture, the model, the input size, the
+`near`, `far` and `gamma` of `depth`, the fill actually used, the number of layers, the parallax
+`strength` (rounded to a thousandth), the size and time of the depth map file and the LaMa file; the
+256 MB limit of the cache covers them and trimming a PNG deletes its JSON. `lama` becomes `simple` while LaMa or
+ONNX Runtime is not installed (`wprs-ctl models download lama-big-fp32`, which, like the other models,
+only downloads after showing its size, license and server). At rest the screen shows the original
+picture; while it moves, the GPU draws the layers from the farthest to the nearest in one pass,
+nearest occluding, with the same source, settings and smoothing as the single image warp.
+
+`wprs-ctl edit depth layers FILE [--fill lama|simple|off] [--layers N] [--force] [--list] [--clear]`
+builds the set in its own process (the same code, with the settings of the configuration
+file as defaults), lists the sets of the picture or deletes them, and
+`wprs-ctl edit depth show FILE --layer N --out PNG` saves one layer with its transparency.
 
 Exposure, white balance, contrast, saturation, vignette and blur work in linear light, curves and
 overlays (with their `opacity`) in sRGB. The GPU renders an edit once, at the size the output
@@ -2396,7 +2439,7 @@ running job returns that job's id (`import` jobs are never merged, and a `scan` 
 scan, never a running one, so a change made while a folder is scanned is seen by the next scan). Library jobs (`scan`,
 `import`, `analyze`) run one at a time, repository jobs (`repo_add`, `repo_refresh`, `install`)
 run one at a time, at most two `provider_sync` jobs download at once, `account`, `account_sync`
-and `upload` jobs run one at a time, and so do `link` jobs; a job waiting for its
+and `upload` jobs run one at a time, and so do `link` jobs and `layers` jobs; a job waiting for its
 turn is `queued`. A sync after its downloads and an install after its commit stay `running`
 while they wait for the library.
 
@@ -2409,6 +2452,7 @@ while they wait for the library.
 | `repo_add` | `Repos1.Add` | repository URL without query | `0/0` | `Repo` |
 | `repo_refresh` | `Repos1.Refresh`, schedule | repository id, or `""` | `0/0` | `RefreshOutput` |
 | `install` | `Repos1.Install` | `repo_id/id@version` | bytes | `InstalledPackage` |
+| `layers` | showing a picture whose parallax is on, that has a depth map and no layers for its settings yet | picture path | percent (`0` to `100`) | `{ file, fill, layers }` |
 | `account` | `Sync1.AddServer`, `AddPinnedServer`, `PreviewCode`, `Approve`, `ApproveDevice`, `ConfirmShare`, `Rotate`, `Reset`, `SetEscrow` | server URL, `preview <code>`, `approve <code>`, `share <device id>`, `rotate`, `reset` or `escrow` | `0/0` | server answer, or `{recovery}` |
 | `link` | `Sync1.Link`, `Join`, `ShareKey`, `Restore` | `link`, `join <device id>`, `share <device>` or `restore` | `0/0` | `{device, encrypted, needs_key}`, `{from}`, `{device, code}` or `{epoch}` |
 | `account_sync` | `Sync1.SyncNow`, schedule | `""` | `0/0` | `{applied, records, quarantined, unsent}` |
@@ -2584,7 +2628,7 @@ struct Job {
     id: u64, kind: JobKind, target: String, state: JobState, done: u64, total: u64,
     started_at: Time, finished_at: Option<Time>, error: Option<JobError>, output: Option<Value>,
 }
-enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install, Account, Link, AccountSync, Upload }
+enum JobKind { Scan, Import, Analyze, ProviderSync, RepoAdd, RepoRefresh, Install, Account, Link, AccountSync, Upload, Layers }
 enum JobState { Queued, Running, Done, Failed, Cancelled }
 struct JobError { name: String, message: String }
 struct JobsReply { model: u32, serial: u64, jobs: Vec<Job> }

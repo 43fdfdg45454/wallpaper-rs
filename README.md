@@ -360,8 +360,8 @@ carga, ahorro de energía y temperatura y, con una escena, la clase del teléfon
 GPU), el nivel de calidad y por qué bajó. Los avisos que vienen del motor (los fallos de un
 paquete, de una propiedad, de la profundidad o de la sincronización) llevan un identificador de
 mensaje y se muestran en el idioma del teléfono con las mismas traducciones que el resto de la app.
-*Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y del modelo
-de profundidad. El diagnóstico dice también si la clase del teléfono se midió con marcas de
+*Licencias* muestra los textos de ONNX Runtime, de los componentes que incluye y de los modelos
+de profundidad y de relleno (LaMa). El diagnóstico dice también si la clase del teléfono se midió con marcas de
 tiempo de la GPU, que cuentan solo el trabajo de la GPU, o esperando a que termine, en los
 teléfonos que no las tienen; el escritorio mide igual.
 
@@ -410,6 +410,14 @@ por el ahorro de energía, por poca batería o por calor; con una batería norma
 nunca se para. El sensor solo se enciende mientras se ve un fondo con paralaje, a los fotogramas por
 segundo permitidos (60 como mucho), y se apaga al taparlo. Con el teléfono quieto no se dibuja
 ningún fotograma, y con batería el sombreador da como mucho 8 pasos de profundidad.
+
+En el teléfono, con un mapa, el motor también calcula las capas (en segundo plano, como el mapa, con
+el mismo progreso y *Cancelar*) y dibuja con ellas; *Relleno detrás de lo cercano* elige `simple`
+(por defecto), `lama` o `off`, con una nota visible de su coste. LaMa es opcional: gasta más batería y
+memoria y tarda minutos por imagen, así que está apagado por defecto, se descarga solo si lo eliges
+(208 MB, Apache-2.0, huggingface.co, con el mismo permiso previo y su SHA-256) y nunca corre con el
+ahorro de batería, que usa el relleno simple. *Construir las capas de profundidad* las rehace con los
+ajustes actuales, y el teléfono sigue sin herramientas de autor.
 
 *Calcular un mapa de profundidad* usa el mismo modelo que el escritorio, Depth Anything V2 Small,
 con ONNX Runtime 1.31.0, que ya no va dentro del APK. La primera vez pide permiso para descargar los
@@ -1049,7 +1057,7 @@ escenas. Con render por software (sin GPU) la imagen queda quieta salvo que acti
 `playback.software_parallax`, que la mueve con 8 pasos y 15 fotogramas por segundo como mucho.
 El mapa puede ser propio (`wprs-ctl edit depth import`, con la misma proporción que la imagen) o
 calcularse en el propio equipo con Depth Anything V2 Small (Apache-2.0) mediante ONNX Runtime, en
-un proceso aparte y nunca dentro del daemon; gana el mapa más reciente y la caché de mapas
+un proceso aparte y nunca dentro del daemon (solo las capas de más abajo se calculan en un trabajo suyo en segundo plano); gana el mapa más reciente y la caché de mapas
 calculados no pasa de 256 MB. Ni el modelo (99 MB) ni ONNX Runtime (11 MB) vienen incluidos: solo
 se descargan de GitHub cuando lo pides, después de mostrar tamaño, licencia y servidores, se
 comprueban con su SHA-256 fijado, se guardan junto al texto completo de su licencia (y ONNX
@@ -1070,6 +1078,40 @@ wprs-ctl edit depth export foto.jpg mapa.png --adjusted --colour   # el mapa aju
 wprs-ctl edit depth foto.jpg --dilate 4 --smooth 2   # ajustar cerca, lejos, curva y bordes
 wprs-ctl edit depth remove foto.jpg                  # borrar el mapa calculado, el importado y el de al lado
 wprs-ctl edit parallax foto.jpg --source pointer --strength 0.02 --focus 0.3
+```
+
+*Parallax 3D calculado una vez por imagen.* Desplazar una sola imagen estira los bordes y los
+horizontes entre capas de profundidad. Para que lo que descubre un objeto cercano se rellene con
+fondo plausible, el daemon prepara una vez, en segundo plano (un trabajo `Layers` con su progreso,
+que se ve en `wprs-ctl jobs`) y nunca por fotograma, un juego de capas de la imagen: afina el mapa
+con un filtro guiado por la propia imagen (radio 8 px, épsilon 0,002), lo parte en 4 a 6 capas
+(`parallax.layers`, 5 por defecto) con un corte suave de unos 2 px y una profundidad media por capa
+que manda su desplazamiento, marca en las capas de detrás la franja que el desplazamiento máximo
+puede descubrir y la rellena según `parallax.fill`: `lama` (por defecto en el escritorio) usa el
+modelo de relleno LaMa sobre recortes de 512 px, `simple` extiende por pirámide el fondo más cercano
+sin estirar nunca el borde del objeto, y `off` no calcula capas, con lo que la imagen se mueve como
+antes, como una sola imagen deformada, y los bordes pueden verse estirados. Las capas se guardan en
+la caché de mapas (`~/.cache/wallpaper-rs/depth/<SHA-256>-<clave>.layers.png` y `.layers.json`, dentro
+de los mismos 256 MB) con una clave que reúne la imagen, el modelo, el relleno, el número de capas, la
+fuerza del paralaje y los ajustes del mapa; mientras se calculan, o si no hay mapa, la imagen sigue
+con la deformación de siempre. Al moverse, la GPU dibuja las capas de atrás adelante con el
+desplazamiento de cada una (misma fuente, mismos ajustes y mismo suavizado que antes) y en reposo
+muestra la imagen original; las imágenes con ediciones que la revelan (recorte, giro u operaciones)
+siguen con la deformación de una imagen. LaMa (big-lama en ONNX, 208 MB, Apache-2.0) no viene incluido:
+se descarga con `wprs-ctl models download lama-big-fp32` (o desde los ajustes de la app) después de
+mostrar tamaño, licencia y servidor, con las mismas reglas que el modelo de profundidad; sin él, o
+sin ONNX Runtime, se usa `simple`. Corre en el procesador, o en CUDA si `ORT_DYLIB_PATH` apunta a
+un ONNX Runtime con CUDA, con prioridad mínima y como mucho cuatro hilos.
+
+```sh
+wprs-ctl models download lama-big-fp32                          # el relleno LaMa (208 MB)
+wprs-ctl edit depth layers foto.jpg                             # calcular las capas con los ajustes
+wprs-ctl edit depth layers foto.jpg --fill simple --layers 4 --force
+wprs-ctl edit depth layers foto.jpg --list                      # los juegos de capas de la imagen
+wprs-ctl edit depth layers foto.jpg --clear                     # borrarlos
+wprs-ctl edit depth show foto.jpg --layer 0 --out capa.png      # inspeccionar una capa
+wprs-ctl config parallax.fill simple                            # lama, simple u off
+wprs-ctl config parallax.layers 6
 ```
 
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
@@ -3063,7 +3105,7 @@ misma pausa.
 - La iluminación RGB está apagada por defecto; encendida, solo manda colores (nunca otra cosa) al
   servidor de OpenRGB de este equipo, o a la dirección que elijas con un aviso visible, y solo de los
   paquetes a los que se lo permites.
-- El modelo de profundidad y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
+- El modelo de profundidad, el de relleno LaMa y ONNX Runtime solo se descargan si lo pides y aceptas su tamaño,
   licencia y servidores; llevan el mismo User-Agent genérico, sin cabecera Referer ni redirecciones
   de HTTPS a HTTP, se verifican con SHA-256 y los mapas se calculan en el equipo, en un proceso
   aparte. ONNX Runtime funciona con su telemetría desactivada: no guarda ningún identificador ni se
@@ -3147,3 +3189,10 @@ o un widget llega además a la escena), que el plugin envía y el daemon solo
 
 GPL-3.0-or-later. Ver [`LICENSE`](LICENSE). Las escenas de ejemplo de `scenes/` son de dominio
 público (CC0 1.0, [`scenes/LICENSE`](scenes/LICENSE)).
+
+Los modelos no vienen incluidos: se descargan cuando lo pides y cada uno se guarda con el texto de
+su licencia. Depth Anything V2 Small (Apache-2.0), LaMa big-lama (Apache-2.0, el archivo
+`lama_fp32.onnx` de la exportación ONNX publicada como `Carve/LaMa-ONNX` en huggingface.co, 208 044 816
+bytes, SHA-256 `1faef530…68d6`, licencia Apache-2.0 declarada en esa ficha y en
+[`advimman/lama`](https://github.com/advimman/lama/blob/main/LICENSE)) y ONNX Runtime (MIT).
+`wprs-ctl models list` y los ajustes muestran tamaño, licencia y servidores antes de cada descarga.

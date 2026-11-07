@@ -988,7 +988,7 @@ each point by `(depth - focus) × strength` pixels towards the pointer (`follow`
 orbit (`orbit`, which also takes over while the pointer is away), searching its `depth` image (a
 `linear` asset, bright is near) in 8 to 16 `steps`, fewer at lower quality levels, so that near
 parts slide over far ones without tearing; `overscan` enlarges the layer to keep its edges out of
-sight. While it would move nothing (no orbit, no `overscan` and the pointer away, centred or not
+sight (still pictures with a parallax of their own use depth layers computed once instead, in which what a near object uncovers is filled with background; see "Depth layers" in `dbus.md`). While it would move nothing (no orbit, no `overscan` and the pointer away, centred or not
 followed, or a `strength` of zero) the frame leaves it out, so it costs no pass; the phone, whose
 pointer only follows touches, shows it this way most of the time. Still images with a depth map
 move with the same search. `glitch` stays still until
