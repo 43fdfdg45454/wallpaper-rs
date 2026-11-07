@@ -1,16 +1,25 @@
 import QtQuick
 import QtQuick.Layouts
 
-StackLayout {
+Item {
+    id: times
+
     required property var page
 
-    currentIndex: page.mesh.clip !== "" ? 1 : 0
-
-    SceneTimeline {
-        page: parent.page
+    MouseArea {
+        anchors.fill: parent
     }
 
-    SceneClipLine {
-        page: parent.page
+    StackLayout {
+        anchors.fill: parent
+        currentIndex: times.page.mesh.clip !== "" ? 1 : 0
+
+        SceneTimeline {
+            page: times.page
+        }
+
+        SceneClipLine {
+            page: times.page
+        }
     }
 }

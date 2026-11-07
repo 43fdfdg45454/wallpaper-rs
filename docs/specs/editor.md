@@ -663,7 +663,9 @@ curve, a knob on each key that moves the eye of that key and a square on the poi
 moved in the plane of the view at their own depth, a dashed line between them, and a square where the
 paths put the camera at the current time. The scene timeline shows a lane per path with its keys, which
 drag to another time (`key` with `from`, `camera-path … key PATH T --from T` in the terminal) and seek
-the preview with a click. The cost lines add the shadow maps, the fur shells and
+the preview with a click; the panel of the timelines takes the presses that no lane takes, because the
+Breeze style turns a drag that nothing accepts into a move of the whole window, which kept the keys of a
+lane from being dragged. The cost lines add the shadow maps, the fur shells and
 the skinned vertices of each quality level and the shadowed lights of each tier. `wprs-ctl scene
 animate`, `clip`, `key`, `material`, `shadows`, `camera-path`, `new-material`, `debug3d` and `cost3d`
 do the same from the terminal.
