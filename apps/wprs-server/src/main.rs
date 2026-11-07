@@ -108,9 +108,6 @@ fn print(value: serde_json::Value, code: ExitCode) -> ExitCode {
 
 fn run(command: Command) -> Result<String> {
     let cfg = Config::from_env()?;
-    if !matches!(command, Command::Healthcheck) {
-        wprs_server::privileges::settle(&cfg.data)?;
-    }
     let runtime = || tokio::runtime::Builder::new_multi_thread().enable_all().build();
     match command {
         Command::Serve => runtime()?.block_on(async {

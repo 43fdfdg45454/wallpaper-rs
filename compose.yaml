@@ -2,10 +2,6 @@ services:
   wprs:
     image: ghcr.io/wallpaper-rs/wprs-server:${WPRS_VERSION:-latest}
     restart: unless-stopped
-    read_only: true
-    cap_drop: [ALL]
-    cap_add: [CHOWN, SETUID, SETGID]
-    security_opt: ["no-new-privileges:true"]
     environment:
       WPRS_PUBLIC_URL: ${WPRS_PUBLIC_URL:?falta WPRS_PUBLIC_URL en .env}
       WPRS_NAME: ${WPRS_NAME:-wallpaper-rs}

@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.title="wprs-server" \
       org.opencontainers.image.licenses="GPL-3.0-or-later" \
       org.opencontainers.image.source="https://github.com/wallpaper-rs/wallpaper-rs"
 COPY --from=build /out/wprs-server /usr/local/bin/wprs-server
-COPY --from=build --chown=65532:65532 /out/data /data
+COPY --from=build /out/data /data
 ENV WPRS_DATA=/data WPRS_LISTEN=0.0.0.0:8080
 USER 0:0
 VOLUME ["/data"]

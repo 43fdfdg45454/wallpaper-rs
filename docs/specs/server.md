@@ -27,9 +27,8 @@ docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 | `backup [DIR]` | Snapshot the database with `VACUUM INTO`, copy the blobs, thumbnails and complete private files that the snapshot names (a file deleted meanwhile takes a new snapshot, up to three times; files missing from two snapshots in a row are listed as `missing` in the manifest with a warning), the withdrawn packages, the keys and the repository; default `DIR` is `<data>/backups/<UTC time>`, removed again when the backup fails |
 | `restore DIR [--force] [--advance N]` | Check every checksum and `PRAGMA integrity_check`, restore with the server stopped, then publish `N` (default 1) new index versions. Signed root and index files newer than the snapshot stay, so index numbers are never reused; after losing the data directory, pass an `N` that goes past the last version clients saw. Sync heads jump to the restore time in milliseconds, so every device downloads its records again (`410 resync`), and unfinished private files start again from the first byte |
 
-The image builds from base images pinned by digest and starts as root only to hand `/data` to user 65532 and then runs as that user (`CHOWN`, `SETUID` and
-`SETGID` are the only capabilities `compose.yaml` keeps; the process holds none afterwards), on a read-only root
-file system without a shell; `/data` (bind-mounted from `./data`) is the only writable path.
+The image builds from base images pinned by digest, has no shell and runs as root by default, like a plain image;
+whoever wants another user adds a `user:` line to `compose.yaml`. `./data` (mounted as `/data`) holds everything, so a backup is a copy of that folder.
 `compose.yaml` pulls `ghcr.io/wallpaper-rs/wprs-server:${WPRS_VERSION:-latest}`; to build from the
 checkout instead, add the override: `docker compose -f compose.yaml -f deploy/compose.build.yaml up -d --build`.
 
