@@ -123,3 +123,10 @@ fn a_camera_path_row_reads_its_path_by_position() {
     let row = files.iter().find(|(n, _)| n == "ScenePathRow.qml").map(|(_, t)| t.clone()).unwrap();
     assert!(row.contains("required property int index") && !row.contains("required property var modelData"));
 }
+
+#[test]
+fn the_camera_panel_is_hidden_when_the_scene_has_no_camera() {
+    let files = qml_files();
+    let panel = files.iter().find(|(n, _)| n == "SceneCamera3d.qml").map(|(_, t)| t.clone()).unwrap();
+    assert!(panel.contains(r#"page.editor.value("/scene/camera3d") !== "null""#));
+}

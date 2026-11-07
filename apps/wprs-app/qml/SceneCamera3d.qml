@@ -31,7 +31,7 @@ ColumnLayout {
         });
     }
 
-    visible: (info?.stages ?? 0) > 0 || page.editor.value("/scene/camera3d") !== ""
+    visible: (info?.stages ?? 0) > 0 || page.editor.value("/scene/camera3d") !== "null"
     Component.onCompleted: load()
 
     Connections {
