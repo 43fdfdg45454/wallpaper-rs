@@ -39,6 +39,7 @@ Item {
         opacity: gizmo.chosen ? 0.9 : 0.4
 
         TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
             onTapped: gizmo.stage.page.editor.select(gizmo.model.pointer)
         }
     }

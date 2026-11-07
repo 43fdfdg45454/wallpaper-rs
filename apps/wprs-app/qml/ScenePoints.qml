@@ -35,6 +35,7 @@ Item {
             }
 
             TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
                 onTapped: spots.mesh.spot = spot.modelData.name
             }
 

@@ -104,6 +104,7 @@ Item {
             }
 
             TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
                 onTapped: knobs.flip(bend.index)
             }
 

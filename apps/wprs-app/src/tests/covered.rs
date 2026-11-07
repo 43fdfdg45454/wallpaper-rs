@@ -97,3 +97,22 @@ fn the_3d_stage_reads_its_models_and_draws_the_bones_over_their_boxes() {
     let stage = file("SceneStage3d.qml");
     assert!(stage.find("delegate: SceneModelGizmo") < stage.find("delegate: SceneStageBones"));
 }
+
+#[test]
+fn a_tap_on_a_canvas_handle_does_not_also_select_the_canvas() {
+    let files = qml_files();
+    let names = [
+        "SceneGizmo",
+        "SceneModelGizmo",
+        "SceneStageBones",
+        "ScenePoints",
+        "SceneIkKnobs",
+        "SceneBones",
+        "SceneKnob",
+    ];
+    for name in names {
+        let text = files.iter().find(|(n, _)| *n == format!("{name}.qml")).map(|(_, t)| t.clone()).unwrap();
+        let taps = text.matches("TapHandler {").count();
+        assert_eq!(taps, text.matches("gesturePolicy: TapHandler.ReleaseWithinBounds").count(), "{name}");
+    }
+}

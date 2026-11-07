@@ -129,6 +129,7 @@ Item {
             }
 
             TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
                 onTapped: limbs.tapped(knob.modelData.name)
             }
 

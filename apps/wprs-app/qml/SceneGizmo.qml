@@ -72,6 +72,7 @@ Item {
     }
 
     TapHandler {
+        gesturePolicy: TapHandler.ReleaseWithinBounds
         onTapped: gizmo.page.editor.select(gizmo.modelData.pointer)
     }
 
