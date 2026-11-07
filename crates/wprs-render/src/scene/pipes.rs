@@ -27,6 +27,20 @@ pub(crate) enum Mode {
     Screen,
     Replace,
     Atop,
+    Exclusion,
+}
+
+pub(crate) fn fixed(blend: wprs_scene::Blend, atop: bool) -> Option<Mode> {
+    use wprs_scene::Blend as B;
+    match blend {
+        B::Normal if atop => Some(Mode::Atop),
+        B::Normal => Some(Mode::Normal),
+        B::Add => Some(Mode::Add),
+        B::Multiply => Some(Mode::Multiply),
+        B::Screen => Some(Mode::Screen),
+        B::Exclusion => Some(Mode::Exclusion),
+        _ => None,
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -82,6 +96,7 @@ pub(crate) fn blend(mode: Mode) -> Option<wgpu::BlendState> {
         Mode::Add => (c(F::One, F::One), over),
         Mode::Multiply => (c(F::Dst, F::OneMinusSrcAlpha), over),
         Mode::Screen => (c(F::One, F::OneMinusSrc), over),
+        Mode::Exclusion => (c(F::OneMinusDst, F::OneMinusSrc), over),
         Mode::Atop => (c(F::DstAlpha, F::OneMinusSrcAlpha), c(F::Zero, F::One)),
     };
     Some(wgpu::BlendState { color, alpha })

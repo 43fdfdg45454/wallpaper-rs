@@ -124,13 +124,7 @@ pub(super) fn compute(r: &Renderer) -> bool {
 }
 
 fn mode(blend: Blend, atop: bool) -> Mode {
-    match blend {
-        Blend::Normal if atop => Mode::Atop,
-        Blend::Add => Mode::Add,
-        Blend::Multiply => Mode::Multiply,
-        Blend::Screen => Mode::Screen,
-        _ => Mode::Normal,
-    }
+    super::pipes::fixed(blend, atop).unwrap_or(Mode::Normal)
 }
 
 impl SceneView {

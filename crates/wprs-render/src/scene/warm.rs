@@ -4,14 +4,7 @@ use wgpu::TextureFormat as Format;
 use wprs_scene::{Blend, Kind, Layer, Scene};
 
 fn mode(blend: Blend, atop: bool) -> Mode {
-    match blend {
-        Blend::Normal if atop => Mode::Atop,
-        Blend::Normal => Mode::Normal,
-        Blend::Add => Mode::Add,
-        Blend::Multiply => Mode::Multiply,
-        Blend::Screen => Mode::Screen,
-        _ => Mode::Replace,
-    }
+    super::pipes::fixed(blend, atop).unwrap_or(Mode::Replace)
 }
 
 fn entry(layer: &Layer) -> Option<&'static str> {

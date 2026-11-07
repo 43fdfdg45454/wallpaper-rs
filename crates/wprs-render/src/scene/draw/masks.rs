@@ -65,15 +65,7 @@ impl Painter<'_, '_, '_> {
         target: Target,
         atop: bool,
     ) -> (Mode, Src) {
-        let fixed = match blend {
-            Blend::Normal if atop => Some(Mode::Atop),
-            Blend::Normal => Some(Mode::Normal),
-            Blend::Add => Some(Mode::Add),
-            Blend::Multiply => Some(Mode::Multiply),
-            Blend::Screen => Some(Mode::Screen),
-            _ => None,
-        };
-        if let Some(mode) = fixed {
+        if let Some(mode) = super::super::pipes::fixed(blend, atop) {
             return (mode, Src::Clear);
         }
         let (x, y) = (bounds.x - target.rect.x, bounds.y - target.rect.y);
