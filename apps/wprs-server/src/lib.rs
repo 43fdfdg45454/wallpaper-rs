@@ -28,6 +28,7 @@ mod net;
 mod oidc;
 mod pages;
 mod policies;
+pub mod privileges;
 mod records;
 mod repo;
 mod review;

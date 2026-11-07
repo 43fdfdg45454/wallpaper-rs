@@ -644,9 +644,7 @@ jobs:
           persist-credentials: false
 
       - name: Build and start with compose
-        run: |
-          sudo install -d -o 65532 -g 65532 -m 0700 data
-          docker compose up -d --build --wait --wait-timeout 180
+        run: docker compose up -d --build --wait --wait-timeout 180
 
       - name: Health, setup, repository, backup and restore
         run: scripts/server-smoke.sh

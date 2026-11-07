@@ -9,7 +9,6 @@ operator configures, and sends no telemetry.
 
 ```sh
 cp .env.sample .env                          # set WPRS_PUBLIC_URL, the only required variable
-mkdir data && sudo chown 65532:65532 data    # the container writes as user 65532
 docker compose up -d                         # pulls the published image
 docker compose logs wprs | grep setup        # one-time token for the first administrator
 docker compose exec wprs wprs-server repo init --name "Example wallpapers"
@@ -28,7 +27,8 @@ docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 | `backup [DIR]` | Snapshot the database with `VACUUM INTO`, copy the blobs, thumbnails and complete private files that the snapshot names (a file deleted meanwhile takes a new snapshot, up to three times; files missing from two snapshots in a row are listed as `missing` in the manifest with a warning), the withdrawn packages, the keys and the repository; default `DIR` is `<data>/backups/<UTC time>`, removed again when the backup fails |
 | `restore DIR [--force] [--advance N]` | Check every checksum and `PRAGMA integrity_check`, restore with the server stopped, then publish `N` (default 1) new index versions. Signed root and index files newer than the snapshot stay, so index numbers are never reused; after losing the data directory, pass an `N` that goes past the last version clients saw. Sync heads jump to the restore time in milliseconds, so every device downloads its records again (`410 resync`), and unfinished private files start again from the first byte |
 
-The image builds from base images pinned by digest and runs as user 65532 on a read-only root
+The image builds from base images pinned by digest and starts as root only to hand `/data` to user 65532 and then runs as that user (`CHOWN`, `SETUID` and
+`SETGID` are the only capabilities `compose.yaml` keeps; the process holds none afterwards), on a read-only root
 file system without a shell; `/data` (bind-mounted from `./data`) is the only writable path.
 `compose.yaml` pulls `ghcr.io/wallpaper-rs/wprs-server:${WPRS_VERSION:-latest}`; to build from the
 checkout instead, add the override: `docker compose -f compose.yaml -f deploy/compose.build.yaml up -d --build`.

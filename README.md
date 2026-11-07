@@ -1913,12 +1913,11 @@ interruptor), porque lo que oye, el sonido que suena o el micrófono, podría sa
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas
 con subidas y moderación, y la sincronización de la biblioteca, las listas y los ajustes entre
 dispositivos, cifrada de extremo a extremo por defecto. Es un solo binario en un contenedor sin
-shell, con un usuario sin privilegios y la raíz de solo lectura; todos los datos viven en el
+shell, que arranca como root solo para dar `/data` al usuario 65532 y pasa a él al momento, con la raíz de solo lectura; todos los datos viven en el
 volumen `/data`. No envía telemetría ni se conecta a terceros.
 
 ```sh
 cp .env.sample .env                           # editar WPRS_PUBLIC_URL, la única variable obligatoria
-mkdir data && sudo chown 65532:65532 data     # el contenedor escribe como el usuario 65532
 docker compose up -d                          # baja la imagen publicada y la arranca
 docker compose logs wprs | grep setup         # token de un solo uso del primer administrador
 docker compose exec wprs wprs-server repo init --name "Fondos de casa"

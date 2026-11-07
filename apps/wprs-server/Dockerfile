@@ -17,7 +17,7 @@ LABEL org.opencontainers.image.title="wprs-server" \
 COPY --from=build /out/wprs-server /usr/local/bin/wprs-server
 COPY --from=build --chown=65532:65532 /out/data /data
 ENV WPRS_DATA=/data WPRS_LISTEN=0.0.0.0:8080
-USER 65532:65532
+USER 0:0
 VOLUME ["/data"]
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD ["/usr/local/bin/wprs-server", "healthcheck"]
