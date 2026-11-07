@@ -77,10 +77,14 @@ ctl scene bone "$draft" puppet hand --rename paw || fail "the hand was not renam
 ctl scene bone "$draft" puppet paw --root || fail "the paw was not rehung"
 ctl scene auto-weights "$draft" puppet || fail "the weights were not bound to the bones again"
 ctl scene clip "$draft" puppet swing --add --length 2 --loop pingpong || fail "no clip was added"
-ctl scene key "$draft" puppet swing 1 --bone arm --rotation 30 --position 4,0 --scale 1.2 --ease cubic || fail "the arm was not keyed"
+ctl scene key "$draft" puppet swing 1 --bone arm --rotation 30 --position 4,0 --scale 1.2 --ease in_out_cubic || fail "the arm was not keyed"
 ctl scene key "$draft" puppet swing 1.5 --bone arm --from 1 --copy || fail "the key was not copied"
 ctl scene key "$draft" puppet swing 0 --order body --value 3 || fail "the order of a part was not keyed"
-ctl scene keys "$draft" puppet swing | grep '"cubic"' >/dev/null || fail "the keys of the clip were not listed"
+ctl scene keys "$draft" puppet swing | grep '"in_out_cubic"' >/dev/null || fail "the keys of the clip were not listed"
+ctl scene key "$draft" puppet swing 0 --bone arm --rotation 0 --out-handle 0.5,10 || fail "a key of a clip took no Bézier handle"
+ctl scene keys "$draft" puppet swing | grep '"out"' >/dev/null || fail "the handle of the key was not listed"
+ctl scene key "$draft" puppet swing 0 --bone arm --rotation 0 --ease '[0.25,0.1,0.25,1]' || fail "a key of a clip took no cubic Bézier easing"
+if ctl scene key "$draft" puppet swing 0 --bone arm --rotation 0 --in-handle 0.1,1 --ease linear 2>/dev/null; then fail "a key took handles and an easing together"; fi
 ctl scene clip "$draft" puppet swing --rename sway || fail "the clip was not renamed"
 ctl scene set "$draft" /scene/layers/1/animations '[{"clip": "sway"}]'
 ctl scene preview "$draft" -o preview:1 --time 0.5 || fail "a scene with a keyed and painted mesh was not previewed"

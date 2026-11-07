@@ -1,4 +1,5 @@
 mod clips;
+mod curves;
 mod cutouts;
 mod kit;
 mod limbs;

@@ -9,7 +9,8 @@ QQC2.ToolBar {
     required property var line
     readonly property var mesh: line.mesh
     readonly property var clips: (JSON.parse(line.page.editor.value(mesh.pointer(mesh.layer) + "/clips") || "null") ?? []).map(c => c.id)
-    readonly property var eases: ["step", "linear", "cubic"]
+    readonly property var eases: line.page.view.easings ?? ["linear"]
+    readonly property bool custom: line.picked !== null && typeof line.picked.ease !== "string"
 
     function clip(args) {
         line.page.run("clip", Object.assign({
@@ -108,12 +109,27 @@ QQC2.ToolBar {
 
             QQC2.ComboBox {
                 enabled: clipBar.line.picked !== null
-                model: [App.tr("Step"), App.tr("Linear"), App.tr("Smooth curve")]
-                currentIndex: clipBar.line.picked ? Math.max(0, clipBar.eases.indexOf(clipBar.line.picked.ease)) : 1
+                model: clipBar.eases.map(ease => SceneWords.easing(ease))
+                currentIndex: clipBar.line.picked ? clipBar.eases.indexOf(clipBar.line.picked.ease) : -1
+                displayText: clipBar.custom ? App.tr("Custom curve") : currentText
                 onActivated: index => clipBar.line.key(clipBar.line.chosen.row, Object.assign({
                         "time": clipBar.line.picked.t,
                         "ease": clipBar.eases[index]
                     }, clipBar.line.held(clipBar.line.chosen.row, clipBar.line.picked)))
+            }
+
+            QQC2.ToolButton {
+                icon.name: "draw-bezier-curves"
+                text: App.tr("Curve of the key")
+                display: QQC2.AbstractButton.IconOnly
+                enabled: clipBar.line.picked !== null
+                onClicked: curves.open()
+
+                SceneClipCurve {
+                    id: curves
+
+                    line: clipBar.line
+                }
             }
 
             QQC2.ToolButton {

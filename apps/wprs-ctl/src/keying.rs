@@ -103,8 +103,8 @@ pub enum Keying {
     },
 }
 
-const HANDLE_IN: &str = "Bézier handle into this keyframe: seconds before it, up to the previous keyframe, and how much less the value is there; between keys of a position, color or other list it is a share of the way from the previous key (0) to this one (1), in value units only when both keys are single numbers";
-const HANDLE_OUT: &str = "Bézier handle out of this keyframe: seconds after it, up to the next keyframe, and how much more the value is there; between keys of a position, color or other list it is a share of the way from this key (0) to the next (1), in value units only when both keys are single numbers";
+pub(crate) const HANDLE_IN: &str = "Bézier handle into this keyframe: seconds before it, up to the previous keyframe, and how much less the value is there; between keys of a position, color or other list it is a share of the way from the previous key (0) to this one (1), in value units only when both keys are single numbers";
+pub(crate) const HANDLE_OUT: &str = "Bézier handle out of this keyframe: seconds after it, up to the next keyframe, and how much more the value is there; between keys of a position, color or other list it is a share of the way from this key (0) to the next (1), in value units only when both keys are single numbers";
 
 fn event(text: &str) -> Result<TimelineEvent, String> {
     let (t, name) = text.split_once(':').ok_or_else(|| fill(told("%1 is not T:NAME"), &[&text]))?;
@@ -112,7 +112,7 @@ fn event(text: &str) -> Result<TimelineEvent, String> {
     Ok(TimelineEvent { t, name: name.trim().into() })
 }
 
-fn pair(text: &str) -> Result<[f64; 2], String> {
+pub(crate) fn pair(text: &str) -> Result<[f64; 2], String> {
     let parsed =
         text.split_once(',').and_then(|(a, b)| Some([a.trim().parse().ok()?, b.trim().parse().ok()?]));
     parsed.ok_or_else(|| fill(told("%1 is not DT,DV"), &[&text]))

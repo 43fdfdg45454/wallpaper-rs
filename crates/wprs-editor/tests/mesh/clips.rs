@@ -58,7 +58,7 @@ fn keys_are_set_moved_copied_eased_and_removed() {
         .unwrap();
     act(&mut p, clip(json!({ "add": true }))).unwrap();
     act(&mut p, key(0.0, json!({ "bone": "arm", "rotation": 0 }))).unwrap();
-    act(&mut p, key(1.0, json!({ "bone": "arm", "rotation": 30, "ease": "cubic" }))).unwrap();
+    act(&mut p, key(1.0, json!({ "bone": "arm", "rotation": 30, "ease": "in_out_cubic" }))).unwrap();
     let arm = |p: &Project| layer(p)["clips"][0]["bones"]["arm"].clone();
     assert_eq!(arm(&p)["rotation"], json!([[0.0, 0.0], [1.0, 30.0, "in_out_cubic"]]));
     act(&mut p, key(0.5, json!({ "bone": "arm" }))).unwrap();

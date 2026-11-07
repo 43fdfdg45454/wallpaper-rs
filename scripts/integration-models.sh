@@ -52,6 +52,8 @@ ctl scene clip "$draft" walker bend --animation bend --from 0.5 || fail "the cli
 if ctl scene clip "$draft" walker bend --animation nothing 2>/dev/null; then fail "a missing animation was played"; fi
 ctl scene key "$draft" walker bend 0.5 --bone tip --angles 0,0,30 || fail "no 3D key was set"
 ctl scene key "$draft" walker bend 0.5 --bone tip --shift 0,0.1,0 || fail "no 3D shift was keyed"
+ctl scene key "$draft" walker bend 0 --bone tip --angles 0,0,0 --out-handle 0.25,0.3 || fail "a 3D key took no Bézier handle"
+ctl scene key "$draft" walker bend 0.5 --bone tip --angles 0,0,30 --ease in_out_sine || fail "a 3D key took no easing"
 ctl scene animate "$draft" walker layer --add bend || fail "no animation layer was added"
 ctl scene animate "$draft" walker layer --index 0 --weight 0.5 --rate 2 --blend-in 0.3 --bones tip || fail "the animation layer was not tuned"
 if ctl scene animate "$draft" walker layer --index 0 --weight 3 2>/dev/null; then fail "a weight of 3 was kept"; fi

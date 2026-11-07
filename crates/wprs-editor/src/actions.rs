@@ -9,7 +9,7 @@ use wprs_core::message::said;
 use wprs_format::features;
 
 pub use crate::action::{
-    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, KeyEase, RgbEdit, RuleEdit, ScriptFile,
+    ACTIONS, Action, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile,
     UpgradeEdit,
 };
 pub use crate::action::{

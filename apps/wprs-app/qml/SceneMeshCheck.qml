@@ -73,7 +73,7 @@ QtObject {
             "time": 1,
             "bone": "arm",
             "rotation": 30,
-            "ease": "cubic"
+            "ease": "in_out_cubic"
         });
         page.mesh.pose = {
             "bone": "arm",
@@ -92,6 +92,9 @@ QtObject {
             }
         }).bones.length !== 2)
             throw new Error("the clip does not list its keys and pose: " + JSON.stringify(keys));
+        Qt.createComponent("SceneClipCurveCheck.qml").createObject(page, {
+            "page": page
+        }).exercise();
         page.mesh.clip = "";
         run("bone", {
             "name": "arm",

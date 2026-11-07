@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:00+0000\n"
+"POT-Creation-Date: 2026-11-07 00:00+0000\n"
 "PO-Revision-Date: 2026-10-30 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -507,6 +507,10 @@ msgstr "la clave tiene un valor fuera de su rango"
 #: crates/wprs-editor/src/clips/keyed.rs
 msgid "the clip has no key there at %1 s"
 msgstr "el clip no tiene ninguna clave ahí en %1 s"
+
+#: crates/wprs-editor/src/clips/shape.rs
+msgid "Bézier handles shape one channel of a key at a time"
+msgstr "Las asas Bézier curvan un canal de una clave cada vez"
 
 #: crates/wprs-editor/src/covers.rs
 msgid "%1 is not a still picture of the scene"

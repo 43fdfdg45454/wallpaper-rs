@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:00+0000\n"
+"POT-Creation-Date: 2026-11-07 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -3903,22 +3903,42 @@ msgstr "%1 s"
 msgid "Key"
 msgstr "Clave"
 
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/ScenePropertyRange.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Step"
-msgstr "Paso"
+#: apps/wprs-app/qml/SceneClipBar.qml
+msgid "Custom curve"
+msgstr "Curva propia"
 
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/facade/SceneValues.qml
-msgid "Linear"
-msgstr "Lineal"
-
-#: apps/wprs-app/qml/SceneClipBar.qml apps/wprs-app/qml/SceneSwarmStrands.qml
-msgid "Smooth curve"
-msgstr "Curva suave"
+#: apps/wprs-app/qml/SceneClipBar.qml
+msgid "Curve of the key"
+msgstr "Curva de la clave"
 
 #: apps/wprs-app/qml/SceneClipBar.qml
 msgid "Remove the key"
 msgstr "Quitar la clave"
+
+#: apps/wprs-app/qml/SceneClipCurve.qml
+msgid "Curve to the next key"
+msgstr "Curva hasta la siguiente clave"
+
+#: apps/wprs-app/qml/SceneClipCurve.qml
+msgid ""
+"Handles bend the curve between two keys of numbers or lists of numbers; pick "
+"a key that has another after it."
+msgstr ""
+"Las asas curvan el tramo entre dos claves de números o listas de números; "
+"elige una clave que tenga otra después."
+
+#: apps/wprs-app/qml/SceneClipCurve.qml
+msgid "Drag the two handles to bend how the number moves between the keys."
+msgstr ""
+"Arrastra las dos asas para curvar cómo cambia el número entre las claves."
+
+#: apps/wprs-app/qml/SceneClipCurve.qml
+msgid ""
+"Drag the two handles to bend how fast the value goes from one key to the "
+"next: the height is the share of the way, from 0 to 1."
+msgstr ""
+"Arrastra las dos asas para curvar lo rápido que va el valor de una clave a "
+"la siguiente: la altura es la parte del camino, de 0 a 1."
 
 #: apps/wprs-app/qml/SceneClipEdit.qml
 msgid "Add a clip"
@@ -5655,6 +5675,11 @@ msgstr "Mínimo"
 msgid "Maximum"
 msgstr "Máximo"
 
+#: apps/wprs-app/qml/ScenePropertyRange.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Step"
+msgstr "Paso"
+
 #: apps/wprs-app/qml/SceneQuality.qml apps/wprs-app/qml/facade/SceneNames.qml
 msgid "Restart"
 msgstr "Reiniciar"
@@ -7160,6 +7185,10 @@ msgstr "Repeticiones de la textura"
 #: apps/wprs-app/qml/facade/SceneLabels.qml
 msgid "Texture scroll"
 msgstr "Desplazamiento de la textura"
+
+#: apps/wprs-app/qml/SceneSwarmStrands.qml
+msgid "Smooth curve"
+msgstr "Curva suave"
 
 #: apps/wprs-app/qml/SceneSwarmStrands.qml
 msgid "Leave a trail"
@@ -10797,6 +10826,10 @@ msgstr "Aclarar"
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Lighter color"
 msgstr "Color más claro"
+
+#: apps/wprs-app/qml/facade/SceneValues.qml
+msgid "Linear"
+msgstr "Lineal"
 
 #: apps/wprs-app/qml/facade/SceneValues.qml
 msgid "Linear burn"

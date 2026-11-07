@@ -11,6 +11,7 @@ mod benching;
 mod calls;
 mod caution;
 pub mod cli;
+mod clipkey;
 mod clipping;
 mod consent;
 mod cropping;

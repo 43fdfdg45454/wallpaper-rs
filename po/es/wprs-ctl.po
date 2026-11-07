@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:00+0000\n"
+"POT-Creation-Date: 2026-11-07 00:00+0000\n"
 "PO-Revision-Date: 2026-11-06 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -752,6 +752,74 @@ msgstr ""
 "Moderar un servidor propio con un token personal (WPRS_SERVER_TOKEN); no "
 "necesita el daemon"
 
+#: apps/wprs-ctl/src/clipkey.rs apps/wprs-ctl/src/clipping.rs
+msgid "Id of the clip"
+msgstr "Id del clip"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Seconds from the start of the clip"
+msgstr "Segundos desde el inicio del clip"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "The bone keyed"
+msgstr "El hueso con clave"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Degrees clockwise added to its rest pose"
+msgstr "Grados en sentido horario sumados a su pose de reposo"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Pixels, y down, in the space of its parent"
+msgstr "Píxeles, y hacia abajo, en el espacio de su padre"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Scale of its rest pose"
+msgstr "Escala de su pose de reposo"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Degrees around x, y and z"
+msgstr "Grados alrededor de x, y y z"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Model units moved"
+msgstr "Unidades del modelo desplazadas"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "The blend shape keyed"
+msgstr "La forma de mezcla con clave"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Weight of the blend shape, from -1 to 1"
+msgstr "Peso de la forma de mezcla, de -1 a 1"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "The part whose order is keyed"
+msgstr "La parte cuyo orden lleva la clave"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Order of the part, from -1000 to 1000"
+msgstr "Orden de la parte, de -1000 a 1000"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid ""
+"How the key moves on to the next one: linear, step, hold, in_out_sine and "
+"the like, or [x1,y1,x2,y2]"
+msgstr ""
+"Cómo pasa la clave a la siguiente: linear, step, hold, in_out_sine y "
+"similares, o [x1,y1,x2,y2]"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Remove the key"
+msgstr "Quitar la clave"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Move the key that is at these seconds"
+msgstr "Mover la clave que está en estos segundos"
+
+#: apps/wprs-ctl/src/clipkey.rs
+msgid "Copy the key instead of moving it"
+msgstr "Copiar la clave en vez de moverla"
+
 #: apps/wprs-ctl/src/clipping.rs
 msgid ""
 "Add, change, rename or remove a clip of a mesh or model layer; --play also "
@@ -761,10 +829,6 @@ msgstr ""
 "Añadir, cambiar, renombrar o quitar un clip de una capa de malla o modelo; --"
 "play también añade una capa de animación que reproduce un clip nuevo, y "
 "quitarlo también quita las capas de animación que lo reproducen"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Id of the clip"
-msgstr "Id del clip"
 
 #: apps/wprs-ctl/src/clipping.rs
 msgid "Add it, of 2 s unless --length says otherwise"
@@ -802,71 +866,15 @@ msgstr "Empezar el clip más tarde en su animación, manteniendo su duración"
 msgid ""
 "Set, move, copy or remove a key of a clip of a mesh or model layer for a "
 "bone, a blend shape or the order of a part; a bone keyed without values "
-"keeps the pose it has there"
+"keeps the pose it has there; --ease takes any easing of the scene format or "
+"[x1,y1,x2,y2], --in-handle and --out-handle bend one channel with Bézier "
+"handles"
 msgstr ""
 "Fijar, mover, copiar o quitar una clave de un clip de una capa de malla o "
 "modelo para un hueso, una forma de mezcla o el orden de una parte; un hueso "
-"con clave sin valores mantiene la pose que tiene ahí"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Seconds from the start of the clip"
-msgstr "Segundos desde el inicio del clip"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "The bone keyed"
-msgstr "El hueso con clave"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Degrees clockwise added to its rest pose"
-msgstr "Grados en sentido horario sumados a su pose de reposo"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Pixels, y down, in the space of its parent"
-msgstr "Píxeles, y hacia abajo, en el espacio de su padre"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Scale of its rest pose"
-msgstr "Escala de su pose de reposo"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Degrees around x, y and z"
-msgstr "Grados alrededor de x, y y z"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Model units moved"
-msgstr "Unidades del modelo desplazadas"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "The blend shape keyed"
-msgstr "La forma de mezcla con clave"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Weight of the blend shape, from -1 to 1"
-msgstr "Peso de la forma de mezcla, de -1 a 1"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "The part whose order is keyed"
-msgstr "La parte cuyo orden lleva la clave"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Order of the part, from -1000 to 1000"
-msgstr "Orden de la parte, de -1000 a 1000"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "How the key moves on to the next one"
-msgstr "Cómo pasa la clave a la siguiente"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Remove the key"
-msgstr "Quitar la clave"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Move the key that is at these seconds"
-msgstr "Mover la clave que está en estos segundos"
-
-#: apps/wprs-ctl/src/clipping.rs
-msgid "Copy the key instead of moving it"
-msgstr "Copiar la clave en vez de moverla"
+"con clave sin valores mantiene la pose que tiene ahí; --ease acepta "
+"cualquier suavizado del formato de escena o [x1,y1,x2,y2], y --in-handle y --"
+"out-handle curvan un canal con asas Bézier"
 
 #: apps/wprs-ctl/src/clipping.rs
 msgid "Print the keys of a clip of a mesh or model layer, row by row, as JSON"

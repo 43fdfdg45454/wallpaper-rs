@@ -23,8 +23,7 @@ pub use names::{
     ACTIONS, AssetEdit, ConditionEdit, EDITOR, ImportAssets, RgbEdit, RuleEdit, ScriptFile, UpgradeEdit,
 };
 pub use rigging::{
-    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, KeyEase, MaskStroke, MeshCut,
-    WeightStroke,
+    AutoWeights, BoneEdit, ClipEdit, ClipKey, DepthStroke, ExpressionEdit, MaskStroke, MeshCut, WeightStroke,
 };
 pub use shaping::EffectsEdit;
 pub use solid::{CameraEdit, Edit3d, MaterialEdit, ModelEdit, ModelSet, TonesEdit, ViewEdit};

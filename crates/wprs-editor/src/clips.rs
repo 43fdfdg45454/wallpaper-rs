@@ -6,6 +6,7 @@ use wprs_core::message::said;
 use wprs_scene::{MAX_ANIMATION_LAYERS, MAX_CLIPS_PER_MODEL};
 
 mod keyed;
+mod shape;
 
 pub(crate) use keyed::{key, num};
 

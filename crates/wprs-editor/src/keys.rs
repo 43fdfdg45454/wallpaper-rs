@@ -117,7 +117,7 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
             let kept = at.map(|i| keys[i][1].clone());
             let value = value.or(kept).or_else(|| sample(&keys, time)).unwrap_or(Value::Null);
             let third = third.or_else(|| at.and_then(|i| keys[i].get(2).cloned()));
-            let third = end(third.as_ref(), e, &value)?;
+            let third = end(third.as_ref(), e.ease.as_ref(), [e.in_handle, e.out_handle], &value)?;
             let new = key(time, value, third);
             match at {
                 Some(i) => keys[i] = new,
@@ -142,7 +142,7 @@ pub fn keyframe(doc: &Value, e: &KeyframeEdit) -> Result<Vec<Op>> {
             let value = value.ok_or_else(|| {
                 anyhow!(said("editor.no_value_yet", "%1 has no value yet; give one", &[&pointer]))
             })?;
-            let third = end(None, e, &value)?;
+            let third = end(None, e.ease.as_ref(), [e.in_handle, e.out_handle], &value)?;
             let new = [key(time, value, third)];
             reach(pointer, &[], &new)?;
             set(doc, pointer, json!({"keys": new}))

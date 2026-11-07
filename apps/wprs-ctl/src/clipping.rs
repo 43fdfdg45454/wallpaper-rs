@@ -1,10 +1,9 @@
 use crate::author::{Author, DIR, ID};
-use crate::rigging::pair;
 use anyhow::Result;
 use clap::Subcommand;
 use serde_json::json;
 use std::path::PathBuf;
-use wprs_editor::actions::{Action, ClipEdit, ClipKey, ExpressionEdit};
+use wprs_editor::actions::{Action, ClipEdit, ExpressionEdit};
 
 #[derive(Subcommand, Debug)]
 pub enum Clipping {
@@ -40,56 +39,9 @@ pub enum Clipping {
         from: Option<f32>,
     },
     #[command(
-        about = "Set, move, copy or remove a key of a clip of a mesh or model layer for a bone, a blend shape or the order of a part; a bone keyed without values keeps the pose it has there"
+        about = "Set, move, copy or remove a key of a clip of a mesh or model layer for a bone, a blend shape or the order of a part; a bone keyed without values keeps the pose it has there; --ease takes any easing of the scene format or [x1,y1,x2,y2], --in-handle and --out-handle bend one channel with Bézier handles"
     )]
-    Key {
-        #[arg(help = DIR)]
-        dir: PathBuf,
-        #[arg(help = ID)]
-        layer: String,
-        #[arg(help = "Id of the clip")]
-        clip: String,
-        #[arg(allow_negative_numbers = true, help = "Seconds from the start of the clip")]
-        time: f64,
-        #[arg(long, conflicts_with_all = ["shape", "order"], help = "The bone keyed")]
-        bone: Option<String>,
-        #[arg(long, allow_hyphen_values = true, help = "Degrees clockwise added to its rest pose")]
-        rotation: Option<f32>,
-        #[arg(
-            long,
-            allow_hyphen_values = true,
-            value_name = "X,Y",
-            help = "Pixels, y down, in the space of its parent"
-        )]
-        position: Option<String>,
-        #[arg(long, allow_hyphen_values = true, value_name = "S or X,Y", help = "Scale of its rest pose")]
-        scale: Option<String>,
-        #[arg(long, allow_hyphen_values = true, value_name = "X,Y,Z", help = "Degrees around x, y and z")]
-        angles: Option<String>,
-        #[arg(long, allow_hyphen_values = true, value_name = "X,Y,Z", help = "Model units moved")]
-        shift: Option<String>,
-        #[arg(long, conflicts_with = "order", help = "The blend shape keyed")]
-        shape: Option<String>,
-        #[arg(long, allow_hyphen_values = true, help = "Weight of the blend shape, from -1 to 1")]
-        weight: Option<f32>,
-        #[arg(long, help = "The part whose order is keyed")]
-        order: Option<String>,
-        #[arg(long, allow_hyphen_values = true, help = "Order of the part, from -1000 to 1000")]
-        value: Option<f32>,
-        #[arg(long, value_parser = ["step", "linear", "cubic"], help = "How the key moves on to the next one")]
-        ease: Option<String>,
-        #[arg(long, help = "Remove the key")]
-        remove: bool,
-        #[arg(
-            allow_negative_numbers = true,
-            long,
-            value_name = "SECONDS",
-            help = "Move the key that is at these seconds"
-        )]
-        from: Option<f64>,
-        #[arg(long, requires = "from", help = "Copy the key instead of moving it")]
-        copy: bool,
-    },
+    Key(crate::clipkey::KeyArgs),
     #[command(about = "Print the keys of a clip of a mesh or model layer, row by row, as JSON")]
     Keys {
         #[arg(help = DIR)]
@@ -131,55 +83,7 @@ pub(crate) fn action(command: Clipping) -> Result<(PathBuf, Action), Box<Author>
             let clip = ClipEdit { layer, id, add, remove, to, length, repeat, animation, from, play };
             (dir, Action::Clip(clip))
         }
-        Clipping::Key {
-            dir,
-            layer,
-            clip,
-            time,
-            bone,
-            rotation,
-            position,
-            scale,
-            angles,
-            shift,
-            shape,
-            weight,
-            order,
-            value,
-            ease,
-            remove,
-            from,
-            copy,
-        } => {
-            let angles = angles.as_deref().and_then(crate::animated::three);
-            let shift = shift.as_deref().and_then(crate::animated::three);
-            let position = position.as_deref().and_then(pair);
-            let scale =
-                scale.as_deref().and_then(|s| pair(s).or_else(|| s.trim().parse().ok().map(|v| [v, v])));
-            let ease = ease.and_then(|e| serde_json::from_value(json!(e)).ok());
-            (
-                dir,
-                Action::Key(ClipKey {
-                    layer,
-                    clip,
-                    time,
-                    bone,
-                    rotation,
-                    position,
-                    scale,
-                    angles,
-                    shift,
-                    shape,
-                    weight,
-                    order,
-                    value,
-                    ease,
-                    remove,
-                    from,
-                    copy,
-                }),
-            )
-        }
+        Clipping::Key(args) => args.action(),
         Clipping::Expression { dir, layer, name, shapes, to, remove } => {
             let parsed = shapes.iter().map(|s| {
                 s.split_once('=').and_then(|(k, w)| Some((k.trim().to_owned(), w.trim().parse().ok()?)))

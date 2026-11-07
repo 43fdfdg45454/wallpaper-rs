@@ -2594,7 +2594,7 @@ sobre la curva dibujada en la vista de edición (el ojo y el punto al que miran,
 profundidad) y en su propia fila de la línea de tiempo de la escena, bucle, suavizado, orden, fundido y un botón para
 recorrerlos desde la cámara. El panel de coste suma por nivel los mapas de sombra, las capas de pelo y
 los vértices con piel. En la terminal: `wprs-ctl scene animate CARPETA CAPA layer|root|preset|morph|clips|bones`,
-`scene clip … --animation NOMBRE --from S`, `scene key … --angles X,Y,Z --shift X,Y,Z`, `scene material
+`scene clip … --animation NOMBRE --from S`, `scene key … --angles X,Y,Z --shift X,Y,Z`, `scene key … --ease in_out_sine|[x1,y1,x2,y2] | --in-handle DT,DV --out-handle DT,DV`, `scene material
 … --shader fur|foliage|chroma --key COLOR`, `scene shadows CARPETA LUZ`, `scene camera-path CARPETA
 add|key|remove|set|order|fade|show`, `scene new-material CARPETA NOMBRE [--check]`,
 `scene physics CARPETA CAPA add HUESO --rotation MIN,MAX` y `scene debug3d`.

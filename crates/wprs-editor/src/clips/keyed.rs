@@ -1,4 +1,4 @@
-use crate::action::{ClipKey, KeyEase};
+use crate::action::ClipKey;
 use crate::ops::{Op, escape, set};
 use crate::rigs::Channels;
 use anyhow::{Result, anyhow, ensure};
@@ -18,14 +18,6 @@ pub(crate) fn num(v: f32) -> Value {
 
 fn time(k: &Value) -> f64 {
     k[0].as_f64().unwrap_or(0.0)
-}
-
-fn ease(e: KeyEase) -> Option<Value> {
-    match e {
-        KeyEase::Step => Some(json!("step")),
-        KeyEase::Linear => None,
-        KeyEase::Cubic => Some(json!("in_out_cubic")),
-    }
 }
 
 fn tracks(
@@ -77,7 +69,7 @@ fn tracks(
 }
 
 pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec<Op>> {
-    let ClipKey { layer, clip, time: t, ease: e, remove, from, copy, .. } = k;
+    let ClipKey { layer, clip, time: t, remove, from, copy, .. } = k;
     let (path, l) = crate::actions::layer(doc, layer)?;
     let (_, _, known) = crate::skin::rigged(dir, doc, l)?;
     let (i, found) = super::found(l, clip)?;
@@ -96,33 +88,39 @@ pub(crate) fn key(dir: &std::path::Path, doc: &Value, k: &ClipKey) -> Result<Vec
     let (t, from) = (at(*t + base), from.map(|f| at(f + base)));
     let mut c = found.clone();
     let mut done = 0;
-    for track in tracks(k, (&known, crate::skin::solid(l)), posed)? {
+    let all = tracks(k, (&known, crate::skin::solid(l)), posed)?;
+    super::shape::check(k, all.len())?;
+    for track in all {
         let pointer = format!("/{}", track.path.iter().map(|p| escape(p)).collect::<Vec<_>>().join("/"));
         let mut keys = c.pointer(&pointer).and_then(Value::as_array).cloned().unwrap_or_default();
         let near = |keys: &[Value], s: f64| keys.iter().position(|k| (time(k) - s).abs() < 1e-3);
+        let old = keys.clone();
         let mut new = None;
         if let Some(s) = from {
             let Some(k) = near(&keys, s) else { continue };
             let old = if *copy { keys[k].clone() } else { keys.remove(k) };
-            new = Some((track.value.clone().unwrap_or(old[1].clone()), e.map_or(old.get(2).cloned(), ease)));
+            new = Some((track.value.clone().unwrap_or(old[1].clone()), old.get(2).cloned()));
         } else if *remove {
             let Some(k) = near(&keys, t) else { continue };
             keys.remove(k);
+            super::shape::reach(&pointer, &old, &keys)?;
         } else {
             let held = near(&keys, t).and_then(|k| keys[k].get(2).cloned());
             let v =
                 track.value.clone().or_else(|| crate::keys::sample(&keys, t)).unwrap_or(track.rest.clone());
-            new = Some((v, e.map_or(held, ease)));
+            new = Some((v, held));
         }
-        if let Some((v, eased)) = new {
+        if let Some((v, held)) = new {
             let within =
                 |x: &Value| x.as_f64().is_some_and(|x| x.is_finite() && x.abs() <= f64::from(track.range));
             let ok = within(&v)
                 || v.as_array().is_some_and(|a| (2..=3).contains(&a.len()) && a.iter().all(within));
             ensure!(ok, said("editor.key_value", "the key holds a value out of its range", &[]));
+            let eased = super::shape::third(k, held, &v)?;
             keys.retain(|k| (time(k) - t).abs() >= 1e-3);
             let k = eased.map_or(json!([t, v]), |x| json!([t, v, x]));
             keys.insert(keys.partition_point(|k| time(k) <= t), k);
+            super::shape::reach(&pointer, &old, &keys)?;
         }
         done += 1;
         store(&mut c, &track.path, keys);

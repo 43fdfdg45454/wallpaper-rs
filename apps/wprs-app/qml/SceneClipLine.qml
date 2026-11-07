@@ -57,7 +57,7 @@ ColumnLayout {
         page.editor.seek(page.clock, playing);
     }
 
-    function key(row, args) {
+    function key(row, args, gesture) {
         const named = row.kind === "bone" ? {
             "bone": row.name
         } : row.kind === "shape" ? {
@@ -68,7 +68,7 @@ ColumnLayout {
         page.run("key", Object.assign({
             "layer": mesh.layer,
             "clip": mesh.clip
-        }, named, args));
+        }, named, args), gesture);
     }
 
     function held(row, k) {

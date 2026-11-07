@@ -1,16 +1,9 @@
 use super::names::{half, tenth, whole};
 use crate::skin::Mode;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::BTreeMap;
 use wprs_scene::Loop;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum KeyEase {
-    Step,
-    Linear,
-    Cubic,
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -120,7 +113,11 @@ pub struct ClipKey {
     #[serde(default)]
     pub value: Option<f32>,
     #[serde(default)]
-    pub ease: Option<KeyEase>,
+    pub ease: Option<Value>,
+    #[serde(default)]
+    pub in_handle: Option<[f64; 2]>,
+    #[serde(default)]
+    pub out_handle: Option<[f64; 2]>,
     #[serde(default)]
     pub remove: bool,
     #[serde(default)]

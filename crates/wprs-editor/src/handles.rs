@@ -39,8 +39,7 @@ pub(crate) fn curve(a: &Value, b: &Value, t: f64) -> Option<Value> {
     }
 }
 
-pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
-    let handles = [e.in_handle, e.out_handle];
+pub(crate) fn spans(ease: Option<&Value>, handles: [Option<[f64; 2]>; 2]) -> Result<()> {
     let fine = |[dt, dv]: [f64; 2]| dt.is_finite() && dt >= 0.0 && (-SPAN..=SPAN).contains(&dv);
     ensure!(
         handles.iter().flatten().all(|h| fine(*h)),
@@ -52,9 +51,14 @@ pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
     );
     let handled = handles.iter().any(Option::is_some);
     ensure!(
-        !(handled && e.ease.is_some()),
+        !(handled && ease.is_some()),
         said("editor.ease_or_handles", "a keyframe eases or has Bézier handles, not both", &[])
     );
+    Ok(())
+}
+
+pub(crate) fn shaped(e: &KeyframeEdit) -> Result<()> {
+    spans(e.ease.as_ref(), [e.in_handle, e.out_handle])?;
     ensure!(
         !(e.base.is_some() && e.absolute),
         said("editor.base_or_absolute", "give a base or make the value absolute, not both", &[])
@@ -91,11 +95,16 @@ pub(crate) fn reach(pointer: &str, old: &[Value], new: &[Value]) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn end(old: Option<&Value>, e: &KeyframeEdit, value: &Value) -> Result<Option<Value>> {
-    if e.ease.is_some() {
-        return Ok(e.ease.clone());
+pub(crate) fn end(
+    old: Option<&Value>,
+    ease: Option<&Value>,
+    handles: [Option<[f64; 2]>; 2],
+    value: &Value,
+) -> Result<Option<Value>> {
+    if ease.is_some() {
+        return Ok(ease.cloned());
     }
-    if e.in_handle.is_none() && e.out_handle.is_none() {
+    if handles.iter().all(Option::is_none) {
         return Ok(old.cloned());
     }
     ensure!(
@@ -108,7 +117,7 @@ pub(crate) fn end(old: Option<&Value>, e: &KeyframeEdit, value: &Value) -> Resul
     );
     let mut sides = old.and_then(Value::as_object).cloned().unwrap_or_else(Map::new);
     let round = |[dt, dv]: [f64; 2]| json!([(dt * 1000.0).round() / 1000.0, (dv * 1e6).round() / 1e6]);
-    for (side, h) in [("in", e.in_handle), ("out", e.out_handle)] {
+    for (side, h) in ["in", "out"].into_iter().zip(handles) {
         if let Some(h) = h {
             sides.insert(side.into(), round(h));
         }

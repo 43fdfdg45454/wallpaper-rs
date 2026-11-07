@@ -3,11 +3,7 @@ use std::path::Path;
 use wprs_scene::AnimClip;
 
 fn ease(k: &Value) -> Value {
-    match k.get(2) {
-        None => json!("linear"),
-        Some(e) if e == "in_out_cubic" => json!("cubic"),
-        Some(e) => e.clone(),
-    }
+    k.get(2).cloned().unwrap_or(json!("linear"))
 }
 
 fn row(kind: &str, name: &str, channel: &str, keys: &Value, from: f64) -> Value {
