@@ -58,6 +58,7 @@ pub(crate) struct Painter<'a, 'p, 'f> {
     pub(crate) flat: std::cell::Cell<Option<(wprs_scene::Lean, wprs_scene::Lean)>>,
     pub(crate) aired: (usize, Option<Src>),
     pub(crate) density: f32,
+    pub(crate) virt: Option<super::straight::Virtual>,
 }
 
 #[derive(Clone, Copy)]

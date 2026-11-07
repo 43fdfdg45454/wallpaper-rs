@@ -10,7 +10,12 @@ mod lit;
 mod masks;
 
 impl Painter<'_, '_, '_> {
-    fn content(&mut self, i: usize, opacity: f32, size: [f32; 2]) -> Option<(&'static str, Item, Src)> {
+    pub(crate) fn content(
+        &mut self,
+        i: usize,
+        opacity: f32,
+        size: [f32; 2],
+    ) -> Option<(&'static str, Item, Src)> {
         let frame = self.frame;
         let d = &frame.draws[i];
         let srgb = self.srgb;

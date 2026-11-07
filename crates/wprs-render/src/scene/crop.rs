@@ -28,3 +28,10 @@ pub(crate) fn cropped(
     let inner = Affine([crop[2], 0.0, 0.0, crop[3], crop[0], crop[1]]);
     (m.then(inner), ((c - a) as u32, (d - b) as u32), crop)
 }
+
+pub(crate) fn projection(j: usize, m: Affine, size: (u32, u32)) -> usize {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::hash::DefaultHasher::new();
+    (j, m.0.map(f32::to_bits), size).hash(&mut h);
+    h.finish() as usize | 1 << (usize::BITS - 1)
+}

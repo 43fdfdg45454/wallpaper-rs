@@ -9,6 +9,7 @@ struct Fx {
     clip: vec4<f32>,
     velocity: vec4<f32>,
     crop: array<vec4<f32>, 2>,
+    view: array<vec4<f32>, 3>,
 };
 
 struct VertexOut {

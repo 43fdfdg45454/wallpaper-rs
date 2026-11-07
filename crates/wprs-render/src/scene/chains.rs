@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use wgpu::{ShaderModule, TextureFormat};
-use wprs_scene::{CHAIN_ENTRY, Descriptor, Output, Scene, descriptor, effect_source, fusion};
+use wprs_scene::{CHAIN_ENTRY, Descriptor, Output, Scene, descriptor, effect_source, fusion, straightened};
 
 #[derive(Default)]
 pub(crate) struct Shelf {
@@ -53,7 +53,7 @@ impl Pipes {
         }
         shelf.modules.entry(key).or_insert_with(|| {
             super::pipes::compiled(1);
-            module(device, effect_source(&chain.collect::<Vec<_>>()))
+            module(device, straightened(effect_source(&chain.collect::<Vec<_>>())))
         });
         key
     }

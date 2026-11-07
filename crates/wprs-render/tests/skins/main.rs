@@ -5,3 +5,4 @@ mod parts;
 mod poses;
 mod settle;
 mod smooth;
+mod straight;

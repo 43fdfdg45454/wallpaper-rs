@@ -1,4 +1,4 @@
-use super::crop::{cropped, window};
+use super::crop::{cropped, projection, window};
 use super::item::{Item, Rect, invert, ndc, scale_of};
 use super::paint::{Painter, Target};
 use super::pipes::Mode;
@@ -27,13 +27,6 @@ impl Fed<'_> {
 fn bound<'e>(e: &EffectDraw<'e>) -> impl Iterator<Item = (&'e str, &'e str)> + use<'e> {
     let params = e.effect.params.iter();
     params.filter_map(|(p, v)| Some((p.as_str(), v.binding()?.layer.as_deref()?)))
-}
-
-fn projection(j: usize, m: Affine, size: (u32, u32)) -> usize {
-    use std::hash::{Hash, Hasher};
-    let mut h = std::hash::DefaultHasher::new();
-    (j, m.0.map(f32::to_bits), size).hash(&mut h);
-    h.finish() as usize | 1 << (usize::BITS - 1)
 }
 
 fn quad(color: [f32; 4]) -> Item {
@@ -137,6 +130,9 @@ impl Painter<'_, '_, '_> {
         window: Option<[f32; 4]>,
     ) -> Option<(Src, [f32; 4])> {
         let j = self.frame.draws.iter().position(|d| d.layer.id == id)?;
+        if let Some(found) = self.skinned(j, m) {
+            return Some(found);
+        }
         let (m, (w, h), crop) = cropped(m, self.sharp(j, m, size), window);
         let key = projection(j, m, (w, h));
         if let Some((_, Some((out, _)))) = self.isolated.iter().find(|(k, _)| *k == key) {

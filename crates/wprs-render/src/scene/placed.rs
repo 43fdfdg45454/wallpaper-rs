@@ -55,7 +55,10 @@ impl Painter<'_, '_, '_> {
         let side = |v: f32| ((v * scale - 1e-3).ceil().max(1.0)) as u32;
         let size = (side(rect.w), side(rect.h));
         let out = out.or_else(|| self.acquire(size))?;
-        let fx = self.placed(rect, self.size_of(first), fx);
+        let mut fx = self.placed(rect, self.size_of(first), fx);
+        if let Some((_, _, view)) = self.virt.filter(|v| v.0 == first) {
+            fx.view = view;
+        }
         Some((out, self.pool.push(&fx)))
     }
 
@@ -100,5 +103,6 @@ pub(crate) fn uniforms(e: &EffectDraw<'_>, layer_uv: Affine) -> Fx {
         clip: [0.0, 0.0, 1.0, 1.0],
         velocity: [e.velocity[0], e.velocity[1], 0.0, 0.0],
         crop: [[0.0; 4]; 2],
+        view: [[0.0; 4]; 3],
     }
 }

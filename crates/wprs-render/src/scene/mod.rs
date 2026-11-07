@@ -46,6 +46,7 @@ mod state;
 #[cfg(test)]
 mod steady;
 mod stops;
+mod straight;
 mod strip;
 mod swarm;
 mod text;

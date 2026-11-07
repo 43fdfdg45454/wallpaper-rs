@@ -72,6 +72,10 @@ pub fn render(r: &Renderer, scene: Scene, at: f64, quality: Quality) -> Vec<u8> 
     let size = (SIDE, SIDE);
     let frame = runtime.frame(view.view(size), quality);
     let image = r.render_scene(&mut view, &runtime, &frame, size, quality, &[]).unwrap();
+    pixels(r, image)
+}
+
+pub fn pixels(r: &Renderer, image: &wprs_render::GpuImage) -> Vec<u8> {
     let layer = Layer {
         image: Some(image),
         fit: Fit::Stretch,

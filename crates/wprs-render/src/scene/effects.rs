@@ -31,6 +31,9 @@ impl Painter<'_, '_, '_> {
         let list = &frame.effects[frame.draws[i].effects.clone()];
         let (mut current, mut k) = (input, 0);
         while k < list.len() {
+            if k > 0 && self.virt.is_some_and(|v| v.0 == current) {
+                return current;
+            }
             let n = list[k].chain.clamp(1, list.len() - k);
             let n = if list[k..k + n].iter().any(|e| self.cut(i, e)) { 1 } else { n };
             let region = if n == 1 {

@@ -84,6 +84,14 @@ impl Renderer {
         self.eight.store(on, std::sync::atomic::Ordering::Relaxed);
     }
 
+    pub fn force_tiled(&self, on: bool) {
+        self.tiled.store(on, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub(crate) fn tiled(&self) -> bool {
+        self.tiled.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
     pub fn tier(&self) -> Tier {
         match self.forced.load(std::sync::atomic::Ordering::Relaxed) {
             0 => {}

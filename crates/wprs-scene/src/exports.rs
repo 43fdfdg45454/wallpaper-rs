@@ -53,7 +53,7 @@ pub use crate::gltf::{
     MAX_MODELS_JSON, MAX_MORPHS, MAX_NODES, MAX_TRIANGLES, ModelFile,
 };
 pub use crate::governor::Governor;
-pub use crate::guard::guarded;
+pub use crate::guard::{guarded, straightened};
 pub use crate::helper::{
     CHECK_CPU, CHECK_MEMORY, CHECK_SHADER, launch_checks_from_here, serve_check, serve_check_with,
 };

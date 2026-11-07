@@ -91,7 +91,7 @@ impl Painter<'_, '_, '_> {
             return Region::Empty;
         }
         let (all, part) = ((w * h) as f32, (c - a) * (d - b));
-        if part > MOST * all || !worth(all - part, e.descriptor.units(), self.r.tiled) {
+        if part > MOST * all || !worth(all - part, e.descriptor.units(), self.r.tiled()) {
             return Region::Whole;
         }
         Region::Part([a as u32, b as u32, (c - a) as u32, (d - b) as u32])

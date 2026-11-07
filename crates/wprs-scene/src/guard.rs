@@ -9,8 +9,13 @@ pub fn guarded(d: &Descriptor) -> Result<Module, String> {
     if !crate::verdicts::passed(d.key) {
         return Err("its shader was not checked".into());
     }
-    let source = source(d);
+    let source = straightened(source(d));
     crate::shader::roomy(|| armed(crate::shader::compile(&source)?.0, &source))
+}
+
+pub fn straightened(source: String) -> String {
+    let plain = "fn tap(uv: vec2<f32>) -> vec4<f32> {\n    return sample(input_tex, uv);\n}\n";
+    source.replacen(plain, include_str!("straight.wgsl"), 1)
 }
 
 pub(crate) fn source(d: &Descriptor) -> String {

@@ -90,6 +90,7 @@ impl Renderer {
             flat: std::cell::Cell::new(None),
             aired: (0, None),
             density: 1.0,
+            virt: None,
         };
         if frame.draws.iter().any(|d| !d.layer.solid.is_off()) {
             painter.hitboxes(&v.sources, &mut v.covers, &mut v.hitboxes);
@@ -139,10 +140,7 @@ impl Renderer {
         }
         let keep = frame.keep && !fresh && !v.trimmed;
         v.trimmed = false;
-        painter.clip = match damage {
-            Damage::Part(rect) => Some(rect),
-            _ => None,
-        };
+        painter.clip = if let Damage::Part(rect) = damage { Some(rect) } else { None };
         painter.run(Src::Canvas, background.map(f64::from), keep);
         let (clip, reused) = (painter.clip, painter.reused);
         super::gather::gather(&mut scratch.ops, &scratch.sets);

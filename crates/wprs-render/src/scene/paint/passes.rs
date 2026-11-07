@@ -122,23 +122,14 @@ impl<'a> Painter<'a, '_, '_> {
             return Some((Src::Cache(id), rect));
         }
         let outer = std::mem::replace(&mut self.density, dense);
-        let Some(src) = self.hold(i, size) else {
+        let layer = self.geometry(i).map_or(rect.affine(), |(size, _)| self.local(i, size));
+        let uv = invert(layer).then(rect.affine());
+        let Some(out) = self.read_straight(i, size, rect, uv).or_else(|| self.drawn_apart(i, size, rect, uv))
+        else {
             self.density = outer;
             return None;
         };
-        self.ops.push(Op::Clear(src, [0.0; 4]));
-        let target = Target { src, rect };
-        match d.content {
-            Content::Group { clip } => self.list(i + 1..d.end, target, clip),
-            _ => self.direct(i, target, (1.0, Blend::Normal, None), false),
-        }
-        let layer = self.geometry(i).map_or(rect.affine(), |(size, _)| self.local(i, size));
-        let uv = invert(layer).then(rect.affine());
-        let out = self.effects(i, src, rect, uv);
         self.density = outer;
-        if out != src {
-            self.release(src);
-        }
         let room = self.caches.values().map(|c| c.tex.bytes()).sum::<u64>() < BUDGET;
         let Some(key) = key.filter(|_| room) else { return Some((out, rect)) };
         let size = self.size_of(out);
@@ -151,6 +142,7 @@ impl<'a> Painter<'a, '_, '_> {
 
     pub(crate) fn size_of(&self, src: Src) -> (u32, u32) {
         match src {
+            _ if self.virt.is_some_and(|v| v.0 == src) => self.virt.map_or((1, 1), |v| v.1),
             Src::Pool(i) => self.pool.busy[i].0.size(),
             Src::Ext(i) => self.exts[i].size(),
             Src::Cache(k) => self.caches.get(&k).map_or((1, 1), |c| c.tex.size()),
@@ -158,5 +150,34 @@ impl<'a> Painter<'a, '_, '_> {
             Src::White | Src::Clear | Src::Lut(_) | Src::Void => (1, 1),
             Src::Canvas => self.full.size(),
         }
+    }
+
+    fn read_straight(
+        &mut self,
+        i: usize,
+        size: (u32, u32),
+        rect: Rect,
+        uv: wprs_scene::Affine,
+    ) -> Option<Src> {
+        let (picture, view) = self.pictured(i, uv)?;
+        self.virt = Some((picture, size, view));
+        let out = self.effects(i, picture, rect, uv);
+        self.virt = None;
+        (out != picture).then_some(out)
+    }
+
+    fn drawn_apart(&mut self, i: usize, size: (u32, u32), rect: Rect, uv: wprs_scene::Affine) -> Option<Src> {
+        let src = self.hold(i, size)?;
+        self.ops.push(Op::Clear(src, [0.0; 4]));
+        let target = Target { src, rect };
+        match self.frame.draws[i].content {
+            Content::Group { clip } => self.list(i + 1..self.frame.draws[i].end, target, clip),
+            _ => self.direct(i, target, (1.0, Blend::Normal, None), false),
+        }
+        let out = self.effects(i, src, rect, uv);
+        if out != src {
+            self.release(src);
+        }
+        Some(out)
     }
 }
