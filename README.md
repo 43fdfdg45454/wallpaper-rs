@@ -2938,7 +2938,12 @@ en un contenedor de Arch con `wpewebkit`, la prueba del auxiliar (`apps/wprs-web
 la interfaz `window.wprs`, el límite de FPS, la pausa, que la página no llega a la red, a otros
 paquetes ni a archivos del equipo) y `scripts/web-test.sh` con el servicio, `wprs-ctl` y una
 página de color. En Ubuntu, `scripts/integration-test.sh` comprueba que el fondo se rechaza con su
-motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor. En el teléfono,
+motivo. `WPRS_REQUIRE_WEB=1` hace que ambas fallen si falta el motor. El mismo trabajo ejecuta
+`scripts/video-test.sh` (`scripts/integration-video.sh`) en ese contenedor de Arch, con PipeWire y
+`gst-plugin-pipewire` 1.6: es la única prueba de la rama del sonido directo por `pipewiresink` 1.2 o
+posterior (el informe de que no hay salida de audio, un sumidero nulo, el volumen y el silencio),
+porque en Ubuntu 24.04 el plugin es el 1.0; `WPRS_REQUIRE_PIPEWIRE_SOUND=1` hace que falle si el
+plugin es anterior a 1.2. En el teléfono,
 `WebPageTest` (pruebas instrumentadas en el emulador) muestra una página de prueba con el WebView y
 comprueba sus valores, el color que dibuja, la pausa, el límite de fotogramas, lo que oculta cada
 ajuste de privacidad, el borrado de sus datos, los archivos elegidos, los clics solo con permiso y

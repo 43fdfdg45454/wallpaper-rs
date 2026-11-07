@@ -124,6 +124,7 @@ ctl volume 100 && ctl set "$sound" -o TEST-13 && consume "$s13"
 expect "s['outputs']['TEST-13']['playing']" True
 plugin=$(gst-inspect-1.0 pipewiresink 2>/dev/null | sed -n 's/^ *Version *//p')
 if printf '1.2\n%s\n' "$plugin" | sort -VC; then direct=true; else direct=false; fi
+[ "${WPRS_REQUIRE_PIPEWIRE_SOUND:-0}" != 1 ] || $direct || fail "WPRS_REQUIRE_PIPEWIRE_SOUND=1 but the PipeWire GStreamer plugin is '$plugin', older than 1.2"
 sounds() { ! $direct || wait_for 5 between 5000 20000; }
 if $direct; then
   wait_for 10 grep -q "no audio output" "$WORK/wprsd.log" || fail "a video without an audio output was not reported"

@@ -186,7 +186,7 @@ jobs:
       - name: User namespaces for the WebKit sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      - name: Helper and daemon with WPE WebKit
+      - name: Helper and daemon with WPE WebKit, and video sound through PipeWire 1.2 or newer
         run: |
           chmod +x target/debug/*
           docker run --rm --device /dev/dri --security-opt seccomp=unconfined --security-opt apparmor=unconfined --security-opt systempaths=unconfined \
@@ -194,11 +194,11 @@ jobs:
             docker.io/library/archlinux:base-20261018.0.612668@sha256:52dfbd5afb23a220d5ee92dafcb4c788d96c026ed04179890c23adef4c897fa0 bash -c '
             set -e
             pacman -Sy --noconfirm --needed archlinux-keyring >/dev/null
-            pacman -Syu --noconfirm --needed wpewebkit pipewire wireplumber dbus python procps-ng \
+            pacman -Syu --noconfirm --needed wpewebkit pipewire pipewire-audio gst-plugin-pipewire wireplumber dbus python procps-ng \
               gst-plugins-base gst-plugins-good mesa vulkan-swrast vulkan-icd-loader >/dev/null
-            pacman -Q wpewebkit
+            pacman -Q wpewebkit gst-plugin-pipewire
             useradd -m -u "$(stat -c %u .)" tester
-            su tester -c "WPRS_REQUIRE_WEB=1 target/debug/web-page --test-threads 1 && WPRS_REQUIRE_WEB=1 scripts/web-test.sh target/debug"
+            su tester -c "WPRS_REQUIRE_WEB=1 target/debug/web-page --test-threads 1 && WPRS_REQUIRE_WEB=1 scripts/web-test.sh target/debug && WPRS_REQUIRE_PIPEWIRE_SOUND=1 scripts/video-test.sh target/debug"
           '
 
   sway:
