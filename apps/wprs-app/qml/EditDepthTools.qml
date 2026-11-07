@@ -78,4 +78,14 @@ ColumnLayout {
         kind: "fill"
         counted: tools.relief.survey ? JSON.parse(tools.relief.survey).marks ?? 0 : 0
     }
+
+    Kirigami.Heading {
+        level: 4
+        text: App.tr("Layers and fill")
+    }
+
+    EditDepthCompare {
+        Layout.fillWidth: true
+        page: tools.page
+    }
 }

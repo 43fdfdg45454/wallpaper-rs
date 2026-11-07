@@ -593,7 +593,8 @@ msgstr ""
 msgid "Preset:"
 msgstr "Preajuste:"
 
-#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/OutputFilter.qml
+#: apps/wprs-app/qml/ApplyDialog.qml apps/wprs-app/qml/EditDepthCheck.qml
+#: apps/wprs-app/qml/EditDepthCompare.qml apps/wprs-app/qml/OutputFilter.qml
 #: apps/wprs-app/qml/SceneEffectMask.qml apps/wprs-app/qml/SceneMedia.qml
 #: apps/wprs-app/qml/SceneRig.qml apps/wprs-app/qml/SceneSwarmKin.qml
 #: apps/wprs-app/qml/SceneSwarmLight.qml apps/wprs-app/qml/SceneTones.qml
@@ -966,7 +967,8 @@ msgstr ""
 "Esta imagen aún no tiene mapa de profundidad. El blanco está cerca y el "
 "negro, lejos. En cuanto se descarga el modelo, el mapa se calcula solo."
 
-#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/StatusBar.qml
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/EditDepthCompare.qml
+#: apps/wprs-app/qml/StatusBar.qml
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1090,6 +1092,47 @@ msgstr "Quitar las marcas"
 msgid "Remove the strokes"
 msgstr "Quitar los trazos"
 
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Layer %1, the farthest"
+msgstr "Capa %1, la más lejana"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Layer %1, the nearest"
+msgstr "Capa %1, la más cercana"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml apps/wprs-app/qml/SceneRefs.qml
+#: apps/wprs-app/qml/SceneRigIk.qml apps/wprs-app/qml/facade/SceneOptions.qml
+msgid "Layer %1"
+msgstr "Capa %1"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Highlight the band that moving can uncover"
+msgstr "Resaltar la franja que el movimiento puede descubrir"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Compare LaMa with the simple fill"
+msgstr "Comparar LaMa con el relleno simple"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid ""
+"LaMa is not installed, so there is nothing to compare. Download it in the "
+"settings."
+msgstr ""
+"LaMa no está instalado, así que no hay nada que comparar. Descárgalo en los "
+"ajustes."
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Where LaMa ends"
+msgstr "Dónde termina LaMa"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Building the layers…"
+msgstr "Calculando las capas…"
+
+#: apps/wprs-app/qml/EditDepthCompare.qml
+msgid "Preparing the view…"
+msgstr "Preparando la vista…"
+
 #: apps/wprs-app/qml/EditDepthCuts.qml
 msgid "Far"
 msgstr "Lejos"
@@ -1153,6 +1196,10 @@ msgstr "Cortes de capa"
 #: apps/wprs-app/qml/EditDepthTools.qml
 msgid "Fill brush"
 msgstr "Pincel de relleno"
+
+#: apps/wprs-app/qml/EditDepthTools.qml
+msgid "Layers and fill"
+msgstr "Capas y relleno"
 
 #: apps/wprs-app/qml/EditDepthView.qml
 msgid "Show the depth map over the picture"
@@ -5849,11 +5896,6 @@ msgstr "Carátula anterior (%1)"
 #: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneTemplateFollow.qml
 msgid "Bone %1"
 msgstr "Hueso %1"
-
-#: apps/wprs-app/qml/SceneRefs.qml apps/wprs-app/qml/SceneRigIk.qml
-#: apps/wprs-app/qml/facade/SceneOptions.qml
-msgid "Layer %1"
-msgstr "Capa %1"
 
 #: apps/wprs-app/qml/SceneRgb.qml apps/wprs-app/qml/SettingsPage.qml
 #: apps/wprs-app/qml/facade/SceneNames.qml

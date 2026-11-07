@@ -842,3 +842,9 @@ rotation and the straightening come back with the other tools), and offers:
   strength: a mark is all or nothing where it covers at least half of the brush). The marks show
   in the layer views as the band they widen or empty, the layers are built again after the last
   stroke, and *Remove the marks* is `fill_mask` with `clear`.
+- *Layers and fill*: a list of the layers, from the farthest, that shows one alone over the picture
+  (`Relief.view`), with *Highlight the band that moving can uncover* tinting the pixels the set
+  filled (the `--band` of `edit depth show`), and *Compare LaMa with the simple fill*, which shows the
+  LaMa layer on the left of a divider that is dragged and the simple one on the right
+  (`edit depth compare`). A set that is missing is built then, with its progress and a *Cancel*
+  button, and the comparison is offered only while LaMa and ONNX Runtime are installed.

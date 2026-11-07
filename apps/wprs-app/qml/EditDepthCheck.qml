@@ -71,8 +71,14 @@ QtObject {
         cuts.put([]);
         if (page.edit.depth.cuts !== undefined)
             throw new Error("depth: going back to automatic kept the cuts");
+        const compare = Qt.createComponent("EditDepthCompare.qml").createObject(page, {
+                "page": page
+            });
+        if (compare.names.length !== compare.count + 1 || compare.names[0] !== App.tr("None"))
+            throw new Error("depth: the layer picker lists " + JSON.stringify(compare.names));
         page.paint = null;
         paint.destroy();
         cuts.destroy();
+        compare.destroy();
     }
 }

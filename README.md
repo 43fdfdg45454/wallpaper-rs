@@ -1135,6 +1135,10 @@ herramientas con las que el autor decide cómo se parte y se rellena la imagen, 
 - *Pincel de relleno*: pinta en la imagen lo que siempre debe rellenarse detrás de un objeto cercano
   (aunque quede fuera del alcance del desplazamiento) o lo que nunca se rellena, y las capas se
   recalculan al soltar (`edit depth fill-mask`).
+- *Capas y relleno*: elige una capa para verla sola, con la franja que el movimiento puede descubrir
+  resaltada (`edit depth show --band`), o compara el relleno de LaMa a un lado de un divisor que se
+  arrastra y el simple al otro (`edit depth compare`); lo que falta se calcula entonces, con su
+  progreso, y la comparación solo se ofrece con LaMa instalado.
 
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
