@@ -113,6 +113,7 @@ fun Settings(main: Main) {
             )
         }
         item { Grade(main) }
+        item { ShortcutMissed() }
         item {
             Header(stringResource(R.string.diagnostics))
             val answers = stringResource(R.string.no) to stringResource(R.string.yes)

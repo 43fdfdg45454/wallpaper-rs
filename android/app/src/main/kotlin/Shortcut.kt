@@ -1,6 +1,7 @@
 package io.github.wallpaper_rs
 
 import android.app.WallpaperColors
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -29,13 +30,27 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object Shortcuts {
-    fun open(context: Context, target: JSONObject) {
-        val intent = when {
-            target.has("uri") -> Intent(Intent.ACTION_VIEW, Uri.parse(target.getString("uri"))).addCategory(Intent.CATEGORY_BROWSABLE)
-            target.has("app") -> context.packageManager.getLaunchIntentForPackage(target.getString("app"))
+    var missed by mutableStateOf<Pair<String, String>?>(null)
+        private set
+
+    fun forget() {
+        missed = null
+    }
+
+    fun open(context: Context, target: JSONObject): Boolean {
+        val (uri, app) = target.optString("uri") to target.optString("app")
+        val intent = if (uri.isNotEmpty()) Intent(Intent.ACTION_VIEW, Uri.parse(uri)).addCategory(Intent.CATEGORY_BROWSABLE)
+        else context.packageManager.getLaunchIntentForPackage(app)
+        val thrown = intent?.let { runCatching { context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.exceptionOrNull() }
+        val reason = when {
+            intent == null || thrown is ActivityNotFoundException && uri.isEmpty() -> "app"
+            thrown is ActivityNotFoundException -> "web"
+            thrown != null -> "denied"
             else -> null
-        } ?: return
-        runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+        val shown = uri.ifEmpty { app }
+        missed = reason?.let { it to shown }
+        return reason == null
     }
 
     fun each(list: String?, block: (JSONObject) -> Unit) = list?.let(::JSONArray)?.let { all ->
@@ -100,4 +115,18 @@ internal fun Shortcut(field: JSONObject, modifier: Modifier, enabled: Boolean, s
             text = { OutlinedTextField(text, { typing = it }, singleLine = true, isError = web == null, supportingText = { Text(stringResource(R.string.shortcut_https)) }) },
         )
     }
+}
+
+@Composable
+internal fun ShortcutMissed() {
+    val (reason, shown) = Shortcuts.missed ?: return
+    val text = when (reason) {
+        "app" -> R.string.shortcut_missed_app
+        "web" -> R.string.shortcut_missed_web
+        else -> R.string.shortcut_missed_denied
+    }
+    ListItem(
+        headlineContent = { Text(stringResource(text, shown)) },
+        trailingContent = { TextButton(Shortcuts::forget) { Text(stringResource(R.string.close)) } },
+    )
 }

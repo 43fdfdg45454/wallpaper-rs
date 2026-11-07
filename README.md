@@ -1244,7 +1244,10 @@ un archivo o una carpeta (con el selector) o una aplicación por su id `.desktop
 Flatpak); el fondo nunca ve qué elegiste y solo puede pedir abrirlo dentro de un clic real, como
 mucho una vez por segundo, en una pantalla que acepta clics. En el teléfono eliges en la página
 del paquete una app instalada o una dirección `https://`, y se abre con un toque en la pantalla de
-inicio si el paquete tiene permiso para los toques (nunca desde la de bloqueo). Si una escena usa clics en una pantalla
+inicio si el paquete tiene permiso para los toques (nunca desde la de bloqueo). Si no se puede abrir
+(la app ya no está instalada, ninguna app abre la dirección o Android lo rechaza) *Ajustes* lo dice en
+una línea hasta que se cierra o un atajo se abre bien; Android no avisa cuando bloquea en silencio que
+un servicio de fondo de pantalla abra una app, y eso no se puede detectar. Si una escena usa clics en una pantalla
 a la que no llegan (como Plasma dentro del Flatpak), sus ajustes lo avisan. Un paquete que pide
 sombreadores de cálculo avisa antes de aplicarlo si la gráfica no los tiene, y la ficha de cada
 paquete dice en qué equipos funciona entero (`desktop`, `android`): el validador lo calcula con las
