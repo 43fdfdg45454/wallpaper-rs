@@ -825,8 +825,8 @@ msgstr "Volver"
 msgid "Save"
 msgstr "Guardar"
 
-#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/PackagePage.qml
-#: apps/wprs-app/qml/ScenePage.qml
+#: apps/wprs-app/qml/EditActions.qml apps/wprs-app/qml/EditDepthBrush.qml
+#: apps/wprs-app/qml/PackagePage.qml apps/wprs-app/qml/ScenePage.qml
 msgid "Undo"
 msgstr "Deshacer"
 
@@ -954,7 +954,7 @@ msgstr "Calculando la profundidad…"
 msgid "Saving the map…"
 msgstr "Guardando el mapa…"
 
-#: apps/wprs-app/qml/EditDepth.qml
+#: apps/wprs-app/qml/EditDepth.qml apps/wprs-app/qml/EditDepthView.qml
 msgid "False colour, red near and blue far"
 msgstr "Falso color: rojo cerca y azul lejos"
 
@@ -1028,6 +1028,94 @@ msgstr "Ensanchar los bordes cercanos (px)"
 msgid "Pictures"
 msgstr "Imágenes"
 
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Paint fill marks"
+msgstr "Pintar marcas de relleno"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Paint depth"
+msgstr "Pintar profundidad"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Refill"
+msgstr "Rellenar"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Raise"
+msgstr "Subir"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Protect"
+msgstr "Proteger"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml apps/wprs-app/qml/SceneLayerTools.qml
+msgid "Lower"
+msgstr "Bajar"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml apps/wprs-app/qml/EditMasks.qml
+#: apps/wprs-app/qml/SceneMapBrush.qml apps/wprs-app/qml/SceneMask.qml
+#: apps/wprs-app/qml/SceneRigDepth.qml apps/wprs-app/qml/SceneRigWeights.qml
+msgid "Brush size"
+msgstr "Tamaño del pincel"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml apps/wprs-app/qml/EditOps.qml
+#: apps/wprs-app/qml/OutputFilter.qml apps/wprs-app/qml/SceneCanvasLook.qml
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneNormals.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
+#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/SceneSwarmPull.qml
+#: apps/wprs-app/qml/facade/SceneNames.qml
+msgid "Strength"
+msgstr "Fuerza"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+#: apps/wprs-app/qml/SceneEffectMaskTune.qml
+#: apps/wprs-app/qml/SceneRigWeights.qml
+msgid "Soft edge"
+msgstr "Borde suave"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "%1 marks"
+msgstr "%1 marcas"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "%1 strokes"
+msgstr "%1 trazos"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Remove the marks"
+msgstr "Quitar las marcas"
+
+#: apps/wprs-app/qml/EditDepthBrush.qml
+msgid "Remove the strokes"
+msgstr "Quitar los trazos"
+
+#: apps/wprs-app/qml/EditDepthLayers.qml
+msgid "LaMa"
+msgstr "LaMa"
+
+#: apps/wprs-app/qml/EditDepthLayers.qml
+msgid "Simple fill"
+msgstr "Relleno simple"
+
+#: apps/wprs-app/qml/EditDepthTools.qml
+msgid "Depth over the picture"
+msgstr "Profundidad sobre la imagen"
+
+#: apps/wprs-app/qml/EditDepthTools.qml
+msgid "Depth brush"
+msgstr "Pincel de profundidad"
+
+#: apps/wprs-app/qml/EditDepthView.qml
+msgid "Show the depth map over the picture"
+msgstr "Mostrar el mapa de profundidad sobre la imagen"
+
+#: apps/wprs-app/qml/EditDepthView.qml apps/wprs-app/qml/EditEffects.qml
+#: apps/wprs-app/qml/SceneSwarmInstance.qml
+#: apps/wprs-app/qml/SceneSwarmLook.qml apps/wprs-app/qml/facade/SceneTerms.qml
+msgid "Opacity"
+msgstr "Opacidad"
+
 #: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/EditOps.qml
 #: apps/wprs-app/qml/SceneNormals.qml apps/wprs-app/qml/facade/SceneEffects.qml
 #: apps/wprs-app/qml/facade/SceneWords.qml
@@ -1097,11 +1185,6 @@ msgstr "Luz suave"
 #: apps/wprs-app/qml/SceneSwarmKin.qml apps/wprs-app/qml/facade/SceneWords.qml
 msgid "Color"
 msgstr "Color"
-
-#: apps/wprs-app/qml/EditEffects.qml apps/wprs-app/qml/SceneSwarmInstance.qml
-#: apps/wprs-app/qml/SceneSwarmLook.qml apps/wprs-app/qml/facade/SceneTerms.qml
-msgid "Opacity"
-msgstr "Opacidad"
 
 #: apps/wprs-app/qml/EditEffects.qml
 msgid ""
@@ -1306,12 +1389,6 @@ msgid "Nearest"
 msgstr "Lo más cercano"
 
 #: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMapBrush.qml
-#: apps/wprs-app/qml/SceneMask.qml apps/wprs-app/qml/SceneRigDepth.qml
-#: apps/wprs-app/qml/SceneRigWeights.qml
-msgid "Brush size"
-msgstr "Tamaño del pincel"
-
-#: apps/wprs-app/qml/EditMasks.qml apps/wprs-app/qml/SceneMapBrush.qml
 msgid "Hardness"
 msgstr "Dureza"
 
@@ -1402,16 +1479,6 @@ msgstr "Bajar"
 #: apps/wprs-app/qml/SceneTimelineEvents.qml apps/wprs-app/qml/SettingsPage.qml
 msgid "Remove"
 msgstr "Quitar"
-
-#: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/OutputFilter.qml
-#: apps/wprs-app/qml/SceneCanvasLook.qml
-#: apps/wprs-app/qml/SceneEffectMaskTune.qml
-#: apps/wprs-app/qml/SceneLighting.qml apps/wprs-app/qml/SceneNormals.qml
-#: apps/wprs-app/qml/SceneRigWeights.qml apps/wprs-app/qml/SceneRigWind.qml
-#: apps/wprs-app/qml/SceneSwarmKeep.qml apps/wprs-app/qml/SceneSwarmPull.qml
-#: apps/wprs-app/qml/facade/SceneNames.qml
-msgid "Strength"
-msgstr "Fuerza"
 
 #: apps/wprs-app/qml/EditOps.qml apps/wprs-app/qml/RgbBoard.qml
 msgid "Whole picture"
@@ -4185,11 +4252,6 @@ msgid "Invert: apply the effect where the mask is empty"
 msgstr "Invertir: aplicar el efecto donde la máscara está vacía"
 
 #: apps/wprs-app/qml/SceneEffectMaskTune.qml
-#: apps/wprs-app/qml/SceneRigWeights.qml
-msgid "Soft edge"
-msgstr "Borde suave"
-
-#: apps/wprs-app/qml/SceneEffectMaskTune.qml
 #: apps/wprs-app/qml/SceneShadows3d.qml apps/wprs-app/qml/SceneSwarmSwirl.qml
 msgid "%1 px"
 msgstr "%1 px"
@@ -4625,14 +4687,6 @@ msgstr "Agrupar la capa elegida y las marcadas con Ctrl"
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move into a group"
 msgstr "Meter en un grupo"
-
-#: apps/wprs-app/qml/SceneLayerTools.qml
-msgid "Raise"
-msgstr "Subir"
-
-#: apps/wprs-app/qml/SceneLayerTools.qml
-msgid "Lower"
-msgstr "Bajar"
 
 #: apps/wprs-app/qml/SceneLayerTools.qml
 msgid "Move out of the group"

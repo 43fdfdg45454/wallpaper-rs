@@ -1119,6 +1119,16 @@ wprs-ctl config parallax.fill simple                            # lama, simple u
 wprs-ctl config parallax.layers 6
 ```
 
+*Herramientas de autor para las capas.* En la página de edición de una imagen con mapa de profundidad,
+la herramienta *Profundidad* muestra la imagen entera y sin girar y trae, bajo los ajustes del mapa, las
+herramientas con las que el autor decide cómo se parte y se rellena la imagen, cada una con su orden en
+`wprs-ctl edit depth` y con deshacer:
+
+- *Profundidad sobre la imagen*: muestra el mapa ya ajustado, con los trazos, encima de la imagen, en gris
+  o en falso color y con un control de opacidad.
+- *Pincel de profundidad*: sube o baja la profundidad con un radio, una fuerza y un borde suave a elegir;
+  cada trazo es un paso del historial y se aplica al mapa ajustado (`edit depth brush`).
+
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
 contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.

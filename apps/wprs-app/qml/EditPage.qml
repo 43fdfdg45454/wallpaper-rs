@@ -12,6 +12,17 @@ Kirigami.Page {
     property string aspect
     property string mask
     property var brush: null
+    property var paint: null
+    property var cutsLive: null
+    property bool overlayOn
+    property real overlayOpacity: 0.6
+    property bool overlayColour: true
+    property bool outlineOn
+    property bool bandOn
+    property bool splitOn
+    property real splitAt: 0.5
+    property int layerPick: -1
+    property alias relief: relief
     readonly property var edit: JSON.parse(editor.json || "{}")
     readonly property var values: JSON.parse(editor.values || "{}")
     readonly property var ops: edit.ops ?? []
@@ -36,6 +47,7 @@ Kirigami.Page {
         editor.run("depth_brush", '{"points": "0.2,0.2;0.4,0.3", "by": 0.2, "radius": 0.05, "lower": true}');
         editor.run("depth_cuts", '{"cuts": "0.3,0.6"}');
         editor.run("fill_mask", '{"points": "0.5,0.5", "protect": true}');
+        depthCheck.exercise();
         editor.undo();
         editor.redo();
         editor.compare(true);
@@ -54,6 +66,18 @@ Kirigami.Page {
 
     Editor {
         id: editor
+    }
+
+    Relief {
+        id: relief
+
+        Component.onCompleted: open(page.item.path ?? "")
+    }
+
+    EditDepthCheck {
+        id: depthCheck
+
+        page: page
     }
 
     EditActions {

@@ -12,30 +12,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: crates/wprs-core/src/edit/action.rs
-msgid "%1 is not KEY=VALUE"
-msgstr "%1 no es CLAVE=VALOR"
-
-#: crates/wprs-core/src/edit/action.rs
-msgid "no mask is named %1"
-msgstr "ninguna máscara se llama %1"
-
-#: crates/wprs-core/src/edit/action.rs
-msgid "no operation is named %1"
-msgstr "ninguna operación se llama %1"
-
-#: crates/wprs-core/src/edit/action.rs crates/wprs-core/src/edit/check.rs
-#: crates/wprs-core/src/edit/fields.rs crates/wprs-core/src/edit/set.rs
-#: crates/wprs-core/src/edit/tool.rs crates/wprs-editor/src/check.rs
-#: crates/wprs-editor/src/findings.rs crates/wprs-editor/src/history.rs
-#: crates/wprs-format/src/facts.rs crates/wprs-format/src/features.rs
-msgid "%1"
-msgstr "%1"
-
-#: crates/wprs-core/src/edit/action.rs
-msgid "some of %1 are not operations"
-msgstr "algunas de %1 no son operaciones"
-
 #: crates/wprs-core/src/edit/check.rs
 msgid "%1: %2 is out of range %3 to %4"
 msgstr "%1: %2 está fuera del rango de %3 a %4"
@@ -59,6 +35,14 @@ msgstr "%1: x tiene que crecer de un punto al siguiente"
 #: crates/wprs-core/src/edit/check.rs
 msgid "%1: unknown field"
 msgstr "%1: campo desconocido"
+
+#: crates/wprs-core/src/edit/check.rs crates/wprs-core/src/edit/fields.rs
+#: crates/wprs-core/src/edit/perform.rs crates/wprs-core/src/edit/set.rs
+#: crates/wprs-core/src/edit/tool.rs crates/wprs-editor/src/check.rs
+#: crates/wprs-editor/src/findings.rs crates/wprs-editor/src/history.rs
+#: crates/wprs-format/src/facts.rs crates/wprs-format/src/features.rs
+msgid "%1"
+msgstr "%1"
 
 #: crates/wprs-core/src/edit/check.rs
 msgid "version %1 is newer than %2"
@@ -178,6 +162,22 @@ msgstr "%1 no es una máscara"
 #: crates/wprs-core/src/edit/parse.rs
 msgid "%1 is not linear, radial, luminance, depth, brush or erase"
 msgstr "%1 no es linear, radial, luminance, depth, brush ni erase"
+
+#: crates/wprs-core/src/edit/perform.rs
+msgid "%1 is not KEY=VALUE"
+msgstr "%1 no es CLAVE=VALOR"
+
+#: crates/wprs-core/src/edit/perform.rs
+msgid "no mask is named %1"
+msgstr "ninguna máscara se llama %1"
+
+#: crates/wprs-core/src/edit/perform.rs
+msgid "no operation is named %1"
+msgstr "ninguna operación se llama %1"
+
+#: crates/wprs-core/src/edit/perform.rs
+msgid "some of %1 are not operations"
+msgstr "algunas de %1 no son operaciones"
 
 #: crates/wprs-core/src/edit/set.rs
 msgid "%1 is not a number"

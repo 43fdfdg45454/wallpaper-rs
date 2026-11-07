@@ -14,8 +14,9 @@ pub fn gesture(action: &str, args: Option<&Value>) -> String {
     let changes = args.and_then(|a| a["changes"].as_array()).into_iter().flatten();
     let keys = changes.filter_map(Value::as_str).map(|c| c.split('=').next().unwrap_or(c));
     let keys: Vec<&str> = keys.collect();
-    let target =
-        args.map(|a| [&a["output"], &a["name"], &a["id"]].map(|v| v.as_str().unwrap_or("")).join(" "));
+    let target = args.map(|a| {
+        [&a["output"], &a["name"], &a["id"], &a["points"]].map(|v| v.as_str().unwrap_or("")).join(" ")
+    });
     format!("{action} {} {}", keys.join(" "), target.unwrap_or_default())
 }
 

@@ -13,12 +13,14 @@ fn the_editor_draws_its_picture_on_the_gpu() {
         Err(e) => return assert!(std::env::var_os("WPRS_REQUIRE_GPU").is_none(), "GPU required: {e}"),
     };
     let mut edit = Edit::default();
-    let plain = picture.draw(&edit, false).unwrap();
+    let plain = picture.draw(&edit, (false, false)).unwrap();
     assert_eq!(plain.dimensions(), (64, 32));
     edit.set("ev", "2").unwrap();
     edit.act(serde_json::from_value(json!({"crop": {"rect": "0,0,0.5,1", "rotate": 90}})).unwrap()).unwrap();
-    let (cropped, whole) = (picture.draw(&edit, false).unwrap(), picture.draw(&edit, true).unwrap());
+    let (cropped, whole) =
+        (picture.draw(&edit, (false, false)).unwrap(), picture.draw(&edit, (true, false)).unwrap());
     assert_eq!((cropped.dimensions(), whole.dimensions()), ((16, 64), (32, 64)));
+    assert_eq!(picture.draw(&edit, (true, true)).unwrap().dimensions(), (64, 32));
     assert!(cropped.get_pixel(8, 32)[0] > plain.get_pixel(8, 16)[0] + 40);
     let path = write(&cropped).unwrap();
     let data = std::fs::read(&path).unwrap();

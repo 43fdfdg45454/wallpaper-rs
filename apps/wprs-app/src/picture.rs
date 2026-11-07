@@ -11,7 +11,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use wprs_core::edit::Edit;
+use wprs_core::edit::{Edit, Geometry};
 use wprs_depth::{Map, Places};
 use wprs_render::{RenderError, Renderer, decode_image};
 
@@ -59,9 +59,11 @@ impl Picture {
         kept.as_ref().map(|(_, map)| map.clone())
     }
 
-    pub fn draw(&self, edit: &Edit, whole: bool) -> Result<RgbaImage> {
+    pub fn draw(&self, edit: &Edit, (whole, plain): (bool, bool)) -> Result<RgbaImage> {
         let mut edit = Edit { parallax: None, ..edit.clone() };
-        if whole {
+        if plain {
+            edit.geometry = Geometry::default();
+        } else if whole {
             edit.geometry.crop = None;
         }
         let depth = edit.needs_depth().then(|| self.depth(&edit)).flatten();
@@ -118,8 +120,8 @@ impl Editor {
         self.set_trouble(QString::from(trouble(e)));
     }
 
-    pub fn view(mut self: Pin<&mut Self>, whole: bool) {
-        self.as_mut().rust_mut().wanted = whole;
+    pub fn view(mut self: Pin<&mut Self>, whole: bool, plain: bool) {
+        self.as_mut().rust_mut().wanted = (whole, plain);
         self.draw();
     }
 
@@ -136,11 +138,11 @@ impl Editor {
             return;
         }
         let edit = if self.comparing { self.edit.before() } else { self.edit.clone() };
-        let (whole, qt) = (self.wanted, self.qt_thread());
+        let (shape, qt) = (self.wanted, self.qt_thread());
         self.as_mut().rust_mut().drawing = true;
         bus::spawn(async move {
             let started = Instant::now();
-            let drawn = tokio::task::spawn_blocking(move || write(&art.draw(&edit, whole)?)).await;
+            let drawn = tokio::task::spawn_blocking(move || write(&art.draw(&edit, shape)?)).await;
             let drawn = drawn.map_err(anyhow::Error::from).and_then(|d| d);
             tokio::time::sleep(THROTTLE.saturating_sub(started.elapsed())).await;
             let left = drawn.as_ref().ok().cloned();
@@ -150,7 +152,8 @@ impl Editor {
                     Ok(path) => {
                         let old = editor.as_mut().rust_mut().drawn.replace(path.clone());
                         editor.as_mut().set_trouble(QString::default());
-                        editor.as_mut().set_whole(whole);
+                        editor.as_mut().set_whole(shape.0);
+                        editor.as_mut().set_plain(shape.1);
                         editor.as_mut().set_picture(QString::from(&bus::url(&path.to_string_lossy())));
                         old.map(std::fs::remove_file);
                     }
@@ -169,4 +172,21 @@ impl Editor {
             }
         });
     }
+}
+
+pub fn write_png(pixels: &RgbaImage) -> Result<PathBuf> {
+    use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+    let dir = dirs::runtime_dir().unwrap_or_else(std::env::temp_dir);
+    let path =
+        dir.join(format!("wprs-app-{}-{}.png", std::process::id(), DRAWN.fetch_add(1, Ordering::Relaxed)));
+    let file = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&path)?;
+    let encoder = PngEncoder::new_with_quality(file, CompressionType::Fast, FilterType::NoFilter);
+    image::ImageEncoder::write_image(
+        encoder,
+        pixels,
+        pixels.width(),
+        pixels.height(),
+        image::ExtendedColorType::Rgba8,
+    )?;
+    Ok(path)
 }

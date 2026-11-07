@@ -818,3 +818,15 @@ the set made with that fill instead of the newest. `edit depth compare FILE --ou
 [--at X]` builds, when they are missing, the set filled by LaMa and the one filled by the simple
 fill, with progress on the standard error, and saves one layer with LaMa on the left of `X` (0.5
 by default) and the simple fill on the right; it refuses to run while LaMa is not installed.
+
+In the app the *Depth* tool of the picture editor, once the picture has a depth map, shows the whole
+picture, unturned and uncropped, so that what is painted lines up with the original (the crop, the
+rotation and the straightening come back with the other tools), and offers:
+
+- *Show the depth map over the picture*: the adjusted map, strokes included, in grey or in false
+  colour, over the picture with its own opacity (`Relief.look`, drawn once per change of the edit and
+  never per frame).
+- *Paint depth*: the brush for `depth_brush`, with raise or lower, size, strength and soft edge. The
+  canvas draws the circle of the brush and the stroke while the button is down, thinned to a point
+  every quarter of the radius, and sends the stroke on release as one `depth_brush`; undo removes it
+  alone. *Remove the strokes* is `depth_brush` with `clear`.

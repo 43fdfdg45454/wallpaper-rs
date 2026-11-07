@@ -149,6 +149,13 @@ ColumnLayout {
         }
     }
 
+    EditDepthTools {
+        Layout.fillWidth: true
+        visible: maps.map !== ""
+        page: tool.page
+        map: maps.map
+    }
+
     FileDialog {
         id: files
 

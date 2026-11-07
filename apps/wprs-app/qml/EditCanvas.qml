@@ -10,7 +10,9 @@ ColumnLayout {
     required property var page
     property int section
     readonly property var editor: page.editor
-    readonly property bool whole: section === 0
+    readonly property bool plain: section === 6
+    readonly property bool whole: section === 0 || plain
+    readonly property string shape: whole + "/" + plain
     readonly property var crop: page.edit.geometry?.crop ?? [0, 0, 1, 1]
     readonly property var outputs: page.edit.outputs ?? {}
     readonly property var troubles: ({
@@ -20,8 +22,8 @@ ColumnLayout {
         })
 
     spacing: 0
-    onWholeChanged: editor.view(whole)
-    Component.onCompleted: editor.view(whole)
+    onShapeChanged: editor.view(whole, plain)
+    Component.onCompleted: editor.view(whole, plain)
 
     Rectangle {
         Layout.fillWidth: true
@@ -44,11 +46,11 @@ ColumnLayout {
             y: shown.y + (shown.height - shown.paintedHeight) / 2
             width: shown.paintedWidth
             height: shown.paintedHeight
-            visible: shown.status === Image.Ready && canvas.editor.whole === canvas.whole
+            visible: shown.status === Image.Ready && canvas.editor.whole === canvas.whole && canvas.editor.plain === canvas.plain
             clip: true
 
             EditFrame {
-                visible: canvas.whole
+                visible: canvas.section === 0
                 dim: true
                 rect: canvas.crop
                 onMoved: rect => canvas.page.run("crop", {
@@ -62,6 +64,18 @@ ColumnLayout {
                 visible: canvas.section === 5 && !canvas.editor.comparing
                 page: canvas.page
                 matrix: canvas.page.values.view?.[canvas.editor.whole ? "whole" : "crop"] ?? [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+            }
+
+            EditDepthLayers {
+                anchors.fill: parent
+                visible: canvas.plain
+                page: canvas.page
+            }
+
+            EditDepthPaint {
+                anchors.fill: parent
+                visible: canvas.plain && canvas.page.paint !== null
+                page: canvas.page
             }
 
             Repeater {

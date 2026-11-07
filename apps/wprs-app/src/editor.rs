@@ -11,6 +11,7 @@ pub mod qobject {
         #[qml_element]
         #[qproperty(QString, picture)]
         #[qproperty(bool, whole)]
+        #[qproperty(bool, plain)]
         #[qproperty(QString, trouble)]
         #[qproperty(QString, json)]
         #[qproperty(QString, values)]
@@ -34,7 +35,7 @@ pub mod qobject {
         #[qinvokable]
         fn preview(self: Pin<&mut Editor>, stop: bool);
         #[qinvokable]
-        fn view(self: Pin<&mut Editor>, whole: bool);
+        fn view(self: Pin<&mut Editor>, whole: bool, plain: bool);
         #[qinvokable]
         fn refresh(self: Pin<&mut Editor>);
         #[qinvokable]
@@ -67,6 +68,7 @@ use wprs_core::edit::{self, Action, Edit, History};
 pub struct EditorRust {
     pub picture: QString,
     pub whole: bool,
+    pub plain: bool,
     pub trouble: QString,
     pub json: QString,
     pub values: QString,
@@ -89,7 +91,7 @@ pub struct EditorRust {
     pub shown: bool,
     pub sent: u64,
     pub art: Option<Arc<Picture>>,
-    pub wanted: bool,
+    pub wanted: (bool, bool),
     pub drawing: bool,
     pub redraw: bool,
     pub drawn: Option<PathBuf>,
