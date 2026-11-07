@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
 use wprs_core::edit::{self, Depth, Edit, Source};
 use wprs_depth::models::assets;
-use wprs_depth::{MODEL, Part, Places, beside, read, sha256, write};
+use wprs_depth::{LAMA, MODEL, Part, Places, beside, read, sha256, write};
 
 pub enum Work {
     Open,
@@ -16,6 +16,9 @@ pub enum Work {
     Keep,
     Remove,
     Install(PathBuf),
+    Rebuild,
+    DropLama,
+    CheckLama,
 }
 
 #[derive(Default)]
@@ -25,6 +28,8 @@ pub struct Shown {
     pub sha: String,
     pub ready: bool,
     pub allowed: bool,
+    pub layers: String,
+    pub note: String,
 }
 
 pub struct Target {
@@ -54,7 +59,9 @@ pub fn run(
         let edit = edit::load(&target.image, &edit::dir()).ok().flatten().map(|(_, e)| e).unwrap_or_default();
         target.sha = sha(&target.image, &edit).unwrap_or_default();
     }
+    let checked = matches!(work, Work::CheckLama);
     let failed = act(places, &target, work, stop, report).err().filter(|_| !stop.load(Relaxed));
+    let note = if checked && failed.is_none() { "verified" } else { "" };
     let failed = failed.map(|e| format!("{e:#}"));
     let libraries = places.library(None);
     let have = |a: &wprs_depth::Asset| {
@@ -70,7 +77,19 @@ pub fn run(
     let map = places.find(&target.image, &target.sha, &target.depth).map(|p| url(&p.to_string_lossy()));
     let ready = have(&MODEL) && !libraries.is_empty();
     let (assets, allowed) = (json!(list).to_string(), wprs_depth::allowed());
-    (Shown { assets, map: map.unwrap_or_default(), sha: target.sha, ready, allowed }, failed)
+    let layers = json!({"sets": places.layer_files().len(), "bytes": places.layer_bytes()}).to_string();
+    (
+        Shown {
+            assets,
+            map: map.unwrap_or_default(),
+            sha: target.sha,
+            ready,
+            allowed,
+            layers,
+            note: note.into(),
+        },
+        failed,
+    )
 }
 
 fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: Report<'_>) -> Result<()> {
@@ -95,6 +114,12 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
         Work::Remove => match places.unmap(image, sha, &target.depth) {
             0 => bail!("the image has no depth map"),
             _ => Ok(()),
+        },
+        Work::Rebuild => places.unlayer_all().map(drop),
+        Work::DropLama => places.remove(&LAMA).map(drop),
+        Work::CheckLama => match places.verify(&LAMA)? {
+            true => Ok(()),
+            false => bail!("LaMa is missing or damaged; download it again"),
         },
         Work::Install(file) => {
             let sha = sha256(&file)?;
@@ -134,8 +159,8 @@ fn ready(places: &Places, target: &Target, stop: &AtomicBool, report: Report<'_>
 }
 
 pub fn look(places: &Places, (image, sha): (&Path, &str), depth: &Depth, colour: bool) -> Result<PathBuf> {
-    let found = places.find(image, sha, depth).context("the image has no depth map yet")?;
-    let map = wprs_depth::shrink(wprs_depth::adjust(&wprs_depth::shrink(read(&found)?, 1024), depth), 512);
-    let pixels = image::DynamicImage::ImageRgb8(wprs_depth::coloured(&map, colour)).into_rgba8();
-    crate::picture::write(&pixels)
+    let found = places.map(image, sha, depth, 1024)?.context("the image has no depth map yet")?;
+    let pixels =
+        image::DynamicImage::ImageRgb8(wprs_depth::coloured(&wprs_depth::shrink(found, 512), colour));
+    crate::picture::write(&pixels.into_rgba8())
 }

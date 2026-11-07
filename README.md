@@ -1140,6 +1140,12 @@ herramientas con las que el autor decide cómo se parte y se rellena la imagen, 
   arrastra y el simple al otro (`edit depth compare`); lo que falta se calcula entonces, con su
   progreso, y la comparación solo se ofrece con LaMa instalado.
 
+Las capas se recalculan solas medio segundo después del último cambio mientras la herramienta está
+abierta, y un cambio nuevo cancela el cálculo en curso. En *Ajustes*, junto a la descarga de LaMa, hay
+botones para comprobarlo (`models verify`) y quitarlo (`models remove`), y *Recalcular las capas*, que
+borra los juegos de capas guardados y hace que el daemon prepare de nuevo los de las imágenes que
+muestra; el botón indica cuántos juegos hay guardados o cuánto lleva el cálculo del daemon.
+
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La
 contraseña de una clave se pide en la terminal o se lee de `WPRS_KEY_PASSWORD`.

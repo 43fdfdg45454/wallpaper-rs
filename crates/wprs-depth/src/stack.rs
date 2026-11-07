@@ -92,11 +92,26 @@ impl Places {
         unjson(path);
     }
 
+    pub fn layer_files(&self) -> Vec<PathBuf> {
+        let entries = std::fs::read_dir(self.cache.join("depth")).into_iter().flatten().flatten();
+        entries.map(|e| e.path()).filter(|p| p.to_string_lossy().ends_with(SUFFIX)).collect()
+    }
+
+    pub fn layer_bytes(&self) -> u64 {
+        let size = |p: &PathBuf| std::fs::metadata(p).map_or(0, |m| m.len());
+        self.layer_files().iter().map(|p| size(p) + size(&json(p))).sum()
+    }
+
+    pub fn unlayer_all(&self) -> Result<usize> {
+        let sets = self.layer_files();
+        sets.iter().for_each(|p| self.discard(p));
+        Ok(sets.len())
+    }
+
     pub fn layers_of(&self, sha256: &str) -> Vec<PathBuf> {
         let prefix = format!("{sha256}-");
-        let entries = std::fs::read_dir(self.cache.join("depth")).into_iter().flatten().flatten();
-        let named = entries.filter(|e| e.file_name().to_string_lossy().starts_with(&prefix));
-        named.map(|e| e.path()).filter(|p| p.to_string_lossy().ends_with(SUFFIX)).collect()
+        let named = self.layer_files().into_iter();
+        named.filter(|p| p.file_name().is_some_and(|n| n.to_string_lossy().starts_with(&prefix))).collect()
     }
 
     pub fn unlayer(&self, sha256: &str) -> usize {

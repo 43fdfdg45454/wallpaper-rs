@@ -126,6 +126,9 @@ fn a_saved_layer_set_comes_back_and_is_trimmed_with_its_cache() {
     let inside = dir.path().join("depth").join(path.file_name().unwrap());
     wprs_depth::save(&inside, &made).unwrap();
     assert_eq!(places.layers_of(&"ab".repeat(32)).len(), 1);
+    assert_eq!((places.layer_files().len(), places.layer_bytes() > 0), (1, true));
+    assert_eq!(places.unlayer_all().unwrap(), 1);
+    wprs_depth::save(&inside, &made).unwrap();
     assert_eq!(places.unlayer(&"ab".repeat(32)), 1);
     assert!(places.layers_of(&"ab".repeat(32)).is_empty() && wprs_depth::load(&inside).unwrap().is_none());
 }

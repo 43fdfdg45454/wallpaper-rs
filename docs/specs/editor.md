@@ -848,3 +848,9 @@ rotation and the straightening come back with the other tools), and offers:
   LaMa layer on the left of a divider that is dragged and the simple one on the right
   (`edit depth compare`). A set that is missing is built then, with its progress and a *Cancel*
   button, and the comparison is offered only while LaMa and ONNX Runtime are installed.
+
+The settings page of the app has, next to the LaMa download, *Check LaMa* (`wprs-ctl models verify
+lama-big-fp32`), *Remove LaMa* (`models remove lama-big-fp32`) and *Rebuild the layers*, which
+deletes every layer set of the cache (the same as `edit depth layers --clear` for each picture) and
+reloads the daemon so that it builds those of the pictures it shows; the button shows how many sets
+are kept, or the progress of the `layers` job of the daemon while one runs.

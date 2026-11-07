@@ -102,3 +102,32 @@ fn a_layer_is_built_on_demand_and_its_band_is_highlighted() {
         (Some(true), Some(5.0))
     );
 }
+
+#[test]
+fn the_layer_sets_are_counted_cleared_and_lama_is_checked_and_removed() {
+    let dir = tempfile::tempdir().unwrap();
+    let places = Places { data: dir.path().join("data"), cache: dir.path().join("cache") };
+    let target = || Target {
+        image: dir.path().join("none.png"),
+        sha: "ab".repeat(32),
+        depth: Depth::default(),
+        device: Default::default(),
+    };
+    let info = wprs_depth::Info { format: 1, size: [2, 2], depths: vec![0.5], ..Default::default() };
+    let made = wprs_depth::Layers { info, images: vec![image::RgbaImage::new(2, 2)] };
+    wprs_depth::save(
+        &places.cache.join("depth").join(format!("{}-0123456789abcdef.layers.png", "ab".repeat(32))),
+        &made,
+    )
+    .unwrap();
+    let stop = AtomicBool::new(false);
+    let (shown, failed) = run(&places, target(), Work::Open, &stop, &mut |_, _| {});
+    let kept: Value = serde_json::from_str(&shown.layers).unwrap();
+    assert!(failed.is_none() && kept["sets"] == 1 && kept["bytes"].as_u64() > Some(0), "{kept}");
+    let (shown, failed) = run(&places, target(), Work::CheckLama, &stop, &mut |_, _| {});
+    assert!(failed.unwrap().contains("missing or damaged") && shown.note.is_empty());
+    let (_, failed) = run(&places, target(), Work::DropLama, &stop, &mut |_, _| {});
+    assert!(failed.is_none());
+    let (shown, failed) = run(&places, target(), Work::Rebuild, &stop, &mut |_, _| {});
+    assert!(failed.is_none() && serde_json::from_str::<Value>(&shown.layers).unwrap()["sets"] == 0);
+}

@@ -19,6 +19,8 @@ pub mod qobject {
         #[qproperty(bool, allowed)]
         #[qproperty(QString, device)]
         #[qproperty(QString, look)]
+        #[qproperty(QString, layers)]
+        #[qproperty(QString, note)]
         type DepthMaps = super::DepthRust;
 
         #[qinvokable]
@@ -27,6 +29,12 @@ pub mod qobject {
         fn download(self: Pin<&mut DepthMaps>);
         #[qinvokable]
         fn fetch_lama(self: Pin<&mut DepthMaps>);
+        #[qinvokable]
+        fn rebuild_layers(self: Pin<&mut DepthMaps>);
+        #[qinvokable]
+        fn remove_lama(self: Pin<&mut DepthMaps>);
+        #[qinvokable]
+        fn verify_lama(self: Pin<&mut DepthMaps>);
         #[qinvokable]
         fn generate(self: Pin<&mut DepthMaps>, input: u32);
         #[qinvokable]
@@ -69,6 +77,8 @@ pub struct DepthRust {
     pub allowed: bool,
     pub device: QString,
     pub look: QString,
+    pub layers: QString,
+    pub note: QString,
     pub viewing: bool,
     pub again: Option<(String, bool)>,
     pub file: PathBuf,
@@ -90,6 +100,18 @@ impl DepthMaps {
 
     pub fn fetch_lama(self: Pin<&mut Self>) {
         self.start(Work::Lama);
+    }
+
+    pub fn rebuild_layers(self: Pin<&mut Self>) {
+        self.start(Work::Rebuild);
+    }
+
+    pub fn remove_lama(self: Pin<&mut Self>) {
+        self.start(Work::DropLama);
+    }
+
+    pub fn verify_lama(self: Pin<&mut Self>) {
+        self.start(Work::CheckLama);
     }
 
     pub fn generate(mut self: Pin<&mut Self>, input: u32) {
@@ -119,35 +141,14 @@ impl DepthMaps {
         self.start(Work::Install(given));
     }
 
-    pub fn view(mut self: Pin<&mut Self>, depth: &QString, colour: bool) {
-        if std::mem::replace(&mut self.as_mut().rust_mut().viewing, true) {
-            self.as_mut().rust_mut().again = Some((depth.to_string(), colour));
-            return;
-        }
-        let depth: Depth = serde_json::from_str(&depth.to_string()).unwrap_or_default();
-        let (qt, image, sha) = (self.qt_thread(), self.file.clone(), self.sha.clone());
-        std::thread::spawn(move || {
-            let shown = crate::depthwork::look(&Places::default(), (&image, &sha), &depth, colour);
-            qt.queue(move |mut maps| {
-                let old = crate::app::path(&maps.look.to_string());
-                maps.as_mut().set_look(QString::from(&shown.map(|p| bus_url(&p)).unwrap_or_default()));
-                old.map(std::fs::remove_file);
-                maps.as_mut().rust_mut().viewing = false;
-                if let Some((depth, colour)) = maps.as_mut().rust_mut().again.take() {
-                    maps.view(&QString::from(&depth), colour);
-                }
-            })
-            .ok();
-        });
-    }
-
-    fn start(mut self: Pin<&mut Self>, work: Work) {
+    pub(crate) fn start(mut self: Pin<&mut Self>, work: Work) {
         if self.busy {
             return;
         }
         let stop = Arc::new(AtomicBool::new(false));
         self.as_mut().rust_mut().stop = stop.clone();
         self.as_mut().set_error(QString::default());
+        self.as_mut().set_note(QString::default());
         self.as_mut().set_progress(-1.0);
         self.as_mut().set_busy(true);
         let (qt, image, sha) = (self.qt_thread(), self.file.clone(), self.sha.clone());
@@ -172,6 +173,8 @@ impl DepthMaps {
                 maps.as_mut().rust_mut().sha = shown.sha;
                 maps.as_mut().set_assets(QString::from(&shown.assets));
                 maps.as_mut().set_ready(shown.ready);
+                maps.as_mut().set_layers(QString::from(&shown.layers));
+                maps.as_mut().set_note(QString::from(&shown.note));
                 maps.as_mut().set_allowed(shown.allowed);
                 maps.as_mut().set_map(QString::default());
                 maps.as_mut().set_map(QString::from(&shown.map));
@@ -181,15 +184,5 @@ impl DepthMaps {
             })
             .ok();
         });
-    }
-}
-
-fn bus_url(path: &std::path::Path) -> String {
-    crate::bus::url(&path.to_string_lossy())
-}
-
-impl Drop for DepthRust {
-    fn drop(&mut self) {
-        crate::app::path(&self.look.to_string()).map(std::fs::remove_file);
     }
 }

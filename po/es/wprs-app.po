@@ -1719,6 +1719,34 @@ msgstr "Descargar LaMa"
 msgid "Downloads are turned off in the settings."
 msgstr "Las descargas están desactivadas en los ajustes."
 
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Check LaMa"
+msgstr "Comprobar LaMa"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Remove LaMa"
+msgstr "Quitar LaMa"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "LaMa is whole"
+msgstr "LaMa está entero"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Rebuild the layers"
+msgstr "Recalcular las capas"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Building the layers: %1 %"
+msgstr "Calculando las capas: %1 %"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "%1 sets of layers are kept (%2 MB)"
+msgstr "Hay %1 juegos de capas guardados (%2 MB)"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "No layers are kept yet"
+msgstr "Todavía no hay capas guardadas"
+
 #: apps/wprs-app/qml/Filters.qml
 msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
 msgstr "Buscar, por ejemplo: tag:mar kind:image -fav:yes sort:random"

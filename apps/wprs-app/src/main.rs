@@ -7,6 +7,7 @@ mod calls;
 mod choices;
 mod depth;
 mod depthproc;
+mod depthview;
 mod depthwork;
 mod diff;
 mod editing;
