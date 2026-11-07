@@ -5,6 +5,7 @@ members = [
     "crates/wprs-render",
     "crates/wprs-pipewire",
     "crates/wprs-video",
+    "crates/wprs-mix",
     "crates/wprs-format",
     "crates/wprs-schedule",
     "crates/wprs-providers",
@@ -40,6 +41,7 @@ wprs-core = { path = "crates/wprs-core" }
 wprs-render = { path = "crates/wprs-render" }
 wprs-pipewire = { path = "crates/wprs-pipewire" }
 wprs-video = { path = "crates/wprs-video" }
+wprs-mix = { path = "crates/wprs-mix" }
 wprs-format = { path = "crates/wprs-format" }
 wprs-schedule = { path = "crates/wprs-schedule" }
 wprs-providers = { path = "crates/wprs-providers" }

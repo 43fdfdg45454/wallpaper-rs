@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wprs_scene::{Playlist, Voice};
-use wprs_video::{Bank, Mix, RATE, Soundtrack, Source, Track, decode, probe_sound};
+use wprs_video::{Bank, Disk, Mix, RATE, Soundtrack, Source, Track, decode, probe_sound};
 
 const ON: Voice = Voice { play: true, volume: 1.0, pan: 0.0, at: 0.0 };
 const SECOND: f64 = RATE as f64;
@@ -88,7 +88,7 @@ fn sounds_decode_from_wav_and_mp3_and_long_ones_stream() {
         None => required("no MP3 encoder"),
     }
     let mut sound = Mix::new(&[track(&[3.0], true)]);
-    sound.load(0, 0, Source::Stream(Arc::new(file)));
+    sound.load(0, 0, Source::Stream(Arc::new(Disk(file))));
     sound.set(&[Voice { at: 2.0, ..ON }], 0.0);
     let mut heard = Vec::new();
     assert!(

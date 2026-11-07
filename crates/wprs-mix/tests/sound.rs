@@ -1,6 +1,6 @@
 use std::sync::Arc;
+use wprs_mix::{Clip, Mix, RATE, Source, Track};
 use wprs_scene::{Order, Playlist, Voice};
-use wprs_video::{Clip, Mix, RATE, Source, Track};
 
 const ON: Voice = Voice { play: true, volume: 1.0, pan: 0.0, at: 0.0 };
 const SECOND: f64 = RATE as f64;

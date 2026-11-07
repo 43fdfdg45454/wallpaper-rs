@@ -1,4 +1,5 @@
 use super::report::{self, wall};
+use super::sounded::soonest;
 use super::{RETRIES, Shot, Stage};
 use crate::acting::Sent;
 use crate::hearing;
@@ -48,6 +49,7 @@ impl Stage {
         let dt = self.tick.filter(|_| !still).map_or(0.0, |t| ((nanos - t) as f64 / 1e9).clamp(0.0, MAX_GAP));
         self.tick = (!still).then_some(nanos);
         self.runtime.advance(dt * speed);
+        let hearing = self.listen(power, still);
         let [listens, feels] = self.wants();
         let allowed = self.allowed();
         let listens = listens && power.moving() && !still;
@@ -104,7 +106,7 @@ impl Stage {
             || self.view.is_none())
         {
             let left = self.due.map(|due| ((due - nanos) / 1_000_000).max(1));
-            let delay = left.unwrap_or(idle);
+            let delay = soonest(left.unwrap_or(idle), hearing);
             return Ok(Shot { image: None, fps: self.fps, delay });
         }
         if std::mem::replace(&mut self.quality, quality) != quality && self.runtime.set_quality(quality) {
@@ -179,6 +181,6 @@ impl Stage {
                 }
             }
         }
-        Ok(Shot { image: Some(image), fps: self.fps, delay })
+        Ok(Shot { image: Some(image), fps: self.fps, delay: soonest(delay, hearing) })
     }
 }

@@ -77,7 +77,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             Toggle(stringResource(R.string.react_taps), granted?.optBoolean("taps") == true) { grant("taps", it) }
         }
         MediaGrants(form) { input, on -> grant(input, on) }
-        if (form.optBoolean("sounds")) Text(stringResource(R.string.sounds_off), Modifier.padding(16.dp, 4.dp), style = small)
+        if (form.optBoolean("sounds") && form.optBoolean("muted")) Text(stringResource(R.string.sounds_muted), Modifier.padding(16.dp, 4.dp), style = small)
         val saved = options(form.optJSONArray("saved"))
         val presets = options(form.optJSONArray("presets")) + saved
         if (presets.isNotEmpty()) Choices(stringResource(R.string.presets), presets, "") { preset ->
@@ -93,7 +93,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
             TextButton({ keeping.launch(arrayOf(JSON, "text/plain")) }) { Text(stringResource(R.string.import_preset)) }
         }
         val fields = form.optJSONArray("fields") ?: JSONArray()
-        val renamed = if (form.optBoolean("video")) REEL.keys else if (form.optJSONObject("web")?.optBoolean("own_volume") == false) setOf("volume") else emptySet()
+        val renamed = if (form.optBoolean("video")) REEL.keys else if (form.optJSONObject("web")?.optBoolean("own_volume") == false || form.optBoolean("sounds")) setOf("volume") else emptySet()
         val all = (0 until fields.length()).map(fields::getJSONObject).map { if (it.optString("key") in renamed) reeled(it) else it }
         val folded = all.filter { it.getString("kind") == "group" && it.optBoolean("collapsed") != (it.getString("key") in flipped) }.map { it.getString("key") }
         all.filter { it.optBoolean("visible") && it.optString("group") !in folded }.forEach { field ->

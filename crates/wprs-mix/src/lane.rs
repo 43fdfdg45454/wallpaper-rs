@@ -1,5 +1,4 @@
-use super::{AHEAD, DRIFT, DUCK, Item, RAMP, RATE, Source, Track, same};
-use crate::feed::Slot;
+use super::{AHEAD, DRIFT, DUCK, Feed, Item, RAMP, RATE, Source, Track, same};
 use wprs_scene::{Spot, Voice, Walk};
 
 #[derive(Default)]
@@ -11,7 +10,7 @@ pub(super) struct Lane {
     pub(super) at: f64,
     pub(super) walk: Walk,
     pub(super) item: Option<Item>,
-    pub(super) feeds: Vec<(f64, Slot)>,
+    pub(super) feeds: Vec<(f64, Box<dyn Feed>)>,
     pub(super) gain: f32,
     pub(super) level: f32,
     pub(super) pan: f32,
@@ -53,9 +52,9 @@ impl Lane {
         let keep = [current, next];
         self.feeds.retain(|(key, _)| keep.iter().flatten().any(|(_, start, _)| same(*key, *start)));
         for (clip, start, offset) in keep.into_iter().flatten() {
-            let Some(Source::Stream(path)) = &self.sources[clip] else { continue };
+            let Some(Source::Stream(stream)) = &self.sources[clip] else { continue };
             if !self.feeds.iter().any(|(key, _)| same(*key, start)) {
-                self.feeds.push((start, Slot::open(path, offset.max(0.0) as u64)));
+                self.feeds.push((start, stream.open(offset.max(0.0) as u64)));
             }
         }
     }

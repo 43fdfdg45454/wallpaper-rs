@@ -1423,8 +1423,8 @@ with a fixed `clock.seed` plays the same order. A streamed sound is decoded a li
 it plays, and the next streamed clip of a list starts decoding 1.5 s before its turn, so lists and
 loops of long sounds play without gaps; nothing of a stream is kept once it has played. `play_on`
 starts the sound again each time its trigger fires; `play` still mutes it while it is off. The
-desktop plays these sounds; Android plays scenes without sound (`sound` and `sound2` are left out
-there).
+desktop and the phone play these sounds (the phone decodes them with the codecs of the system when they
+first sound, reads a `stream` sound as it plays and keeps about 0.2 s between the scene and the speaker).
 
 `play`, `volume` and `pan` may be literals or follow a user property or keyframes on the scene
 clock, which a timeline triggered by a property or a beat can drive; they never follow the audio
@@ -1437,7 +1437,10 @@ Every scene with sound has a `volume` user property, a slider from 0 to 100 % (1
 added automatically; a manifest may declare it to change its label, default or order, as long as
 it stays a slider within 0 to 100. Scenes start muted like videos and follow `playback.muted` and
 `playback.volume`; only one output plays the sound of a scene shown on several outputs, and nothing
-plays on the lock screen (see "Scene sound" in `dbus.md`).
+plays on the lock screen (see "Scene sound" in `dbus.md`). On the phone the sound plays only while the
+wallpaper is shown on the home screen (not on the lock screen or in a preview), pauses with the scene
+when battery saver, a low battery or heat stop it, follows `playback.duck` and releases its audio output
+5 s after every layer has stopped; a scene that has sound layers gets its `volume` setting there too.
 
 ## Particles
 
@@ -1963,7 +1966,7 @@ export const sway = (value, { params }) => Math.sin(scene.layer("tree").rotation
 | `props` | `get(id)` (a chosen file or folder reads `"wpak-user://<id>"`, never its path, and `null` while none is chosen), `all()`, `label(id)` (the label of the chosen option of a combo in that language), `color(id)` (`{ r, g, b, a }` from 0 to 1) and `pressed(id)` (a button was pressed since the last frame); scripts never write settings |
 | `audio` | `bass`, `mid`, `treble`, `level`, `beat`, `bands(16 \| 32 \| 64, "left" \| "right" \| "average")` (a new array) and `buffers(16 \| 32 \| 64)`: `{ left, right, average }` as `Float32Array`s that the engine fills in place before each frame |
 | `input` | `cursor`: `x`, `y` (fractions of the screen), `inside`, `buttons`, `left`, `scene` (canvas pixels) and `screen` (screen pixels); `buttons` and `left` stay 0 without the `clicks` input |
-| `sound(id)` | a sound layer of the scene (`uses: ["sounds"]`, `script_sounds`): `play()` (from where `pause()` left it, or from the start), `pause()`, `stop()` (back to the start), `playing` and `volume` (0 to 1, multiplied by the volume of the layer and the user's). The first call takes the sound over from its `play_on`; the layer's own `play` and the user's mute still silence it. Phones play no scene sounds, so there the calls change nothing |
+| `sound(id)` | a sound layer of the scene (`uses: ["sounds"]`, `script_sounds`): `play()` (from where `pause()` left it, or from the start), `pause()`, `stop()` (back to the start), `playing` and `volume` (0 to 1, multiplied by the volume of the layer and the user's). The first call takes the sound over from its `play_on`; the layer's own `play` and the user's mute still silence it. The phone obeys them like the desktop |
 | `scene` | `layer(id)`, `layers()` (the ids of the top-level layers in drawing order), `spawn(template, options)`, `destroy(id)` and `order(id, index)`, and `mesh(pool)`, `camera`, `parallax`, `bloom` and `background` (see below) |
 | `storage` | `get`, `set`, `delete`, `clear` and `keys` of what the scripts keep (see below) |
 | `folder(prop)` | the pictures of a folder the user chose (see below) |
@@ -1999,8 +2002,8 @@ once it ended), `pause()`, `stop()` (back to `start`, paused), `seek(seconds)` (
 frame: the last `seek` of a frame counts), `time`, `duration` (`undefined` while it is not known),
 `playing`, `rate` (0 to 16, read and written), `volume` (0 to 1, 1 by default, read and written: it
 scales the sound of the video under the volume of the videos of the package and the general volume;
-layers that share a clock share it; the phone plays scenes without sound, so there it changes
-nothing) and `on("ended", handler)`, called with `{ layer,
+layers that share a clock share it; the videos inside a scene play without sound on the phone, so there it
+changes nothing) and `on("ended", handler)`, called with `{ layer,
 name }` in the frame after a video without `loop` reaches its end. Calls take the video over from the
 `playback` of the layer until the scene starts again.
 
@@ -2105,7 +2108,7 @@ copy changes, which it makes again when the system says the folder changed. `sho
 with a decoder of its own that only runs while the scene is shown, on a clock of its own that follows
 the `playback` of the layer and that `layer.video` (play, pause, seek, rate, volume, `ended`) controls like the
 videos of the package, with its sound at the volume of the videos of the package on the desktop (the
-phone plays scenes without sound, folder videos too), instead of its own
+phone plays the videos inside a scene without sound, folder videos too), instead of its own
 (`null` gives it back), at most eight files at once, any of them videos; a video on another
 kind of layer throws. Scripts never see paths, and the phone lists the folder the user chose in the same way.
 

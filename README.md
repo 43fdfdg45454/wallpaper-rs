@@ -514,7 +514,7 @@ de una escena los decodifica el hardware y se copian a la GPU fotograma a fotogr
 se pausan si la escena se queda quieta. Los scripts de las escenas se ejecutan en el teléfono como en
 el escritorio, en un hilo propio con los mismos límites (QuickJS sin archivos ni red, 32 MiB de
 memoria y 4 ms por fotograma); si uno falla tres veces seguidas se detiene y la escena sigue sin él,
-y el diagnóstico de *Ajustes* lo dice. Sus sonidos no suenan en el teléfono, así que su volumen no
+y el diagnóstico de *Ajustes* lo dice. Sus sonidos suenan en el teléfono (ver arriba) y su volumen
 aparece entre las propiedades. El diagnóstico también dice si los efectos de los paquetes se
 cronometran con marcas de tiempo de la GPU o esperando a que termine, y al cerrarse el fondo el
 teléfono termina las compilaciones de sombreadores y limpia sus marcas de prueba, para que un cierre
@@ -552,6 +552,22 @@ y los toques son los clics del teléfono: un toque sobre una capa `solid` arranc
 `click:` y llega a sus scripts. Solo cuentan los toques reales sobre la pantalla de inicio (la de
 bloqueo no da ninguno) y sobre la vista previa de la página de la escena, y solo en las escenas
 con ese permiso; sin él, tocar la vista previa no le llega a la escena.
+
+El sonido de las escenas suena en el teléfono con las mismas reglas que en el escritorio: las
+escenas empiezan en silencio (*Reproducir el sonido de los vídeos y las escenas* en *Ajustes*, que
+es `playback.muted`), `playback.scene_sound` en `false` las deja mudas, el volumen es
+`playback.volume` por el ajuste *Volumen* de la escena (que aparece en las escenas con sonido) y
+*Silenciar el fondo mientras otra app reproduce sonido* lo baja con el mismo fundido. Solo suena en la
+pantalla de inicio: ni en la de bloqueo ni en la vista previa, ni cuando el fondo no se ve, y se
+calla con el ahorro de energía, con poca batería sin cargador o con mucho calor, igual que el
+movimiento de la escena. Todas las capas de una escena se mezclan en una sola salida de AAudio, que
+se abre cuando algo suena y se cierra cuando todo calló y pasaron cinco segundos; los sonidos se
+descodifican con los códecs de Android la primera vez que se oyen (los largos con `stream`, a
+medida que suenan), se realinean con la escena una vez por segundo y llegan al altavoz unos
+200 ms después de la escena, así que los sonidos que arranca un toque van algo más tarde que en el
+escritorio. Un sonido que arranca por un evento o por un script respeta igual el silencio y el volumen elegidos en Ajustes.
+No hay red ni permisos nuevos: la salida de sonido no pide el micrófono (eso solo es *Reaccionar al
+sonido*) y lo que suena en un fondo no sale del teléfono.
 
 Solo se dibuja cuando cambia algo y nunca mientras el fondo no se ve: con una imagen fija no hay
 ningún fotograma más. El fundido y el desplazamiento al pasar de página en el lanzador van como
@@ -1218,8 +1234,8 @@ mientras otra aplicación reproduce sonido* (`playback.duck`, apagado de serie) 
 fundido mientras alguna otra aplicación reproduce, contando sus flujos de PipeWire sin leer sus
 nombres ni su contenido. En el teléfono el mismo ajuste (*Silenciar el fondo mientras otra app
 reproduce sonido*) sigue las reproducciones activas que Android anuncia, sin saber de qué app son
-ni qué suenan, y solo escucha mientras un vídeo o una página con sonido se ve; baja el sonido solo
-si hay más reproducciones que las suyas (una por vídeo que suena y una por página con sonido). Las propiedades con valores por nivel de calidad (`quality`) los toman solas
+ni qué suenan, y solo escucha mientras un vídeo, una escena o una página con sonido se ve; baja el sonido solo
+si hay más reproducciones que las suyas (una por vídeo que suena, una por página con sonido y una por escena que suena). Las propiedades con valores por nivel de calidad (`quality`) los toman solas
 cuando el equipo ahorra energía, y scripts y páginas reciben el nivel. Un atajo (`shortcut`) lo
 eliges tú en los ajustes del fondo: una dirección `https://` (se abre con el portal del escritorio),
 un archivo o una carpeta (con el selector) o una aplicación por su id `.desktop` (fuera del
@@ -1249,7 +1265,7 @@ como valores, rangos de frecuencias con límites y exponente, y efectos propios 
 con pasadas, objetivos, variantes, hasta 8 texturas y 24 parámetros, comprobados al leer el paquete
 contra el contrato de su preludio. Cada uno tiene su nombre en `requires.features`, y el escritorio
 y el teléfono rechazan con el mismo aviso una escena que use alguno que su motor aún no dibuja (el
-teléfono, que reproduce las escenas sin sonido, solo omite el sonido nuevo). `docs/specs/scene.md`
+teléfono ya reproduce también el sonido nuevo). `docs/specs/scene.md`
 describe cada campo y sus límites.
 
 De esa lista, el escritorio y el teléfono ya dibujan la cámara 2D (centro, zoom, giro y una
@@ -1266,8 +1282,8 @@ GPU pueden dibujar, también las que no tienen texturas de coma flotante de 16 b
 escalarlo sin volver a dibujar las letras), y los vídeos en cualquier sitio que admite una imagen, con un decodificador por
 vídeo que se pausa mientras nada lo muestra, la reproducción de `playback` y el control desde
 scripts con `layer.video` (reproducir, pausar, parar, saltar, ritmo, volumen de 0 a 1, tiempo,
-duración y aviso de fin; el teléfono reproduce las escenas sin sonido, así que allí el volumen no
-cambia nada).
+duración y aviso de fin; los vídeos dentro de una escena van sin sonido en el teléfono, así que allí
+el volumen no cambia nada).
 
 El escritorio y el teléfono ya dibujan también los efectos propios del paquete. El inspector de cada
 uso de efecto muestra sus reglas para despertar la escena (qué entrada pide cada parámetro, a cuál
@@ -1354,8 +1370,8 @@ y reciben sus eventos y su final. El escritorio toca las capas de sonido complet
 en orden o al azar con pausas, sonidos largos de hasta diez minutos leídos en flujo sin cargarlos
 enteros y sonidos disparados por eventos, con el volumen y el paso de un lado a otro suavizados. El
 sonido sigue el tiempo de la escena: los bucles se vuelven a alinear, al reanudar suena donde dice la
-línea de tiempo y la latencia baja de unos 160 ms a unos 50 ms. El teléfono sigue reproduciendo las
-escenas sin sonido. Una escena sin imagen de vista previa recibe una miniatura dibujada a partir de la
+línea de tiempo y la latencia baja de unos 160 ms a unos 50 ms. El teléfono toca las mismas capas,
+con unos 200 ms de latencia. Una escena sin imagen de vista previa recibe una miniatura dibujada a partir de la
 propia escena en su momento de póster.
 
 El formato describe también las escenas más avanzadas: capas `mesh` que deforman una imagen con un
@@ -2982,6 +2998,7 @@ misma pausa.
 | `crates/wprs-editor` | Editor de escenas compartido por la app y `wprs-ctl scene`: operaciones, historial, puntos de partida, inspector y carpetas de escena |
 | `crates/wprs-pipewire` | Exportación de streams de vídeo PipeWire |
 | `crates/wprs-video` | Reproducción de vídeo en bucle y del sonido de las escenas con GStreamer |
+| `crates/wprs-mix` | Mezclador de las capas de sonido de una escena (listas, pausas, fundidos, paso de un lado a otro y alineación con la escena), compartido por el escritorio y Android |
 | `crates/wprs-wayland` | Superficies layer-shell y ventanas de escritorio X11, escala, ritmo y oclusión |
 | `crates/wprs-audio` | Captura del sonido con PipeWire y su análisis en bandas para las escenas, también a partir del espectro que da Android |
 | `crates/wprs-script` | Scripts de escena en JavaScript, aislados en un proceso por escena con límites de CPU y memoria, su módulo `wprs` y `wprs/math` |

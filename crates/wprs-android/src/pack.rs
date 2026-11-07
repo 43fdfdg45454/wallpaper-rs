@@ -1,9 +1,9 @@
 use crate::said;
 use crate::{Error, store};
-use image::{ImageReader, Limits, RgbaImage};
+use image::RgbaImage;
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{BufReader, Cursor};
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::time::SystemTime;
@@ -11,9 +11,13 @@ use wprs_format::{Kind, Package};
 use wprs_render::{Pictures, SceneAssets};
 use wprs_scene::{Preset, Property, Scene};
 
+mod drawn;
 mod info;
 mod lanes;
 mod mirror;
+mod sounds;
+
+use drawn::{decode, drawn};
 
 pub(crate) use info::{about, animated, check, entry, examples, lacks, media};
 pub(crate) use lanes::lanes;
@@ -41,6 +45,7 @@ pub(crate) struct Pack {
     pub(crate) presets: Vec<Preset>,
     pub(crate) assets: SceneAssets,
     pub(crate) videos: Vec<(String, PathBuf)>,
+    pub(crate) sounds: Vec<sounds::Sound>,
     pub(crate) inputs: Option<wprs_scene::Uses>,
     pub(crate) scripts: Vec<(String, String)>,
     pub(crate) labels: serde_json::Value,
@@ -75,17 +80,6 @@ fn scene_of(package: Package<BufReader<fs::File>>) -> Result<Package<BufReader<f
             &[&package.manifest.title_in(&[])],
         )),
     }
-}
-
-fn decode(bytes: Vec<u8>) -> Result<RgbaImage, Error> {
-    drawn(bytes, false)
-}
-
-fn drawn(bytes: Vec<u8>, linear: bool) -> Result<RgbaImage, Error> {
-    let mut limits = Limits::default();
-    (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
-        (Some(1 << 14), Some(1 << 14), Some(1 << 28));
-    Ok(wprs_render::decode_asset(ImageReader::new(Cursor::new(bytes)), limits, linear)?)
 }
 
 pub(crate) fn folder(path: &Path) -> Result<PathBuf, Error> {
@@ -160,6 +154,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         videos.push((key, link));
     }
     assets.luts.extend(package.luts(&scene)?);
+    let sounds = sounds::extract(&mut package, &scene, path)?;
     let (file, kept) = (path.to_owned(), stamp.clone());
     assets.reloadable(&scene, move || {
         self::stamp(&file).ok().filter(|now| *now == kept)?;
@@ -175,9 +170,11 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
     if scripts.iter().map(|(_, s)| s.len()).sum::<usize>() > wprs_scene::MAX_SCRIPT_BYTES {
         return Err(said("android.scene_scripts_take", "the scene scripts take more than 1 MiB", &[]));
     }
-    let labels = wprs_scene::labels(&m.properties, &m.default_locale.iter().cloned().collect::<Vec<_>>());
+    let loudness = m.playback.clone().unwrap_or_default().loudness();
+    let properties = scene.properties(&m.properties, "Volume", loudness);
+    let labels = wprs_scene::labels(&properties, &m.default_locale.iter().cloned().collect::<Vec<_>>());
     let (id, version, locale, scene) = (m.id, m.version, m.default_locale, Arc::new(scene));
-    let (properties, presets) = (m.properties, m.presets);
+    let presets = m.presets;
     let pack = Arc::new(Pack {
         id,
         version,
@@ -187,6 +184,7 @@ pub(crate) fn load(path: &Path) -> Result<Arc<Pack>, Error> {
         presets,
         assets,
         videos,
+        sounds,
         inputs,
         scripts,
         labels,

@@ -8,6 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 wprs-scene.workspace = true
+wprs-mix.workspace = true
 gstreamer.workspace = true
 gstreamer-app.workspace = true
 gstreamer-video.workspace = true

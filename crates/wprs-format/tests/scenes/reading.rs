@@ -20,9 +20,9 @@ fn scenes_name_their_newer_features_and_engines_refuse_what_they_cannot_draw() {
     assert_eq!(package.facts.features.iter().collect::<Vec<_>>(), all);
     assert!(features::playable(&package.manifest, &package.facts, Platform::Desktop).is_ok());
     assert!(features::playable(&package.manifest, &package.facts, Platform::Android).is_ok());
-    assert_eq!(features::lacks("android", &package.facts.features), ["sound", "sound2"]);
+    assert!(features::lacks("android", &package.facts.features).is_empty());
     assert!(package.facts.facets.iter().any(|f| f == "desktop"));
-    assert!(package.facts.facets.iter().all(|f| f != "android"));
+    assert!(package.facts.facets.iter().any(|f| f == "android"));
     let mut few = manifest(&["sound", "sound2"]);
     few.inputs = vec![wprs_format::Input::Media];
     let unlisted = load(&few, &files).map(drop).unwrap_err().to_string();

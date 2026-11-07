@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::fmt::Debug;
 use std::sync::Arc;
 use wprs_scene::{Playlist, Voice};
 
@@ -12,6 +12,15 @@ const DUCK: f32 = 1.0 / 240.0;
 const DRIFT: f64 = 0.06 * RATE as f64;
 const AHEAD: f64 = 1.5 * RATE as f64;
 
+pub trait Feed: Send {
+    fn settle(&mut self);
+    fn frame(&mut self, at: u64) -> Option<[i16; 2]>;
+}
+
+pub trait Stream: Debug + Send + Sync {
+    fn open(&self, from: u64) -> Box<dyn Feed>;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Clip {
     pub channels: usize,
@@ -21,7 +30,7 @@ pub struct Clip {
 #[derive(Debug, Clone)]
 pub enum Source {
     Memory(Arc<Clip>),
-    Stream(Arc<PathBuf>),
+    Stream(Arc<dyn Stream>),
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

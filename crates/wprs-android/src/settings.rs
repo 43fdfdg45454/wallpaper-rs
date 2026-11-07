@@ -72,6 +72,10 @@ pub(crate) fn config() -> Config {
     loaded().unwrap_or_default()
 }
 
+pub(crate) fn playback() -> wprs_core::settings::Playback {
+    cached().ok().and_then(|config| config.as_ref().map(|config| config.playback.clone())).unwrap_or_default()
+}
+
 pub(crate) fn downloads() -> bool {
     loaded().is_ok_and(|config| config.models.allow_download)
 }

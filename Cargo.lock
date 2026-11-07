@@ -6767,6 +6767,7 @@ dependencies = [
  "wprs-depth",
  "wprs-format",
  "wprs-library",
+ "wprs-mix",
  "wprs-providers",
  "wprs-render",
  "wprs-scene",
@@ -6966,6 +6967,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wprs-mix"
+version = "0.3.0"
+dependencies = [
+ "wprs-scene",
+]
+
+[[package]]
 name = "wprs-pipewire"
 version = "0.3.0"
 dependencies = [
@@ -7146,6 +7154,7 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.21",
  "tracing",
+ "wprs-mix",
  "wprs-scene",
 ]
 

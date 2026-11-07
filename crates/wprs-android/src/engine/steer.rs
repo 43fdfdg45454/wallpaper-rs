@@ -2,13 +2,17 @@ use super::Engine;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
 
-pub(crate) type Steered = (u64, Vec<(PathBuf, u32)>);
+pub(crate) type Steered = (u64, Vec<(PathBuf, u32)>, bool);
 
 impl Engine {
     pub(crate) fn steer(&mut self) -> Option<String> {
         let opens = self.stage.as_mut().map(crate::stage::Stage::opened).unwrap_or_default();
         let mut list: Vec<serde_json::Value> =
             opens.into_iter().map(|t| serde_json::json!({ "open": t })).collect();
+        let sounding = self.stage.as_ref().is_some_and(crate::stage::Stage::sounding);
+        if std::mem::replace(&mut self.steered.2, sounding) != sounding {
+            list.push(serde_json::json!({ "sound": sounding }));
+        }
         list.extend(self.tapes().unwrap_or_default());
         (!list.is_empty()).then(|| serde_json::Value::Array(list).to_string())
     }

@@ -1,10 +1,10 @@
-use crate::mix::RATE;
 use crate::{Error, local_uri, lock, make};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app::AppSink;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use wprs_mix::{RATE, Stream};
 
 const NEAR: u64 = RATE as u64 / 4;
 const QUEUED: u32 = 8;
@@ -71,8 +71,19 @@ impl Slot {
         opened.map(drop).unwrap_or_else(|e| tracing::warn!("cannot start streaming a sound: {e}"));
         Slot::Waiting(shared)
     }
+}
 
-    pub(crate) fn settle(&mut self) {
+#[derive(Debug)]
+pub struct Disk(pub PathBuf);
+
+impl Stream for Disk {
+    fn open(&self, from: u64) -> Box<dyn wprs_mix::Feed> {
+        Box::new(Slot::open(&self.0, from))
+    }
+}
+
+impl wprs_mix::Feed for Slot {
+    fn settle(&mut self) {
         if let Slot::Waiting(shared) = self
             && let Some(feed) = shared.try_lock().ok().and_then(|mut f| f.take())
         {
@@ -80,7 +91,7 @@ impl Slot {
         }
     }
 
-    pub(crate) fn frame(&mut self, at: u64) -> Option<[i16; 2]> {
+    fn frame(&mut self, at: u64) -> Option<[i16; 2]> {
         match self {
             Slot::Ready(feed) => feed.frame(at),
             Slot::Waiting(_) => None,

@@ -9,7 +9,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use wprs_core::model::Input;
-use wprs_scene::{Control, Property, Runtime, VOLUME, Values};
+use wprs_scene::{Control, Property, Runtime, Values};
 
 const GRANTS: &str = "inputs.json";
 
@@ -112,8 +112,7 @@ fn form(pack: &Pack, languages: &[String], uid: &str) -> Result<Value, Error> {
     let length =
         || with(|lib| Ok(lib.item(uid)?.meta.duration_ms)).ok().flatten().map(|ms| ms as f64 / 1000.0);
     let video = pack.video.as_ref().map(|m| m.video_properties(&crate::reel::labels(), length()));
-    let mut props = video.unwrap_or_else(|| pack.properties.clone());
-    props.retain(|key, _| !sounds || key != VOLUME);
+    let props = video.unwrap_or_else(|| pack.properties.clone());
     let languages: Vec<String> = languages.iter().cloned().chain(pack.locale.clone()).collect();
     let (mut fields, presets) = wprs_scene::form(&props, &pack.presets, &values, &languages);
     let filled = saved::filled(pack);
@@ -127,6 +126,7 @@ fn form(pack: &Pack, languages: &[String], uid: &str) -> Result<Value, Error> {
     let network = pack.web.as_ref().is_some_and(|w| !w.network.is_empty());
     Ok(json!({
         "fields": fields, "presets": presets, "scripts": pack.web.is_none() && ran.scripts, "sounds": sounds,
+        "muted": settings::config().playback.muted,
         "saved": saved::listed(pack)?, "web": crate::page::form(pack),
         "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2], "media": media, "network": network },
         "granted": { "audio": audio, "touch": touch, "taps": taps, "media": allows(&pack.id, Input::Media),

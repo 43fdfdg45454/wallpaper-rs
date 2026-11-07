@@ -36,10 +36,7 @@ pub(super) fn scenes() {
         let found = listed.as_array().unwrap().iter().find(|i| i["title"] == title).unwrap();
         ask(json!({ "op": "item", "uid": found["uid"] }))["lacks"].clone()
     };
-    assert_eq!(
-        [lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")],
-        [json!([]), json!(["sound"]), json!([])]
-    );
+    assert_eq!([lacks("Orbits"), lacks("Snowfall"), lacks("Pulse")], [json!([]), json!([]), json!([])]);
     assert!(
         about["about"]["description"].as_str().unwrap().contains("\n\nDestella con el ritmo y"),
         "{about}"
@@ -168,6 +165,8 @@ pub(super) fn scenes() {
     stopped::only_automatic_stops_heavy_scenes();
     flight::flown();
     looks::drawn();
+    super::sounded::scene_sounds_play_pause_and_release();
+    super::sounded::a_one_shot_sound_pauses_when_it_ends_and_is_dropped_later();
     power::device(false, 0);
 }
 

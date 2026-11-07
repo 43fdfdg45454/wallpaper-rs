@@ -55,6 +55,7 @@ impl Stage {
 
     pub(crate) fn hide(&mut self) {
         self.tick = None;
+        self.mute();
         if let Some(view) = self.view.as_mut() {
             view.trim();
             self.runtime.restart_particles();

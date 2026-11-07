@@ -1,5 +1,5 @@
+use crate::feed::Disk;
 use crate::feed::decoder;
-use crate::mix::{Clip, Mix, RATE, Source};
 use crate::{Error, lock};
 use gstreamer as gst;
 use gstreamer::prelude::*;
@@ -7,9 +7,9 @@ use gstreamer_app::AppSink;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, Weak, mpsc};
 use std::time::{Duration, Instant};
+use wprs_mix::{Clip, Mix, RATE, Source};
 use wprs_scene::{MAX_SOUND_SECONDS, MAX_SOUND_TOTAL};
 
-const EDGE: u64 = 1 << 20;
 const DECODE_WAIT: Duration = Duration::from_secs(30);
 const MARGIN: f32 = 0.5;
 
@@ -51,18 +51,7 @@ pub fn decode(path: &Path, budget: usize) -> Result<Clip, Error> {
 }
 
 pub fn probe(path: &Path) -> Result<f32, Error> {
-    use std::io::{Read, Seek, SeekFrom};
-    let mut file = std::fs::File::open(path).map_err(|e| Error::Decode(e.to_string()))?;
-    let size = file.metadata().map_err(|e| Error::Decode(e.to_string()))?.len();
-    let mut edge = |from: SeekFrom| {
-        let mut bytes = Vec::new();
-        file.seek(from).and_then(|_| (&mut file).take(EDGE).read_to_end(&mut bytes)).map(|_| bytes)
-    };
-    let head = edge(SeekFrom::Start(0)).map_err(|e| Error::Decode(e.to_string()))?;
-    let tail = edge(SeekFrom::Start(size.saturating_sub(EDGE))).map_err(|e| Error::Decode(e.to_string()))?;
-    let clip =
-        wprs_scene::Clip::sample(&path.to_string_lossy(), &head, &tail, size).map_err(Error::Decode)?;
-    Ok(clip.seconds)
+    wprs_scene::Clip::file(path).map(|clip| clip.seconds).map_err(Error::Decode)
 }
 
 fn pull(sink: &AppSink, bus: &gst::Bus, (frames, channels): (usize, usize)) -> Result<Clip, String> {
@@ -129,7 +118,7 @@ impl Bank {
         let (used, total) = (lock(loads).frames, ((MAX_SOUND_TOTAL + MARGIN) * RATE as f32) as usize);
         let (path, streamed) = &files[file];
         let loaded = match streamed {
-            true => probe(path).map(|_| Source::Stream(Arc::new(path.clone()))),
+            true => probe(path).map(|_| Source::Stream(Arc::new(Disk(path.clone())))),
             false => decode(path, total.saturating_sub(used)).map(|clip| Source::Memory(Arc::new(clip))),
         };
         let mut loads = lock(loads);

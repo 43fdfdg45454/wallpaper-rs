@@ -38,6 +38,8 @@ class Videos(private val context: Context) : Ducked {
 
     fun close() = Duck.unlisten(this)
 
+    fun hear(painter: Painter, on: Boolean) = Duck.want(context, painter, on)
+
     fun join(uri: String, painter: Painter) = videos.getOrPut(uri) { Video(context, uri) }.run {
         if (painter !in viewers) {
             viewers += painter

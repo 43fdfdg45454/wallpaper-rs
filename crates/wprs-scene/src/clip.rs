@@ -27,6 +27,22 @@ impl Clip {
         }
     }
 
+    pub fn file(path: &std::path::Path) -> Result<Clip, String> {
+        use std::io::{Read, Seek, SeekFrom};
+        const EDGE: u64 = 1 << 20;
+        let failed = |e: std::io::Error| e.to_string();
+        let mut file = std::fs::File::open(path).map_err(failed)?;
+        let size = file.metadata().map_err(failed)?.len();
+        let mut edge = |from: u64| {
+            let mut bytes = Vec::new();
+            file.seek(SeekFrom::Start(from)).map_err(failed)?;
+            (&mut file).take(EDGE).read_to_end(&mut bytes).map_err(failed)?;
+            Ok::<_, String>(bytes)
+        };
+        let (head, tail) = (edge(0)?, edge(size.saturating_sub(EDGE))?);
+        Clip::sample(&path.to_string_lossy(), &head, &tail, size)
+    }
+
     pub fn read(name: &str, bytes: &[u8]) -> Result<Clip, String> {
         Clip::sample(name, bytes, bytes, bytes.len() as u64)
     }

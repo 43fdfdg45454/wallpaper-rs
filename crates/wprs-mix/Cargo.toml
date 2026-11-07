@@ -1,0 +1,10 @@
+[package]
+name = "wprs-mix"
+description = "Mixer of the sound layers of a scene for wallpaper-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+wprs-scene.workspace = true

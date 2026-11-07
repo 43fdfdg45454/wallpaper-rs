@@ -111,6 +111,7 @@ pub(crate) fn pack(package: &Package<BufReader<File>>) -> Result<Pack, Error> {
         presets: m.presets.clone(),
         assets: Default::default(),
         videos: Vec::new(),
+        sounds: Vec::new(),
         inputs: None,
         scripts: Vec::new(),
         labels,

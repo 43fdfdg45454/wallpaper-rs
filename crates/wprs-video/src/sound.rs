@@ -1,13 +1,13 @@
 use crate::bank::Bank;
 use crate::bus::Pipe;
 use crate::feed::raw;
-use crate::mix::{Mix, RATE, Track};
 use crate::{Error, Event, lock, make, pipewire};
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use gstreamer_app::{AppSrc, AppSrcCallbacks};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use wprs_mix::{Mix, RATE, Track};
 use wprs_scene::Voice;
 
 const CHUNK: usize = 480;

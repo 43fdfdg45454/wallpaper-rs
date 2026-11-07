@@ -12,6 +12,7 @@ mod heard;
 mod input;
 #[cfg(test)]
 mod probe;
+mod sounded;
 
 pub(crate) use heard::allowed as media_allowed;
 
@@ -45,6 +46,9 @@ pub(crate) struct Stage {
     pub(crate) moving: bool,
     pub(crate) reports: Option<usize>,
     pub(crate) measured: bool,
+    pub(crate) audible: bool,
+    silent: bool,
+    sounds: crate::sound::Sounds,
     guard: Option<Box<Guarded>>,
     retried: u64,
     spare: Spare,
@@ -87,15 +91,17 @@ impl Stage {
         pack.inputs.into_iter().for_each(|allowed| runtime.declare(allowed));
         runtime.set_leveling(wprs_scene::Leveling::of(&pack.properties));
         runtime.set_language(pack.locale.as_deref().unwrap_or_default());
-        runtime.set_listeners(true, false);
+        runtime.set_listeners(true, true);
         pack.assets.sheets.iter().for_each(|(id, d)| runtime.set_sheet(id, d.clone()));
         let films =
             pack.videos.iter().filter_map(|(id, path)| Some((id.clone(), wprs_scene::film_file(path)?)));
-        runtime.set_lengths(films.collect());
+        let heard = pack.sounds.iter().map(|(id, _, seconds)| (id.clone(), *seconds));
+        runtime.set_lengths(films.chain(heard).collect());
         let (granted, moving) = (props::granted(&pack.id), moves(&pack.id));
         let media = heard::Shown::new(heard::allowed(&pack));
         let (view, quality, tick, due, touch) = (None, Quality::Q3, None, None, (None, 0, false));
         let acting = Acting::new(&pack, &runtime, (lock, preview));
+        let sounds = crate::sound::Sounds::new(Arc::clone(&pack));
         let extras = Extras::gather(&pack, (runtime.props(), &[]), extras::now(), &Extras::default());
         let assets = extras.assets(&pack);
         Stage {
@@ -121,6 +127,9 @@ impl Stage {
             moving,
             reports: Some(report::HOME),
             measured: false,
+            audible: false,
+            silent: lock || preview,
+            sounds,
             guard: None,
             retried: RETRIES.load(Relaxed),
             spare: Spare::default(),

@@ -143,7 +143,7 @@ pub fn diagnostics<'a>(mut env: EnvUnowned<'a>, _: JObject<'a>) -> JString<'a> {
             "cap": power.fps(false), "charging": power.charging, "saver": power.saver, "thermal": power.thermal,
             "measured": gpu::measured(), "timed": gpu::timed(), "flashes": stage::report::flashes(),
             "particles": stage::report::particles(), "scripts": crate::acting::scripts(), "stamps": gpu::stamps(),
-            "clips": crate::clips::report(), "hdr": crate::hdr::report(),
+            "clips": crate::clips::report(), "hdr": crate::hdr::report(), "sound": crate::sound::report(),
         });
         if let (Some(all), serde_json::Value::Object(shown)) =
             (report.as_object_mut(), stage::report::wallpaper())

@@ -165,6 +165,7 @@ impl Engine {
             return Ok(wait);
         }
         self.dirty |= force;
+        self.stage.iter_mut().for_each(|stage| stage.audible = !self.hidden);
         self.measured = crate::perf::measures(measured, self.preview, self.hidden);
         let (shown, mark) = (self.presented, crate::perf::enter(self.measured));
         let next = self.frame(nanos, fps, power).inspect_err(|e| {

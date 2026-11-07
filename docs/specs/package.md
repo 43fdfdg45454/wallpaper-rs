@@ -143,7 +143,8 @@ the daemon counts the PipeWire playback streams of other processes that are runn
 reading their names, their media or their sound. The phone counts the active playbacks Android
 reports (only how many there are, which names no app), listens only while a video or a page with
 sound is shown, and fades out only when there are more of them than its own: one for each of its
-videos that plays with sound and one for each page shown with sound.
+videos that plays with sound, one for each page shown with sound and one for each scene that plays
+its sound layers.
 
 ### Video settings
 
@@ -250,7 +251,7 @@ the folder changed, and the stored value is the path of that copy.
 |---------|-------------|---------|---------|
 | `inputs.audio`, `inputs.pointer`, `inputs.clicks`, `inputs.media`, `inputs.network` | declares or uses that input | runs | runs |
 | `scripts` | runs scene scripts | runs | runs |
-| `sound` | plays sound layers | runs | without |
+| `sound` | plays sound layers | runs | runs |
 | `properties2` | has settings of the newer kinds or fields: sliders without `step` or with `decimals`, `editable` or `log`, combos of numbers or flags or with icons, `secret` texts, `button`, `divider`, `folder`, `shortcut`, collapsed groups, icons, fractional `order`, `visible_if` expressions, `enabled_if` and `default_asset`, or settings written in a way the first version cannot read (a field it does not know, even with its default value, a missing `default` of a text or `accept` of a file, or an `order` such as `2.0`) | runs | runs |
 | `folder` | shows pictures from a folder the user chooses | runs | runs |
 | `folder2` | reads the subfolders of a chosen folder (`recursive`) or fewer of its files (`max_files`) | runs | runs |
@@ -288,9 +289,9 @@ draw it, refuse the package with the newer-version message.
 
 The fields of `scene.json` that came after the first version name these features (`scene.md` says
 what each field does). Each one is refused on a platform until its engine draws it, and the table
-says which ones run today; the phone, which runs scene scripts in a thread of their own but plays no
-scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_layers` and
-`script_animations`, and leaves out the other `script_` features, which change nothing there:
+says which ones run today; the phone, which runs scene scripts in a thread of their own and plays
+the scene sound, runs `sound2`, `script_sounds`, `scripts2`, `script_layers` and
+`script_animations`, and leaves out the `script_` features that change nothing there:
 
 | Feature | The scene | Desktop | Android |
 |---------|-----------|---------|---------|
@@ -309,7 +310,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `text_layout` | sets `valign`, `wrap`, `line_height`, `background` or `padding` on a text | runs | runs |
 | `text_styles` | sets `letter_spacing`, `outline`, `shadow`, `blur` or `render: sdf` on a text | runs | runs |
 | `fonts2` | uses ttc, otc or woff2 fonts, `face` or `fallback` | runs | runs |
-| `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | runs | without |
+| `sound2` | plays MP3, `sounds` lists, `mode`, `pause`, `stream` or `play_on` | runs | runs |
 | `camera` | sets `canvas.camera` | runs | runs |
 | `parallax2` | sets `canvas.parallax` or a parallax with two different parts | runs | runs |
 | `bloom` | sets `canvas.bloom` | runs | runs |
@@ -366,7 +367,7 @@ scene sound, plays a scene with `sound2` silently, runs `scripts2`, `script_laye
 | `script_layers` | has `templates` or scripts that use `layers` | runs | runs |
 | `script_geometry` | has `pools` or scripts that use `geometry` | runs | runs |
 | `script_storage` | has scripts that use `storage` | runs | runs |
-| `script_sounds` | has scripts that use `sounds` | runs | without |
+| `script_sounds` | has scripts that use `sounds` | runs | runs |
 | `script_animations` | has scripts that use `animations` | runs | runs |
 | `script_camera` | has scripts that use `camera` | runs | runs |
 | `script_shortcuts` | has scripts that use `shortcuts` | runs | runs |

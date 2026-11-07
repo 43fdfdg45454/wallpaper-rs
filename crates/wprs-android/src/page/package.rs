@@ -78,6 +78,7 @@ pub(crate) fn pack(package: &mut Package<BufReader<File>>, path: &Path) -> Resul
         presets: m.presets,
         assets: Default::default(),
         videos: Vec::new(),
+        sounds: Vec::new(),
         inputs,
         scripts: Vec::new(),
         labels,

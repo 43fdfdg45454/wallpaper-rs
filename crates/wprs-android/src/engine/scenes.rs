@@ -33,7 +33,8 @@ impl Engine {
         let old = std::mem::replace(&mut self.stage, next).filter(|old| old.image().is_some());
         self.unreport();
         let fades = !settings::look(self.lock).fade.is_zero() && shown.is_some() && self.fading.is_none();
-        if let Some(old) = old.filter(|_| fades) {
+        if let Some(mut old) = old.filter(|_| fades) {
+            old.mute();
             (self.fading, self.image) = (Some(Fading::new(Gone::Scene(Box::new(old)))), None);
         }
     }

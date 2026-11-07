@@ -60,6 +60,7 @@ mod rotation;
 mod saved;
 mod server;
 mod settings;
+mod sound;
 mod stage;
 mod stall;
 mod state;

@@ -135,6 +135,7 @@ class Painter(
         tilt.follow(this, 0)
         hearing.follow(this, false)
         players?.follow(this, false)
+        videos.hear(this, false)
         clips.forEach { videos.leave(key(it), this) }
         clips = emptyList()
         video?.let { videos.leave(it, this) }
@@ -161,7 +162,8 @@ class Painter(
     private fun key(path: String) = "$path#$handle"
 
     private fun steer(list: JSONArray) = (0 until list.length()).map(list::getJSONObject).forEach {
-        if (it.has("open")) opened(it.getJSONObject("open")) else videos.steer(key(it.getString("path")), it)
+        if (it.has("sound")) videos.hear(this, it.getBoolean("sound"))
+        else if (it.has("open")) opened(it.getJSONObject("open")) else videos.steer(key(it.getString("path")), it)
     }
 
     private fun follow() {

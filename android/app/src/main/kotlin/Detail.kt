@@ -78,14 +78,11 @@ fun Detail(main: Main, uid: String, open: (String) -> Unit, close: () -> Unit) {
             item?.lacks?.takeIf { it.isNotEmpty() }?.let { lacks ->
                 val notes = lacks.mapNotNull { lack ->
                     when (lack) {
-                        "sound" -> R.string.lacks_sound
                         "gpu" -> R.string.lacks_gpu
                         "display2" -> R.string.lacks_display2
                         "spanned_scenes" -> R.string.lacks_spanned_scenes
-                        "sound2" -> R.string.lacks_sound2
                         "script_geometry" -> R.string.lacks_script_geometry
                         "script_storage" -> R.string.lacks_script_storage
-                        "script_sounds" -> R.string.lacks_script_sounds
                         "script_animations" -> R.string.lacks_script_animations
                         "script_camera" -> R.string.lacks_script_camera
                         "script_hierarchy" -> R.string.lacks_script_hierarchy

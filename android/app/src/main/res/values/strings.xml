@@ -33,14 +33,11 @@
     <string name="mature_warning">This wallpaper has mature content.</string>
     <string name="flashing_warning">This wallpaper flashes or shows fast patterns that can trigger seizures in people with photosensitive epilepsy.</string>
     <string name="show_anyway">Show anyway</string>
-    <string name="lacks_sound">Its sounds do not play on the phone.</string>
     <string name="lacks_gpu">It needs compute shaders, which the graphics of this phone lack, so it may draw slowly or leave parts out.</string>
     <string name="lacks_display2">Its color around the picture and its spreading over every screen are not used on the phone.</string>
     <string name="lacks_spanned_scenes">Its scene is not spread over several screens on the phone.</string>
-    <string name="lacks_sound2">Its MP3 or long sounds, lists of sounds and sounds started by events do not play on the phone.</string>
     <string name="lacks_script_geometry">Shapes its scripts build are not shown on the phone.</string>
     <string name="lacks_script_storage">Its scripts keep no data on the phone.</string>
-    <string name="lacks_script_sounds">Its scripts do not play or stop sounds on the phone.</string>
     <string name="lacks_script_animations">Its scripts do not drive pictures, videos, clips or bones on the phone.</string>
     <string name="lacks_script_camera">Its scripts do not move the camera or the parallax on the phone.</string>
     <string name="lacks_script_hierarchy">Its scripts do not change the parents of layers on the phone.</string>
@@ -94,7 +91,7 @@
     <string name="vulkan" translatable="false">Vulkan</string>
     <string name="gl" translatable="false">OpenGL ES</string>
     <string name="fade">Fade between wallpapers</string>
-    <string name="video_sound">Play the sound of videos</string>
+    <string name="video_sound">Play the sound of videos and scenes</string>
     <string name="parallax">Move with the phone</string>
     <string name="make_map">Make a depth map</string>
     <string name="remake_map">Make the depth map again</string>
