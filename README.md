@@ -3084,7 +3084,9 @@ misma pausa.
   pantallas hasta que los enciendes en una (`wprs-ctl input clicks on -o <pantalla>`, o en la app), y
   solo llegan los reales: los del compositor en Sway y demás escritorios con `wlr-layer-shell`
   (también los toques de una pantalla táctil), los de X11 que no manda otro programa con `SendEvent`
-  y, en Plasma, los que el escritorio deja al fondo, que el plugin de fondo envía y el daemon solo
+  y, en Plasma, los del escritorio (también con la vista de carpeta y sus iconos, que se quedan con
+sus clics: el plugin de fondo los ve con un manejador que no los toma, así que un clic sobre un icono
+o un widget llega además a la escena), que el plugin envía y el daemon solo
   acepta del intérprete de Plasma (ni de la app ni de `wprs-ctl`) y, mientras el script de KWin
   informa del puntero, solo en la pantalla donde está. Ningún otro programa puede inyectar clics por
   D-Bus; el daemon no distingue el plugin de otro código que corra dentro de Plasma, como otro

@@ -6,6 +6,7 @@ Item {
     id: taps
 
     readonly property string output: Screen.name
+    readonly property Item above: Window.window?.contentItem ?? null
     property bool taking: false
 
     function message(member, signature, args) {
@@ -27,19 +28,29 @@ Item {
     }
 
     function send(point, buttons) {
+        const at = taps.mapFromItem(cover, point.x, point.y);
         if (taps.taking && width > 0 && height > 0)
-            DBus.SessionBus.asyncCall(message("Touch", "(sddu)", [output, point.x / width, point.y / height, buttons]));
+            DBus.SessionBus.asyncCall(message("Touch", "(sddu)", [output, at.x / width, at.y / height, buttons]));
     }
 
     onOutputChanged: refresh()
     Component.onCompleted: refresh()
+    Component.onDestruction: cover.destroy()
 
-    PointHandler {
-        id: press
+    Item {
+        id: cover
 
-        enabled: taps.taking
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onActiveChanged: taps.send(press.point.position, press.active ? press.point.pressedButtons : 0)
+        parent: taps.above ?? taps
+        anchors.fill: parent
+        z: 1000000
+
+        PointHandler {
+            id: press
+
+            enabled: taps.taking
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            onActiveChanged: taps.send(press.point.position, press.active ? press.point.pressedButtons : 0)
+        }
     }
 
     DBus.SignalWatcher {
