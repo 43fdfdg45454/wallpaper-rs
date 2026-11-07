@@ -15,7 +15,7 @@ pub(crate) fn run(path: &Path, args: &[String]) -> Result<Value, String> {
     runtime.set_battery(true);
     let films = pack.videos.iter().filter_map(|(id, path)| Some((id.clone(), wprs_scene::film_file(path)?)));
     runtime.set_lengths(films.collect());
-    let r = Renderer::with_choice(None, &Default::default()).map_err(|e| e.to_string())?.renderer;
+    let r = Renderer::with_choice(None, &Default::default(), None).map_err(|e| e.to_string())?.renderer;
     let unit_ms = r.calibrate(store::dir().ok().map(|dir| dir.join("gpu-tier.json")).as_deref()).unit_ms;
     let tier = power::tier(r.software(), r.compute()).min(r.tier());
     let bench = Bench { tier: Some(tier), ..bench };

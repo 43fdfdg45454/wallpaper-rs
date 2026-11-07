@@ -62,8 +62,9 @@ ColumnLayout {
 
     function label(name, same) {
         const used = same.some(a => a.used) ? App.tr("in use") : "";
+        const desktop = same.some(a => a.compositor) ? App.tr("draws the desktop") : "";
         const ways = same.map(a => backend(a.backend)).join(", ");
-        return [name, kinds[same[0].kind] ?? same[0].kind, ways, used].filter(t => t).join(" · ");
+        return [name, kinds[same[0].kind] ?? same[0].kind, ways, used, desktop].filter(t => t).join(" · ");
     }
 
     QQC2.ComboBox {
@@ -95,6 +96,14 @@ ColumnLayout {
         text: App.tr("Restart the daemon now")
         icon.name: "view-refresh"
         onClicked: App.act("Restart", [], "Daemon1")
+    }
+
+    QQC2.Label {
+        visible: !!App.state.gpu_note
+        Layout.maximumWidth: Kirigami.Units.gridUnit * 30
+        wrapMode: Text.Wrap
+        text: App.state.gpu_note ?? ""
+        color: Kirigami.Theme.neutralTextColor
     }
 
     QQC2.Label {

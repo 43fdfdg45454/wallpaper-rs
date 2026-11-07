@@ -1603,6 +1603,10 @@ msgstr "«%1», que no coincide con ninguna tarjeta"
 msgid "in use"
 msgstr "en uso"
 
+#: apps/wprs-app/qml/GpuPicker.qml
+msgid "draws the desktop"
+msgstr "dibuja el escritorio"
+
 #: apps/wprs-app/qml/GpuPicker.qml apps/wprs-app/qml/SettingsPage.qml
 #: apps/wprs-app/qml/facade/Labels.qml
 #: apps/wprs-app/qml/facade/ManifestWords.qml

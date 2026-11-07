@@ -186,6 +186,7 @@ impl Daemon {
             compute: self.compute,
             adapters: self.gpus.adapters(),
             gpu_warning: self.gpus.warning.clone(),
+            gpu_note: self.gpus.note(),
             gpu_restart: self.gpus.restart(&st.config.render.gpu),
             qualities: st.config.own_qualities(),
             hdrs: st.config.own_hdrs(),

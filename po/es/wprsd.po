@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 00:00+0000\n"
+"POT-Creation-Date: 2026-11-07 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -202,6 +202,14 @@ msgid ""
 msgstr ""
 "La página web falló o dejó de responder cuatro veces seguidas y está "
 "apagada; en su lugar se ve el color de fondo."
+
+#: apps/wprsd/src/words.rs
+msgid ""
+"The desktop draws with another graphics card than the one in use, so the "
+"frames of the wallpaper are copied through the processor."
+msgstr ""
+"El escritorio dibuja con otra tarjeta gráfica distinta de la que se usa, así "
+"que los fotogramas del fondo se copian a través del procesador."
 
 #: apps/wprsd/src/words.rs
 msgid "No graphics card matches “%1”; the automatic choice is used."

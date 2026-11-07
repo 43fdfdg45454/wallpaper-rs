@@ -41,6 +41,7 @@ impl Renderer {
             backend: backend(i.backend),
             used: same(i),
             bus: i.device_pci_bus_id.to_lowercase(),
+            compositor: false,
         };
         found.iter().map(made).collect()
     }

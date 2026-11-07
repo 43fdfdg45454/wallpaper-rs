@@ -217,8 +217,15 @@ frame it gave.
 
 ### Graphics card
 
-`render.gpu = auto` keeps the choice above: the adapter that saves the most power, so a computer
-with an integrated and a dedicated card renders on the integrated one. `integrated`, `dedicated`
+`render.gpu = auto` takes the card the compositor renders with, so that the frames reach it without a
+copy: at start the daemon asks the compositor for the default feedback of `linux-dmabuf-v1` (its
+`main_device`, a device number that the daemon turns into the PCI bus id of the card behind it
+through `/sys/dev/char`, within 2 s and only on Wayland) and opens the adapter on that bus, Vulkan
+before OpenGL ES. When the compositor does not say (X11, no `linux-dmabuf-v1` of version 4, a card that
+is not in the list, or one that cannot be opened) it keeps the choice above: the adapter that saves the
+most power, so a computer with an integrated and a dedicated card renders on the integrated one,
+which a compositor on the dedicated card (such as KWin when plasmashell offers only that card's
+modifiers to PipeWire) then reads through the processor. `integrated`, `dedicated`
 and `software` take the first Vulkan adapter of that kind, and any other value the first one whose
 name contains it, without regard to case, so two cards of the same kind are told apart by their
 names, and `pci:` with a PCI bus id (`pci:0000:03:00.0`) the card on that bus, which tells two
@@ -2485,7 +2492,11 @@ render set it rather than the model of the card alone. `adapters` lists the grap
 daemon finds, at start and again a second after a card is plugged in or taken out, each with its
 `name`, `kind` (`"integrated"`, `"dedicated"`, `"virtual"`, `"software"` or `"other"`), `backend`
 (`"vulkan"` or `"gl"`), `used`, true for the one it renders with, and `bus`, its PCI bus id in lower
-case (empty when the driver gives none). `gpu_warning` says, in the language of the daemon, that no card matched
+case (empty when the driver gives none) and `compositor`, true for the card the compositor renders
+with (none while the daemon does not know it). `gpu_note` says, in the language of the daemon, that the
+compositor renders with another card than the one in use, so every frame is copied through the
+processor (a card forced by `render.gpu`, or the fallback), or is `null`; the app shows it under the
+card picker and `wprs-ctl gpu` prints it with a `DESKTOP` column. `gpu_warning` says, in the language of the daemon, that no card matched
 `render.gpu`, or that the matching card could not be opened, and the automatic choice was taken, or
 is `null`; `gpu_restart` is true while `render.gpu` differs from the value the daemon started with,
 without regard to case. `qualities` maps every output that has its own `playback.quality.<output>`
@@ -2510,11 +2521,11 @@ struct State {
     volume: f64, muted: bool, profile: Option<Uid>, jobs: u32,
     options: BTreeMap<String, Value>,
     outputs: BTreeMap<String, OutputState>, calibrating: bool, compute: bool,
-    adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_restart: bool,
+    adapters: Vec<GpuAdapter>, gpu_warning: Option<String>, gpu_note: Option<String>, gpu_restart: bool,
     qualities: BTreeMap<String, String>, hdrs: BTreeMap<String, String>, layer_shell: LayerShellState,
 }
 struct LayerShellState { namespace: Option<String>, from: String, restart: bool, ignored: Option<String> }
-struct GpuAdapter { name: String, kind: String, backend: String, used: bool, bus: String }
+struct GpuAdapter { name: String, kind: String, backend: String, used: bool, bus: String, compositor: bool }
 struct OutputState {
     width: u32, height: u32, image: Option<PathBuf>, fit: Fit, background: String,
     kind: Shown, playing: bool, active: bool, covered: bool, clients: u32, error: Option<String>,

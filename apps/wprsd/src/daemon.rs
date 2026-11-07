@@ -88,9 +88,10 @@ impl Daemon {
             }
             None => tracing::debug!(path = %config_path.display(), "configuration loaded"),
         }
-        let chosen = Renderer::with_choice(display, &config.render.gpu)
+        let compositor = wprs_wayland::compositor_device().and_then(wprs_render::bus_of);
+        let chosen = Renderer::with_choice(display, &config.render.gpu, compositor.as_deref())
             .context("cannot initialize the GPU renderer")?;
-        let (mut gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu);
+        let (mut gpus, renderer) = crate::gpus::Gpus::start(chosen, &config.render.gpu, compositor);
         let renderer = renderer.install();
         gpus.renderer = Some(renderer);
         let adapter = renderer.adapter().to_owned();

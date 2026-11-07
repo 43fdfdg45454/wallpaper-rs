@@ -35,6 +35,8 @@ model! {
         #[serde(default)]
         pub gpu_warning: Option<String>,
         #[serde(default)]
+        pub gpu_note: Option<String>,
+        #[serde(default)]
         pub gpu_restart: bool,
         #[serde(default)]
         pub qualities: BTreeMap<String, String>,
@@ -51,6 +53,8 @@ model! {
         pub used: bool,
         #[serde(default)]
         pub bus: String,
+        #[serde(default)]
+        pub compositor: bool,
     }
 
     pub struct OutputState {

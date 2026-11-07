@@ -762,12 +762,18 @@ sobra tiempo, así que un fotograma pesado nunca se toma por una GPU colgada. Lo
 oscurecen los bordes derecho e inferior, y el desenfoque de movimiento puede seguir la velocidad de
 su capa (`follow`).
 
-En un equipo con una GPU integrada y otra dedicada, el daemon dibuja por defecto con la que gasta
-menos energía, que suele ser la integrada. `render.gpu` elige otra: `auto` (lo de siempre),
+En un equipo con una GPU integrada y otra dedicada, el daemon dibuja por defecto con la misma que el
+compositor, para que los fotogramas le lleguen sin copiarse (al arrancar le pide la «retroalimentación»
+de `linux-dmabuf-v1`, de donde saca el bus PCI de su tarjeta; en Plasma, KPipeWire solo ofrece los
+modificadores de esa tarjeta, y con otra PipeWire cae a memoria y la CPU copia cada fotograma). Si el
+compositor no lo dice (X11, sin esa versión del protocolo o una tarjeta que no se puede abrir) elige la
+que gasta menos energía, que suele ser la integrada. `render.gpu` elige otra: `auto` (lo de siempre),
 `integrated`, `dedicated`, `software` (render por software, para pruebas) o parte del nombre de una
 tarjeta sin distinguir mayúsculas, como `Graphics A`, que sirve para elegir entre dos del mismo tipo.
 La app lo ofrece en *Ajustes* → *Tarjeta gráfica* con las tarjetas que encontró el daemon (nombre,
-tipo y API) y marca la que está en uso; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
+tipo y API) y marca la que está en uso y la que dibuja el escritorio; si el compositor dibuja con otra
+(porque se fuerza una tarjeta o por el recurso), la app, `wprs-ctl gpu` (columna `DESKTOP`) y
+`wprs-ctl state` (`gpu_note`) avisan de que los fotogramas se copian por el procesador; `wprs-ctl gpu` las lista y `wprs-ctl gpu dedicated` o
 `wprs-ctl config render.gpu dedicated` elige una. El cambio vale desde el siguiente arranque del
 daemon, porque el render se crea una sola vez y lo comparten todas las pantallas, vídeos y escenas;
 hasta entonces la app, `wprs-ctl gpu` y `wprs-ctl config render.gpu` lo avisan (`gpu_restart` en

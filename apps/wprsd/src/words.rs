@@ -119,6 +119,12 @@ pub fn web_crashed() -> String {
     )
 }
 
+pub fn gpu_copies() -> String {
+    tr(
+        "The desktop draws with another graphics card than the one in use, so the frames of the wallpaper are copied through the processor.",
+    )
+}
+
 pub fn gpu_missing(name: &str) -> String {
     tr("No graphics card matches “%1”; the automatic choice is used.").replace("%1", name)
 }

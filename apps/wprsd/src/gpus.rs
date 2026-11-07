@@ -19,22 +19,32 @@ pub(crate) struct Gpus {
     adapters: Mutex<Vec<GpuAdapter>>,
     pub(crate) warning: Option<String>,
     started: GpuChoice,
+    compositor: Option<String>,
     pub(crate) renderer: Option<&'static Renderer>,
 }
 
 impl Gpus {
-    pub(crate) fn start(chosen: Chosen, choice: &GpuChoice) -> (Gpus, Renderer) {
+    pub(crate) fn start(chosen: Chosen, choice: &GpuChoice, compositor: Option<String>) -> (Gpus, Renderer) {
         let warning = chosen.fallback.map(|why| match why {
             Fallback::Missing => crate::words::gpu_missing(choice.as_str()),
             Fallback::Unusable => crate::words::gpu_unusable(choice.as_str()),
         });
         let adapters = Mutex::new(chosen.adapters);
-        let gpus = Gpus { adapters, warning, started: choice.clone(), renderer: None };
+        let gpus = Gpus { adapters, warning, started: choice.clone(), compositor, renderer: None };
         (gpus, chosen.renderer)
     }
 
     pub(crate) fn adapters(&self) -> Vec<GpuAdapter> {
-        lock(&self.adapters).clone()
+        let mut found = lock(&self.adapters).clone();
+        let bus = self.compositor.as_deref();
+        found.iter_mut().for_each(|a| a.compositor = bus.is_some_and(|b| a.bus == b));
+        found
+    }
+
+    pub(crate) fn note(&self) -> Option<String> {
+        let bus = self.compositor.as_deref()?;
+        let copies = !lock(&self.adapters).iter().any(|a| a.used && a.bus == bus);
+        copies.then(crate::words::gpu_copies)
     }
 
     pub(crate) fn restart(&self, configured: &GpuChoice) -> bool {
@@ -101,6 +111,31 @@ fn follow(fd: &OwnedFd, daemon: &Weak<Daemon>) {
 
 #[cfg(test)]
 mod tests {
+    use super::{GpuAdapter, Gpus};
+    use std::sync::Mutex;
+
+    fn card(bus: &str, used: bool) -> GpuAdapter {
+        let (name, kind, backend) = ("Example".to_owned(), "dedicated".to_owned(), "vulkan".to_owned());
+        GpuAdapter { name, kind, backend, used, bus: bus.into(), compositor: false }
+    }
+
+    fn gpus(compositor: Option<&str>) -> Gpus {
+        let adapters = Mutex::new(vec![card("0000:00:02.0", true), card("0000:03:00.0", false)]);
+        Gpus { adapters, compositor: compositor.map(Into::into), ..Gpus::default() }
+    }
+
+    #[test]
+    fn the_card_of_the_compositor_is_marked_and_a_note_tells_when_it_is_not_the_one_in_use() {
+        let other = gpus(Some("0000:03:00.0"));
+        assert_eq!(other.adapters().iter().map(|a| a.compositor).collect::<Vec<_>>(), [false, true]);
+        assert!(other.note().is_some_and(|note| note.contains("copied")));
+        let same = gpus(Some("0000:00:02.0"));
+        assert_eq!(same.adapters().iter().map(|a| a.compositor).collect::<Vec<_>>(), [true, false]);
+        assert_eq!(same.note(), None, "the card in use draws the desktop");
+        let unknown = gpus(None);
+        assert!(unknown.adapters().iter().all(|a| !a.compositor) && unknown.note().is_none());
+    }
+
     #[test]
     fn only_card_and_render_nodes_count_as_graphics_cards() {
         let named = [&b"card0"[..], b"card12", b"renderD128", b"card", b"by-path", b"card0-DP-1", b"renderD"];

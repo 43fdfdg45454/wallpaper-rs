@@ -4,6 +4,7 @@ mod cosmic;
 mod cover;
 mod described;
 mod desk;
+mod device;
 mod handlers;
 mod hyprland;
 mod modes;
@@ -20,6 +21,7 @@ mod x11;
 
 pub use color::Light;
 pub use described::Mastered;
+pub use device::compositor_device;
 pub use modes::watch_modes;
 pub use pacer::Pacer;
 pub use window::{Display, Window};

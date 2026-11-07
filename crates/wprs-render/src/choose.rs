@@ -7,8 +7,11 @@ use wgpu::{Backend, Backends, DeviceType};
 use wprs_core::GpuChoice;
 use wprs_core::model::GpuAdapter;
 
+mod compositor;
 mod listing;
 mod sysfs;
+
+pub use compositor::bus_of;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Fallback {
@@ -100,10 +103,21 @@ fn find(choice: &GpuChoice, display: Option<&Arc<dyn WgpuHasDisplayHandle>>) -> 
 }
 
 impl Renderer {
-    pub fn with_choice(display: Option<Display>, choice: &GpuChoice) -> Result<Chosen, RenderError> {
+    pub fn with_choice(
+        display: Option<Display>,
+        choice: &GpuChoice,
+        compositor: Option<&str>,
+    ) -> Result<Chosen, RenderError> {
         let display: Option<Arc<dyn WgpuHasDisplayHandle>> = display.map(Arc::from);
         let mut fallback = None;
-        if !choice.is_auto() {
+        let guided = compositor::guided(choice, compositor);
+        if let Some(wanted) = guided.as_ref() {
+            if let Some(Ok(renderer)) = find(wanted, display.as_ref()).map(|(i, a)| Self::with_adapter(i, a))
+            {
+                return Ok(renderer.chosen(None));
+            }
+            tracing::debug!("the graphics card of the compositor cannot be used; using the automatic choice");
+        } else if !choice.is_auto() {
             let opened = find(choice, display.as_ref()).map(|(i, a)| Self::with_adapter(i, a));
             match settle(opened, choice.as_str()) {
                 Ok(renderer) => return Ok(renderer.chosen(None)),

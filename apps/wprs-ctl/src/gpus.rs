@@ -50,19 +50,23 @@ pub async fn run(client: &Client, args: GpuArgs) -> Result<()> {
     let chosen = state.options.get("render.gpu").and_then(|v| v.as_str()).unwrap_or("auto").to_owned();
     if args.json {
         let reply = json!({ "gpu": chosen, "adapters": state.adapters, "warning": state.gpu_warning,
-            "restart": state.gpu_restart, "tier": state.tier, "tier_measured": state.tier_measured });
+            "note": state.gpu_note, "restart": state.gpu_restart, "tier": state.tier, "tier_measured": state.tier_measured });
         println!("{reply}");
         return Ok(());
     }
     let rows = state.adapters.iter().map(|a| {
         let used = if a.used { "*" } else { "" };
         let bus = if a.bus.is_empty() { "-".into() } else { format!("pci:{}", a.bus) };
-        vec![used.into(), a.name.clone(), a.kind.clone(), a.backend.clone(), bus]
+        let desktop = if a.compositor { "*" } else { "" };
+        vec![used.into(), desktop.into(), a.name.clone(), a.kind.clone(), a.backend.clone(), bus]
     });
-    print!("{}", table(&["USED", "NAME", "KIND", "BACKEND", "BUS"], rows));
+    print!("{}", table(&["USED", "DESKTOP", "NAME", "KIND", "BACKEND", "BUS"], rows));
     println!("render.gpu = {}", clean(&chosen));
     if let Some(warning) = &state.gpu_warning {
         println!("warning: {}", clean(warning));
+    }
+    if let Some(note) = &state.gpu_note {
+        println!("note: {}", clean(note));
     }
     if state.gpu_restart {
         println!("{LATER}");

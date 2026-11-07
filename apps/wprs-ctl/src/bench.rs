@@ -86,7 +86,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
     let (scene, values, assets) = load(&path)?;
     let gpu =
         wprs_core::Config::default_path().and_then(|p| wprs_core::Config::load(&p)).map(|c| c.render.gpu);
-    let r = Renderer::with_choice(None, &gpu.unwrap_or_default())?.renderer;
+    let r = Renderer::with_choice(None, &gpu.unwrap_or_default(), None)?.renderer;
     let unit_ms = r.calibrate(wprs_core::gpu_tier().as_deref()).unit_ms;
     if let Some(t) = forced {
         r.force_tier(Some(serde_json::from_value(json!(t))?));
