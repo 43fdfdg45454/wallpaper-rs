@@ -34,6 +34,27 @@ QtObject {
         const first = strokes("strokes");
         if (first.length !== 1 || first[0].points.length !== 2 || first[0].by !== -0.2 || first[0].points[1][0] !== 0.5)
             throw new Error("depth: a stroke of the brush was not kept as one step: " + JSON.stringify(first));
+        page.paint = {
+            "kind": "fill",
+            "radius": 0.05,
+            "falloff": 0.5,
+            "by": 0.2,
+            "second": false
+        };
+        paint.add(150, 20);
+        paint.lay();
+        if (strokes("fills").length !== 1 || strokes("fills")[0].by !== 1 || strokes("strokes").length !== 1)
+            throw new Error("depth: a fill mark was not kept: " + JSON.stringify(page.edit.depth));
+        page.paint = Object.assign({}, page.paint, {
+            "second": true
+        });
+        paint.add(20, 80);
+        paint.lay();
+        if (strokes("fills")[1].by !== -1)
+            throw new Error("depth: a protected mark was not kept: " + JSON.stringify(strokes("fills")));
+        page.editor.undo();
+        if (strokes("fills").length !== 1 || strokes("strokes").length !== 1)
+            throw new Error("depth: undo did not remove one mark");
         const cuts = Qt.createComponent("EditDepthCuts.qml").createObject(page, {
                 "page": page,
                 "width": 300

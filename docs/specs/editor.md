@@ -838,3 +838,7 @@ rotation and the straightening come back with the other tools), and offers:
   again with those cuts half a second after the last change, a newer change cancelling the build in
   progress. A double click on a handle removes it, a click on the strip or *Add a cut* adds one in the
   widest gap (at most 5), and *Back to automatic* is `depth_cuts` with `auto`.
+- *Fill brush*: the same brush for `fill_mask`, with *Refill* and *Protect*, size and soft edge (no
+  strength: a mark is all or nothing where it covers at least half of the brush). The marks show
+  in the layer views as the band they widen or empty, the layers are built again after the last
+  stroke, and *Remove the marks* is `fill_mask` with `clear`.

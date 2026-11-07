@@ -1132,6 +1132,9 @@ herramientas con las que el autor decide cómo se parte y se rellena la imagen, 
   (un doble clic quita una, un clic en la franja añade otra) mientras la imagen muestra el contorno
   teñido de cada capa en vivo; al soltar se vuelven a calcular las capas con esos cortes, que el
   agrupamiento automático ya no pisa hasta pulsar *Volver a automático* (`edit depth cuts`).
+- *Pincel de relleno*: pinta en la imagen lo que siempre debe rellenarse detrás de un objeto cercano
+  (aunque quede fuera del alcance del desplazamiento) o lo que nunca se rellena, y las capas se
+  recalculan al soltar (`edit depth fill-mask`).
 
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La

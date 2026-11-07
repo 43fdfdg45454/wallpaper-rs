@@ -1150,6 +1150,10 @@ msgstr "Pincel de profundidad"
 msgid "Layer cuts"
 msgstr "Cortes de capa"
 
+#: apps/wprs-app/qml/EditDepthTools.qml
+msgid "Fill brush"
+msgstr "Pincel de relleno"
+
 #: apps/wprs-app/qml/EditDepthView.qml
 msgid "Show the depth map over the picture"
 msgstr "Mostrar el mapa de profundidad sobre la imagen"
