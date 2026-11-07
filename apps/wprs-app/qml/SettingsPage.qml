@@ -60,6 +60,10 @@ Kirigami.ScrollablePage {
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
 
+            FillNote {
+                Layout.fillWidth: true
+            }
+
             Kirigami.Separator {
                 Kirigami.FormData.isSection: true
                 Kirigami.FormData.label: App.tr("Scene quality")

@@ -7,6 +7,8 @@ QtObject {
             "playback.muted": App.tr("Muted"),
             "playback.max_fps": App.tr("Frames per second"),
             "playback.software_parallax": App.tr("Depth parallax with software rendering"),
+            "parallax.fill": App.tr("Fill behind near objects in depth parallax"),
+            "parallax.layers": App.tr("Depth layers of the parallax"),
             "playback.flash_guard": App.tr("Slow down or stop wallpapers that flash more than three times a second"),
             "playback.scene_sound": App.tr("Let scenes play their sounds"),
             "playback.scene_capture": App.tr("Let scenes react to the sound that plays"),

@@ -10,6 +10,7 @@ use wprs_depth::{MODEL, Part, Places, beside, read, sha256, write};
 pub enum Work {
     Open,
     Download,
+    Lama,
     Generate,
     Adopt(PathBuf),
     Keep,
@@ -62,7 +63,8 @@ pub fn run(
     let list: Vec<_> = (assets().iter())
         .map(|a| {
             json!({"id": a.id, "title": a.title, "size": format!("{:.1} MB", a.bytes as f64 / 1e6),
-            "license": a.license, "license_url": a.license_url, "hosts": a.hosts(), "installed": have(a)})
+            "license": a.license, "license_url": a.license_url, "hosts": a.hosts(), "installed": have(a),
+            "inpaint": a.kind == Part::Inpaint})
         })
         .collect();
     let map = places.find(&target.image, &target.sha, &target.depth).map(|p| url(&p.to_string_lossy()));
@@ -76,19 +78,10 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
     match work {
         Work::Open => Ok(()),
         Work::Download if !wprs_depth::allowed() => bail!("downloads are turned off in the settings"),
+        Work::Lama if !wprs_depth::allowed() => bail!("downloads are turned off in the settings"),
+        Work::Lama => fetch(places, Part::Inpaint, stop, report),
         Work::Download => {
-            let missing = assets().into_iter().filter(|a| places.installed(a).is_none());
-            for asset in missing.filter(|a| a.kind == Part::Model || places.library(None).is_empty()) {
-                let mut shown = -1.0;
-                places.download(&asset, &mut |done, total| {
-                    let part = (done * 200 / total.max(1)) as f64 / 200.0;
-                    if part != shown {
-                        shown = part;
-                        report("download", part);
-                    }
-                    !stop.load(Relaxed)
-                })?;
-            }
+            fetch(places, Part::Model, stop, report)?;
             ready(places, target, stop, report)
         }
         Work::Generate => {
@@ -111,6 +104,24 @@ fn act(places: &Places, target: &Target, work: Work, stop: &AtomicBool, report: 
             ready(places, target, stop, report)
         }
     }
+}
+
+fn fetch(places: &Places, wanted: Part, stop: &AtomicBool, report: Report<'_>) -> Result<()> {
+    let missing = assets().into_iter().filter(|a| places.installed(a).is_none());
+    for asset in
+        missing.filter(|a| a.kind == wanted || a.kind == Part::Runtime && places.library(None).is_empty())
+    {
+        let mut shown = -1.0;
+        places.download(&asset, &mut |done, total| {
+            let part = (done * 200 / total.max(1)) as f64 / 200.0;
+            if part != shown {
+                shown = part;
+                report("download", part);
+            }
+            !stop.load(Relaxed)
+        })?;
+    }
+    Ok(())
 }
 
 fn ready(places: &Places, target: &Target, stop: &AtomicBool, report: Report<'_>) -> Result<()> {

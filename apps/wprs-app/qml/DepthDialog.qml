@@ -9,7 +9,7 @@ Kirigami.Dialog {
     id: dialog
 
     required property var maps
-    readonly property var missing: JSON.parse(maps.assets || "[]").filter(asset => !asset.installed)
+    readonly property var missing: JSON.parse(maps.assets || "[]").filter(asset => !asset.installed && !asset.inpaint)
 
     title: App.tr("Download the depth model?")
     standardButtons: Kirigami.Dialog.Cancel

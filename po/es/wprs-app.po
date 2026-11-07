@@ -1539,6 +1539,24 @@ msgstr "Centro vertical"
 msgid "Spread this picture over every screen"
 msgstr "Extender esta imagen por todas las pantallas"
 
+#: apps/wprs-app/qml/FillNote.qml
+msgid ""
+"LaMa is not installed, so pictures use the simple fill. It is downloaded "
+"once from %1 (%2, license %3), checked against its SHA-256 and runs on this "
+"computer; computing the layers of a picture takes a few minutes."
+msgstr ""
+"LaMa no está instalado, así que las imágenes usan el relleno simple. Se "
+"descarga una vez de %1 (%2, licencia %3), se comprueba con su SHA-256 y "
+"funciona en este equipo; calcular las capas de una imagen tarda unos minutos."
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Download LaMa"
+msgstr "Descargar LaMa"
+
+#: apps/wprs-app/qml/FillNote.qml
+msgid "Downloads are turned off in the settings."
+msgstr "Las descargas están desactivadas en los ajustes."
+
 #: apps/wprs-app/qml/Filters.qml
 msgid "Search, for example: tag:sea kind:image -fav:yes sort:random"
 msgstr "Buscar, por ejemplo: tag:mar kind:image -fav:yes sort:random"
@@ -8362,6 +8380,14 @@ msgstr "Fotogramas por segundo"
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Depth parallax with software rendering"
 msgstr "Paralaje de profundidad con renderizado por software"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Fill behind near objects in depth parallax"
+msgstr "Relleno detrás de los objetos cercanos en el paralaje de profundidad"
+
+#: apps/wprs-app/qml/facade/Labels.qml
+msgid "Depth layers of the parallax"
+msgstr "Capas de profundidad del paralaje"
 
 #: apps/wprs-app/qml/facade/Labels.qml
 msgid "Slow down or stop wallpapers that flash more than three times a second"

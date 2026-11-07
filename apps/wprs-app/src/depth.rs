@@ -26,6 +26,8 @@ pub mod qobject {
         #[qinvokable]
         fn download(self: Pin<&mut DepthMaps>);
         #[qinvokable]
+        fn fetch_lama(self: Pin<&mut DepthMaps>);
+        #[qinvokable]
         fn generate(self: Pin<&mut DepthMaps>, input: u32);
         #[qinvokable]
         fn cancel(self: Pin<&mut DepthMaps>);
@@ -84,6 +86,10 @@ impl DepthMaps {
 
     pub fn download(self: Pin<&mut Self>) {
         self.start(Work::Download);
+    }
+
+    pub fn fetch_lama(self: Pin<&mut Self>) {
+        self.start(Work::Lama);
     }
 
     pub fn generate(mut self: Pin<&mut Self>, input: u32) {
