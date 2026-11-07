@@ -57,6 +57,7 @@ fn options() -> Vec<Field> {
         flag("playback.scene_capture"),
         flag("playback.duck"),
         values(option(QualityChoice::KEY, FieldKind::Enum), &QualityChoice::WORDS),
+        values(option(wprs_core::AutoPace::KEY, FieldKind::Enum), &wprs_core::AutoPace::WORDS),
         values(option(wprs_core::HdrChoice::KEY, FieldKind::Enum), &wprs_core::HdrChoice::WORDS),
         values(option(wprs_core::Fill::KEY, FieldKind::Enum), &wprs_core::Fill::WORDS),
         range(option("parallax.layers", FieldKind::Int), 4.0, 6.0, Some(1.0)),

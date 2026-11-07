@@ -30,6 +30,7 @@ QtObject {
             "render.gpu": App.tr("Graphics card"),
             "surfaces.layer_namespace": App.tr("Surface name"),
             "playback.quality": App.tr("Scene quality"),
+            "playback.auto_pace": App.tr("Automatic frame rate"),
             "order": App.tr("Order"),
             "interval": App.tr("Change every"),
             "at": App.tr("Change at (HH:MM, …)"),

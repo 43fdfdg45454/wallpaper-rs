@@ -409,6 +409,14 @@ msgstr ""
 "por el tiempo de GPU como en el teléfono"
 
 #: apps/wprs-ctl/src/bench.rs
+msgid ""
+"With --quality auto: detail may also halve the pace (never below 30 fps), "
+"smooth keeps it"
+msgstr ""
+"Con --quality auto: detail puede además reducir el ritmo a la mitad (nunca "
+"menos de 30 fps), smooth lo mantiene"
+
+#: apps/wprs-ctl/src/bench.rs
 msgid "Number of screens that show the scene at once"
 msgstr "Número de pantallas que muestran la escena a la vez"
 

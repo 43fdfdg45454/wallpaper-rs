@@ -5,6 +5,12 @@ use std::path::PathBuf;
 pub(crate) type Steered = (u64, Vec<(PathBuf, u32)>, bool);
 
 impl Engine {
+    pub(super) fn fps(&self, power: crate::power::Power) -> u32 {
+        let cap = if self.film.is_some() { self.reel.fps } else { wprs_core::settings::fps::DISPLAY };
+        let fps = wprs_core::settings::fps::lower(power.fps(self.preview), cap);
+        self.stage.as_ref().map_or(fps, |stage| stage.divided(fps))
+    }
+
     pub(crate) fn steer(&mut self) -> Option<String> {
         let opens = self.stage.as_mut().map(crate::stage::Stage::opened).unwrap_or_default();
         let mut list: Vec<serde_json::Value> =

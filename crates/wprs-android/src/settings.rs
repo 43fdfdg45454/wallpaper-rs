@@ -161,6 +161,7 @@ fn caps() {
     power::caps(on_battery(config.playback.max_fps), chosen(CHARGER).parse().unwrap_or(60));
     power::guard(config.playback.flash_guard, config.playback.scene_capture);
     power::choose(config.playback.quality);
+    power::pace(config.playback.auto_pace);
     crate::hdr::choose(config.playback.hdr);
 }
 

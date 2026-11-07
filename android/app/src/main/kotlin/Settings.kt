@@ -36,6 +36,7 @@ private val QUALITIES = listOf(
     "auto" to R.string.quality_auto, "min-q2" to R.string.quality_min_q2, "min-q1" to R.string.quality_min_q1,
     "q3" to R.string.quality_q3, "q2" to R.string.quality_q2, "q1" to R.string.quality_q1, "q0" to R.string.quality_q0,
 )
+private val PACES = listOf("detail" to R.string.pace_detail, "smooth" to R.string.pace_smooth)
 private val HDRS = listOf("auto" to R.string.hdr_auto, "on" to R.string.hdr_on, "off" to R.string.hdr_off)
 private val FILLS = listOf("simple" to R.string.fill_simple, "lama" to R.string.fill_lama, "off" to R.string.fill_off)
 private val CONVERTS = listOf("auto" to R.string.convert_auto, "keep" to R.string.convert_keep, "off" to R.string.never)
@@ -46,6 +47,7 @@ private val CHOICES = listOf(
     Triple(R.string.system_colors, "system_colors", COLORS),
     Triple(R.string.backend, "backend", BACKENDS),
     Triple(R.string.scene_quality, "playback.quality", QUALITIES),
+    Triple(R.string.auto_pace, "playback.auto_pace", PACES),
     Triple(R.string.hdr_output, "playback.hdr", HDRS),
     Triple(R.string.parallax_fill, "parallax.fill", FILLS),
     Triple(R.string.convert_videos, Convert.SETTING, CONVERTS),
@@ -98,6 +100,7 @@ fun Settings(main: Main) {
             val texts = options.map { (value, text) -> value to stringResource(text, value.toIntOrNull() ?: 0) }
             Choices(stringResource(label), texts, values[key].orEmpty()) { set(key, it) }
             if (key == "playback.quality") CostWarning(report)
+            if (key == "playback.auto_pace") PaceNote()
             if (key == "parallax.fill") LamaNote(main, values[key], changes)
         }
         items(TOGGLES) { (label, key, states) ->
@@ -126,7 +129,7 @@ fun Settings(main: Main) {
                 stringResource(R.string.frames, report.optLong("frames"), report.optInt("fps")),
                 stringResource(R.string.cap, report.optInt("cap")),
                 stringResource(R.string.power, yes("charging"), yes("saver"), report.optInt("thermal")),
-                stringResource(R.string.scene_level, report.optString("tier"), report.optString("quality"))
+                stringResource(levelWords(report.optInt("pace")), report.optString("tier"), report.optString("quality"), report.optInt("pace_fps"))
                     .takeIf { report.optString("tier").isNotEmpty() },
                 stringResource(if (report.optBoolean("measured")) R.string.tier_measured else R.string.tier_detected)
                     .takeIf { report.optString("tier").isNotEmpty() },

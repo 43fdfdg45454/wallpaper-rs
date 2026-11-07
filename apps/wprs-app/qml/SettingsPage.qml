@@ -55,7 +55,7 @@ Kirigami.ScrollablePage {
 
             Settings {
                 daemon: App
-                model: (App.schema.options ?? []).filter(f => !["render.gpu", "surfaces.layer_namespace", "playback.quality", "playback.hdr", "rgb.enabled", "rgb.server", "rgb.when_covered", "media.remote_covers"].includes(f.key))
+                model: (App.schema.options ?? []).filter(f => !["render.gpu", "surfaces.layer_namespace", "playback.quality", "playback.auto_pace", "playback.hdr", "rgb.enabled", "rgb.server", "rgb.when_covered", "media.remote_covers"].includes(f.key))
                 values: App.state.options ?? {}
                 onEdited: (key, value) => App.act("SetOption", [key, value])
             }
@@ -71,6 +71,11 @@ Kirigami.ScrollablePage {
 
             QualityPicker {
                 Kirigami.FormData.label: App.tr("Quality:")
+                daemon: App
+            }
+
+            PacePicker {
+                Kirigami.FormData.label: App.tr("Frame rate:")
                 daemon: App
             }
 

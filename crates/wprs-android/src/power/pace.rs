@@ -69,4 +69,22 @@ mod tests {
         }
         crate::power::refresh(60.0);
     }
+
+    #[test]
+    fn half_pace_draws_every_second_vsync_and_nothing_between() {
+        crate::power::refresh(60.0);
+        let (vsync, fps) = (1_000_000_000_i64 / 60, wprs_scene::halved(60));
+        let (mut pace, mut drawn, mut idle) = (Pace::default(), Vec::new(), 0);
+        for tick in 1..=240_i64 {
+            match pace.wait(tick * vsync, fps, fps) {
+                Some(_) => idle += 1,
+                None => {
+                    pace.shown(tick * vsync, true);
+                    drawn.push(tick);
+                }
+            }
+        }
+        assert_eq!((drawn.len(), idle), (120, 120));
+        assert!(drawn.windows(2).all(|w| w[1] - w[0] == 2), "{drawn:?}");
+    }
 }

@@ -69,6 +69,13 @@
     <string name="step_top">Es el nivel más alto permitido ahora.</string>
     <string name="step_held">El nivel siguiente se midió y no cabe.</string>
     <string name="step_still">Ni el nivel más bajo alcanza, así que la escena queda quieta en su póster.</string>
+    <string name="auto_pace">Fotogramas por segundo del nivel automático</string>
+    <string name="pace_detail">Detalle primero: la mitad de fotogramas antes de bajar de nivel</string>
+    <string name="pace_smooth">Fluidez primero: mantiene los fotogramas y baja el nivel</string>
+    <string name="auto_pace_note">Con la calidad automática, una escena pesada puede ir a la mitad de fotogramas, nunca menos de 30, para conservar un nivel más alto.</string>
+    <string name="scene_level_paced">Escenas: clase de dispositivo %1$s, nivel %2$s a %3$d fps</string>
+    <string name="step_halved">Los fotogramas se redujeron a la mitad: tardaban más que el objetivo y el nivel se mantiene.</string>
+    <string name="step_doubled">Los fotogramas volvieron al ritmo completo: les sobraba tiempo.</string>
     <string name="hdr_output">HDR en las pantallas que lo admiten</string>
     <string name="hdr_auto">Automático: en pantallas HDR, mientras se carga, para escenas con colores brillantes en la calidad más alta</string>
     <string name="hdr_on">Siempre que la pantalla lo admita, también con batería</string>

@@ -24,7 +24,16 @@ fun stepWords(step: String): Int? = when (step) {
     "top" -> R.string.step_top
     "held" -> R.string.step_held
     "still" -> R.string.step_still
+    "halved" -> R.string.step_halved
+    "doubled" -> R.string.step_doubled
     else -> null
+}
+
+fun levelWords(pace: Int): Int = if (pace > 1) R.string.scene_level_paced else R.string.scene_level
+
+@Composable
+fun PaceNote() {
+    Text(stringResource(R.string.auto_pace_note), Modifier.padding(16.dp, 4.dp), style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable

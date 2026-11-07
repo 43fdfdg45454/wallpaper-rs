@@ -37,7 +37,7 @@ fn stall(stage: &mut Stage) {
     let at = std::time::Instant::now();
     for k in 0..300u32 {
         let when = at + std::time::Duration::from_millis(u64::from(k) * 33);
-        stage.pilot().feed(when, 100.0, 33.3, (wprs_scene::Quality::Q0, true, true));
+        stage.pilot().feed(when, 100.0, [33.3; 2], (wprs_scene::Quality::Q0, true, true));
     }
 }
 
@@ -114,7 +114,33 @@ pub(super) fn only_automatic_stops_heavy_scenes() {
     assert_eq!(warned().0, "still", "the home scene's warning went with the lock screen's");
     report::forget(report::HOME);
     let nothing = json!({ "tier": "", "quality": "", "reason": "", "left_out": [], "over": null, "auto": "",
-        "frame_ms": null, "period_ms": null, "step": "" });
+        "frame_ms": null, "period_ms": null, "step": "", "pace": null, "pace_fps": null });
     assert_eq!(report::wallpaper(), nothing, "an image kept a scene's warning");
+    assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
+}
+
+pub(super) fn the_engine_follows_the_pace_the_pilot_chose() {
+    let (uid, path) = heavy();
+    let mut stage = Stage::new(uid.clone(), pack::load(&path).unwrap());
+    let divided = |stage: &Stage| [60, 0, 1].map(|fps| stage.divided(fps));
+    assert_eq!(divided(&stage), [60, 0, 1]);
+    let at = std::time::Instant::now();
+    let feed = |stage: &mut Stage, periods: [f32; 2]| {
+        for k in 0..300u32 {
+            let when = at + std::time::Duration::from_millis(u64::from(k) * 17);
+            stage.pilot().feed(when, 30.0, periods, (wprs_scene::Quality::Q3, true, true));
+        }
+    };
+    stage.pilot().start(wprs_scene::Quality::Q0, wprs_scene::Quality::Q3);
+    feed(&mut stage, [16.7, 33.3]);
+    assert_eq!((stage.pilot().pace(), divided(&stage)), (2, [30, 0, 1]));
+    assert_eq!(settings::setting("playback.auto_pace", None).unwrap(), "detail");
+    assert_eq!(settings::setting("playback.auto_pace", Some("smooth")).unwrap(), "smooth");
+    assert!(!power::halves());
+    assert!(settings::setting("playback.auto_pace", Some("fast")).is_err());
+    feed(&mut stage, [16.7, 16.7]);
+    assert_eq!((stage.pilot().pace(), divided(&stage)), (1, [60, 0, 1]));
+    assert_eq!(settings::setting("playback.auto_pace", Some("detail")).unwrap(), "detail");
+    assert!(power::halves());
     assert_eq!(ask(json!({ "op": "remove", "uids": [uid] })), Value::Null);
 }

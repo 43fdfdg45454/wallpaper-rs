@@ -99,7 +99,7 @@ pub use crate::particles::{
     cells, distance_field, fbm, flocks, fractal, gradient, hash, largest, mark, noise1, particle_salt,
     remap_input, remap_table, remapped, seen, stacked, strung, swirl, taper, turbulent_ray, turn,
 };
-pub use crate::pilot::{Pilot, Step, Window};
+pub use crate::pilot::{Pilot, Step, Window, halved, periods};
 pub use crate::pointing::{MAX_PRESSES, MAX_TOUCHES, Press, Touch, TouchKind};
 pub use crate::projected::projectable;
 pub use crate::props::{

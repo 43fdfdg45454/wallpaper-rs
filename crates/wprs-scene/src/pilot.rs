@@ -2,8 +2,12 @@ use crate::{Quality, Why};
 use serde::Serialize;
 use std::time::{Duration, Instant};
 
-const SPAN: usize = 32;
-const LEAST: usize = 12;
+mod pace;
+mod window;
+
+pub use pace::{HALVES, halved, periods};
+pub use window::Window;
+
 const DROP: f32 = 0.85;
 const CLIMB: f32 = 0.5;
 const FIT: f32 = 0.75;
@@ -12,33 +16,9 @@ const LOWER: Duration = Duration::from_secs(2);
 const RAISE: Duration = Duration::from_secs(6);
 const APART: Duration = Duration::from_secs(5);
 const BOUNCE: Duration = Duration::from_secs(30);
+const FLIPS: Duration = Duration::from_secs(120);
 const BREAK: Duration = Duration::from_secs(1);
 const TRIES: u8 = 4;
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Window {
-    times: [f32; SPAN],
-    len: usize,
-    next: usize,
-}
-
-impl Window {
-    pub fn push(&mut self, ms: f32) {
-        self.times[self.next] = ms;
-        (self.next, self.len) = ((self.next + 1) % SPAN, (self.len + 1).min(SPAN));
-    }
-
-    pub fn mean(&self) -> Option<f32> {
-        (self.len >= LEAST).then_some(())?;
-        let mut sorted = self.times;
-        let sorted = &mut sorted[..self.len];
-        sorted.sort_unstable_by(f32::total_cmp);
-        let median = sorted[self.len / 2];
-        let kept = sorted.iter().filter(|t| **t <= median * 2.0 && **t >= median / 2.0);
-        let (sum, n) = kept.fold((0.0, 0u32), |(s, n), t| (s + t, n + 1));
-        Some(if n == 0 { median } else { sum / n as f32 })
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -51,11 +31,13 @@ pub enum Step {
     Top,
     Held,
     Still,
+    Halved,
+    Doubled,
 }
 
 impl Step {
     pub fn name(self) -> &'static str {
-        ["model", "steady", "climbed", "dropped", "top", "held", "still"][self as usize]
+        ["model", "steady", "climbed", "dropped", "top", "held", "still", "halved", "doubled"][self as usize]
     }
 }
 
@@ -71,6 +53,9 @@ pub struct Pilot {
     climbed: Option<(Instant, f32)>,
     gains: [f32; 4],
     tries: u8,
+    flips: u8,
+    halved: bool,
+    paced: Option<Instant>,
     step: Step,
     frame: Option<f32>,
     stalled: bool,
@@ -102,6 +87,10 @@ impl Pilot {
         self.stalled
     }
 
+    pub fn pace(&self) -> u32 {
+        1 + u32::from(self.halved)
+    }
+
     pub fn frame_ms(&self) -> Option<f32> {
         self.frame
     }
@@ -114,19 +103,28 @@ impl Pilot {
         &mut self,
         at: Instant,
         ms: f32,
-        period: f32,
+        periods: [f32; 2],
         (ceiling, raises, stills): (Quality, bool, bool),
     ) -> bool {
         if self.last.is_none_or(|l| at.saturating_duration_since(l) > BREAK) {
             self.over = None;
         }
         self.last = Some(at);
+        if self.paced.is_some_and(|p| at.saturating_duration_since(p) >= FLIPS) {
+            self.flips = self.flips.saturating_sub(1);
+            self.paced = (self.flips > 0).then_some(at);
+        }
         if ms.is_finite() && ms >= 0.0 {
             self.window.push(ms);
         }
+        let halves = periods[1] > periods[0] * HALVES;
+        if self.halved && !halves {
+            (self.halved, self.step) = (false, Step::Doubled);
+            return self.moved(at);
+        }
         let Some(mean) = self.window.mean() else { return false };
         self.frame = Some(mean);
-        let floor = self.floor(ceiling);
+        let (floor, period) = (self.floor(ceiling), periods[usize::from(self.halved)]);
         let here = self.level.clamp(floor, ceiling);
         self.level = here;
         let settled = self.changed.is_none_or(|c| at.saturating_duration_since(c) >= APART);
@@ -138,32 +136,46 @@ impl Pilot {
         }
         let above = Quality::from_level(here as u8 + 1);
         let gain = self.gains[above as usize];
-        let fits = match gain {
-            _ if here >= ceiling || !raises => false,
-            g if g > 0.0 => mean * g < period * FIT,
-            _ => mean < period * CLIMB,
-        };
+        let room = here < ceiling && raises;
+        let lift = |p: f32| room && if gain > 0.0 { mean * gain < p * FIT } else { mean < p * CLIMB };
+        let fits = lift(period);
+        let up = fits || (!self.halved && halves && lift(periods[1]));
+        let lighter = self.halved && raises && mean < periods[0] * CLIMB;
         let slow = if here > floor { mean > period * DROP } else { stills && mean > period * STALL };
         let over = lasted(&mut self.over, slow, at, LOWER);
-        let under = lasted(&mut self.under, fits, at, RAISE * (1 << self.tries));
+        let tries = if lighter { self.tries.max(self.flips) } else { self.tries };
+        let under = lasted(&mut self.under, up || lighter, at, RAISE * (1 << tries));
         if !settled {
             return false;
         }
-        let (level, step) = match () {
-            _ if over && here == floor => (here, Step::Still),
-            _ if over => (here.lower(), Step::Dropped),
-            _ if under => (above, Step::Climbed),
+        let (level, halved, step) = match () {
+            _ if over && here == floor => (here, self.halved, Step::Still),
+            _ if over && !self.halved && halves => (here, true, Step::Halved),
+            _ if over => (here.lower(), self.halved, Step::Dropped),
+            _ if under && lighter => (here, false, Step::Doubled),
+            _ if under && fits => (above, self.halved, Step::Climbed),
+            _ if under => (above, true, Step::Climbed),
             _ if here >= ceiling || !raises => return self.hold(Step::Top),
-            _ if gain > 0.0 && !fits => return self.hold(Step::Held),
+            _ if gain > 0.0 && !up => return self.hold(Step::Held),
             _ => return self.hold(Step::Steady),
         };
-        if step != Step::Climbed && self.climbed.take().is_some() {
+        if !matches!(step, Step::Climbed | Step::Doubled) && self.climbed.take().is_some() {
             self.tries = (self.tries + 1).min(TRIES);
         }
         if step == Step::Climbed {
             self.climbed = Some((at, mean));
         }
-        (self.level, self.step, self.stalled) = (level, step, self.stalled || step == Step::Still);
+        if halved != self.halved {
+            let quick = self.paced.is_some_and(|p| at.saturating_duration_since(p) < FLIPS);
+            (self.flips, self.paced) = (self.flips + u8::from(quick), Some(at));
+            self.flips = self.flips.min(TRIES);
+        }
+        (self.level, self.halved, self.step) = (level, halved, step);
+        self.stalled |= step == Step::Still;
+        self.moved(at)
+    }
+
+    fn moved(&mut self, at: Instant) -> bool {
         (self.window, self.changed, self.over, self.under) = (Window::default(), Some(at), None, None);
         true
     }

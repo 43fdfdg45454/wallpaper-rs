@@ -4,20 +4,27 @@ use wprs_scene::{Budget, Heat, Pilot, Quality, Step, Tier, Why, Window};
 const FRAME: Duration = Duration::from_micros(16_667);
 const PERIOD: f32 = 16.667;
 
+#[path = "pilot/pace.rs"]
+mod pace;
+
+const SMOOTH: [f32; 2] = [PERIOD, PERIOD];
+const HALVING: [f32; 2] = [PERIOD, 2.0 * PERIOD];
+
 struct Run {
     pilot: Pilot,
+    periods: [f32; 2],
     at: Instant,
     start: Instant,
     ceiling: Quality,
     stills: bool,
-    changes: Vec<(f32, Quality)>,
+    changes: Vec<(f32, Quality, u32)>,
 }
 
 fn pilot(floor: Quality, fitted: Quality) -> Run {
     let mut pilot = Pilot::default();
     pilot.start(floor, fitted);
     let at = Instant::now();
-    Run { pilot, at, start: at, ceiling: Quality::Q3, stills: true, changes: Vec::new() }
+    Run { pilot, periods: SMOOTH, at, start: at, ceiling: Quality::Q3, stills: true, changes: Vec::new() }
 }
 
 impl Run {
@@ -26,13 +33,19 @@ impl Run {
     }
 
     fn go(&mut self, seconds: f32, ms: impl Fn(Quality, u32) -> f32) -> &mut Run {
+        self.go_paced(seconds, |q, _, k| ms(q, k))
+    }
+
+    fn go_paced(&mut self, seconds: f32, ms: impl Fn(Quality, u32, u32) -> f32) -> &mut Run {
         let end = self.at + Duration::from_secs_f32(seconds);
         let mut k = 0;
         while self.at < end && !self.pilot.stalled() {
             (self.at, k) = (self.at + FRAME, k + 1);
-            let here = self.level();
-            if self.pilot.feed(self.at, ms(here, k), PERIOD, (self.ceiling, true, self.stills)) {
-                self.changes.push(((self.at - self.start).as_secs_f32(), self.level()));
+            let (here, pace) = (self.level(), self.pilot.pace());
+            let sample = ms(here, pace, k);
+            if self.pilot.feed(self.at, sample, self.periods, (self.ceiling, true, self.stills)) {
+                let moved = ((self.at - self.start).as_secs_f32(), self.level(), self.pilot.pace());
+                self.changes.push(moved);
             }
         }
         self
@@ -143,8 +156,7 @@ fn only_automatic_quality_goes_still_and_only_when_even_the_lowest_level_is_far_
 #[test]
 fn a_level_the_user_fixed_is_never_touched() {
     let mut run = pilot(Quality::Q1, Quality::Q1);
-    run.ceiling = Quality::Q1;
-    run.stills = false;
+    (run.ceiling, run.stills, run.periods) = (Quality::Q1, false, HALVING);
     run.go(60.0, costs([1.0; 4]));
     run.go(60.0, costs([90.0; 4]));
     assert!(run.changes.is_empty(), "{:?}", run.changes);

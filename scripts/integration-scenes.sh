@@ -46,6 +46,8 @@ with zipfile.ZipFile(sys.argv[1], "w") as package:
 PACKAGE
 [ "$(ctl scene bench "$scene/glow.wpak" --frames 20 --size 160x90 --json | js "r['needed'], r['created_after_warmup']")" = "(1, 0)" ] ||
   fail "scene bench: $(ctl scene bench "$scene/glow.wpak" --frames 20 --size 160x90)"
+[ "$(ctl scene bench "$scene/glow.wpak" --frames 30 --size 160x90 --quality auto --pace smooth --json | js "r['auto']['pace'], r['auto']['pace_fps']")" = "(1, 60)" ] ||
+  fail "scene bench auto: $(ctl scene bench "$scene/glow.wpak" --frames 30 --size 160x90 --quality auto)"
 read -r _ _ _ s11 < <(ctl stream TEST-11 160 90)
 job=$(bus Library1 Import asb 1 "$scene/glow.wpak" false | out "d[0]")
 wait_for 20 finished "$job" || fail "scene import: $(bus Daemon1 GetJob t "$job")"

@@ -33,6 +33,7 @@ pub struct Bench {
     pub paced: Option<Duration>,
     pub stamps: Stamping,
     pub overlap: bool,
+    pub pace: wprs_core::AutoPace,
 }
 
 impl Default for Bench {
@@ -49,6 +50,7 @@ impl Default for Bench {
             paced: None,
             stamps: Stamping::All,
             overlap: false,
+            pace: wprs_core::AutoPace::Detail,
         }
     }
 }
@@ -97,11 +99,13 @@ pub fn scene_bench(
     more.as_object().into_iter().flatten().for_each(|(k, v)| report[k] = v.clone());
     particles.as_object().into_iter().flatten().for_each(|(k, v)| report["particles"][k] = v.clone());
     if let Some((pilot, _)) = &run.pilot {
-        let levels: Vec<Value> = run.levels.iter().map(|(t, q)| json!([t, q])).collect();
-        let (frame_ms, period_ms) = (pilot.frame_ms(), 1000.0 / bench.fps.max(1) as f32);
+        let levels: Vec<Value> = run.levels.iter().map(|(t, q, p)| json!([t, q, p])).collect();
+        let (pace, fps) = (pilot.pace(), bench.fps.max(1));
+        let fps = if pace > 1 { wprs_scene::halved(fps) } else { fps };
+        let (frame_ms, period_ms) = (pilot.frame_ms(), 1000.0 / fps as f32);
         let (step, still) = (pilot.step(), pilot.stalled());
         report["auto"] = json!({ "start": quality, "levels": levels, "frame_ms": frame_ms,
-            "period_ms": period_ms, "step": step, "still": still });
+            "period_ms": period_ms, "step": step, "still": still, "pace": pace, "pace_fps": fps });
     }
     if bench.passes {
         let (frames, mut passes) = crate::profiled_passes(None);

@@ -8,7 +8,7 @@ use std::time::Duration;
 use wprs_render::{Bench, Level, Renderer, WARMUP};
 use wprs_scene::Runtime;
 
-use crate::benching::{load, ms_of, passes};
+use crate::benching::{load, ms_of, passes, steered};
 
 #[derive(Subcommand, Debug)]
 pub enum SceneCommand {
@@ -24,6 +24,8 @@ pub enum SceneCommand {
         fps: u32,
         #[arg(long, value_parser = ["q0", "q1", "q2", "q3", "auto"], help = "Quality level; picked like the daemon when omitted, steered by GPU time like the phone with auto")]
         quality: Option<String>,
+        #[arg(long, value_parser = ["detail", "smooth"], default_value = "detail", help = "With --quality auto: detail may also halve the pace (never below 30 fps), smooth keeps it")]
+        pace: String,
         #[arg(long, default_value_t = 1, help = "Number of screens that show the scene at once")]
         screens: usize,
         #[arg(long, help = "Print the report as JSON")]
@@ -53,6 +55,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
             size,
             fps,
             quality,
+            pace,
             screens,
             json,
             tier,
@@ -77,6 +80,7 @@ pub fn run(command: SceneCommand) -> Result<()> {
                 passes,
                 shot,
                 paced,
+                pace: serde_json::from_value(json!(pace))?,
                 ..Bench::default()
             };
             (path, bench, json, tier)
@@ -139,16 +143,7 @@ fn text(report: &Value) -> String {
         );
         out += &format!("cpu          {}\n", ms("cpu_ms", "ms"));
     }
-    if let Some(levels) = report["auto"]["levels"].as_array() {
-        let steps: Vec<String> =
-            levels.iter().map(|l| format!("{} at {:.1} s", l[1], l[0].as_f64().unwrap_or(0.0))).collect();
-        out += &format!("auto         {}\n", steps.join(", "));
-    }
-    if let Some(frame) = report["auto"]["frame_ms"].as_f64() {
-        let (auto, period) = (&report["auto"], report["auto"]["period_ms"].as_f64().unwrap_or(0.0));
-        let step = auto["step"].as_str().unwrap_or_default();
-        out += &format!("measured     {frame:.2} ms a frame of {period:.2} ms, last decision {step}\n");
-    }
+    out += &steered(&report["auto"]);
     let first =
         report["first_ms"].as_f64().map_or(String::new(), |ms| format!(", {ms:.1} ms for the first frame"));
     out += &format!("start        {:.1} ms to load{first} of {} screens\n", f("load_ms"), n("screens"));

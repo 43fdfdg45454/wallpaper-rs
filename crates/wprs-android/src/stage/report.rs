@@ -46,8 +46,9 @@ pub(crate) fn wallpaper() -> serde_json::Value {
     let left: Vec<_> = shown.left.1.iter().map(|(id, why)| json!({ "id": id, "reason": why })).collect();
     let (frame, period, step) =
         shown.cost.map_or((None, None, ""), |c| (c.frame, Some(c.period), c.step.name()));
+    let (pace, fps) = shown.cost.map_or((None, None), |c| (Some(c.pace), Some(c.fps)));
     json!({ "tier": tier, "quality": quality, "reason": reason, "left_out": left, "over": over, "auto": auto,
-        "frame_ms": frame, "period_ms": period, "step": step })
+        "frame_ms": frame, "period_ms": period, "step": step, "pace": pace, "pace_fps": fps })
 }
 
 fn level(level: u32) -> Option<[String; 3]> {
@@ -67,6 +68,8 @@ pub(crate) struct Cost {
     pub(crate) frame: Option<f32>,
     pub(crate) period: f32,
     pub(crate) step: Step,
+    pub(crate) pace: u32,
+    pub(crate) fps: u32,
 }
 
 pub(crate) const HOME: usize = 0;
@@ -127,6 +130,10 @@ fn judged(kept: Cost, choice: QualityChoice) -> (&'static str, Option<[f32; 2]>)
 }
 
 impl Stage {
+    pub(crate) fn divided(&self, fps: u32) -> u32 {
+        if self.pilot.pace() > 1 { wprs_scene::halved(fps) } else { fps }
+    }
+
     pub(super) fn steer(&mut self, budget: Budget, power: Power, tier: Tier) -> ((Quality, Why), Quality) {
         let cooled = |(q, why): (Quality, Why)| {
             if power.ceiling() < q { (power.ceiling(), Why::Heat) } else { (q, why) }
@@ -138,9 +145,22 @@ impl Stage {
         if let Some(slot) = self.reports {
             let costs = [Quality::Q0, Quality::Q1, Quality::Q2, Quality::Q3].map(|q| self.runtime.cost(q));
             let (crowded, stalled) = (budget.crowded(&self.runtime), self.pilot.stalled());
-            let period = 1000.0 / budget.timed_fps(&self.runtime, 0).max(1) as f32;
-            let (frame, step) = (self.pilot.frame_ms(), self.pilot.step());
-            let cost = Cost { budget, auto: auto.0, quality, costs, crowded, stalled, frame, period, step };
+            let fps = budget.timed_fps(&self.runtime, 0).max(1);
+            let (frame, step, pace) = (self.pilot.frame_ms(), self.pilot.step(), self.pilot.pace());
+            let period = 1000.0 / fps as f32;
+            let cost = Cost {
+                budget,
+                auto: auto.0,
+                quality,
+                costs,
+                crowded,
+                stalled,
+                frame,
+                period,
+                step,
+                pace,
+                fps,
+            };
             keep(slot, cost, 1 + (tier as u32 * 4 + quality as u32) * 8 + why as u32);
         }
         ((quality, why), ceiling.0)

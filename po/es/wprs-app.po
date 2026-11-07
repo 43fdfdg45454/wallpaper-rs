@@ -2532,6 +2532,29 @@ msgstr "Sus partículas se mueven en el procesador, así que se muestran menos"
 msgid "This picture has its own placement: %1"
 msgstr "Esta imagen tiene su propia colocación: %1"
 
+#: apps/wprs-app/qml/PacePicker.qml
+msgid "Detail first: halve the frame rate before lowering the quality"
+msgstr "Detalle primero: la mitad de fotogramas antes de bajar la calidad"
+
+#: apps/wprs-app/qml/PacePicker.qml
+msgid "Smooth first: keep the frame rate and lower the quality"
+msgstr "Fluidez primero: mantiene los fotogramas y baja la calidad"
+
+#: apps/wprs-app/qml/PacePicker.qml apps/wprs-app/qml/facade/Labels.qml
+msgid "Automatic frame rate"
+msgstr "Fotogramas por segundo automáticos"
+
+#: apps/wprs-app/qml/PacePicker.qml
+msgid ""
+"Applies to phones and to wprs-ctl scene bench; this computer keeps its own "
+"controller, so nothing changes here. With the automatic quality, a heavy "
+"scene may run at half the frame rate (never below 30) to keep a higher level."
+msgstr ""
+"Vale para teléfonos y para wprs-ctl scene bench; este ordenador conserva su "
+"propio control, así que aquí no cambia nada. Con la calidad automática, una "
+"escena pesada puede ir a la mitad de fotogramas (nunca menos de 30) para "
+"conservar un nivel más alto."
+
 #: apps/wprs-app/qml/PackageAbout.qml
 msgid "%1 by %2"
 msgstr "%1, de %2"
@@ -7934,6 +7957,10 @@ msgstr "General"
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "Quality:"
 msgstr "Calidad:"
+
+#: apps/wprs-app/qml/SettingsPage.qml
+msgid "Frame rate:"
+msgstr "Fotogramas:"
 
 #: apps/wprs-app/qml/SettingsPage.qml
 msgid "HDR:"

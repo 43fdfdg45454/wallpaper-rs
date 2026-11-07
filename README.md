@@ -694,7 +694,15 @@ en menos de 30 s duplica la espera de la siguiente (hasta cuatro veces), así qu
 niveles. Con `auto`, una escena que en el nivel más bajo tarda más del doble del intervalo durante
 2 s queda quieta en su póster hasta que cambies la elección o se vuelva a cargar. *Ajustes* muestra
 el tiempo medido, el objetivo y la última decisión, y la frecuencia no depende del nivel: 60
-fotogramas por segundo con batería salvo que elijas otra. Presenta con tres imágenes para que la GPU dibuje un fotograma
+fotogramas por segundo con batería salvo que elijas otra, salvo por lo que sigue. El piloto decide un par, el nivel y un
+divisor del ritmo, y juzga contra el intervalo del ritmo en uso. Con `playback.auto_pace` en `detail` (el valor por defecto)
+y un ritmo de 60 o más, un nivel que no cabe en el intervalo entero pero cuya media prevista cabe en tres
+cuartas partes del doble se alcanza a mitad de ritmo (30 fotogramas por segundo con 60 Hz, nunca menos de 30); si el
+nivel a mitad de ritmo cabría también entero (menos de la mitad del intervalo entero durante 6 s) vuelve al ritmo
+entero antes de subir otro nivel, y una sobrecarga baja primero a mitad de ritmo y solo después un nivel. Con `smooth`
+el ritmo no cambia nunca, un nivel fijo tampoco, y el tope que elijas lo acota. *Ajustes* lo muestra en la decisión
+(«q2 a 30 fps»), `wprs-ctl config playback.auto_pace detail|smooth` y la app lo cambian (el ordenador conserva su propio
+control: vale para el teléfono y para `wprs-ctl scene bench --quality auto`, que imprime el ritmo). Presenta con tres imágenes para que la GPU dibuje un fotograma
 mientras se prepara el siguiente. `wprs-ctl state` (`tier`,
 `tier_measured`, y `quality` y `quality_reason` en cada pantalla), la app y la bandeja muestran la
 clase medida, el nivel y por qué bajó.

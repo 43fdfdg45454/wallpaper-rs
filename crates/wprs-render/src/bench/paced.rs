@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 pub(super) fn paced(run: &mut Run<'_>, length: Duration) -> Result<Value, RenderError> {
     let fps = run.bench.fps.max(1);
-    let interval = Duration::from_secs(1) / fps;
+    let base = Duration::from_secs(1) / fps;
     let mut flight = Flight::default();
     let begin = Instant::now();
     let (mut next, mut last, mut missed) = (begin, begin, 0u64);
@@ -31,6 +31,7 @@ pub(super) fn paced(run: &mut Run<'_>, length: Duration) -> Result<Value, Render
             cpu.push(now.elapsed().as_secs_f64() * 1e3);
             waits.push(now.saturating_duration_since(waited).as_secs_f64() * 1e3);
         }
+        let interval = base * run.pace();
         next += interval;
         let now = Instant::now();
         if now > next {

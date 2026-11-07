@@ -163,6 +163,7 @@ pub(super) fn scenes() {
     acting::shortcuts_open_only_after_a_press();
     calm::calmed();
     stopped::only_automatic_stops_heavy_scenes();
+    stopped::the_engine_follows_the_pace_the_pilot_chose();
     flight::flown();
     looks::drawn();
     super::previewed::repository_previews_come_from_that_repository_once_and_within_a_bound();

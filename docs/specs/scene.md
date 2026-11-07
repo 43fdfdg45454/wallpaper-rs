@@ -284,9 +284,24 @@ too dear is not tried again while the scene costs the same. Under `auto` a scene
 more than twice the interval at the lowest level for 2 seconds stays at `poster_time` until the
 choice changes or the scene is loaded again: on the phone the cost model never stops a scene, only
 the model triangle limit and that measurement do. The phone settings show the measured average
-against the interval and the last decision (`model`, `steady`, `climbed`, `dropped`, `top`, `held`
-or `still`), and `--quality auto` of `wprs-ctl scene bench` and `--level auto` of the phone bench
-report the same under `auto` (`frame_ms`, `period_ms`, `step`, `still` and every level change). Its frame rate never depends on the level (60 on battery unless the user sets another cap). It
+against the interval and the last decision (`model`, `steady`, `climbed`, `dropped`, `top`, `held`,
+`still`, `halved` or `doubled`), and `--quality auto` of `wprs-ctl scene bench` and `--level auto`
+of the phone bench report the same under `auto` (`frame_ms`, `period_ms`, `step`, `still`, `pace`,
+`pace_fps` and every change of level or pace). The pilot decides a pair, the level and a pace
+divisor, and the interval it judges is the one of the pace in use. The divisor is 1 (the pace of
+the user's cap or the display) or 2 (half of it: 30 frames a second on a 60 Hz display), and the
+pace never goes under 30 frames a second, so a cap under 60 stays whole. With `playback.auto_pace`
+at `detail`, the default, a level above that does not fit the whole interval, but whose predicted
+average fits three quarters of the doubled one, is climbed to at half pace; a level at half pace
+that averages under half of the whole interval for 6 seconds goes back to the whole pace before
+any level goes up; and an overload halves the pace before it drops a level while the level is above
+`q0`, and drops a level once the pace is already halved. `smooth` never changes the pace. The same
+waits, cool-downs and bounce guards apply to the pace (a pace that flips again within two minutes
+doubles the wait before it returns to whole, up to four times), a level the user fixes never
+changes its pace, and the user's cap bounds it (half pace halves the cap). On the phone the halved
+pace presents every second vsync of Choreographer, the skipped ones do no work, and the measured
+time stays the GPU time of each frame drawn. The desktop daemon keeps its own controller, so
+`playback.auto_pace` applies to phones and to the bench. Its frame rate otherwise never depends on the level (60 on battery unless the user sets another cap). It
 presents through three swapchain images (latency 2), so the GPU draws a frame while the next one is
 recorded.
 Two changes are at least 5 seconds apart. The quality only moves on devices that time their frames,

@@ -69,6 +69,13 @@
     <string name="step_top">This is the highest level allowed now.</string>
     <string name="step_held">The next level was measured and does not fit.</string>
     <string name="step_still">Even the lowest level is far too slow, so the scene stays still at its poster.</string>
+    <string name="auto_pace">Frame rate of the automatic level</string>
+    <string name="pace_detail">Detail first: half the frame rate before a lower level</string>
+    <string name="pace_smooth">Smooth first: keep the frame rate and lower the level</string>
+    <string name="auto_pace_note">With automatic quality, a heavy scene may run at half the frame rate, never below 30, to keep a higher level.</string>
+    <string name="scene_level_paced">Scenes: device class %1$s, level %2$s at %3$d fps</string>
+    <string name="step_halved">The frame rate was halved: frames took longer than the target and the level stays.</string>
+    <string name="step_doubled">The frame rate went back up: frames had time to spare.</string>
     <string name="hdr_output">HDR on screens that support it</string>
     <string name="hdr_auto">Automatic: on HDR screens, while charging, for scenes with bright colors at the highest quality</string>
     <string name="hdr_on">Always when the screen supports it, also on battery</string>

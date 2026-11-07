@@ -156,10 +156,13 @@ impl Stage {
         self.spare = frame.spare();
         let (samples, gpu_ms) = view.gpu_time();
         if std::mem::replace(&mut self.samples, samples) != samples && !still {
-            let (raises, period) =
-                (!power.saver && power.ceiling() == Quality::Q3, 1000.0 / fps.max(1) as f32);
+            let raises = !power.saver && power.ceiling() == Quality::Q3;
+            let halves = crate::power::halves() && budget.choice.fixed().is_none();
+            let full = cap * self.pilot.pace();
+            let rate = |cap: u32| Budget { max_fps: cap.max(1), ..budget }.timed_fps(&self.runtime, 0);
+            let periods = wprs_scene::periods(halves, [rate(full), rate(wprs_scene::halved(full))]);
             let at = std::time::Instant::now();
-            self.pilot.feed(at, gpu_ms as f32, period, (ceiling, raises, budget.choice.is_auto()));
+            self.pilot.feed(at, gpu_ms as f32, periods, (ceiling, raises, budget.choice.is_auto()));
         }
         if let Some(slot) = self.reports {
             report::mark(slot, 0, view.gpu_particles().map_or(0, |gpu| if gpu { 1 } else { 2 }));

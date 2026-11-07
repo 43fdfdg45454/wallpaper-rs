@@ -159,8 +159,7 @@ impl Engine {
             return Ok(0);
         }
         let power = Power::now();
-        let cap = if self.film.is_some() { self.reel.fps } else { wprs_core::settings::fps::DISPLAY };
-        let fps = wprs_core::settings::fps::lower(power.fps(self.preview), cap);
+        let fps = self.fps(power);
         if let Some(wait) = self.paced.wait(nanos, fps, self.rate).filter(|_| !force) {
             return Ok(wait);
         }

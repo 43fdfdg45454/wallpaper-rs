@@ -11,7 +11,8 @@ pub(super) struct Run<'a> {
     pub(super) bench: &'a Bench,
     pub(super) quality: Quality,
     pub(super) inner: (u32, u32),
-    pub(super) levels: Vec<(f64, Quality)>,
+    pub(super) levels: Vec<(f64, Quality, u32)>,
+    pace: u32,
     pub(super) load_ms: f64,
     pub(super) start: Instant,
     assets: Option<SceneAssets>,
@@ -53,7 +54,7 @@ impl<'a> Run<'a> {
         let inner = view.inner(r, bench.size, quality);
         let load_ms = start.elapsed().as_secs_f64() * 1e3;
         let assets = pilot.is_some().then_some(assets);
-        let (spare, wake, samples, levels) = (Spare::default(), Wake::Frame, 0, vec![(0.0, quality)]);
+        let (spare, wake, samples, levels) = (Spare::default(), Wake::Frame, 0, vec![(0.0, quality, 1)]);
         Ok(Run {
             r,
             runtime,
@@ -62,6 +63,7 @@ impl<'a> Run<'a> {
             quality,
             inner,
             levels,
+            pace: 1,
             load_ms,
             start,
             assets,
@@ -73,14 +75,18 @@ impl<'a> Run<'a> {
         })
     }
 
+    pub(super) fn pace(&self) -> u32 {
+        self.pace
+    }
+
     fn steer(&mut self, at: Instant) -> Result<(), RenderError> {
         let Some((pilot, ceiling)) = &self.pilot else { return Ok(()) };
-        let level = pilot.level((*ceiling, Why::Full), Why::Cost).0;
-        if level == self.quality {
+        let (level, pace) = (pilot.level((*ceiling, Why::Full), Why::Cost).0, pilot.pace());
+        if (level, pace) == (self.quality, self.pace) {
             return Ok(());
         }
-        self.quality = level;
-        self.levels.push((at.saturating_duration_since(self.start).as_secs_f64(), level));
+        (self.quality, self.pace) = (level, pace);
+        self.levels.push((at.saturating_duration_since(self.start).as_secs_f64(), level, pace));
         if self.runtime.set_quality(level)
             && let Some(assets) = &self.assets
         {
@@ -112,8 +118,9 @@ impl<'a> Run<'a> {
         let (samples, gpu_ms) = self.view.gpu_time();
         let fresh = std::mem::replace(&mut self.samples, samples) != samples;
         if let Some((pilot, ceiling)) = self.pilot.as_mut().filter(|_| fresh) {
-            let period = 1000.0 / self.bench.fps.max(1) as f32;
-            pilot.feed(at, gpu_ms as f32, period, (*ceiling, true, true));
+            let fps = self.bench.fps.max(1);
+            let periods = wprs_scene::periods(self.bench.pace.halves(), [fps, wprs_scene::halved(fps)]);
+            pilot.feed(at, gpu_ms as f32, periods, (*ceiling, true, true));
         }
         let span_ms = fresh.then(|| self.view.gpu_span());
         Ok(Drawn { eval_us, gpu_ms: fresh.then_some(gpu_ms), span_ms })
@@ -121,7 +128,7 @@ impl<'a> Run<'a> {
 
     pub(super) fn unpaced(&mut self) -> Result<Value, RenderError> {
         let frames = self.bench.frames.max(1);
-        let step = Duration::from_secs(1) / self.bench.fps.max(1);
+        let base = Duration::from_secs(1) / self.bench.fps.max(1);
         let (mut eval, mut render, mut gpu, mut sim, mut sim_gpu) = (vec![], vec![], vec![], vec![], vec![]);
         let mut span = vec![];
         let (mut needed, mut created, mut steps, mut compiled) = (0, 0, 0, 0);
@@ -129,6 +136,7 @@ impl<'a> Run<'a> {
         let (mut flight, mut timed) = (super::flight::Flight::default(), Instant::now());
         for i in 0..frames {
             timed = if i == WARMUP.min(frames - 1) { Instant::now() } else { timed };
+            let step = base * self.pace;
             if i > 0 {
                 self.runtime.advance(step.as_secs_f64());
                 (since, at) = (since + step, at + step);

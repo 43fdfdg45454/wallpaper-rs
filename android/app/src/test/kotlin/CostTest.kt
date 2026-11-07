@@ -15,8 +15,15 @@ class CostTest {
 
     @Test
     fun everyDecisionOfTheAutomaticLevelHasItsWords() {
-        val steps = listOf("model", "steady", "climbed", "dropped", "top", "held", "still")
+        val steps = listOf("model", "steady", "climbed", "dropped", "top", "held", "still", "halved", "doubled")
         assertEquals(steps.size, steps.mapNotNull { stepWords(it) }.toSet().size)
         assertEquals(null, stepWords(""))
+    }
+
+    @Test
+    fun theLevelLineNamesTheFrameRateOnlyWhenThePaceIsHalved() {
+        assertEquals(R.string.scene_level, levelWords(1))
+        assertEquals(R.string.scene_level, levelWords(0))
+        assertEquals(R.string.scene_level_paced, levelWords(2))
     }
 }
