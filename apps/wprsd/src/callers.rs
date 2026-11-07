@@ -59,12 +59,29 @@ fn system(path: impl AsRef<Path>) -> bool {
     path.as_ref().metadata().is_ok_and(|m| m.uid() == 0 && m.mode() & 0o022 == 0)
 }
 
+const COMPOSITORS: [&str; 2] = ["kwin_wayland", "kwin_x11"];
+
+fn privileged(status: &str, uid_map: &str, comm: &str) -> bool {
+    let permitted = status.lines().find_map(|line| line.strip_prefix("CapPrm:")).map(str::trim);
+    let kwin = COMPOSITORS.contains(&comm.trim());
+    kwin && uid_map.split_whitespace().eq(["0", "0", "4294967295"])
+        && permitted.is_some_and(|c| !c.trim_start_matches('0').is_empty())
+}
+
 fn compositor(pid: u32) -> Caller {
     let exe = PathBuf::from(format!("/proc/{pid}/exe"));
-    let name =
-        std::fs::read_link(&exe).ok().and_then(|p| Some(p.file_name()?.to_string_lossy().into_owned()));
-    let kwin = name.is_some_and(|n| ["kwin_wayland", "kwin_x11"].contains(&n.trim_end_matches(" (deleted)")));
-    if kwin && system(&exe) { Caller::Compositor } else { Caller::Other }
+    let read = |name: &str| std::fs::read_to_string(format!("/proc/{pid}/{name}")).unwrap_or_default();
+    let kwin = match std::fs::read_link(&exe) {
+        Ok(path) => {
+            let name = path.file_name().map(|n| n.to_string_lossy().into_owned());
+            name.is_some_and(|n| COMPOSITORS.contains(&n.trim_end_matches(" (deleted)"))) && system(&exe)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            privileged(&read("status"), &read("uid_map"), &read("comm"))
+        }
+        Err(_) => false,
+    };
+    if kwin { Caller::Compositor } else { Caller::Other }
 }
 
 fn ours() -> Vec<(PathBuf, Caller)> {
@@ -106,6 +123,19 @@ mod tests {
             !reports_pointer(Caller::Compositor),
             "a compositor was trusted before its script was loaded"
         );
+    }
+
+    #[test]
+    fn a_compositor_that_hides_its_executable_is_known_by_the_capabilities_it_was_given() {
+        let (status, identity) =
+            ("Name:\tkwin_wayland\nCapPrm:\t0000000000800000\n", "         0          0 4294967295\n");
+        assert!(privileged(status, identity, "kwin_wayland\n"));
+        assert!(privileged(status, identity, "kwin_x11\n"));
+        assert!(!privileged(status, identity, "evil\n"));
+        assert!(!privileged("CapPrm:\t0000000000000000\n", identity, "kwin_wayland\n"));
+        assert!(!privileged("Name:\tkwin_wayland\n", identity, "kwin_wayland\n"));
+        assert!(!privileged(status, "         0       1000          1\n", "kwin_wayland\n"));
+        assert!(!privileged(status, "", "kwin_wayland\n"));
     }
 
     #[tokio::test]
