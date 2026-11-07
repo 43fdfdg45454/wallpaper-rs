@@ -3,6 +3,7 @@ pub(crate) const NOTICES: &str = "THIRD-PARTY-NOTICES.txt";
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Part {
     Model,
+    Inpaint,
     Runtime,
 }
 
@@ -39,6 +40,25 @@ pub const MODEL: Asset = Asset {
     member: "",
     notices: "",
     file_sha256: "46c4e8eeda3a27f34701831b6a2ec7753d7b38779b215acb5633424703deed8f",
+};
+
+pub const LAMA: Asset = Asset {
+    id: "lama-big-fp32",
+    title: "LaMa big-lama (ONNX, 512 px)",
+    kind: Part::Inpaint,
+    urls: &[
+        "https://huggingface.co/Carve/LaMa-ONNX/resolve/c3c0c9e468934d62e79c329e35d82dd09ff8c444/lama_fp32.onnx",
+        "https://huggingface.co/Carve/LaMa-ONNX/resolve/main/lama_fp32.onnx",
+    ],
+    bytes: 208_044_816,
+    sha256: "1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6",
+    license: "Apache-2.0",
+    license_url: "https://github.com/advimman/lama/blob/main/LICENSE",
+    license_text: include_str!("../licenses/lama.txt"),
+    file: "lama_fp32.onnx",
+    member: "",
+    notices: "",
+    file_sha256: "1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6",
 };
 
 #[cfg(any(
@@ -141,7 +161,7 @@ impl Asset {
 }
 
 pub fn assets() -> Vec<Asset> {
-    std::iter::once(MODEL).chain(RUNTIME).collect()
+    [MODEL, LAMA].into_iter().chain(RUNTIME).collect()
 }
 
 pub fn find(id: &str) -> Option<Asset> {

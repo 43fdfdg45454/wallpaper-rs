@@ -52,7 +52,7 @@ pub struct Estimator {
     _environment: Environment,
 }
 
-fn text(e: impl std::fmt::Display) -> anyhow::Error {
+pub(crate) fn text(e: impl std::fmt::Display) -> anyhow::Error {
     anyhow!("{e}")
 }
 
@@ -79,39 +79,55 @@ fn environment(libraries: &[PathBuf]) -> Result<Environment> {
     Ok(SHARED.get_or_init(|| built).clone())
 }
 
+pub(crate) struct Opened {
+    pub(crate) session: Session,
+    pub(crate) device: Device,
+    pub(crate) environment: Environment,
+}
+
+pub(crate) fn open_session(
+    model: &Path,
+    libraries: &[PathBuf],
+    threads: usize,
+    device: Device,
+) -> Result<Opened> {
+    let environment = environment(libraries)?;
+    let session = |gpu: bool| -> Result<Session> {
+        let cpu = ort::ep::CPU::default().with_arena_allocator(false).build();
+        let cuda = gpu.then(|| ort::ep::CUDA::default().build().error_on_failure());
+        let providers: Vec<_> = cuda.into_iter().chain([cpu]).collect();
+        Session::builder(&environment)
+            .map_err(text)?
+            .with_execution_providers(providers)
+            .map_err(text)?
+            .with_intra_threads(threads)
+            .map_err(text)?
+            .with_memory_pattern(false)
+            .map_err(text)?
+            .commit_from_file(model)
+            .map_err(text)
+    };
+    let cuda = device != Device::Cpu && ort::ep::CUDA::is_available().unwrap_or(false);
+    let (session, device) = match (device, cuda) {
+        (Device::Cuda, false) => {
+            bail!("this ONNX Runtime cannot use CUDA; give one built with CUDA in ORT_DYLIB_PATH")
+        }
+        (Device::Cuda, true) => (session(true).context("cannot run the model with CUDA")?, Device::Cuda),
+        (_, true) => match session(true) {
+            Ok(session) => (session, Device::Cuda),
+            Err(e) => {
+                eprintln!("the model runs on the processor: {e:#}");
+                (session(false)?, Device::Cpu)
+            }
+        },
+        _ => (session(false)?, Device::Cpu),
+    };
+    Ok(Opened { session, device, environment })
+}
+
 impl Estimator {
     pub fn open(model: &Path, libraries: &[PathBuf], threads: usize, device: Device) -> Result<Self> {
-        let environment = environment(libraries)?;
-        let session = |gpu: bool| -> Result<Session> {
-            let cpu = ort::ep::CPU::default().with_arena_allocator(false).build();
-            let cuda = gpu.then(|| ort::ep::CUDA::default().build().error_on_failure());
-            let providers: Vec<_> = cuda.into_iter().chain([cpu]).collect();
-            Session::builder(&environment)
-                .map_err(text)?
-                .with_execution_providers(providers)
-                .map_err(text)?
-                .with_intra_threads(threads)
-                .map_err(text)?
-                .with_memory_pattern(false)
-                .map_err(text)?
-                .commit_from_file(model)
-                .map_err(text)
-        };
-        let cuda = device != Device::Cpu && ort::ep::CUDA::is_available().unwrap_or(false);
-        let (session, device) = match (device, cuda) {
-            (Device::Cuda, false) => {
-                bail!("this ONNX Runtime cannot use CUDA; give one built with CUDA in ORT_DYLIB_PATH")
-            }
-            (Device::Cuda, true) => (session(true).context("cannot run the model with CUDA")?, Device::Cuda),
-            (_, true) => match session(true) {
-                Ok(session) => (session, Device::Cuda),
-                Err(e) => {
-                    eprintln!("the model runs on the processor: {e:#}");
-                    (session(false)?, Device::Cpu)
-                }
-            },
-            _ => (session(false)?, Device::Cpu),
-        };
+        let Opened { session, device, environment } = open_session(model, libraries, threads, device)?;
         Ok(Self { session, device, _environment: environment })
     }
 

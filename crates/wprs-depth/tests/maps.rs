@@ -46,16 +46,23 @@ fn adjustments_remap_dilate_and_smooth() {
 #[test]
 fn the_manifest_pins_permissive_files_on_github() {
     use wprs_depth::models::{assets, find};
-    use wprs_depth::{Asset, MODEL, RUNTIME};
+    use wprs_depth::{Asset, LAMA, MODEL, RUNTIME};
     for asset in assets() {
-        assert!(!asset.urls.is_empty() && asset.urls.iter().all(|u| u.starts_with("https://github.com/")));
+        let host = if asset.id == LAMA.id { "huggingface.co" } else { "github.com" };
+        assert!(
+            !asset.urls.is_empty() && asset.urls.iter().all(|u| u.starts_with(&format!("https://{host}/")))
+        );
         assert!(asset.sha256.len() == 64 && asset.file_sha256.len() == 64 && asset.bytes > 1 << 20);
         assert!(
             ["Apache-2.0", "MIT"].contains(&asset.license)
                 && asset.license_url.starts_with("https://github.com/")
         );
-        assert_eq!((find(asset.id), asset.hosts().as_str()), (Some(asset), "github.com"));
+        assert_eq!((find(asset.id), asset.hosts().as_str()), (Some(asset), host));
     }
+    assert_eq!((LAMA.bytes, LAMA.urls.len(), LAMA.kind), (208_044_816, 2, wprs_depth::Part::Inpaint));
+    assert!(LAMA.urls[0].contains("/resolve/c3c0c9e468934d62e79c329e35d82dd09ff8c444/lama_fp32.onnx"));
+    assert!(LAMA.license_text.contains("Apache License\n                           Version 2.0"));
+    assert!(LAMA.notice().contains(LAMA.sha256) && LAMA.archive() == LAMA.file);
     assert_eq!((MODEL.bytes, MODEL.urls.len()), (99_092_268, 1));
     assert!(MODEL.license_text.contains("Apache License\n                           Version 2.0"));
     assert!(RUNTIME.is_none_or(|r| r.license_text.starts_with("MIT License") && r.license == "MIT"));

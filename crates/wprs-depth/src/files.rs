@@ -1,7 +1,7 @@
 use crate::Map;
 use anyhow::{Context, Result, ensure};
 use image::codecs::png::PngEncoder;
-use image::{ExtendedColorType, ImageEncoder, ImageReader, Limits};
+use image::{ExtendedColorType, ImageEncoder, ImageReader, Limits, RgbImage};
 use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use std::os::unix::fs::DirBuilderExt;
@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 const MAX_EDGE: u32 = 8192;
+const PICTURE_EDGE: u32 = 2048;
 const MAX_BYTES: u64 = 256 << 20;
 const STALE: Duration = Duration::from_secs(3600);
 
@@ -35,7 +36,15 @@ pub(crate) fn sweep(dir: &Path, prefixes: &[&str]) {
     }
 }
 
+pub(crate) fn hashed(sha256: &str) -> Option<&str> {
+    (sha256.len() == 64 && sha256.bytes().all(|b| b.is_ascii_hexdigit())).then_some(sha256)
+}
+
 pub fn read(path: &Path) -> Result<Map> {
+    Ok(read_png(path)?.into_luma16())
+}
+
+pub(crate) fn read_png(path: &Path) -> Result<image::DynamicImage> {
     let mut reader = ImageReader::open(path)
         .with_context(|| format!("cannot open {}", path.display()))?
         .with_guessed_format()?;
@@ -43,8 +52,7 @@ pub fn read(path: &Path) -> Result<Map> {
     (limits.max_image_width, limits.max_image_height, limits.max_alloc) =
         (Some(MAX_EDGE), Some(MAX_EDGE), Some(MAX_BYTES));
     reader.limits(limits);
-    let decoded = reader.decode().with_context(|| format!("{} is not a picture", path.display()))?;
-    Ok(decoded.into_luma16())
+    reader.decode().with_context(|| format!("{} is not a picture", path.display()))
 }
 
 pub fn shape(image: &Path) -> Result<(u32, u32)> {
@@ -81,4 +89,18 @@ pub fn sha256(path: &Path) -> std::io::Result<String> {
     let mut hash = Sha256::new();
     feed(&mut hash, std::fs::File::open(path)?)?;
     Ok(hash.finalize().iter().map(|b| format!("{b:02x}")).collect())
+}
+
+pub fn decode(path: &Path) -> Result<RgbImage> {
+    let decoded = wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits());
+    let refused = || format!("{} is not a picture", path.display());
+    let Ok((mut image, orientation)) = decoded else {
+        let image = wprs_render::decode_image(path, PICTURE_EDGE).with_context(refused)?;
+        return Ok(image::DynamicImage::ImageRgba8(image).into_rgb8());
+    };
+    if image.width().max(image.height()) > PICTURE_EDGE {
+        image = image.thumbnail(PICTURE_EDGE, PICTURE_EDGE);
+    }
+    image.apply_orientation(orientation);
+    Ok(image.into_rgb8())
 }

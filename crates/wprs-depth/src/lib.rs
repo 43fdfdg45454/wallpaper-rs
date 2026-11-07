@@ -1,8 +1,13 @@
+mod build;
 #[cfg(feature = "fetch")]
 mod fetch;
 mod files;
+mod fill;
+mod guided;
 #[cfg(feature = "infer")]
 mod infer;
+#[cfg(feature = "infer")]
+mod inpaint;
 #[cfg(feature = "fetch")]
 mod install;
 #[cfg(feature = "infer")]
@@ -10,19 +15,30 @@ mod made;
 pub mod models;
 mod normals;
 mod process;
+mod split;
+mod stack;
 mod store;
+mod windows;
 
+pub use build::{EDGE, MARGIN, layers, reach};
 #[cfg(feature = "fetch")]
 pub use fetch::{AGENT, Cancelled, allowed, download};
-pub use files::{beside, read, sha256, shape, write};
+pub use files::{beside, decode, read, sha256, shape, write};
+pub use fill::{push_pull, simple};
+pub use guided::{EPSILON, RADIUS, filter, planes, refine};
 #[cfg(feature = "infer")]
 pub use infer::{Device, Estimator, Stage, Stopped, TELEMETRY, background, threads};
 #[cfg(feature = "infer")]
-pub use made::{Bench, bench, decode, generate, generate_until};
-pub use models::{Asset, MODEL, Part, RUNTIME};
+pub use inpaint::Inpainter;
+#[cfg(feature = "infer")]
+pub use made::{Bench, bench, generate, generate_until};
+pub use models::{Asset, LAMA, MODEL, Part, RUNTIME};
 pub use normals::{MAX_BLUR, MAX_STRENGTH, normals, relief, sphere};
 pub use process::{adjust, coloured, input_size, normalize, shrink, tensor};
+pub use split::{Split, distance, indices, mask, soft, split};
+pub use stack::{Band, Info, Layers, SUFFIX, Settings, load, save};
 pub use store::CACHE_BYTES;
+pub use windows::{Inpaint, lama, plan};
 
 use std::path::{Path, PathBuf};
 
@@ -47,7 +63,7 @@ impl Places {
     }
 
     pub fn file(&self, asset: &Asset) -> PathBuf {
-        let kind = if asset.kind == Part::Model { "models" } else { "runtime" };
+        let kind = if asset.kind == Part::Runtime { "runtime" } else { "models" };
         self.data.join(kind).join(asset.id).join(asset.file)
     }
 

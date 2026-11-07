@@ -1,3 +1,4 @@
+use crate::files::hashed;
 use crate::{Map, Places, adjust, beside, read, shape, shrink, write};
 use anyhow::{Context, Result, ensure};
 use std::path::{Path, PathBuf};
@@ -6,10 +7,6 @@ use wprs_core::edit::Depth;
 
 pub const CACHE_BYTES: u64 = 256 << 20;
 const MAX_ASPECT: f64 = 0.02;
-
-fn hashed(sha256: &str) -> Option<&str> {
-    (sha256.len() == 64 && sha256.bytes().all(|b| b.is_ascii_hexdigit())).then_some(sha256)
-}
 
 fn modified(path: &Path) -> Option<SystemTime> {
     std::fs::metadata(path).ok().filter(|m| m.is_file())?.modified().ok()
@@ -77,6 +74,7 @@ impl Places {
                 break;
             }
             if std::fs::remove_file(&path).is_ok() {
+                crate::stack::unjson(&path);
                 (total, freed) = (total - len, freed + len);
             }
         }

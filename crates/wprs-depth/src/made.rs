@@ -1,32 +1,15 @@
 use crate::infer::{Device, Estimator, Stage, threads};
-use crate::{CACHE_BYTES, MODEL, Places, write};
+use crate::{CACHE_BYTES, MODEL, Places, decode, write};
 use anyhow::{Context, Result, ensure};
-use image::{ImageReader, RgbImage};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 use wprs_core::edit::Depth;
 
-const MAX_EDGE: u32 = 2048;
-
 pub struct Bench {
     pub device: Device,
     pub load: Duration,
     pub runs: Vec<Duration>,
-}
-
-pub fn decode(path: &Path) -> Result<RgbImage> {
-    let decoded = wprs_render::decode_unoriented(ImageReader::open(path)?, wprs_render::picture_limits());
-    let refused = || format!("{} is not a picture", path.display());
-    let Ok((mut image, orientation)) = decoded else {
-        let image = wprs_render::decode_image(path, MAX_EDGE).with_context(refused)?;
-        return Ok(image::DynamicImage::ImageRgba8(image).into_rgb8());
-    };
-    if image.width().max(image.height()) > MAX_EDGE {
-        image = image.thumbnail(MAX_EDGE, MAX_EDGE);
-    }
-    image.apply_orientation(orientation);
-    Ok(image.into_rgb8())
 }
 
 pub fn bench(places: &Places, image: &Path, depth: &Depth, device: Device, runs: usize) -> Result<Bench> {
