@@ -75,6 +75,7 @@ Timer {
         ticks = 0;
         if (++step < steps.length)
             return steps[step][0]();
+        running = false;
         stall.grabToImage(shot => {
                 if (shot.image === undefined || stall.width <= 0)
                     finish("the page did not draw");
