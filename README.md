@@ -509,7 +509,12 @@ está en lugar de una copia de la capa, una malla oculta que da su máscara a ot
 tamaño se lee sin dibujarla aparte, y los efectos que se funden en una pasada siguen fundidos cuando
 el nivel quita uno de en medio. En el teléfono de pruebas (60 Hz, pantalla apagada) una escena con
 una imagen y dos olas bajó de 15,5 a 9,9 ms por fotograma en Q0 y otra con una malla animada de 16,9
-a 15,1 ms en Q2. El motor de la escena sigue vivo
+a 15,1 ms en Q2. Cada fotograma llega a la GPU en un solo envío, con las mallas posadas, los moldes,
+los modelos 3D y las partículas dentro, así que el tiempo que miden los niveles los incluye; las
+mallas de una misma pose se posan juntas en una pasada y las capas en modo exclusión se mezclan sin
+copiar el lienzo. Con eso la escena de la malla animada pasó de 50 a 57 fotogramas por segundo
+mostrados en Q0 y la de las dos olas de 57 a 59. Las capas en modo aclarar u oscurecer siguen
+copiando lo que tienen debajo y cortando la pasada del lienzo. El motor de la escena sigue vivo
 cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Las capas con
 paralaje de una escena siguen la inclinación del teléfono con los mismos sensores que el paralaje de
 las fotos, aunque la escena no lo pida con `gyro`, y sin sensores, el paso de páginas del lanzador;

@@ -358,6 +358,18 @@ of being drawn into a target for that effect. The picture is then resampled once
 which changes only the softness of its edges. Effects that fuse into one pass (`fs_chain`) stay
 fused when the quality level leaves out an effect between them, on every GPU.
 
+A frame reaches the GPU in one submission: posed meshes, molds, 3D models and the particle
+simulation are recorded with the passes of the frame instead of being sent on their own, so the
+frame time that the quality levels and `wprs-ctl scene bench` read covers them too. Mesh layers
+that share a rig, a pose, a size and the size of their target, without relief, clipped parts or a
+video, are posed together in one pass with one target each, up to four. Layers that blend with
+`add`, `multiply`, `screen` or `exclusion` use the blend unit of the GPU; every other mode
+(`lighten`, `darken`, `overlay` and the rest) reads what lies under the layer from a copy, which
+ends the pass of its target and starts another, about a millisecond on a phone for each such layer
+at the top of the canvas. No fixed blend gives `lighten` or `darken` exactly for a partly
+transparent layer, so an author counting passes on phones gets more from `add` or `screen` when the
+look allows it.
+
 On battery the level drops one step, which lowers resolution and effects, not the rate: the rate
 follows the display up to 60 frames per second unless the user chose a rate (`playback.max_fps`,
 on the phone its rate on battery, 60 by default), which then holds as on mains power; power saving
