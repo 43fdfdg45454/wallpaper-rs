@@ -37,6 +37,7 @@ private val QUALITIES = listOf(
     "q3" to R.string.quality_q3, "q2" to R.string.quality_q2, "q1" to R.string.quality_q1, "q0" to R.string.quality_q0,
 )
 private val HDRS = listOf("auto" to R.string.hdr_auto, "on" to R.string.hdr_on, "off" to R.string.hdr_off)
+private val FILLS = listOf("simple" to R.string.fill_simple, "lama" to R.string.fill_lama, "off" to R.string.fill_off)
 private val CONVERTS = listOf("auto" to R.string.convert_auto, "keep" to R.string.convert_keep, "off" to R.string.never)
 private val CHOICES = listOf(
     Triple(R.string.fit, "fit", FIT),
@@ -46,6 +47,7 @@ private val CHOICES = listOf(
     Triple(R.string.backend, "backend", BACKENDS),
     Triple(R.string.scene_quality, "playback.quality", QUALITIES),
     Triple(R.string.hdr_output, "playback.hdr", HDRS),
+    Triple(R.string.parallax_fill, "parallax.fill", FILLS),
     Triple(R.string.convert_videos, Convert.SETTING, CONVERTS),
 )
 private val TOGGLES = listOf(
@@ -61,7 +63,7 @@ private val TOGGLES = listOf(
     Triple(R.string.show_mature, Unveil.KEY, "true" to "false"),
 )
 private val KEYS = CHOICES.map { it.second } + TOGGLES.map { it.second }
-private val NOTICES = listOf("onnxruntime", "onnxruntime-third-party-notices", "depth-anything-v2")
+private val NOTICES = listOf("onnxruntime", "onnxruntime-third-party-notices", "depth-anything-v2", "lama")
 
 @Composable
 fun Settings(main: Main) {
@@ -96,6 +98,7 @@ fun Settings(main: Main) {
             val texts = options.map { (value, text) -> value to stringResource(text, value.toIntOrNull() ?: 0) }
             Choices(stringResource(label), texts, values[key].orEmpty()) { set(key, it) }
             if (key == "playback.quality") CostWarning(report)
+            if (key == "parallax.fill") LamaNote(main, values[key], changes)
         }
         items(TOGGLES) { (label, key, states) ->
             val (on, off) = states

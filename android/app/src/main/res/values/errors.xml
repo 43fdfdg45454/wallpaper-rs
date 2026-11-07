@@ -116,4 +116,5 @@
     <string name="error_android_no_release">No release of %1$s matches %2$s</string>
     <string name="error_android_convert_item">%1$s is not a video of the library</string>
     <string name="error_android_convert_failed">The converted video of %1$s cannot be read</string>
+    <string name="error_android_layers_off">The fill is off: pictures keep the single image warp</string>
 </resources>

@@ -63,6 +63,14 @@ fun Relief(main: Main, uid: String, state: JSONObject) {
         else -> if (moving) R.string.depth_none else R.string.depth_missing
     }
     Note(stringResource(map))
+    if (moving && state.optBoolean("map")) {
+        Note(stringResource(if (state.optBoolean("layers")) R.string.layers_ready else R.string.layers_none))
+        if (state.optJSONObject("fill")?.optString("used")?.isNotEmpty() == true) {
+            TextButton({ Depth.layers(uid) }, Modifier.padding(horizontal = 8.dp), enabled = busy == null) {
+                Text(stringResource(R.string.make_layers))
+            }
+        }
+    }
     Choices(
         stringResource(R.string.depth_device),
         listOf("auto" to stringResource(R.string.depth_device_auto), "cpu" to stringResource(R.string.depth_device_cpu)),

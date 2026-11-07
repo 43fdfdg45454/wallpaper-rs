@@ -7,6 +7,7 @@ use wprs_core::Fit;
 use wprs_core::edit::{self, Depth, Edit, Parallax, Source};
 use wprs_depth::Places;
 
+pub(crate) mod layers;
 pub(crate) mod maps;
 pub(crate) mod model;
 
@@ -26,6 +27,14 @@ enum Request {
     Model,
     Install,
     Forget,
+    Lama,
+    InstallLama,
+    ForgetLama,
+    Layers {
+        uid: String,
+        library: Option<PathBuf>,
+        device: Option<String>,
+    },
     Make {
         uid: String,
         library: Option<PathBuf>,
@@ -80,6 +89,7 @@ enum Request {
 pub(crate) struct Raise {
     pub(crate) parallax: Parallax,
     pub(crate) map: Option<(PathBuf, SystemTime)>,
+    pub(crate) deck: Option<PathBuf>,
     pub(crate) depth: Depth,
 }
 

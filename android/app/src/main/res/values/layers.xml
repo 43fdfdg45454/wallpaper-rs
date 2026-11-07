@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="parallax_fill">Fill behind near objects</string>
+    <string name="fill_simple">Simple</string>
+    <string name="fill_lama">LaMa</string>
+    <string name="fill_off">Off</string>
+    <string name="fill_note">Depth parallax fills what a near object uncovers. LaMa fills it better but uses more battery and memory, takes minutes for each picture and never runs on battery saver, which uses the simple fill instead. Off keeps the single image warp.</string>
+    <string name="lama_missing">LaMa is not installed: the simple fill is used until you download it.</string>
+    <string name="download_lama">Download LaMa</string>
+    <string name="delete_lama">Delete LaMa</string>
+    <string name="lama_model">LaMa model (%s)</string>
+    <string name="lama_terms">%1$s (%2$s) comes from %3$s under the %4$s license (%5$s). It then runs on this phone and your pictures never leave it.</string>
+    <string name="layers_ready">Depth layers ready: what a near object uncovers shows filled background</string>
+    <string name="layers_none">No depth layers yet: the picture moves as one image</string>
+    <string name="make_layers">Build the depth layers</string>
+</resources>

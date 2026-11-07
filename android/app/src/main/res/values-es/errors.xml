@@ -116,4 +116,5 @@
     <string name="error_android_no_release">Ninguna versión de %1$s cumple %2$s</string>
     <string name="error_android_convert_item">%1$s no es un vídeo de la biblioteca</string>
     <string name="error_android_convert_failed">No se puede leer el vídeo convertido de %1$s</string>
+    <string name="error_android_layers_off">El relleno está apagado: las imágenes conservan la deformación de una sola imagen</string>
 </resources>

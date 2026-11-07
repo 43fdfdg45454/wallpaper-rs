@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="parallax_fill">Relleno detrás de lo cercano</string>
+    <string name="fill_simple">Simple</string>
+    <string name="fill_lama">LaMa</string>
+    <string name="fill_off">Apagado</string>
+    <string name="fill_note">El paralaje de profundidad rellena lo que descubre un objeto cercano. LaMa lo rellena mejor pero gasta más batería y memoria, tarda minutos por imagen y nunca funciona con el ahorro de batería, que usa el relleno simple. Apagado deja la deformación de una sola imagen.</string>
+    <string name="lama_missing">LaMa no está instalado: se usa el relleno simple hasta que lo descargues.</string>
+    <string name="download_lama">Descargar LaMa</string>
+    <string name="delete_lama">Borrar LaMa</string>
+    <string name="lama_model">Modelo LaMa (%s)</string>
+    <string name="lama_terms">%1$s (%2$s) se descarga de %3$s con la licencia %4$s (%5$s). Después funciona en el teléfono y tus fotos no salen de él.</string>
+    <string name="layers_ready">Capas de profundidad listas: lo que descubre un objeto cercano muestra fondo rellenado</string>
+    <string name="layers_none">Todavía no hay capas de profundidad: la imagen se mueve como una sola</string>
+    <string name="make_layers">Construir las capas de profundidad</string>
+</resources>

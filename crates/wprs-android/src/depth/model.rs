@@ -5,7 +5,7 @@ use std::fs::{self, File, Permissions};
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use wprs_depth::{Asset, MODEL, Part, Places, RUNTIME};
+use wprs_depth::{Asset, LAMA, MODEL, Part, Places, RUNTIME};
 
 const AGENT: &str = concat!("wallpaper-rs/", env!("CARGO_PKG_VERSION"));
 const MAX_LIBRARY: u64 = 256 << 20;
@@ -14,9 +14,13 @@ pub(crate) fn assets() -> Vec<Asset> {
     std::iter::once(MODEL).chain(RUNTIME).collect()
 }
 
-fn needed(places: &Places) -> Vec<Asset> {
+pub(crate) fn lama() -> Vec<Asset> {
+    std::iter::once(LAMA).chain(RUNTIME).collect()
+}
+
+fn needed(places: &Places, assets: Vec<Asset>) -> Vec<Asset> {
     let found = !places.library(None).is_empty();
-    assets()
+    assets
         .into_iter()
         .filter(|a| places.installed(a).is_none() && !(a.kind == Part::Runtime && found))
         .collect()
@@ -38,8 +42,8 @@ fn joined(assets: &[&Asset], field: impl Fn(&Asset) -> String) -> String {
     fields.collect::<Vec<_>>().join(", ")
 }
 
-pub(crate) fn shown(places: &Places) -> Value {
-    let (all, missing) = (assets(), needed(places));
+pub(crate) fn shown(places: &Places, all: Vec<Asset>) -> Value {
+    let missing = needed(places, all.clone());
     let missing: Vec<&Asset> = missing.iter().collect();
     let listed = if missing.is_empty() { all.iter().collect() } else { missing.clone() };
     let files: Vec<Value> = missing
@@ -92,13 +96,18 @@ fn settle(places: &Places, asset: &Asset) -> Result<(), Error> {
     Ok(fs::write(folder.join("LICENSE.txt"), asset.license_text)?)
 }
 
-pub(crate) fn install(places: &Places) -> Result<Value, Error> {
+pub(crate) fn install(places: &Places, wanted: Vec<Asset>) -> Result<Value, Error> {
     if !settings::downloads() {
-        assets().iter().for_each(|a| drop(fs::remove_file(part(places, a))));
+        wanted.iter().for_each(|a| drop(fs::remove_file(part(places, a))));
         return Err(said("android.download_off", "downloading the model is turned off", &[]));
     }
-    needed(places).iter().try_for_each(|asset| settle(places, asset))?;
+    needed(places, wanted).iter().try_for_each(|asset| settle(places, asset))?;
     Ok(Value::Null)
+}
+
+pub(crate) fn forget_lama(places: &Places) -> bool {
+    let dir = places.file(&LAMA).parent().map(Path::to_path_buf);
+    dir.is_some_and(|dir| fs::remove_dir_all(dir).is_ok())
 }
 
 pub(crate) fn forget(places: &Places) -> bool {

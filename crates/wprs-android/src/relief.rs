@@ -62,8 +62,15 @@ pub(crate) fn raise(
         let flat = map.is_none();
         let map = map.unwrap_or_else(|| DepthMap::from_pixel(1, 1, Luma([u16::MAX])));
         let turned = key.3.clone().map(|geometry| Edit { geometry, ..Edit::default() });
-        let depth =
-            gpu.renderer.upload_depth(&map, turned.as_ref()).inspect_err(|e| log::warn!("{e}")).ok()?;
+        let deck = key.2.deck.as_ref().filter(|_| key.3.is_none() && !flat);
+        let layers = deck.and_then(|path| wprs_depth::load(path).ok().flatten());
+        let stack = layers.and_then(|l| gpu.renderer.upload_layers(&l.images, &l.info.depths).ok());
+        let depth = match stack {
+            Some(stack) => stack,
+            None => {
+                gpu.renderer.upload_depth(&map, turned.as_ref()).inspect_err(|e| log::warn!("{e}")).ok()?
+            }
+        };
         Some(Raised { key, depth, flat, motion: motion.unwrap_or_default() })
     });
     true

@@ -35,6 +35,20 @@ object Depth {
         depth("make", "uid" to uid, "device" to device.value)
     }
 
+    fun layers(uid: String) = run(uid) { depth("layers", "uid" to uid, "device" to device.value) }
+
+    fun fetchLama() = run(LAMA) {
+        val model = depth("lama") as JSONObject
+        if (!model.getBoolean("installed")) {
+            if (!model.getBoolean("allowed")) throw Refused("downloading the model is turned off", "android.download_off")
+            val files = model.getJSONArray("files")
+            repeat(files.length()) { fetch(files.getJSONObject(it)) }
+            progress.floatValue = -1f
+            if (cancelled) return@run
+            depth("install_lama")
+        }
+    }
+
     fun cancel() {
         cancelled = true
         Thread { runCatching { depth("cancel") } }.start()
@@ -107,5 +121,6 @@ object Depth {
         }
     }
 
+    const val LAMA = "lama"
     private const val TIMEOUT_MS = 60_000
 }

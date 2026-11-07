@@ -29,7 +29,8 @@ pub(crate) fn stamped(image: &Path, edit: &Edit) -> Option<(PathBuf, SystemTime)
 pub(crate) fn raised(image: &Path) -> Option<Raise> {
     let edit = loaded(image).ok()?;
     let parallax = edit.moving()?.clone();
-    Some(Raise { parallax, map: stamped(image, &edit), depth: edit.depth.unwrap_or_default() })
+    let deck = super::layers::path(image, &edit);
+    Some(Raise { parallax, map: stamped(image, &edit), deck, depth: edit.depth.unwrap_or_default() })
 }
 
 pub(crate) fn masking(map: Option<&Path>, edit: &Edit) -> Option<Map> {
@@ -67,6 +68,7 @@ pub(crate) fn look(image: &Path, edit: &Edit, colour: bool) -> Result<PathBuf, E
 pub(crate) fn forget(image: &Path) -> Result<(), Error> {
     let (edit, places) = (loaded(image)?, places()?);
     let sha = &edit.source.sha256;
+    places.unlayer(sha);
     let maps = [places.own(sha), places.generated(sha, &edit.depth.unwrap_or_default()), Some(beside(image))];
     maps.into_iter().flatten().for_each(|map| drop(fs::remove_file(map)));
     edit::remove(image, &store::dir()?.join(EDITS)).map(drop).map_err(Error::Said)

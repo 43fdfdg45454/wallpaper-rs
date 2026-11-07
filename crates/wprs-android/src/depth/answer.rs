@@ -31,9 +31,21 @@ pub(super) fn answer(request: Request) -> Result<Value, Error> {
     let places = places()?;
     let image = |uid: &str| library::with(|lib| Ok(crate::pack::media(&lib.item(uid)?)?.0));
     Ok(match request {
-        Request::Model => super::model::shown(&places),
-        Request::Install => super::model::install(&places)?,
+        Request::Model => super::model::shown(&places, super::model::assets()),
+        Request::Install => super::model::install(&places, super::model::assets())?,
         Request::Forget => json!(super::model::forget(&places)),
+        Request::Lama => super::model::shown(&places, super::model::lama()),
+        Request::InstallLama => super::model::install(&places, super::model::lama())?,
+        Request::ForgetLama => json!(super::model::forget_lama(&places)),
+        Request::Layers { uid, library, device } => {
+            let device: Device = device.as_deref().unwrap_or("cpu").parse()?;
+            let image = image(&uid)?;
+            STOP.store(false, Relaxed);
+            wprs_depth::background();
+            super::layers::build(&image, &edited(&image)?, library.as_deref(), device)?;
+            store::changed();
+            Value::Null
+        }
         Request::Make { uid, library, device } => {
             let device: Device = device.as_deref().unwrap_or("cpu").parse()?;
             super::model::ready(&places)?;
@@ -49,7 +61,8 @@ pub(super) fn answer(request: Request) -> Result<Value, Error> {
                 Err(said("android.depth_cancelled", "the depth map was cancelled", &[]))?;
             }
             made?;
-            moving(&image)?
+            moving(&image)?;
+            super::layers::best(&image, library.as_deref(), device)
         }
         Request::Cancel => Value::Null,
         Request::Look { uid, colour } => {
@@ -59,6 +72,7 @@ pub(super) fn answer(request: Request) -> Result<Value, Error> {
         Request::Unmap { uid } => {
             let image = image(&uid)?;
             let edit = edited(&image)?;
+            places.unlayer(&edit.source.sha256);
             let removed = places.unmap(&image, &edit.source.sha256, &edit.depth.unwrap_or_default());
             store::changed();
             json!(removed)
@@ -74,7 +88,8 @@ pub(super) fn answer(request: Request) -> Result<Value, Error> {
             let mut copy = tempfile::NamedTempFile::new_in(store::dir()?)?;
             std::io::copy(&mut source, &mut copy)?;
             places.import(copy.path(), &image, &edited(&image)?.source.sha256)?;
-            moving(&image)?
+            moving(&image)?;
+            super::layers::best(&image, None, Device::Cpu)
         }
         Request::Item { uid } => {
             let image = image(&uid)?;
@@ -83,7 +98,8 @@ pub(super) fn answer(request: Request) -> Result<Value, Error> {
             let levels = edit.depth.clone().unwrap_or_default();
             json!({ "parallax": edit.moving().is_some(), "map": found(&image, &edit).is_some(),
                 "near": levels.near, "far": levels.far, "gamma": levels.gamma, "smooth": levels.smooth, "dilate": levels.dilate,
-                "strength": p.strength, "focus": p.focus, "fit": edit.fit, "base": edit.geometry.crop,
+                "strength": p.strength, "focus": p.focus, "layers": super::layers::path(&image, &edit).is_some(),
+                "fill": super::layers::shown(), "fit": edit.fit, "base": edit.geometry.crop,
                 "crop": framing::draft(&uid).or_else(|| framing::own(&edit)), "paused": Power::now().stills(),
                 "changed": super::maps::changed(&image, &edit) })
         }

@@ -6,6 +6,7 @@ use std::os::fd::AsRawFd;
 use std::path::Path;
 
 mod checks;
+mod layered;
 
 pub(super) use checks::heif_photos_get_maps;
 use checks::masked;
@@ -74,6 +75,7 @@ pub(super) fn relief(uid: &str) {
     looks(uid, &image, &deep);
     levels(uid, &image, &deep);
     masked(uid, &image);
+    layered::layered(uid, &image, &deep);
     assert_eq!(deep(json!({ "op": "unmap", "uid": uid })), json!(1));
     assert_eq!(
         (state(), deep(json!({ "op": "unmap", "uid": uid }))),
