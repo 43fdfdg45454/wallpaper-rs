@@ -44,6 +44,7 @@ pub struct Config {
     pub repos: Repos,
     pub models: Models,
     pub media: Media,
+    pub parallax: crate::parallax::Parallax,
     pub rgb: crate::rgb::Rgb,
     #[serde(skip_serializing_if = "Layout::is_default")]
     pub layout: Layout,
@@ -67,6 +68,7 @@ impl Config {
     pub fn normalize(&mut self) -> Vec<String> {
         let before = self.options();
         self.playback = self.playback.sanitized();
+        self.parallax = self.parallax.sanitized();
         self.rgb = std::mem::take(&mut self.rgb).sanitized();
         self.transition.duration_ms = self.transition.duration_ms.min(Transition::MAX_MS);
         self.library.thumb_cache_mb = self.library.thumb_cache_mb.clamp(Library::MIN_MB, Library::MAX_MB);
@@ -147,18 +149,6 @@ impl Config {
 
     pub fn filter(&self, output: &str) -> Filter {
         self.pick(output, |o| o.filter).unwrap_or_default()
-    }
-
-    pub fn quality(&self, output: &str) -> QualityChoice {
-        self.own_quality(output).unwrap_or(self.playback.quality)
-    }
-
-    pub fn own_quality(&self, output: &str) -> Option<QualityChoice> {
-        self.outputs.get(output).filter(|_| !output.is_empty()).and_then(|o| o.quality)
-    }
-
-    pub fn own_qualities(&self) -> BTreeMap<String, String> {
-        self.outputs.iter().filter_map(|(name, o)| Some((name.clone(), o.quality?.as_str().into()))).collect()
     }
 
     pub fn set_filter(&mut self, output: &str, filter: Filter) {

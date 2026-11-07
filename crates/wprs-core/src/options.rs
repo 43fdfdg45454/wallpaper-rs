@@ -4,8 +4,8 @@ use crate::quality::QualityChoice;
 use crate::settings::fps;
 use std::collections::BTreeMap;
 
-const OPTION_SECTIONS: [&str; 8] =
-    ["playback", "transition", "pause", "library", "repos", "models", "rgb", "media"];
+const OPTION_SECTIONS: [&str; 9] =
+    ["playback", "transition", "pause", "library", "repos", "models", "rgb", "media", "parallax"];
 
 impl Config {
     pub fn options(&self) -> BTreeMap<String, toml::Value> {
@@ -65,6 +65,18 @@ impl Config {
         }
         *self = updated;
         Ok(())
+    }
+
+    pub fn quality(&self, output: &str) -> QualityChoice {
+        self.own_quality(output).unwrap_or(self.playback.quality)
+    }
+
+    pub fn own_quality(&self, output: &str) -> Option<QualityChoice> {
+        self.outputs.get(output).filter(|_| !output.is_empty()).and_then(|o| o.quality)
+    }
+
+    pub fn own_qualities(&self) -> BTreeMap<String, String> {
+        self.outputs.iter().filter_map(|(name, o)| Some((name.clone(), o.quality?.as_str().into()))).collect()
     }
 
     fn set_own_quality(&mut self, output: &str, value: &str) -> Result<(), String> {

@@ -16,7 +16,7 @@ const PARTS: [&str; 7] = ["geometry", "ops", "masks", "span", "depth", "parallax
 const EDIT_BYTES: usize = 64 << 10;
 pub const GPU: &str = "render.gpu";
 pub const QUALITY: &str = "playback.quality";
-pub const DEVICE_KEYS: [&str; 9] = [
+pub const DEVICE_KEYS: [&str; 10] = [
     "playback.volume",
     "playback.muted",
     "playback.software_parallax",
@@ -26,6 +26,7 @@ pub const DEVICE_KEYS: [&str; 9] = [
     QUALITY,
     wprs_core::LayerNamespace::KEY,
     "media.remote_covers",
+    wprs_core::Fill::KEY,
 ];
 
 type Lookup<'a> = &'a dyn Fn(&str, &str) -> Option<String>;

@@ -58,6 +58,8 @@ fn options() -> Vec<Field> {
         flag("playback.duck"),
         values(option(QualityChoice::KEY, FieldKind::Enum), &QualityChoice::WORDS),
         values(option(wprs_core::HdrChoice::KEY, FieldKind::Enum), &wprs_core::HdrChoice::WORDS),
+        values(option(wprs_core::Fill::KEY, FieldKind::Enum), &wprs_core::Fill::WORDS),
+        range(option("parallax.layers", FieldKind::Int), 4.0, 6.0, Some(1.0)),
         values(option("transition.kind", FieldKind::Enum), &["fade", "none"]),
         range(option("transition.duration_ms", FieldKind::Int), 0.0, 10_000.0, Some(1.0)),
         flag("pause.when_covered"),

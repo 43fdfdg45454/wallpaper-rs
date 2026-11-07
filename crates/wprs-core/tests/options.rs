@@ -1,5 +1,5 @@
 use std::time::Duration;
-use wprs_core::{Config, Playback};
+use wprs_core::{Config, Fill, Playback};
 
 #[test]
 fn settings_sections() {
@@ -22,7 +22,7 @@ fn settings_sections() {
 #[test]
 fn options_are_listed_and_validated() {
     let mut c = Config::default();
-    assert_eq!(c.options().len(), 29);
+    assert_eq!(c.options().len(), 31);
     assert!(!c.media.remote_covers && c.repos.vote_counts);
     c.set_option("media.remote_covers", "true").unwrap();
     assert!(c.media.remote_covers && c.set_option("media.remote_covers", "maybe").is_err());
@@ -43,6 +43,11 @@ fn options_are_listed_and_validated() {
     c.set_option("models.allow_download", "false").unwrap();
     c.set_option("playback.software_parallax", "true").unwrap();
     assert!(!c.models.allow_download && c.playback.sanitized().software_parallax);
+    assert_eq!((c.parallax.fill.as_str(), c.parallax.layers), (Fill::standard().as_str(), 5));
+    c.set_option("parallax.fill", "simple").unwrap();
+    c.set_option("parallax.layers", "6").unwrap();
+    assert_eq!((c.parallax.fill, c.parallax.layers), (Fill::Simple, 6));
+    assert!(toml::to_string(&c).unwrap().contains("[parallax]\nfill = \"simple\"\nlayers = 6"));
     c.set_option("layout.bezel_mm", "8.5").unwrap();
     assert!(toml::to_string(&c).unwrap().contains("[layout]\nbezel_mm = 8.5"));
     c.set_option("pause.on_battery", "false").unwrap();
@@ -68,6 +73,9 @@ fn options_are_listed_and_validated() {
         ("transition.kind", "spin"),
         ("pause.on_battery", "maybe"),
         ("default.image", "/x"),
+        ("parallax.fill", "gentle"),
+        ("parallax.layers", "3"),
+        ("parallax.layers", "7"),
         ("nope", "1"),
     ];
     invalid.iter().for_each(|(k, v)| assert!(c.set_option(k, v).is_err(), "{k} = {v}"));
