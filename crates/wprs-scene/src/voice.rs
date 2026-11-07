@@ -139,10 +139,17 @@ impl Runtime {
     }
 
     pub fn voices(&self) -> (Vec<Voice>, Wake) {
+        let mut voices = Vec::new();
+        let wake = self.voices_into(&mut voices);
+        (voices, wake)
+    }
+
+    pub fn voices_into(&self, voices: &mut Vec<Voice>) -> Wake {
         let (cx, lists, t) = (self.context(), &self.lists, self.time());
         let mut gates = self.gates.borrow_mut();
-        let mut voices = Vec::new();
-        for (i, s) in self.scene.sounds().enumerate() {
+        voices.clear();
+        let mut i = 0;
+        self.scene.each_sound(|s| {
             let mut voice = s.voice(&cx);
             let gate = &mut gates[i];
             *gate = match voice.play {
@@ -164,9 +171,12 @@ impl Runtime {
             }
             voice.play &= onset.is_some();
             voices.push(voice);
-        }
-        *self.played.heard.borrow_mut() = voices.iter().map(|v| v.play).collect();
-        (voices, cx.wake.get().min(self.cue_wake()))
+            i += 1;
+        });
+        let mut heard = self.played.heard.borrow_mut();
+        heard.clear();
+        heard.extend(voices.iter().map(|v| v.play));
+        cx.wake.get().min(self.cue_wake())
     }
 }
 

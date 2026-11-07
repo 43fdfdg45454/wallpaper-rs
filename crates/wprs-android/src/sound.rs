@@ -1,6 +1,7 @@
 use crate::pack::Pack;
 use bank::Bank;
 use out::Out;
+use played::Played;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 use wprs_core::settings::Playback;
@@ -11,6 +12,7 @@ mod bank;
 mod decode;
 mod feed;
 mod out;
+mod played;
 
 #[cfg(any(test, target_os = "android"))]
 pub(crate) use out::report;
@@ -62,21 +64,12 @@ pub(crate) fn property(runtime: &Runtime) -> f64 {
     runtime.props().get(VOLUME).and_then(serde_json::Value::as_f64).unwrap_or(100.0)
 }
 
-struct Played {
-    out: Out,
-    mix: Arc<Mutex<Mix>>,
-    fade: Duration,
-    playing: bool,
-    voices: Vec<Voice>,
-    synced: Instant,
-    quiet: Option<Instant>,
-}
-
 pub(crate) struct Sounds {
     pack: Arc<Pack>,
     bank: Bank,
     played: Option<Played>,
     failed: Option<Instant>,
+    voices: Vec<Voice>,
 }
 
 fn after(wake: Wake) -> Option<Duration> {
@@ -91,30 +84,9 @@ fn locked(mix: &Mutex<Mix>) -> MutexGuard<'_, Mix> {
     mix.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-impl Played {
-    fn retime(&mut self, voices: &[Voice], now: Instant) {
-        let mut mix = locked(&self.mix);
-        let heard = mix.frames.saturating_sub(self.out.latency()) as f64;
-        mix.set(voices, heard);
-        (self.voices, self.synced) = (voices.to_vec(), now);
-    }
-
-    fn hush(&mut self, silent: bool, now: Instant) -> bool {
-        self.quiet = silent.then(|| self.quiet.unwrap_or(now));
-        self.quiet.is_some_and(|at| at + self.fade <= now)
-    }
-
-    fn timers(&self, now: Instant) -> impl Iterator<Item = Duration> {
-        let resync = self.playing.then(|| self.synced + RESYNC);
-        let linger = if self.playing { Duration::ZERO } else { LINGER };
-        let quiet = self.quiet.map(|at| at + self.fade + linger);
-        resync.into_iter().chain(quiet).map(move |at| at.saturating_duration_since(now))
-    }
-}
-
 impl Sounds {
     pub(crate) fn new(pack: Arc<Pack>) -> Sounds {
-        Sounds { bank: Bank::new(&pack), pack, played: None, failed: None }
+        Sounds { bank: Bank::new(&pack), pack, played: None, failed: None, voices: Vec::new() }
     }
 
     pub(crate) fn sounding(&self) -> bool {
@@ -162,17 +134,31 @@ impl Sounds {
             }
             return None;
         }
-        let (voices, wake) = runtime.voices();
+        let mut voices = std::mem::take(&mut self.voices);
+        let wake = runtime.voices_into(&mut voices);
+        let next = self.followed(runtime, &voices, (wake, level), now);
+        self.voices = voices;
+        next
+    }
+
+    fn followed(
+        &mut self,
+        runtime: &Runtime,
+        voices: &[Voice],
+        at: (Wake, f32),
+        now: Instant,
+    ) -> Option<Duration> {
+        let (wake, level) = at;
         let heard = voices.iter().any(|v| v.play && v.volume > 0.0);
         if self.played.is_none() && heard {
-            self.start(runtime, &voices, now);
+            self.start(runtime, voices, now);
         }
         let retry = self.failed.map(|at| (at + RETRY).saturating_duration_since(now));
         let Some(played) = self.played.as_mut() else { return after(wake).into_iter().chain(retry).min() };
         let ended = locked(&played.mix).quiet();
         let faded = played.hush(!heard || ended, now);
         if played.voices != voices || (played.playing && now >= played.synced + RESYNC) {
-            played.retime(&voices, now);
+            played.retime(voices, now);
         }
         played.out.level(level);
         if played.playing == faded {

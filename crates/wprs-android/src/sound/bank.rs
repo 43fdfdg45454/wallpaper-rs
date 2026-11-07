@@ -51,7 +51,11 @@ impl Bank {
     }
 
     pub(super) fn clear(&self) {
-        *locked(&self.loads) = fresh(self.files.len());
+        let mut loads = locked(&self.loads);
+        loads.clips.clear();
+        loads.clips.resize(self.files.len(), Load::Idle);
+        loads.frames = 0;
+        loads.waiting.clear();
     }
 
     pub(super) fn fill(&self, pack: &Pack, mix: &Arc<Mutex<Mix>>, voices: &[Voice]) {

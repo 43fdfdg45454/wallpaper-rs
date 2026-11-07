@@ -80,11 +80,19 @@ impl Sound {
 }
 
 impl Scene {
+    pub fn each_sound<'a>(&'a self, mut f: impl FnMut(&'a Sound)) {
+        fn walk<'a>(layers: &'a [Layer], f: &mut dyn FnMut(&'a Sound)) {
+            layers.iter().for_each(|l| match &l.kind {
+                Kind::Sound(s) => f(s),
+                Kind::Group { layers, .. } => walk(layers, f),
+                _ => {}
+            });
+        }
+        walk(&self.layers, &mut f);
+    }
+
     pub fn sounds(&self) -> impl Iterator<Item = &Sound> {
-        self.layers().filter_map(|l| match &l.kind {
-            Kind::Sound(sound) => Some(sound),
-            _ => None,
-        })
+        self.layers().filter_map(|l| if let Kind::Sound(sound) = &l.kind { Some(sound) } else { None })
     }
 
     pub fn properties(
