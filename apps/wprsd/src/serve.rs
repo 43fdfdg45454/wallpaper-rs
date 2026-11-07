@@ -24,6 +24,7 @@ pub(crate) async fn run(args: Args) -> anyhow::Result<()> {
     tokio::spawn(watch::clients(vanished, daemon.clone()));
     let server = connection.object_server();
     let weak = Arc::downgrade(&daemon);
+    deck::start(&daemon);
     server.at(dbus::OBJECT_PATH, service::Service(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, library1::Library(weak.clone())).await?;
     server.at(dbus::OBJECT_PATH, playlists1::Playlists(weak.clone())).await?;

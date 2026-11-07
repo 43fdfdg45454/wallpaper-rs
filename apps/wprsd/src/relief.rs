@@ -38,6 +38,7 @@ impl Daemon {
                 map
             }
         };
-        Some(Depth { file: found, modified, map })
+        let deck = self.deck_for(file, &sha, edit, &places);
+        Some(Depth { file: found, modified, map, deck })
     }
 }

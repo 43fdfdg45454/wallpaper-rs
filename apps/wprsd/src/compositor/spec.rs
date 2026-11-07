@@ -70,6 +70,19 @@ pub struct Depth {
     pub file: PathBuf,
     pub modified: Option<SystemTime>,
     pub map: Arc<DepthMap>,
+    pub deck: Option<Deck>,
+}
+
+#[derive(Clone)]
+pub struct Deck {
+    pub file: PathBuf,
+    pub layers: Arc<wprs_depth::Layers>,
+}
+
+impl Depth {
+    pub fn key(&self) -> (PathBuf, Option<SystemTime>, Option<PathBuf>) {
+        (self.file.clone(), self.modified, self.deck.as_ref().map(|d| d.file.clone()))
+    }
 }
 
 impl Content {
@@ -87,7 +100,7 @@ impl Content {
     pub(crate) fn same_look(&self, other: &Content) -> bool {
         let look = |c: &Content| match c {
             Content::Image(p) => {
-                let depth = p.depth.as_ref().map(|d| (d.file.clone(), d.modified));
+                let depth = p.depth.as_ref().map(Depth::key);
                 Some((p.edit.clone(), p.place.clone(), depth))
             }
             _ => None,

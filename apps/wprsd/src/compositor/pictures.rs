@@ -1,5 +1,5 @@
 use super::output::{Output, Raised};
-use super::{Content, Picture};
+use super::{Content, Depth, Picture};
 use image::RgbaImage;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use wprs_core::{Fit, UvRect};
 use wprs_render::{GpuImage, Renderer, decode_image, decoded_size, needed_edge};
 
 pub(super) type Look =
-    (PathBuf, Option<SystemTime>, Option<Arc<Edit>>, Option<(PathBuf, Option<SystemTime>)>);
+    (PathBuf, Option<SystemTime>, Option<Arc<Edit>>, Option<(PathBuf, Option<SystemTime>, Option<PathBuf>)>);
 pub(super) type Made = (GpuImage, UvRect, Option<Raised>);
 type Target = (Fit, (u32, u32));
 
@@ -25,7 +25,7 @@ pub(super) struct Developed {
 pub(super) struct Pictures(Vec<Developed>);
 
 pub(super) fn look(picture: &Picture) -> Look {
-    let depth = picture.depth.as_ref().map(|d| (d.file.clone(), d.modified));
+    let depth = picture.depth.as_ref().map(Depth::key);
     (picture.file.clone(), picture.modified, picture.edit.clone(), depth)
 }
 
@@ -65,9 +65,16 @@ pub(super) fn develop(
             Some(edit) => renderer.develop(&p, edit, depth, renderer.develop_size(frame, uv, size))?,
             None => renderer.upload_placed(&p, uv, size)?,
         };
+        let deck = picture.depth.as_ref().and_then(|d| d.deck.as_ref()).filter(|_| edit.is_none());
         let relief = match (moving, depth) {
             (Some(parallax), Some(map)) if !uv.repeat => {
-                Some((renderer.upload_depth(map, edit)?, parallax.clone()))
+                let stack = deck.and_then(|d| {
+                    let set = &d.layers;
+                    let made = renderer.upload_layers(&set.images, &set.info.depths);
+                    made.inspect_err(|e| tracing::warn!(output, "cannot show the layers: {e}")).ok()
+                });
+                let depth = stack.map_or_else(|| renderer.upload_depth(map, edit), Ok)?;
+                Some((depth, parallax.clone()))
             }
             _ => None,
         };

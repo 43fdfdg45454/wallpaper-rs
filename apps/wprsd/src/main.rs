@@ -13,6 +13,7 @@ mod compositor;
 mod confirm;
 mod controls;
 mod daemon;
+mod deck;
 mod decode;
 mod drafts;
 mod duck;

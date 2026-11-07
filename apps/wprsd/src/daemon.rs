@@ -39,6 +39,7 @@ pub(crate) struct State {
     pub(crate) sidecars: crate::edits::Sidecars,
     pub(crate) drafts: HashMap<String, crate::drafts::Draft>,
     pub(crate) depths: HashMap<PathBuf, crate::relief::Cached>,
+    pub(crate) decks: crate::deck::Memory,
     pub(crate) scenes: HashMap<PathBuf, ((i64, u64), Weak<crate::scenes::ScenePack>)>,
     pub(crate) keys: crate::inputs::Keys,
     pub(crate) modes: HashMap<String, ((u32, u32), u32)>,
