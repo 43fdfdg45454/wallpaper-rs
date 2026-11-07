@@ -479,7 +479,9 @@ jobs:
           target: google_apis
           arch: x86_64
           emulator-boot-timeout: 900
-          script: android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64
+          script: |
+            adb shell pm disable-user --user 0 com.google.android.gms
+            android/gradlew -p android connectedDebugAndroidTest -Pabis=x86_64
 
       - name: Failing instrumentation tests
         if: failure()
