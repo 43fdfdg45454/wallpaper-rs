@@ -65,7 +65,11 @@ impl Geometry {
 
 impl Edit {
     pub fn develops(&self) -> bool {
-        !self.geometry.is_identity() || self.ops.iter().any(|op| op.enabled)
+        !self.geometry.is_identity() || self.operates()
+    }
+
+    pub fn operates(&self) -> bool {
+        self.ops.iter().any(|op| op.enabled)
     }
 
     pub fn is_empty(&self) -> bool {

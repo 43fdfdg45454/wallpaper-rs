@@ -65,7 +65,11 @@ pub(super) fn develop(
             Some(edit) => renderer.develop(&p, edit, depth, renderer.develop_size(frame, uv, size))?,
             None => renderer.upload_placed(&p, uv, size)?,
         };
-        let deck = picture.depth.as_ref().and_then(|d| d.deck.as_ref()).filter(|_| edit.is_none());
+        let deck = picture
+            .depth
+            .as_ref()
+            .and_then(|d| d.deck.as_ref())
+            .filter(|_| !edit.is_some_and(Edit::operates));
         let relief = match (moving, depth) {
             (Some(parallax), Some(map)) if !uv.repeat => {
                 let stack = deck.and_then(|d| {

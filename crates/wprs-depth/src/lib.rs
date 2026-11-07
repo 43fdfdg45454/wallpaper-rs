@@ -23,6 +23,7 @@ mod split;
 mod stack;
 mod store;
 mod views;
+mod warp;
 mod windows;
 
 pub use brush::{lift, lift_map, marks, stamp};
@@ -47,6 +48,7 @@ pub use split::{Split, cut, distance, indices, mask, soft, split};
 pub use stack::{Band, Info, Layers, SUFFIX, Settings, load, save};
 pub use store::CACHE_BYTES;
 pub use views::{band_mask, halves, histogram, hue, outlines, tint};
+pub use warp::turned;
 pub use windows::{Inpaint, lama, plan};
 
 use std::path::{Path, PathBuf};

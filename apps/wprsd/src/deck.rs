@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
 use wprs_core::Fill;
-use wprs_core::edit::{Depth, Edit};
+use wprs_core::edit::{Depth, Edit, Geometry};
 use wprs_core::model::JobKind;
 use wprs_depth::{Device, Inpainter, Layers, Places, Settings};
 
@@ -16,6 +16,7 @@ const THREADS: usize = 4;
 #[derive(Default)]
 pub(crate) struct Memory {
     sets: HashMap<PathBuf, Weak<Layers>>,
+    turned: HashMap<(PathBuf, String), Weak<Layers>>,
     failed: HashSet<PathBuf>,
     me: Weak<Daemon>,
 }
@@ -62,7 +63,7 @@ impl Daemon {
     pub(crate) fn deck_for(&self, file: &Path, sha: &str, edit: &Edit, places: &Places) -> Option<Deck> {
         let moving = edit.moving()?;
         let config = self.state().config.parallax.clone();
-        if edit.develops() || config.fill == Fill::Off {
+        if edit.operates() || config.fill == Fill::Off {
             return None;
         }
         let depth = edit.depth.clone().unwrap_or_default();
@@ -89,10 +90,27 @@ impl Daemon {
             self.build_deck(file, sha, (depth, set), path);
             return None;
         };
+        {
+            let mut st = self.state();
+            st.decks.sets.retain(|_, weak| weak.strong_count() > 0);
+            st.decks.sets.insert(path.clone(), Arc::downgrade(&layers));
+        }
+        Some(Deck { layers: self.turned(&path, layers, &edit.geometry), file: path })
+    }
+
+    fn turned(&self, path: &Path, layers: Arc<Layers>, geometry: &Geometry) -> Arc<Layers> {
+        if geometry.is_identity() {
+            return layers;
+        }
+        let key = (path.to_owned(), serde_json::to_string(geometry).unwrap_or_default());
+        if let Some(known) = self.state().decks.turned.get(&key).and_then(Weak::upgrade) {
+            return known;
+        }
+        let made = Arc::new(wprs_depth::turned(&layers, geometry));
         let mut st = self.state();
-        st.decks.sets.retain(|_, weak| weak.strong_count() > 0);
-        st.decks.sets.insert(path.clone(), Arc::downgrade(&layers));
-        Some(Deck { file: path, layers })
+        st.decks.turned.retain(|_, weak| weak.strong_count() > 0);
+        st.decks.turned.insert(key, Arc::downgrade(&made));
+        made
     }
 
     fn build_deck(&self, file: &Path, sha: &str, (depth, set): (Depth, Settings), path: PathBuf) {

@@ -1096,8 +1096,9 @@ de los mismos 256 MB) con una clave que reúne la imagen, el modelo, el relleno,
 fuerza del paralaje y los ajustes del mapa; mientras se calculan, o si no hay mapa, la imagen sigue
 con la deformación de siempre. Al moverse, la GPU dibuja las capas de atrás adelante con el
 desplazamiento de cada una (misma fuente, mismos ajustes y mismo suavizado que antes) y en reposo
-muestra la imagen original; las imágenes con ediciones que la revelan (recorte, giro u operaciones)
-siguen con la deformación de una imagen. LaMa (big-lama en ONNX, 208 MB, Apache-2.0) no viene incluido:
+muestra la imagen original; un recorte, giro, enderezado o volteo gira también las capas (el
+daemon las transforma en memoria con la misma matriz que la imagen, sin otro cálculo), pero las
+imágenes con operaciones de color activas siguen con la deformación de una imagen. LaMa (big-lama en ONNX, 208 MB, Apache-2.0) no viene incluido:
 se descarga con `wprs-ctl models download lama-big-fp32` (o desde los ajustes de la app) después de
 mostrar tamaño, licencia y servidor, con las mismas reglas que el modelo de profundidad; sin él, o
 sin ONNX Runtime, se usa `simple`. Corre en el procesador, o en CUDA si `ORT_DYLIB_PATH` apunta a

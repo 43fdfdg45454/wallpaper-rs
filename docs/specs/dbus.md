@@ -2256,8 +2256,8 @@ environment's switch), so it neither stores a device id nor contacts anyone.
 configuration that cannot be read counts as `false`, also when a setting change saves it again.
 `wprs-ctl models install` takes files fetched by other means.
 
-**Depth layers.** A picture whose `parallax` is on, with a depth map, `parallax.fill` other than `off` and an edit that
-does not develop it (no `geometry` and no enabled `ops`), moves as a stack of layers computed once,
+**Depth layers.** A picture whose `parallax` is on, with a depth map, `parallax.fill` other than `off` and an edit
+without enabled `ops`, moves as a stack of layers computed once,
 never per frame. The daemon starts a `layers` job (target: the picture path) when it shows such a
 picture and finds no set for its settings; until it ends, and when it fails (once per run), the
 picture moves with the single image warp. The job runs on its own thread at the lowest priority,
@@ -2291,6 +2291,13 @@ ONNX Runtime is not installed (`wprs-ctl models download lama-big-fp32`, which, 
 only downloads after showing its size, license and server). At rest the screen shows the original
 picture; while it moves, the GPU draws the layers from the farthest to the nearest in one pass,
 nearest occluding, with the same source, settings and smoothing as the single image warp.
+
+A `geometry` (crop, rotation, straightening or flip) does not make another set: the daemon turns
+the layers of the set of the whole picture, once and in memory, with the matrix the GPU uses for
+the picture (bilinear, on premultiplied colours, at the size of the layers cropped to the frame), so
+that they line up with the edited picture; strokes, cuts and marks stay in the coordinates of the
+original. An edit with enabled `ops` (colour edits are drawn by the GPU on the picture, not on the
+layers) keeps the single image warp.
 
 `wprs-ctl edit depth layers FILE [--fill lama|simple|off] [--layers N] [--force] [--list] [--clear]`
 builds the set in its own process (the same code, with the settings of the configuration
