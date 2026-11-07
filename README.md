@@ -1128,6 +1128,10 @@ herramientas con las que el autor decide cómo se parte y se rellena la imagen, 
   o en falso color y con un control de opacidad.
 - *Pincel de profundidad*: sube o baja la profundidad con un radio, una fuerza y un borde suave a elegir;
   cada trazo es un paso del historial y se aplica al mapa ajustado (`edit depth brush`).
+- *Cortes de capa*: sobre el histograma de profundidad se ven los cortes como asas que se arrastran
+  (un doble clic quita una, un clic en la franja añade otra) mientras la imagen muestra el contorno
+  teñido de cada capa en vivo; al soltar se vuelven a calcular las capas con esos cortes, que el
+  agrupamiento automático ya no pisa hasta pulsar *Volver a automático* (`edit depth cuts`).
 
 `wprs-ctl pack` (crear, firmar, comprobar, actualizar y validar paquetes `.wpak`) y `wprs-ctl repo`
 (claves, firma, publicación, rotación y verificación de un repositorio) funcionan sin daemon. La

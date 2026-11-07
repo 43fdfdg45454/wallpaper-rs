@@ -56,4 +56,14 @@ ColumnLayout {
         kind: "depth"
         counted: tools.relief.survey ? JSON.parse(tools.relief.survey).strokes ?? 0 : 0
     }
+
+    Kirigami.Heading {
+        level: 4
+        text: App.tr("Layer cuts")
+    }
+
+    EditDepthCuts {
+        Layout.fillWidth: true
+        page: tools.page
+    }
 }

@@ -1090,6 +1090,46 @@ msgstr "Quitar las marcas"
 msgid "Remove the strokes"
 msgstr "Quitar los trazos"
 
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Far"
+msgstr "Lejos"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Near"
+msgstr "Cerca"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "%1 layers, cut where you set the handles"
+msgstr "%1 capas, cortadas donde pusiste las asas"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "%1 layers, cut by the picture itself"
+msgstr "%1 capas, cortadas por la propia imagen"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Show the layers on the picture"
+msgstr "Mostrar las capas sobre la imagen"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Add a cut"
+msgstr "Añadir un corte"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Remove the cut"
+msgstr "Quitar el corte"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid "Back to automatic"
+msgstr "Volver a automático"
+
+#: apps/wprs-app/qml/EditDepthCuts.qml
+msgid ""
+"Drag a handle to move a cut, double-click it to remove it, click the strip "
+"to add one."
+msgstr ""
+"Arrastra un asa para mover un corte, haz doble clic para quitarlo y clic en "
+"la franja para añadir otro."
+
 #: apps/wprs-app/qml/EditDepthLayers.qml
 msgid "LaMa"
 msgstr "LaMa"
@@ -1105,6 +1145,10 @@ msgstr "Profundidad sobre la imagen"
 #: apps/wprs-app/qml/EditDepthTools.qml
 msgid "Depth brush"
 msgstr "Pincel de profundidad"
+
+#: apps/wprs-app/qml/EditDepthTools.qml
+msgid "Layer cuts"
+msgstr "Cortes de capa"
 
 #: apps/wprs-app/qml/EditDepthView.qml
 msgid "Show the depth map over the picture"

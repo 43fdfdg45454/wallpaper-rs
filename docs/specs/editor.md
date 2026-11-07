@@ -830,3 +830,11 @@ rotation and the straightening come back with the other tools), and offers:
   canvas draws the circle of the brush and the stroke while the button is down, thinned to a point
   every quarter of the radius, and sends the stroke on release as one `depth_brush`; undo removes it
   alone. *Remove the strokes* is `depth_brush` with `clear`.
+- *Layer cuts*: a strip with the histogram of the depth, far on the left, coloured by layer, and a
+  handle for each cut of the layers (the manual ones of `depth.cuts`, else the ones of the newest
+  set or the ones the clustering would find). Dragging a handle keeps it at least 0.01 from its
+  neighbours and draws, with `Relief.trace`, the outline of every layer tinted on the picture, at 512
+  pixels and without building anything; releasing it sends one `depth_cuts`, and the layers are built
+  again with those cuts half a second after the last change, a newer change cancelling the build in
+  progress. A double click on a handle removes it, a click on the strip or *Add a cut* adds one in the
+  widest gap (at most 5), and *Back to automatic* is `depth_cuts` with `auto`.
