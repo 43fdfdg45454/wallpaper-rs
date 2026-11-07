@@ -43,6 +43,8 @@ impl HttpFetch {
         let builder = builder.tls_certs_only(
             webpki_root_certs::TLS_SERVER_ROOT_CERTS
                 .iter()
+                .map(|der| &der[..])
+                .chain(wprs_core::roots::added().iter().map(Vec::as_slice))
                 .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
         );
         let client = builder.connect_timeout(Duration::from_secs(10)).timeout(window).build()?;

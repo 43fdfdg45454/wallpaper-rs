@@ -19,6 +19,7 @@ pub mod pace;
 pub mod parallax;
 pub mod quality;
 pub mod rgb;
+pub mod roots;
 pub mod settings;
 pub mod spread;
 pub mod stash;

@@ -36,6 +36,7 @@ class Wprs : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         Log.setLogLevel(Log.LOG_LEVEL_WARNING)
+        saveUserRoots(noBackupFilesDir.resolve("roots.der"))
         Native.prepare(noBackupFilesDir.path)
         val small = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
         Native.device(small, Build.VERSION.MEDIA_PERFORMANCE_CLASS)

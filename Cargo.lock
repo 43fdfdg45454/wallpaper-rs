@@ -7005,6 +7005,7 @@ dependencies = [
  "tokio-rustls",
  "webpki-root-certs",
  "wiremock",
+ "wprs-core",
  "wprs-format",
 ]
 

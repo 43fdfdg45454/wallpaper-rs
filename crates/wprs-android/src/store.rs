@@ -24,6 +24,7 @@ pub(crate) fn prepare(files: &str) -> Result<(), Error> {
         return Ok(());
     }
     let dir = dir()?;
+    wprs_core::roots::load_added(&dir.join("roots.der"));
     [MEDIA, THUMBS].iter().try_for_each(|name| fs::create_dir_all(dir.join(name)))?;
     wprs_scene::keep_strikes(&dir.join("stopped-effects"));
     settings::prepare()?;

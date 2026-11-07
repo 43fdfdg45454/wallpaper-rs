@@ -61,6 +61,8 @@ impl Api {
         let builder = builder.tls_certs_only(
             webpki_root_certs::TLS_SERVER_ROOT_CERTS
                 .iter()
+                .map(|der| &der[..])
+                .chain(wprs_core::roots::added().iter().map(Vec::as_slice))
                 .filter_map(|der| reqwest::Certificate::from_der(der).ok()),
         );
         let builder = match pin.filter(|p| !p.is_empty()) {
