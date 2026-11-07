@@ -22,6 +22,14 @@ fn documented(text: &str) -> Vec<(String, Vec<String>)> {
     members
 }
 
+fn command_of(action: &str) -> String {
+    match action {
+        "depth_brush" | "depth_cuts" => format!("edit depth {}", &action[6..]),
+        "fill_mask" => "edit depth fill-mask".into(),
+        _ => format!("edit {action}"),
+    }
+}
+
 fn subcommand(path: &str) -> clap::Command {
     let find = |command: clap::Command, name| command.find_subcommand(name).cloned();
     path.split(' ').try_fold(Cli::command(), find).unwrap_or_else(|| panic!("no command {path}"))
@@ -78,7 +86,7 @@ fn expected(value: serde_json::Value) -> Vec<String> {
 fn every_editor_action_has_an_edit_command_with_the_same_arguments() {
     assert_eq!(expected(serde_json::json!({"": {}})), ACTIONS);
     for name in ACTIONS {
-        let command = subcommand(&format!("edit {name}"));
+        let command = subcommand(&command_of(name));
         for field in expected(serde_json::json!({name: {"": null}})) {
             assert!(
                 command.get_arguments().any(|a| a.get_id() == field.as_str()),

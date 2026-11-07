@@ -114,3 +114,51 @@ fn turning_the_phone_moves_like_tilting_it_and_recentres() {
     let later = (0..1000).fold([0.0; 3], |_, _| turn.follow(held, 0.03));
     assert!(later.iter().all(|v| v.abs() < 0.01), "{later:?}");
 }
+
+#[test]
+fn strokes_cuts_and_fill_marks_are_edit_actions_that_round_trip() {
+    let mut e = Edit::default();
+    let brush =
+        json!({"depth_brush": {"points": "0.2,0.2;0.6,0.4", "by": 0.3, "lower": true, "radius": 0.1}});
+    act(&mut e, brush).unwrap();
+    act(&mut e, json!({"depth_brush": {"points": "0.5,0.5"}})).unwrap();
+    let strokes = e.depth.clone().unwrap().strokes;
+    assert_eq!(strokes.len(), 2);
+    assert_eq!((strokes[0].by, strokes[0].radius, strokes[0].falloff), (-0.3, 0.1, 0.5));
+    assert_eq!((strokes[1].by, strokes[1].points.clone()), (0.1, vec![[0.5, 0.5]]));
+    let both = json!({"depth_brush": {"points": "0.5,0.5", "raise": true, "lower": true}});
+    assert!(act(&mut e, both).unwrap_err().to_string().contains("choose one"));
+    assert!(act(&mut e, json!({"depth_brush": {}})).unwrap_err().to_string().contains("give a stroke"));
+    assert!(act(&mut e, json!({"depth_brush": {"points": "0.5"}})).is_err());
+    assert!(act(&mut e, json!({"depth_brush": {"points": "1.5,0.5"}})).is_err());
+    assert!(act(&mut e, json!({"depth_brush": {"points": "0.5,0.5", "radius": 0}})).is_err());
+    act(&mut e, json!({"depth_cuts": {"cuts": "0.2,0.45,0.7"}})).unwrap();
+    assert_eq!(e.depth.as_ref().unwrap().cuts, Some(vec![0.2, 0.45, 0.7]));
+    for bad in ["0.5,0.2", "0.001,0.5", "0.1,0.2,0.3,0.4,0.5,0.6", "a,b", "0.5,0.502"] {
+        assert!(act(&mut e, json!({"depth_cuts": {"cuts": bad}})).is_err(), "{bad}");
+    }
+    act(&mut e, json!({"fill_mask": {"points": "0.3,0.3;0.4,0.3", "refill": true}})).unwrap();
+    act(&mut e, json!({"fill_mask": {"points": "0.8,0.8", "protect": true, "radius": 0.2}})).unwrap();
+    let fills = e.depth.clone().unwrap().fills;
+    assert_eq!((fills[0].by, fills[1].by, fills[1].radius), (1.0, -1.0, 0.2));
+    assert!(
+        act(&mut e, json!({"fill_mask": {"points": "0.8,0.8"}}))
+            .unwrap_err()
+            .to_string()
+            .contains("--refill")
+    );
+    assert_eq!(Edit::parse(&e.to_json()).unwrap(), e);
+    act(&mut e, json!({"fill_mask": {"clear": true}})).unwrap();
+    act(&mut e, json!({"depth_brush": {"clear": true}})).unwrap();
+    act(&mut e, json!({"depth_cuts": {"auto": true}})).unwrap();
+    assert_eq!(e.depth, Some(Depth::default()));
+    let plain = serde_json::to_value(Depth::default()).unwrap();
+    assert!(["cuts", "strokes", "fills"].iter().all(|k| plain.get(k).is_none()));
+    let many = vec!["0.1,0.1"; 1000].join(";");
+    for _ in 0..3 {
+        act(&mut e, json!({"depth_brush": {"points": many}})).unwrap();
+    }
+    assert!(
+        act(&mut e, json!({"depth_brush": {"points": many}})).unwrap_err().to_string().contains("at most")
+    );
+}

@@ -203,6 +203,38 @@ msgstr "%1 es una operación %2, no %3; indica otro id"
 msgid "%1 is not rgb, r, g or b"
 msgstr "%1 no es rgb, r, g ni b"
 
+#: crates/wprs-core/src/edit/touch.rs crates/wprs-editor/src/sculpt.rs
+msgid "a stroke has 1 to %1 points"
+msgstr "un trazo tiene de 1 a %1 puntos"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "use at most %1 strokes and %2 points in %3"
+msgstr "usa como mucho %1 trazos y %2 puntos en %3"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "depth.cuts: use 1 to %1 cuts"
+msgstr "depth.cuts: usa de 1 a %1 cortes"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "depth.cuts: use growing cuts at least %1 apart"
+msgstr "depth.cuts: usa cortes crecientes separados al menos %1"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "give a stroke, or clear to remove the strokes"
+msgstr "da un trazo, o clear para quitar los trazos"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "choose one of --raise and --lower, or --refill and --protect"
+msgstr "elige uno de --raise y --lower, o de --refill y --protect"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "use cuts such as 0.2,0.45,0.7"
+msgstr "usa cortes como 0.2,0.45,0.7"
+
+#: crates/wprs-core/src/edit/touch.rs
+msgid "give the cuts or auto"
+msgstr "da los cortes o auto"
+
 #: crates/wprs-editor/src/actions.rs crates/wprs-editor/src/layers.rs
 msgid "there is no layer \"%1\""
 msgstr "no hay ninguna capa «%1»"
@@ -1176,10 +1208,6 @@ msgstr "una escena tiene como mucho %1 scripts"
 #: crates/wprs-editor/src/scripts.rs crates/wprs-editor/src/shaders.rs
 msgid "%1 is not a text file: %2"
 msgstr "%1 no es un archivo de texto: %2"
-
-#: crates/wprs-editor/src/sculpt.rs
-msgid "a stroke has 1 to %1 points"
-msgstr "un trazo tiene de 1 a %1 puntos"
 
 #: crates/wprs-editor/src/sculpt.rs
 msgid "the brush has a radius above 0 and up to 1 of the longer side"

@@ -8,8 +8,10 @@ mod geometry;
 mod history;
 mod masks;
 mod parse;
+mod perform;
 mod set;
 mod tool;
+mod touch;
 
 use crate::Fit;
 pub use action::{ACTIONS, Action, Error};
@@ -22,6 +24,9 @@ pub use masks::{Mask, Stroke};
 pub use parse::numbers;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+pub use touch::{
+    FALLOFF, GAP, MOST_CUTS, MOST_POINTS, MOST_STROKE, MOST_STROKES, RADIUS, STRENGTH, Touch, points,
+};
 
 pub const VERSION: u32 = 1;
 

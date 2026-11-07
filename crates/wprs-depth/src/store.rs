@@ -30,7 +30,9 @@ impl Places {
 
     pub fn map(&self, image: &Path, sha256: &str, depth: &Depth, edge: u32) -> Result<Option<Map>> {
         let Some(path) = self.find(image, sha256, depth) else { return Ok(None) };
-        Ok(Some(adjust(&shrink(read(&path)?, edge), depth)))
+        let mut map = adjust(&shrink(read(&path)?, edge), depth);
+        crate::lift_map(&mut map, &depth.strokes);
+        Ok(Some(map))
     }
 
     pub fn import(&self, file: &Path, image: &Path, sha256: &str) -> Result<PathBuf> {

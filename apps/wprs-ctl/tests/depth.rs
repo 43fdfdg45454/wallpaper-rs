@@ -100,3 +100,76 @@ fn depth_masks_shape_exports() {
     let shown = image::open(dir.join("out.png")).unwrap().into_rgb8();
     assert!(shown.get_pixel(5, 10)[0].abs_diff(100) <= 2 && shown.get_pixel(35, 10)[0] > 130);
 }
+
+fn shown(dir: &Path) -> Value {
+    serde_json::from_str(&ok(dir, &["edit", "show", "hills.png"])).unwrap()
+}
+
+#[test]
+fn depth_strokes_cuts_and_marks_are_commands_and_a_layer_shows_its_band() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path();
+    RgbaImage::from_fn(64, 48, |x, _| Rgba([if x < 32 { 40 } else { 200 }, 90, 120, 255]))
+        .save(dir.join("hills.png"))
+        .unwrap();
+    GrayImage::from_fn(64, 48, |x, _| Luma([if x < 32 { 20 } else { 230 }]))
+        .save(dir.join("hills.png.depth.png"))
+        .unwrap();
+    ok(
+        dir,
+        &[
+            "edit",
+            "depth",
+            "brush",
+            "hills.png",
+            "0.1,0.1;0.3,0.1",
+            "--lower",
+            "--by",
+            "0.2",
+            "--radius",
+            "0.1",
+        ],
+    );
+    let stroke = shown(dir)["depth"]["strokes"][0].clone();
+    assert_eq!((&stroke["radius"], &stroke["points"][1]), (&json!(0.1), &json!([0.3, 0.1])));
+    assert!(stroke["by"].as_f64().unwrap() < -0.19);
+    ok(dir, &["edit", "undo", "hills.png"]);
+    assert!(shown(dir)["depth"]["strokes"].is_null());
+    assert!(fails(dir, &["edit", "depth", "brush", "hills.png"], 2).contains("give a stroke"));
+    assert!(
+        fails(dir, &["edit", "depth", "brush", "hills.png", "0.1,0.1", "--raise", "--lower"], 2)
+            .contains("cannot be used")
+    );
+    ok(dir, &["edit", "depth", "cuts", "hills.png", "0.3,0.6"]);
+    assert_eq!(shown(dir)["depth"]["cuts"], json!([0.3, 0.6]));
+    assert!(fails(dir, &["edit", "depth", "cuts", "hills.png", "0.7,0.2"], 1).contains("growing"));
+    assert!(fails(dir, &["edit", "depth", "cuts", "hills.png"], 2).contains("required"));
+    ok(dir, &["edit", "depth", "fill-mask", "hills.png", "0.5,0.5", "--protect"]);
+    ok(dir, &["edit", "depth", "fill-mask", "hills.png", "0.2,0.2", "--refill", "--radius", "0.1"]);
+    assert_eq!(shown(dir)["depth"]["fills"][0]["by"], json!(-1.0));
+    assert!(fails(dir, &["edit", "depth", "fill-mask", "hills.png", "0.2,0.2"], 2).contains("--refill"));
+    ok(dir, &["edit", "depth", "fill-mask", "hills.png", "--clear"]);
+    ok(dir, &["edit", "depth", "cuts", "hills.png", "--auto"]);
+    assert!(shown(dir)["depth"]["fills"].is_null() && shown(dir)["depth"]["cuts"].is_null());
+    ok(dir, &["edit", "depth", "cuts", "hills.png", "0.5"]);
+    ok(dir, &["edit", "depth", "layers", "hills.png", "--fill", "simple", "--layers", "4"]);
+    ok(
+        dir,
+        &["edit", "depth", "show", "hills.png", "--layer", "0", "--out", "far.png", "--band", "band.png"],
+    );
+    let band = image::open(dir.join("band.png")).unwrap().into_luma8();
+    assert_eq!(band.dimensions(), (64, 48));
+    assert!(band.pixels().any(|p| p[0] == 255) && band.pixels().any(|p| p[0] == 0));
+    assert!(
+        fails(
+            dir,
+            &["edit", "depth", "show", "hills.png", "--layer", "0", "--out", "x.png", "--fill", "lama"],
+            1
+        )
+        .contains("no layers filled with lama")
+    );
+    assert!(
+        fails(dir, &["edit", "depth", "compare", "hills.png", "--out", "both.png"], 1)
+            .contains("not installed")
+    );
+}

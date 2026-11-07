@@ -33,6 +33,9 @@ Kirigami.Page {
         editor.run("mask", '{"name": "sky", "spec": "luminance:0,0.4"}');
         editor.run("depth", '{"near": 0.9, "dilate": 4}');
         editor.run("parallax", '{"source": "pointer", "steps": 8}');
+        editor.run("depth_brush", '{"points": "0.2,0.2;0.4,0.3", "by": 0.2, "radius": 0.05, "lower": true}');
+        editor.run("depth_cuts", '{"cuts": "0.3,0.6"}');
+        editor.run("fill_mask", '{"points": "0.5,0.5", "protect": true}');
         editor.undo();
         editor.redo();
         editor.compare(true);

@@ -2,8 +2,10 @@ use crate::editing::open;
 use anyhow::{Context, Result};
 use clap::Subcommand;
 use std::path::{Path, PathBuf};
-use wprs_core::edit::{Action, Depth, Edit, Source};
-use wprs_depth::{Device, Places, Stage, adjust, beside, coloured, read, write};
+use wprs_core::edit::{Depth, Edit, Source};
+use wprs_depth::{Device, Places, Stage, adjust, beside, coloured, lift_map, read, write};
+
+pub use crate::looking::{Levels, Look};
 
 const MAX_EDGE: u32 = 4096;
 
@@ -51,57 +53,20 @@ pub enum Maps {
         about = "Build, list or delete the depth layers that parallax moves; each fills what a near object hides"
     )]
     Layers(crate::stacking::Make),
-    #[command(about = "Save one depth layer of an image as a PNG to inspect it")]
+    #[command(
+        about = "Save one depth layer of an image as a PNG to inspect it, and the band that was filled"
+    )]
     Show(crate::stacking::Peek),
-}
-
-#[derive(clap::Args, Debug)]
-pub struct Levels {
-    #[arg(long, help = "Level of the nearest point, 0 to 1, 1 by default")]
-    near: Option<f32>,
-    #[arg(long, help = "Level of the farthest point, 0 to 1, 0 by default")]
-    far: Option<f32>,
-    #[arg(long, help = "Curve between them, 0.2 to 5, 1 by default")]
-    gamma: Option<f32>,
-    #[arg(long, help = "Blur radius in pixels of the map, 0 to 16, 2 by default")]
-    smooth: Option<u32>,
-    #[arg(long, help = "Pixels by which near objects grow over their edges, 0 to 16, 3 by default")]
-    dilate: Option<u32>,
-    #[arg(long, help = "Short side given to the model: a multiple of 14 from 196 to 1036, 518 by default")]
-    input: Option<u32>,
-}
-
-#[derive(clap::Args, Debug)]
-pub struct Look {
-    #[arg(long, value_parser = ["auto", "pointer", "accelerometer"], help = "What moves it; auto when new")]
-    source: Option<String>,
-    #[arg(long, help = "Largest shift as a fraction of the width, up to 0.03")]
-    strength: Option<f32>,
-    #[arg(long, help = "Depth that stays still, 0 far to 1 near")]
-    focus: Option<f32>,
-    #[arg(long, value_parser = ["1", "8", "16", "32"], help = "Quality: 1 shifts, more steps follow edges")]
-    steps: Option<String>,
-    #[arg(long, value_name = "MS", help = "Time the movement takes to settle, 0 to 2000 ms")]
-    smoothing: Option<u32>,
-    #[arg(long, help = "Zoom that hides the edges, 1 to 1.1")]
-    overscan: Option<f32>,
-    #[arg(long, help = "Turn the parallax off and keep its settings")]
-    off: bool,
-}
-
-impl Levels {
-    pub fn action(self) -> Action {
-        let Levels { near, far, gamma, smooth, dilate, input } = self;
-        Action::Depth { near, far, gamma, smooth, dilate, input }
-    }
-}
-
-impl Look {
-    pub fn action(self) -> Action {
-        let Look { source, strength, focus, steps, smoothing, overscan, off } = self;
-        let steps = steps.and_then(|s| s.parse().ok());
-        Action::Parallax { source, strength, focus, steps, smoothing, overscan, off }
-    }
+    #[command(about = "Save one layer filled by LaMa on the left and by the simple fill on the right")]
+    Compare(crate::stacking::Compare),
+    #[command(about = "Raise or lower the depth map along a stroke of the brush; undo goes back one stroke")]
+    Brush(crate::touching::Brush),
+    #[command(about = "Cut the depth into layers at the given levels, or go back to the automatic cuts")]
+    Cuts(crate::touching::Cuts),
+    #[command(
+        about = "Paint where the fill must always (refill) or never (protect) reach behind near objects"
+    )]
+    FillMask(crate::touching::Marks),
 }
 
 pub fn key(path: &Path, edit: &Edit) -> Result<String> {
@@ -120,6 +85,10 @@ pub fn run(command: Maps) -> Result<()> {
     let command = match command {
         Maps::Layers(args) => return crate::stacking::make(args),
         Maps::Show(args) => return crate::stacking::peek(args),
+        Maps::Compare(args) => return crate::stacking::compare(args),
+        Maps::Brush(args) => return crate::touching::brush(args),
+        Maps::Cuts(args) => return crate::touching::cuts(args),
+        Maps::FillMask(args) => return crate::touching::marks(args),
         other => other,
     };
     let places = Places::default();
@@ -128,12 +97,11 @@ pub fn run(command: Maps) -> Result<()> {
         | Maps::Import { path, .. }
         | Maps::Export { path, .. }
         | Maps::Remove { path } => (path, open(path)?),
-        Maps::Layers(_) | Maps::Show(_) => return Ok(()),
+        _ => return Ok(()),
     };
     let (sha, depth) = (key(path, &edit)?, edit.depth.clone().unwrap_or_default());
     let found = places.find(path, &sha, &depth);
     let shown = match command {
-        Maps::Layers(_) | Maps::Show(_) => return Ok(()),
         Maps::Generate { path, device, bench: Some(runs), .. } => {
             return bench(&places, &path, &depth, &device, runs);
         }
@@ -155,13 +123,17 @@ pub fn run(command: Maps) -> Result<()> {
                 }
                 None => beside(&path),
             };
-            let map = if adjusted { adjust(&read(&from)?, &depth) } else { read(&from)? };
+            let mut map = if adjusted { adjust(&read(&from)?, &depth) } else { read(&from)? };
+            if adjusted {
+                lift_map(&mut map, &depth.strokes);
+            }
             match colour {
                 true => coloured(&map, true).save_with_format(&to, image::ImageFormat::Png)?,
                 false => write(&map, &to)?,
             }
             Some(to)
         }
+        _ => return Ok(()),
     };
     shown.iter().for_each(|p| println!("{}", p.display()));
     Ok(())

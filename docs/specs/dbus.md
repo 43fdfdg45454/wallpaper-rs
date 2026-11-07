@@ -2203,7 +2203,15 @@ that cannot be used is ignored with a warning.
   farthest points, `gamma` (`0.2` to `5`) curves the levels between them, `dilate` (`0` to `16`
   pixels of the map) grows near objects over their edges and `smooth` (`0` to `16`) blurs the
   result. `model` is `depth-anything-v2-small` and `input` (a multiple of 14 from `196` to `1036`)
-  the short side given to it, which also names the generated map.
+  the short side given to it, which also names the generated map. `strokes` (the brush of
+  `wprs-ctl edit depth brush`) are lists of `{points, radius, falloff, by}` with `points` as `[x, y]`
+  fractions of the original picture, `radius` a fraction (above 0, up to 1) of its longer side,
+  `falloff` from `0` to `1` and `by` from `-1` to `1` added to the adjusted level at the middle
+  of the stroke and fading to nothing at its edge; `fills` are marks of the same shape whose `by`
+  is `1` (the band behind nearer layers is always filled there) or `-1` (never filled there);
+  `cuts` (1 to 5 growing levels, 0.005 apart at least) sets where the depth layers end, and none
+  leaves it to the clustering. Each list holds at most 256 entries and 3 000 points, and all three
+  are left out of the file while empty. See `editor.md`, "Picture depth tools".
 - `parallax` moves the image in depth on the desktop while `enabled`: `source` is `auto` (a slow
   orbit), `pointer` (the pointer feed of `Inputs1`, back to the centre when the pointer leaves the
   outputs that show the image or rests for 3 s) or `accelerometer` (the IIO accelerometer of the
@@ -2276,7 +2284,7 @@ The set is one PNG with the layers stacked from the farthest, `<SHA-256>-<key>.l
 `<SHA-256>-<key>.layers.json` (`format`, `size`, `fill`, `cuts`, `depths` and `bands` with the layer,
 the reach in pixels and the pixels filled), in the cache of depth maps (written first the JSON and
 then the PNG, which the daemon watches). The key hashes the picture, the model, the input size, the
-`near`, `far` and `gamma` of `depth`, the fill actually used, the number of layers, the parallax
+`near`, `far` and `gamma` of `depth` and its `cuts`, `strokes` and `fills`, the fill actually used, the number of layers, the parallax
 `strength` (rounded to a thousandth), the size and time of the depth map file and the LaMa file; the
 256 MB limit of the cache covers them and trimming a PNG deletes its JSON. `lama` becomes `simple` while LaMa or
 ONNX Runtime is not installed (`wprs-ctl models download lama-big-fp32`, which, like the other models,
@@ -2287,7 +2295,11 @@ nearest occluding, with the same source, settings and smoothing as the single im
 `wprs-ctl edit depth layers FILE [--fill lama|simple|off] [--layers N] [--force] [--list] [--clear]`
 builds the set in its own process (the same code, with the settings of the configuration
 file as defaults), lists the sets of the picture or deletes them, and
-`wprs-ctl edit depth show FILE --layer N --out PNG` saves one layer with its transparency.
+`wprs-ctl edit depth show FILE --layer N --out PNG [--band PNG] [--fill lama|simple]` saves one layer
+with its transparency and, with `--band`, the pixels of it that moving can uncover, and
+`wprs-ctl edit depth compare FILE --out PNG [--layer N] [--at X]` saves one layer filled by LaMa on
+one side and by the simple fill on the other (the commands of the depth tools are in `editor.md`,
+"Picture depth tools").
 
 Exposure, white balance, contrast, saturation, vignette and blur work in linear light, curves and
 overlays (with their `opacity`) in sRGB. The GPU renders an edit once, at the size the output

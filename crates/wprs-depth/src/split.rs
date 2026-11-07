@@ -84,6 +84,20 @@ pub fn split(depth: &[f32], count: usize) -> Split {
     }
 }
 
+pub fn cut(depth: &[f32], cuts: &[f32]) -> Split {
+    let mut sums = vec![(0.0f64, 0u64); cuts.len() + 1];
+    for d in depth {
+        let k = cuts.partition_point(|c| *c <= *d);
+        sums[k] = (sums[k].0 + f64::from(*d), sums[k].1 + 1);
+    }
+    let mut kept: Vec<usize> = (0..sums.len()).filter(|k| sums[*k].1 > 0).collect();
+    if kept.is_empty() {
+        (kept, sums[0]) = (vec![0], (0.0, 1));
+    }
+    let depths = kept.iter().map(|k| (sums[*k].0 / sums[*k].1 as f64) as f32).collect();
+    Split { cuts: kept.windows(2).map(|w| cuts[w[0]]).collect(), depths }
+}
+
 pub fn indices(depth: &[f32], split: &Split) -> Vec<u8> {
     depth.iter().map(|d| split.index(*d) as u8).collect()
 }

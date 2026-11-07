@@ -1,4 +1,5 @@
 use super::parse::{invalid, usage};
+use super::touch::{self, Touch};
 use super::{Edit, Error};
 use crate::message::{Message, said};
 use serde::{Deserialize, Serialize};
@@ -17,11 +18,30 @@ pub struct Depth {
     pub gamma: f32,
     pub smooth: u32,
     pub dilate: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cuts: Option<Vec<f32>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub strokes: Vec<Touch>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fills: Vec<Touch>,
 }
 
 impl Default for Depth {
     fn default() -> Self {
-        Self { model: MODEL.into(), input: 518, near: 1.0, far: 0.0, gamma: 1.0, smooth: 2, dilate: 3 }
+        let model = MODEL.into();
+        let (cuts, strokes, fills) = (None, Vec::new(), Vec::new());
+        Self {
+            model,
+            input: 518,
+            near: 1.0,
+            far: 0.0,
+            gamma: 1.0,
+            smooth: 2,
+            dilate: 3,
+            cuts,
+            strokes,
+            fills,
+        }
     }
 }
 
@@ -65,6 +85,9 @@ pub(super) fn check(depth: Option<&Depth>, parallax: Option<&Parallax>) -> Resul
         bounded("depth.far", d.far, 0.0, 1.0)?;
         bounded("depth.gamma", d.gamma, 0.2, 5.0)?;
         fine(d.smooth <= 16 && d.dilate <= 16, "edit.depth_pixels", "depth: use 0 to 16 pixels")?;
+        d.cuts.as_deref().map_or(Ok(()), touch::cuts)?;
+        touch::check("depth.strokes", &d.strokes)?;
+        touch::check("depth.fills", &d.fills)?;
     }
     let Some(p) = parallax else { return Ok(()) };
     bounded("parallax.strength", p.strength, 0.0, MAX_STRENGTH)?;

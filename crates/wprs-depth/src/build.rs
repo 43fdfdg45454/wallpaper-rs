@@ -1,6 +1,8 @@
+use crate::brush::lift;
 use crate::fill::{push_pull, simple};
 use crate::guided::{Size, refine};
-use crate::split::{CUT_PIXELS, Split, distance, indices, mask, soft, split};
+use crate::plan::{Plan, Region};
+use crate::split::{CUT_PIXELS, Split, soft};
 use crate::stack::{Band, Info, Layers, Settings, save};
 use crate::windows::{Inpaint, lama};
 use crate::{CACHE_BYTES, Map, Places, adjust, decode, read};
@@ -15,22 +17,23 @@ pub const VERSION: u32 = 1;
 pub const EDGE: u32 = 1920;
 pub const MARGIN: f32 = 2.0;
 
-fn fitted(image: RgbImage) -> RgbImage {
+pub(crate) fn fitted(image: RgbImage) -> RgbImage {
     match image.width().max(image.height()) > EDGE {
         true => image::DynamicImage::ImageRgb8(image).thumbnail(EDGE, EDGE).into_rgb8(),
         false => image,
     }
 }
 
-fn levels(refined: &[f32], size: Size, depth: &Depth) -> Vec<f32> {
+fn leveled(picture: &RgbImage, map: &Map, depth: &Depth) -> (Size, Vec<f32>) {
+    let size = (picture.width() as usize, picture.height() as usize);
+    let refined = refine(map, picture);
     let steps = refined.iter().map(|v| (v * 65535.0).round() as u16).collect();
     let map = Map::from_raw(size.0 as u32, size.1 as u32, steps).unwrap_or_default();
     let flat = Depth { dilate: 0, smooth: 0, ..depth.clone() };
-    adjust(&map, &flat).pixels().map(|Luma([v])| f32::from(*v) / 65535.0).collect()
-}
-
-fn either(a: &[bool], b: &[bool]) -> Vec<bool> {
-    a.iter().zip(b).map(|(a, b)| *a || *b).collect()
+    let mut levels: Vec<f32> =
+        adjust(&map, &flat).pixels().map(|Luma([v])| f32::from(*v) / 65535.0).collect();
+    lift(&mut levels, size, &depth.strokes);
+    (size, levels)
 }
 
 pub fn reach(shift: f32, width: usize, split: &Split, layer: usize) -> f32 {
@@ -46,29 +49,20 @@ struct Source<'a> {
 
 fn one(
     cx: &Source,
-    (own, over, soft): (&[bool], &[bool], &[f32]),
-    (far, reach): (bool, f32),
+    (region, soft): (&Region, &[f32]),
     inpaint: Option<&mut Inpaint<'_>>,
     stop: &AtomicBool,
 ) -> Result<(RgbaImage, Band)> {
-    let near = distance(over, cx.size);
-    let under: Vec<bool> = near.iter().map(|d| *d <= MARGIN).collect();
-    let mut known: Vec<bool> = own.iter().zip(&under).map(|(o, u)| *o && !*u).collect();
-    if far && !known.contains(&true) {
-        known.clone_from_slice(own);
-    }
+    let Region { known, band, reached, refill, reach, far } = region;
     let has = known.contains(&true);
-    let reached = distance(&known, cx.size);
-    let wanted = |k: usize| !known[k] && (over[k] || under[k]) && reached[k] <= reach;
-    let band: Vec<bool> = (0..known.len()).map(wanted).collect();
     let mut filled = match (has, cx.fill) {
         (false, _) => cx.picture.clone(),
-        (true, Fill::Lama) => push_pull(cx.picture, &known),
-        (true, _) => simple(cx.picture, &known),
+        (true, Fill::Lama) => push_pull(cx.picture, known),
+        (true, _) => simple(cx.picture, known),
     };
     if has && cx.fill == Fill::Lama && band.contains(&true) {
         let Some(inpaint) = inpaint else { bail!("LaMa is not loaded") };
-        lama(&mut filled, &band, inpaint, stop)?;
+        lama(&mut filled, band, inpaint, stop)?;
     }
     let (w, h) = cx.size;
     let mut layer = RgbaImage::new(w as u32, h as u32);
@@ -79,12 +73,12 @@ fn one(
             filled.as_raw()[k * 3..k * 3 + 3].to_vec()
         };
         let feather = ((reach + CUT_PIXELS as f32 * 2.0 - reached[k]) / 2.0).clamp(0.0, 1.0);
-        let alpha = if far {
+        let alpha = if *far {
             1.0
         } else if known[k] {
             soft[k]
         } else if band[k] {
-            feather.max(soft[k])
+            if refill[k] { 1.0 } else { feather.max(soft[k]) }
         } else {
             0.0
         };
@@ -92,7 +86,7 @@ fn one(
         *p = Rgba([rgb[0], rgb[1], rgb[2], (alpha * 255.0).round() as u8]);
     }
     let pixels = band.iter().filter(|b| **b).count();
-    Ok((layer, Band { layer: 0, reach, pixels }))
+    Ok((layer, Band { layer: 0, reach: *reach, pixels }))
 }
 
 pub fn layers(
@@ -104,38 +98,39 @@ pub fn layers(
     stop: &AtomicBool,
 ) -> Result<Layers> {
     ensure!(set.fill != Fill::Off, "the fill mode is off: there are no layers to build");
-    let size = (picture.width() as usize, picture.height() as usize);
-    let levels = levels(&refine(map, picture), size, depth);
+    let (size, levels) = leveled(picture, map, depth);
     progress(10);
-    let parts = split(&levels, set.count.clamp(1, 6));
-    let owner = indices(&levels, &parts);
-    let masks: Vec<Vec<bool>> = (0..parts.count()).map(|i| mask(&owner, i)).collect();
-    let mut over = vec![vec![false; levels.len()]; parts.count()];
-    for i in (1..parts.count()).rev() {
-        over[i - 1] = either(&over[i], &masks[i]);
-    }
+    let plan = Plan::new(&levels, size, depth, set.count);
     let cx = Source { picture, size, fill: set.fill };
     let (mut images, mut bands) = (Vec::new(), Vec::new());
-    for i in 0..parts.count() {
+    for i in 0..plan.parts.count() {
         ensure!(!stop.load(Relaxed), "cancelled");
-        let edge = soft(&masks[i], size);
-        let reached = reach(set.shift, size.0, &parts, i);
-        let given = (&masks[i][..], &over[i][..], &edge[..]);
-        let (image, mut band) = one(&cx, given, (i == 0, reached), inpaint.as_deref_mut(), stop)?;
+        let edge = soft(&plan.masks[i], size);
+        let region = plan.region(i, reach(set.shift, size.0, &plan.parts, i));
+        let (image, mut band) = one(&cx, (&region, &edge), inpaint.as_deref_mut(), stop)?;
         band.layer = i;
         images.push(image);
         bands.push(band);
-        progress(10 + 90 * (i as u64 + 1) / parts.count() as u64);
+        progress(10 + 90 * (i as u64 + 1) / plan.parts.count() as u64);
     }
     let info = Info {
         format: 1,
         size: [size.0 as u32, size.1 as u32],
         fill: set.fill.as_str().into(),
-        cuts: parts.cuts,
-        depths: parts.depths,
+        cuts: plan.parts.cuts,
+        depths: plan.parts.depths,
         bands,
     };
     Ok(Layers { info, images })
+}
+
+pub fn band(picture: &RgbImage, map: &Map, depth: &Depth, info: &Info, layer: usize) -> Result<Vec<bool>> {
+    ensure!(layer < info.depths.len(), "the set has {} layers", info.depths.len());
+    let (size, levels) = leveled(picture, map, depth);
+    let fixed = Depth { cuts: Some(info.cuts.clone()), ..depth.clone() };
+    let plan = Plan::new(&levels, size, &fixed, info.depths.len());
+    ensure!(plan.parts.count() == info.depths.len(), "the layer set does not match the depth map");
+    Ok(plan.region(layer, info.bands.get(layer).map_or(MARGIN, |b| b.reach)).band)
 }
 
 impl Places {
@@ -155,5 +150,17 @@ impl Places {
         save(&dest, &made)?;
         self.trim(&dest, CACHE_BYTES)?;
         Ok(dest)
+    }
+
+    pub fn layer_band(
+        &self,
+        (image, sha256): (&Path, &str),
+        depth: &Depth,
+        (info, layer): (&Info, usize),
+    ) -> Result<(Vec<bool>, (u32, u32))> {
+        let map = read(&self.find(image, sha256, depth).context("the image has no depth map")?)?;
+        let picture = fitted(decode(image)?);
+        let found = band(&picture, &map, depth, info, layer)?;
+        Ok((found, picture.dimensions()))
     }
 }

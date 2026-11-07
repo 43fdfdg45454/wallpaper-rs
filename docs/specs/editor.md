@@ -793,3 +793,28 @@ without it, and packs the folder with the code of `wprs-ctl pack build` into `-o
 `<id>-<version>.wpak` next to the folder. `apply` builds the package into
 `$XDG_DATA_HOME/wallpaper-rs/scenes/`, imports it into the library and shows it on an output, or
 on every output.
+
+## Picture depth tools
+
+The *Depth* page of the picture editor in the app and `wprs-ctl edit depth` shape the depth layers
+that parallax moves (`dbus.md`, "Depth layers") through the `depth` section of the edit of a
+picture. They are actions of the edit, the same ones the app runs with `editor.run` and
+`wprs-ctl` with a command, so every step has the undo history of the picture: each stroke, each
+change of the cuts and each mark is one step. All coordinates are fractions of the original
+picture, before the crop and the rotation, and a radius is a fraction of its longer side.
+
+| Action | Fields | `wprs-ctl edit depth …` |
+|--------|--------|-------------------------|
+| `depth_brush` | `points` (a stroke of 1 to 1 024 points, `X,Y;X,Y;...`), `by` (0 to 1, 0.1 by default: the depth added at the middle of the brush, fading to nothing at its edge), `raise` or `lower` (`raise` when neither), `radius` (above 0 and up to 1, 0.05 by default), `falloff` (0 hard to 1 soft, 0.5 by default: how much of the radius fades) and `clear` (removes the earlier strokes first, or alone removes them); adds the stroke to `depth.strokes`, which are applied in order to the adjusted depth map (after `near`, `far`, `gamma`, `dilate` and `smooth`), so every use of the map sees them: the single image warp, the depth masks, the layers and the overlay. At most 256 strokes and 3 000 points in all | `brush FILE X,Y;X,Y;... [--raise\|--lower] [--by V] [--radius R] [--falloff F] [--clear]` |
+| `depth_cuts` | `cuts` (1 to 5 growing levels between 0.005 and 0.995, at least 0.005 apart, `L,L,...`) or `auto`; the layers end at those depths instead of at the ones the clustering finds (a layer left without pixels is dropped, and then the cut that bounded it), so the number of layers follows the cuts and not `parallax.layers`; `auto` goes back to the clustering | `cuts FILE L,L,... \| --auto` |
+| `fill_mask` | `points`, `radius` and `falloff` as the brush, `refill` or `protect` (one of them with `points`) and `clear`; marks, in `depth.fills`, where the band of a layer, the pixels behind nearer layers that moving can uncover, ignores its reach and is always filled (`refill`), or where it is never filled (`protect`, the pixels stay transparent in the layers behind); a later mark paints over an earlier one where they meet | `fill-mask FILE X,Y;X,Y;... (--refill\|--protect) [--radius R] [--falloff F] [--clear]` |
+
+The layers (`wprs-ctl edit depth layers`) and the key of their cache follow the strokes, cuts and
+marks, so a change builds a new set and the old one is trimmed with the cache. The map of the app
+and `edit depth export --adjusted` include the strokes. `edit depth show FILE --layer N --out PNG`
+saves one layer with its transparency, `--band PNG` also saves the band of that layer, white on
+black, computed again with the cuts, strokes and marks of the set, and `--fill lama|simple` picks
+the set made with that fill instead of the newest. `edit depth compare FILE --out PNG [--layer N]
+[--at X]` builds, when they are missing, the set filled by LaMa and the one filled by the simple
+fill, with progress on the standard error, and saves one layer with LaMa on the left of `X` (0.5
+by default) and the simple fill on the right; it refuses to run while LaMa is not installed.

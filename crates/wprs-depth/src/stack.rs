@@ -67,13 +67,14 @@ impl Places {
         let stamp = meta.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_nanos();
         let (near, far, gamma) = (depth.near, depth.far, depth.gamma);
         let used = format!(
-            "{FORMAT}|{sha256}|{}|{}|{near:.3}|{far:.3}|{gamma:.3}|{}|{}|{stamp}|{}|{}",
+            "{FORMAT}|{sha256}|{}|{}|{near:.3}|{far:.3}|{gamma:.3}|{}|{}|{stamp}|{}|{}|{}",
             depth.model,
             depth.input,
             set.named(),
             meta.len(),
             crate::models::LAMA.id,
-            crate::build::VERSION
+            crate::build::VERSION,
+            serde_json::to_string(&(&depth.cuts, &depth.strokes, &depth.fills)).unwrap_or_default()
         );
         let hash: String =
             Sha256::digest(used.as_bytes()).iter().take(8).map(|b| format!("{b:02x}")).collect();

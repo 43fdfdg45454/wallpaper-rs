@@ -908,6 +908,7 @@ msgstr "Quitar la expresión"
 
 #: apps/wprs-ctl/src/cropping.rs apps/wprs-ctl/src/depth.rs
 #: apps/wprs-ctl/src/edit.rs apps/wprs-ctl/src/stacking.rs
+#: apps/wprs-ctl/src/touching.rs
 msgid "Image file"
 msgstr "Archivo de imagen"
 
@@ -1015,68 +1016,43 @@ msgstr ""
 "cada una rellena lo que oculta un objeto cercano"
 
 #: apps/wprs-ctl/src/depth.rs
-msgid "Save one depth layer of an image as a PNG to inspect it"
+msgid ""
+"Save one depth layer of an image as a PNG to inspect it, and the band that "
+"was filled"
 msgstr ""
-"Guardar una capa de profundidad de una imagen como PNG para inspeccionarla"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Level of the nearest point, 0 to 1, 1 by default"
-msgstr "Nivel del punto más cercano, de 0 a 1, 1 por defecto"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Level of the farthest point, 0 to 1, 0 by default"
-msgstr "Nivel del punto más lejano, de 0 a 1, 0 por defecto"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Curve between them, 0.2 to 5, 1 by default"
-msgstr "Curva entre ambos, de 0,2 a 5, 1 por defecto"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Blur radius in pixels of the map, 0 to 16, 2 by default"
-msgstr "Radio de desenfoque en píxeles del mapa, de 0 a 16, 2 por defecto"
+"Guardar una capa de profundidad de una imagen como PNG para inspeccionarla, "
+"y la franja que se rellenó"
 
 #: apps/wprs-ctl/src/depth.rs
 msgid ""
-"Pixels by which near objects grow over their edges, 0 to 16, 3 by default"
+"Save one layer filled by LaMa on the left and by the simple fill on the right"
 msgstr ""
-"Píxeles que crecen los objetos cercanos sobre sus bordes, de 0 a 16, 3 por "
-"defecto"
+"Guardar una capa rellenada con LaMa a la izquierda y con el relleno simple a "
+"la derecha"
 
 #: apps/wprs-ctl/src/depth.rs
 msgid ""
-"Short side given to the model: a multiple of 14 from 196 to 1036, 518 by "
-"default"
+"Raise or lower the depth map along a stroke of the brush; undo goes back one "
+"stroke"
 msgstr ""
-"Lado corto que recibe el modelo: un múltiplo de 14 de 196 a 1036, 518 por "
-"defecto"
+"Subir o bajar el mapa de profundidad a lo largo de un trazo del pincel; "
+"deshacer quita un trazo"
 
 #: apps/wprs-ctl/src/depth.rs
-msgid "What moves it; auto when new"
-msgstr "Qué lo mueve; auto al crearlo"
+msgid ""
+"Cut the depth into layers at the given levels, or go back to the automatic "
+"cuts"
+msgstr ""
+"Cortar la profundidad en capas en los niveles dados, o volver a los cortes "
+"automáticos"
 
 #: apps/wprs-ctl/src/depth.rs
-msgid "Largest shift as a fraction of the width, up to 0.03"
-msgstr "Desplazamiento máximo como fracción del ancho, hasta 0,03"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Depth that stays still, 0 far to 1 near"
-msgstr "Profundidad que queda quieta, de 0 lejos a 1 cerca"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Quality: 1 shifts, more steps follow edges"
-msgstr "Calidad: 1 desplaza, más pasos siguen los bordes"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Time the movement takes to settle, 0 to 2000 ms"
-msgstr "Tiempo que tarda en asentarse el movimiento, de 0 a 2000 ms"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Zoom that hides the edges, 1 to 1.1"
-msgstr "Zoom que oculta los bordes, de 1 a 1,1"
-
-#: apps/wprs-ctl/src/depth.rs
-msgid "Turn the parallax off and keep its settings"
-msgstr "Apagar el paralaje y conservar sus ajustes"
+msgid ""
+"Paint where the fill must always (refill) or never (protect) reach behind "
+"near objects"
+msgstr ""
+"Pintar dónde el relleno debe llegar siempre (refill) o nunca (protect) "
+"detrás de los objetos cercanos"
 
 #: apps/wprs-ctl/src/edit.rs
 msgid ""
@@ -3185,6 +3161,65 @@ msgstr "Otro último hueso, junto con --root"
 #: apps/wprs-ctl/src/limbing.rs
 msgid "Remove chain N, 0 first"
 msgstr "Quitar la cadena N, 0 la primera"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Level of the nearest point, 0 to 1, 1 by default"
+msgstr "Nivel del punto más cercano, de 0 a 1, 1 por defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Level of the farthest point, 0 to 1, 0 by default"
+msgstr "Nivel del punto más lejano, de 0 a 1, 0 por defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Curve between them, 0.2 to 5, 1 by default"
+msgstr "Curva entre ambos, de 0,2 a 5, 1 por defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Blur radius in pixels of the map, 0 to 16, 2 by default"
+msgstr "Radio de desenfoque en píxeles del mapa, de 0 a 16, 2 por defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid ""
+"Pixels by which near objects grow over their edges, 0 to 16, 3 by default"
+msgstr ""
+"Píxeles que crecen los objetos cercanos sobre sus bordes, de 0 a 16, 3 por "
+"defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid ""
+"Short side given to the model: a multiple of 14 from 196 to 1036, 518 by "
+"default"
+msgstr ""
+"Lado corto que recibe el modelo: un múltiplo de 14 de 196 a 1036, 518 por "
+"defecto"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "What moves it; auto when new"
+msgstr "Qué lo mueve; auto al crearlo"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Largest shift as a fraction of the width, up to 0.03"
+msgstr "Desplazamiento máximo como fracción del ancho, hasta 0,03"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Depth that stays still, 0 far to 1 near"
+msgstr "Profundidad que queda quieta, de 0 lejos a 1 cerca"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Quality: 1 shifts, more steps follow edges"
+msgstr "Calidad: 1 desplaza, más pasos siguen los bordes"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Time the movement takes to settle, 0 to 2000 ms"
+msgstr "Tiempo que tarda en asentarse el movimiento, de 0 a 2000 ms"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Zoom that hides the edges, 1 to 1.1"
+msgstr "Zoom que oculta los bordes, de 1 a 1,1"
+
+#: apps/wprs-ctl/src/looking.rs
+msgid "Turn the parallax off and keep its settings"
+msgstr "Apagar el paralaje y conservar sus ajustes"
 
 #: apps/wprs-ctl/src/manifesting.rs
 msgid ""
@@ -6053,6 +6088,41 @@ msgstr "Capa que guardar, 0 para la más lejana"
 msgid "PNG file to write, with the transparency of the layer"
 msgstr "Archivo PNG que escribir, con la transparencia de la capa"
 
+#: apps/wprs-ctl/src/stacking.rs
+msgid ""
+"Also write the band of the layer that moving can uncover, white on black, as "
+"a PNG"
+msgstr ""
+"Guardar también la franja de la capa que el movimiento puede descubrir, "
+"blanca sobre negro, como PNG"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Show the set made with this fill instead of the newest one"
+msgstr "Mostrar el juego hecho con este relleno en vez del más reciente"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid ""
+"PNG file to write: the layer filled by LaMa on the left, by the simple fill "
+"on the right"
+msgstr ""
+"Archivo PNG que se escribe: la capa rellenada con LaMa a la izquierda y con "
+"el relleno simple a la derecha"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid ""
+"Layer to compare, 0 for the farthest; the one with the largest band by "
+"default"
+msgstr ""
+"Capa que se compara, 0 la más lejana; por defecto la de la franja más grande"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Where the picture changes from LaMa to the simple fill, 0 to 1"
+msgstr "Dónde la imagen pasa de LaMa al relleno simple, de 0 a 1"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Where LaMa runs"
+msgstr "Dónde corre LaMa"
+
 #: apps/wprs-ctl/src/staging.rs
 msgid "%1 is not K=X,Y"
 msgstr "%1 no es K=X,Y"
@@ -6861,6 +6931,64 @@ msgstr "Imprimir este mensaje o la ayuda de las órdenes dadas"
 #: apps/wprs-ctl/src/told.rs
 msgid "The command whose help to print"
 msgstr "Orden cuya ayuda se imprime"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Stroke of 1 to 1024 points, in fractions of the image"
+msgstr "Trazo de 1 a 1024 puntos, en fracciones de la imagen"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Raise the depth towards the viewer, the default"
+msgstr "Subir la profundidad hacia quien mira, lo normal"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Lower the depth, away from the viewer"
+msgstr "Bajar la profundidad, lejos de quien mira"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Depth added at the middle of the brush, 0 to 1, 0.1 by default"
+msgstr ""
+"Profundidad que se suma en el centro del pincel, de 0 a 1, 0,1 por defecto"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Radius of the brush as a fraction of the longer side, 0.05 by default"
+msgstr "Radio del pincel como fracción del lado más largo, 0,05 por defecto"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid ""
+"How much of the brush fades towards its edge, 0 hard to 1 soft, 0.5 by "
+"default"
+msgstr ""
+"Cuánto del pincel se desvanece hacia su borde, de 0 duro a 1 suave, 0,5 por "
+"defecto"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Remove all strokes before painting this one"
+msgstr "Quitar todos los trazos antes de pintar este"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid ""
+"1 to 5 growing depth levels between 0 and 1 where one layer ends and the "
+"next begins"
+msgstr ""
+"De 1 a 5 niveles de profundidad crecientes entre 0 y 1 donde termina una "
+"capa y empieza la siguiente"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Go back to cuts found from the depth of the picture"
+msgstr "Volver a los cortes que salen de la profundidad de la imagen"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Fill the area behind near objects even where it is not within reach"
+msgstr ""
+"Rellenar la zona detrás de los objetos cercanos aunque no esté al alcance"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Never fill the area"
+msgstr "No rellenar nunca la zona"
+
+#: apps/wprs-ctl/src/touching.rs
+msgid "Remove all marks before painting this one, or alone to remove them"
+msgstr "Quitar todas las marcas antes de pintar esta, o solas para quitarlas"
 
 #: apps/wprs-ctl/src/triggering.rs
 msgid ""

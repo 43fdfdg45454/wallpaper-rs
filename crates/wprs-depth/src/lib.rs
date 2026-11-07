@@ -1,3 +1,4 @@
+mod brush;
 mod build;
 #[cfg(feature = "fetch")]
 mod fetch;
@@ -14,13 +15,18 @@ mod install;
 mod made;
 pub mod models;
 mod normals;
+mod plan;
 mod process;
+#[cfg(feature = "infer")]
+mod rebuild;
 mod split;
 mod stack;
 mod store;
+mod views;
 mod windows;
 
-pub use build::{EDGE, MARGIN, layers, reach};
+pub use brush::{lift, lift_map, marks, stamp};
+pub use build::{EDGE, MARGIN, band, layers, reach};
 #[cfg(feature = "fetch")]
 pub use fetch::{AGENT, Cancelled, allowed, download};
 pub use files::{beside, decode, read, sha256, shape, write};
@@ -35,9 +41,12 @@ pub use made::{Bench, bench, generate, generate_until};
 pub use models::{Asset, LAMA, MODEL, Part, RUNTIME};
 pub use normals::{MAX_BLUR, MAX_STRENGTH, normals, relief, sphere};
 pub use process::{adjust, coloured, input_size, normalize, shrink, tensor};
-pub use split::{Split, distance, indices, mask, soft, split};
+#[cfg(feature = "infer")]
+pub use rebuild::settings;
+pub use split::{Split, cut, distance, indices, mask, soft, split};
 pub use stack::{Band, Info, Layers, SUFFIX, Settings, load, save};
 pub use store::CACHE_BYTES;
+pub use views::{band_mask, halves, histogram, hue, outlines, tint};
 pub use windows::{Inpaint, lama, plan};
 
 use std::path::{Path, PathBuf};

@@ -1110,6 +1110,11 @@ wprs-ctl edit depth layers foto.jpg --fill simple --layers 4 --force
 wprs-ctl edit depth layers foto.jpg --list                      # los juegos de capas de la imagen
 wprs-ctl edit depth layers foto.jpg --clear                     # borrarlos
 wprs-ctl edit depth show foto.jpg --layer 0 --out capa.png      # inspeccionar una capa
+wprs-ctl edit depth show foto.jpg --layer 1 --out capa.png --band franja.png   # y su franja a rellenar
+wprs-ctl edit depth compare foto.jpg --out cmp.png --layer 1    # LaMa a la izquierda, relleno simple a la derecha
+wprs-ctl edit depth brush foto.jpg "0.3,0.4;0.5,0.4" --raise --by 0.2 --radius 0.05   # pincel de profundidad
+wprs-ctl edit depth cuts foto.jpg 0.2,0.45,0.7                  # cortes de capa a mano (--auto vuelve a los automáticos)
+wprs-ctl edit depth fill-mask foto.jpg "0.5,0.5" --protect      # zonas que siempre (--refill) o nunca (--protect) se rellenan
 wprs-ctl config parallax.fill simple                            # lama, simple u off
 wprs-ctl config parallax.layers 6
 ```
