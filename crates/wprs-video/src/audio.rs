@@ -165,7 +165,8 @@ impl Audio {
     }
 
     fn rebuild(&mut self, playbin: &gst::Element, bus: &gst::Bus, sink: Option<gst::Element>) {
-        self.restart = playbin.query_position::<gst::ClockTime>().filter(|at| !at.is_zero());
+        let piped = sink.as_ref().is_some_and(|s| s.name() == SINK);
+        self.restart = playbin.query_position::<gst::ClockTime>().filter(|at| !at.is_zero() && !piped);
         self.fresh = true;
         let _ = playbin.set_state(gst::State::Null);
         bus.set_flushing(true);
