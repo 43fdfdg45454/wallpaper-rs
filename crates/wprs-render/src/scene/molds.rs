@@ -120,13 +120,14 @@ impl Renderer {
                 view.molds.insert(id.clone(), made);
             }
             let mold = view.molds.get_mut(id).expect("made above");
-            self.scoped(|| self.cast(mold, mesh))?;
+            let done = self.scoped(|| self.cast(mold, mesh))?;
+            view.pool.defer(done);
             mold.generation = generation;
         }
         Ok(())
     }
 
-    fn cast(&self, mold: &mut Mold, mesh: Option<&wprs_scene::Mesh>) {
+    fn cast(&self, mold: &mut Mold, mesh: Option<&wprs_scene::Mesh>) -> wgpu::CommandBuffer {
         let filled = mesh.filter(|m| !m.indices.is_empty());
         if let Some(m) = filled {
             let fits = |b: &wgpu::Buffer, n: usize| b.size() >= n as u64;
@@ -170,6 +171,6 @@ impl Renderer {
             pass.draw_indexed(0..m.indices.len() as u32, 0, 0..1);
         }
         drop(pass);
-        self.queue.submit([encoder.finish()]);
+        encoder.finish()
     }
 }

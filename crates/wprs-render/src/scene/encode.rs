@@ -35,7 +35,7 @@ impl Renderer {
     ) -> (SceneStats, wgpu::SubmissionIndex, Instant) {
         let pipes = self.scene.get().expect("created with the view");
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        clock.open(&mut encoder, timing);
+        pool.ahead.splice(0..0, clock.open(self, timing));
         let mut stats = SceneStats::default();
         let frame = pool.frame_groups().clone();
         let (mut k, mut profile) = (0, super::profile::Profile::begin(&self.device, timed));
@@ -175,7 +175,7 @@ impl Renderer {
         clock.close(&mut encoder, timing);
         encoder.on_submitted_work_done(move || super::flight::done(view, serial));
         let at = Instant::now();
-        let submitted = self.queue.submit([encoder.finish()]);
+        let submitted = self.queue.submit(pool.ahead.drain(..).chain([encoder.finish()]));
         if profiled {
             super::profile::submitted();
         }

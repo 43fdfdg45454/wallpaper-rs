@@ -37,6 +37,7 @@ pub(crate) struct Pool {
     pub(crate) glow: super::lamps::Glow,
     pub(crate) strip: super::strip::Strip,
     pub(crate) exact: HashMap<u64, crate::GpuImage>,
+    pub(crate) ahead: Vec<wgpu::CommandBuffer>,
 }
 
 impl Pool {
@@ -73,6 +74,17 @@ impl Pool {
             glow: super::lamps::Glow::new(device),
             strip: Default::default(),
             exact: HashMap::new(),
+            ahead: Vec::new(),
+        }
+    }
+
+    pub(crate) fn defer(&mut self, done: wgpu::CommandBuffer) {
+        self.ahead.push(done);
+    }
+
+    pub(crate) fn send_ahead(&mut self, queue: &wgpu::Queue) {
+        if !self.ahead.is_empty() {
+            queue.submit(self.ahead.drain(..));
         }
     }
 

@@ -64,9 +64,10 @@ impl Renderer {
             let staged = view.solids.get_mut(stage.layer).expect("made above");
             let env_view = map.unwrap_or(&self.solids().white);
             let flags = (map.is_some(), view.debug3d);
-            self.scoped(|| {
+            let done = self.scoped(|| {
                 self.paint_stage(staged, (&view.models, env_view, &view.uniform), frame, stage, flags)
             })?;
+            view.pool.defer(done);
             staged.key = key;
             staged.renders += 1;
         }
@@ -84,7 +85,7 @@ impl Renderer {
         frame: &Frame<'_>,
         stage: &Stage3d<'_>,
         flags: (bool, u8),
-    ) {
+    ) -> wgpu::CommandBuffer {
         plan(staged, frame, stage);
         let shadows = self.shadow_plan(frame, stage);
         let mut bytes = std::mem::take(&mut staged.bytes);
@@ -143,6 +144,6 @@ impl Renderer {
                 self.mix_slices(&mut encoder, &staged.cross_groups[k], &staged.slices[k], f);
             }
         }
-        self.queue.submit([encoder.finish()]);
+        encoder.finish()
     }
 }

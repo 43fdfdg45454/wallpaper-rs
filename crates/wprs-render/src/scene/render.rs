@@ -24,6 +24,7 @@ impl Renderer {
         self.check_target(size.0, size.1)?;
         self.judge(view, frame);
         view.pace(self);
+        view.pool.send_ahead(&self.queue);
         self.molds(view, runtime)?;
         let data = frame_data(runtime, frame, size, view.srgb, quality);
         self.queue.write_buffer(&view.uniform, 0, bytemuck::bytes_of(&data));
@@ -106,10 +107,8 @@ impl Renderer {
         };
         let damage = painter.damage(&v.marks, &mut scratch.marks, v.stamp != stamp);
         let fresh = std::mem::replace(&mut v.stamp, stamp) != stamp;
-        let damage = match damage {
-            Damage::Part(_) if v.trimmed || frame.keep => Damage::Full,
-            damage => damage,
-        };
+        let part = matches!(damage, Damage::Part(_)) && (v.trimmed || frame.keep);
+        let damage = if part { Damage::Full } else { damage };
         std::mem::swap(&mut v.marks, &mut scratch.marks);
         v.region = match damage {
             Damage::Full => None,
@@ -125,7 +124,8 @@ impl Renderer {
         if let Some(swarms) = painter.swarms.as_deref_mut() {
             let sim = if clean { super::clock::Sim::Off } else { v.clock.sim(self) };
             let stamp = if let super::clock::Sim::Stamps(set) = &sim { Some(set) } else { None };
-            let stamped = self.scoped(|| swarms.run(self, runtime, frame, quality, stamp))??;
+            let ahead = &mut *painter.pool;
+            let stamped = self.scoped(|| swarms.run(self, runtime, frame, quality, (stamp, ahead)))??;
             v.clock.simmed(self, sim, stamped);
         }
         if clean {
@@ -133,6 +133,7 @@ impl Renderer {
             let in_flight = super::flight::flying(v.id);
             let gpu_us = (v.clock.gpu_ms * 1000.0) as u32;
             v.stats = SceneStats { particles, in_flight, gpu_us, ..SceneStats::default() };
+            v.pool.send_ahead(&self.queue);
             v.pool.end_frame();
             super::flight::idle(v.id);
             v.scratch = scratch;

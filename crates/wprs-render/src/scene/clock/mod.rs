@@ -107,10 +107,11 @@ impl Clock {
         })
     }
 
-    pub(crate) fn open(&self, encoder: &mut wgpu::CommandEncoder, timing: Timing) {
-        if let (Timing::Stamps(_), Some(stamps)) = (timing, &self.stamps) {
-            stamps.mark(encoder, false);
-        }
+    pub(crate) fn open(&self, r: &Renderer, timing: Timing) -> Option<wgpu::CommandBuffer> {
+        let (Timing::Stamps(_), Some(stamps)) = (timing, &self.stamps) else { return None };
+        let mut encoder = r.device.create_command_encoder(&Default::default());
+        stamps.mark(&mut encoder, false);
+        Some(encoder.finish())
     }
 
     pub(crate) fn close(&self, encoder: &mut wgpu::CommandEncoder, timing: Timing) {

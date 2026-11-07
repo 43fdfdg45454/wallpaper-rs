@@ -14,7 +14,7 @@ impl Swarms {
         runtime: &Runtime,
         frame: &Frame<'_>,
         quality: Quality,
-        stamp: Option<&wgpu::QuerySet>,
+        (stamp, ahead): (Option<&wgpu::QuerySet>, &mut super::super::pool::Pool),
     ) -> Result<bool, RenderError> {
         let start = Instant::now();
         let heard = |herd: usize, part: usize, e: usize| {
@@ -72,12 +72,15 @@ impl Swarms {
             jobs.push(Job { herd: i, count, reset });
         }
         self.dispatch(r, runtime, &jobs, start)?;
-        self.stamp.submit(r);
+        self.stamp.close(r);
+        let stamp = std::mem::take(&mut self.stamp);
+        stamp.done.into_iter().for_each(|done| ahead.defer(done));
         if self.profile {
+            ahead.send_ahead(&r.queue);
             r.finish()?;
         }
         self.micros = start.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
-        Ok(std::mem::take(&mut self.stamp).begun)
+        Ok(stamp.begun)
     }
 }
 
@@ -98,6 +101,11 @@ impl Stamp {
     }
 
     pub(super) fn submit(&mut self, r: &Renderer) {
+        self.close(r);
+        r.queue.submit(self.done.drain(..));
+    }
+
+    fn close(&mut self, r: &Renderer) {
         if self.open.is_none() && self.done.is_empty() {
             return;
         }
@@ -105,7 +113,6 @@ impl Stamp {
             self.open.take().unwrap_or_else(|| r.device.create_command_encoder(&Default::default()));
         mark(self.set.as_ref(), &mut self.begun, &mut encoder, true);
         self.done.push(encoder.finish());
-        r.queue.submit(self.done.drain(..));
     }
 }
 

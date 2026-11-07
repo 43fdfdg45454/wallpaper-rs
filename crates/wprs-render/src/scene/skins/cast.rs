@@ -52,7 +52,8 @@ impl Renderer {
                 continue;
             }
             self.bind_skin(skin, (picture.0, &picture.1, padded.as_ref()));
-            self.scoped(|| self.paint_skin(skin, (&p.rig, p.posed()), *size, *relief))?;
+            let done = self.scoped(|| self.paint_skin(skin, (&p.rig, p.posed()), *size, *relief))?;
+            view.pool.defer(done);
             (skin.generation, skin.relief) = (*pose, *relief);
         }
         view.skins.retain(|k, _| runtime.puppet(k).is_some());
@@ -65,7 +66,7 @@ impl Renderer {
         (rig, posed): (&Rigged, &Posed),
         [w, h]: [f32; 2],
         relief: Option<Relief>,
-    ) {
+    ) -> wgpu::CommandBuffer {
         self.queue.write_buffer(&skin.bones, 0, bytemuck::cast_slice(&posed.palette));
         skin.scratch.clear();
         skin.scratch.push([w, h, if relief.is_some() { DEEP } else { 0.0 }, 0.0]);
@@ -126,6 +127,6 @@ impl Renderer {
             }
         }
         drop(pass);
-        self.queue.submit([encoder.finish()]);
+        encoder.finish()
     }
 }
