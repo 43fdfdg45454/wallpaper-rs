@@ -130,6 +130,7 @@ GridLayout {
     Flow {
         Layout.columnSpan: 2
         Layout.fillWidth: true
+        spacing: Kirigami.Units.largeSpacing
 
         SceneRepeater {
             id: listed
