@@ -18,10 +18,17 @@ error of the screen, instead of drawing nothing:
 | Where | What it has | Web pages |
 |-------|-------------|-----------|
 | Arch Linux, Fedora | `wpewebkit` 2.54 | shown |
-| Ubuntu 24.04 (the CI runner) | WebKitGTK 2.52 only, no WPE | refused: `they need WPE WebKit 2.54 or newer, which is not installed` |
-| Flatpak (`org.kde.Platform`) | no WebKit in the runtime | refused with the same reason; `wprs-web` is in the bundle |
+| Ubuntu 24.04 (the CI runner) | WebKitGTK 2.52 only; no `wpewebkit` package at all (the last Ubuntu release that had one is 22.04, with WPE 2.36 and the 1.0 API) | refused: `they need WPE WebKit 2.54 or newer, which is not installed. Ubuntu 24.04 does not ship it` |
+| Flatpak (`org.kde.Platform`) | no WPE in the runtime, and no WPE runtime or extension on Flathub that we know of | refused: `this Flatpak runs on the KDE runtime, which has no WPE WebKit 2.54 or newer`; `wprs-web` is in the bundle |
 | any, without the helper | — | refused: `the web helper wprs-web is not installed` |
 | Android (the app) | the system WebView | shown with it, see "On the phone" |
+
+Putting WPE in the Flatpak would mean building WPE WebKit 2.54 from source inside the manifest
+(libwpe, wpebackend-fdo, libsoup 3, GStreamer GL, ICU and the rest of its dependencies; hours of
+compile time and several GiB of memory on every release build), because neither the KDE runtime nor
+Flathub carries it, and the same holds for a deb on Ubuntu 24.04. The web job of the CI therefore
+proves pages where WPE exists (an Arch Linux container on the Ubuntu runner), and the Ubuntu and
+Flatpak jobs prove the refusal with its reason (`scripts/integration-web.sh`, `packaging/flatpak/check.sh`).
 
 The daemon finds the helper in `WPRS_WEB`, next to `wprsd` or in `PATH`, and runs
 `wprs-web --check` once to learn whether it can start (it prints the WebKit version, or why not).

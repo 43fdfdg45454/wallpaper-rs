@@ -80,8 +80,15 @@ pub fn web_missing() -> String {
     tr("Web wallpapers cannot be shown here: the web helper wprs-web is not installed.")
 }
 
-pub fn web_engine() -> String {
-    tr("Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer, which is not installed.")
+pub fn web_engine(flatpak: bool) -> String {
+    match flatpak {
+        true => tr(
+            "Web wallpapers cannot be shown here: this Flatpak runs on the KDE runtime, which has no WPE WebKit 2.54 or newer, the engine that draws them. Install wallpaper-rs from a package of your distribution that has wpewebkit (Arch Linux, Fedora).",
+        ),
+        false => tr(
+            "Web wallpapers cannot be shown here: they need WPE WebKit 2.54 or newer, which is not installed. Ubuntu 24.04 does not ship it; Arch Linux and Fedora do (wpewebkit).",
+        ),
+    }
 }
 
 pub fn web_old(why: &str) -> String {

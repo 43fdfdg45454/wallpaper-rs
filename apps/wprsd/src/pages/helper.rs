@@ -20,9 +20,15 @@ fn probe() -> Result<String, String> {
     let said = String::from_utf8_lossy(&output.stdout).trim().to_owned();
     match output.status.success() {
         true => Ok(said),
-        false if said.contains("libWPEWebKit") => Err(crate::words::web_engine()),
-        false if said.contains("older than") => Err(crate::words::web_old(&said)),
-        false => Err(crate::words::web_broken(&said)),
+        false => Err(refusal(&said, crate::flatpak::app_id().is_some())),
+    }
+}
+
+fn refusal(said: &str, flatpak: bool) -> String {
+    match said {
+        s if s.contains("libWPEWebKit") => crate::words::web_engine(flatpak),
+        s if s.contains("older than") => crate::words::web_old(s),
+        s => crate::words::web_broken(s),
     }
 }
 
@@ -32,4 +38,19 @@ pub fn available() -> Result<String, String> {
 
 pub fn unavailable() -> Option<String> {
     available().err()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::refusal;
+
+    #[test]
+    fn a_missing_engine_is_explained_for_the_flatpak_and_for_the_rest() {
+        let missing = "libWPEWebKit-2.0.so.1: cannot open shared object file";
+        let (flatpak, other) = (refusal(missing, true), refusal(missing, false));
+        assert!(flatpak.contains("Flatpak") && flatpak.contains("WPE WebKit"), "{flatpak}");
+        assert!(other.contains("Ubuntu 24.04") && other.contains("WPE WebKit"), "{other}");
+        assert!(refusal("WPE WebKit 2.52 is older than 2.54", false).contains("2.52"));
+        assert!(refusal("boom", true).contains("boom"));
+    }
 }

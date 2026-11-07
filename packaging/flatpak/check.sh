@@ -8,7 +8,8 @@ run() { cmd=$1 && shift && flatpak run --env=QT_QPA_PLATFORM=offscreen --command
 test "$(run wprs-ctl $app --version)" = "wprs-ctl $version"
 test "$(run wprsd $app --version)" = "wprsd $version"
 run wprs-app $app --check
-if run wprs-web $app --check; then echo "the runtime unexpectedly carries WPE WebKit"; else echo "web wallpapers refused here, as expected"; fi
+if said=$(run wprs-web $app --check 2>&1); then echo "the runtime unexpectedly carries WPE WebKit"; exit 1; fi
+case $said in *libWPEWebKit*) echo "web wallpapers refused here, as expected" ;; *) echo "wprs-web --check failed for another reason: $said"; exit 1 ;; esac
 files=$(flatpak info -l $app)/files
 exports=${files%%/app/*}/exports/share
 run wprs-plasma $app > plasma.sh

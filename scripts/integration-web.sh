@@ -23,7 +23,7 @@ read -r _ _ _ web < <(ctl stream TEST-W 320 180)
 if ! "$BIN/wprs-web" --check >/dev/null 2>&1; then
   [ "${WPRS_REQUIRE_WEB:-0}" != 1 ] || fail "WPRS_REQUIRE_WEB=1 but web wallpapers cannot run here"
   if ctl lib apply "$tint" -o TEST-W 2>"$pages/refused"; then fail "a web wallpaper was applied without its helper"; fi
-  grep -q "Web wallpapers cannot be shown here" "$pages/refused" || fail "unclear refusal: $(cat "$pages/refused")"
+  grep -q "Web wallpapers cannot be shown here: .*\(WPE WebKit\|wprs-web\)" "$pages/refused" || fail "unclear refusal: $(cat "$pages/refused")"
   ctl release TEST-W
   echo "web wallpapers refused with a reason where the web engine is missing"
 else
