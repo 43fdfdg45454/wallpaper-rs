@@ -1,3 +1,4 @@
+use crate::library::now;
 use crate::said;
 use crate::state::{read, update};
 use crate::{Error, library, store};
@@ -9,6 +10,8 @@ use std::sync::Arc;
 use wprs_format::Anchor;
 use wprs_providers::HttpFetch;
 use wprs_sync::{Ids, Kept, Local, Replica, View};
+
+pub(crate) mod preview;
 
 const DIR: &str = "repos";
 pub(crate) const ITEMS: &str = "items.json";
@@ -24,10 +27,6 @@ pub(crate) struct Offer {
 
 pub(crate) fn dir() -> Result<PathBuf, Error> {
     Ok(store::dir()?.join(DIR))
-}
-
-fn now() -> i64 {
-    library::now()
 }
 
 fn shared(url: &str) -> bool {
@@ -161,6 +160,7 @@ pub(crate) fn list() -> Result<Value, Error> {
 }
 
 pub(crate) fn remove(repo_id: &str) -> Result<Value, Error> {
+    preview::forget(repo_id);
     wprs_format::remove_repo(&dir()?, repo_id)?;
     store::changed();
     Ok(Value::Null)

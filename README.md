@@ -1119,7 +1119,9 @@ que se sincronizan (el teléfono no usa proveedores, pero las guarda selladas po
 claves y las muestra) y los *Repositorios*: los que se añaden en otro equipo llegan como
 propuesta con su clave y se añaden o se rechazan una vez, también se añade uno por su dirección,
 y *Explorar* busca sus paquetes (los marca si son para adultos y los oculta con *Ocultar el
-contenido para adultos*) y los instala en la biblioteca, comprobados con el índice firmado
+contenido para adultos*), enseña la vista previa de cada uno (una por vez que se ve la fila, solo del
+repositorio que añadiste, con un hueco gris mientras llega, sin pedir las de adultos salvo con
+*Mostrar sin difuminar*, y guardadas hasta 16 MiB, que se borran con el repositorio) y los instala en la biblioteca, comprobados con el índice firmado
 del repositorio; un paquete instalado así es el mismo elemento de la biblioteca en el teléfono y
 en el ordenador. Una vez al día, con las mismas reglas de red y batería que la sincronización de
 cada hora (al cambiar *Sincronizar también con datos móviles* cambia también la comprobación que

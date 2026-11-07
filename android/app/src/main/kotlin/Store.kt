@@ -20,6 +20,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import org.json.JSONArray
@@ -134,6 +136,17 @@ fun forget() = thumbs.evictAll()
 fun thumbnail(item: Item): State<ImageBitmap?> = produceState(thumbs[item.uid], item.uid, item.thumb) {
     value = value ?: runCatching { withContext(Dispatchers.IO) { picture(item) } }.getOrNull()
 }
+
+private val fetching = Semaphore(2)
+
+suspend fun remote(spec: String): ImageBitmap? = thumbs[spec] ?: fetching.withPermit {
+    val path = runCatching { account("thumb", "spec" to spec) as? String }.getOrNull()
+    val small = BitmapFactory.Options().apply { inSampleSize = 4 }
+    path?.let { BitmapFactory.decodeFile(it, small)?.asImageBitmap() }?.also { thumbs.put(spec, it) }
+}
+
+@Composable
+fun preview(spec: String): State<ImageBitmap?> = produceState(thumbs[spec], spec) { value = value ?: remote(spec) }
 
 private suspend fun picture(item: Item): ImageBitmap? {
     val made = suspend { ask("thumb", "uid" to item.uid) as? String }

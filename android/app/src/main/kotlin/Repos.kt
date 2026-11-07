@@ -1,6 +1,13 @@
 package io.github.wallpaper_rs
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -104,6 +111,7 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
                         }
                         val id = item.getString("id")
                         ListItem(
+                            leadingContent = { Cover(item.getString("repo_id") + "/" + id + "/" + item.getString("version")) },
                             headlineContent = { Text(item.optString("title").ifEmpty { id }) },
                             supportingContent = {
                                 val mature = stringResource(R.string.mature).takeIf { item.optBoolean("mature") }
@@ -133,4 +141,12 @@ private fun Explore(main: Main, run: Run, close: () -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun Cover(spec: String) {
+    val image by preview(spec)
+    val frame = Modifier.size(72.dp, 40.dp).clip(RoundedCornerShape(4.dp))
+    image?.let { Image(it, null, frame, contentScale = ContentScale.Crop) }
+        ?: Box(frame.background(MaterialTheme.colorScheme.surfaceVariant))
 }

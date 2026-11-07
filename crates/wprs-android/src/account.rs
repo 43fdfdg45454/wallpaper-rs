@@ -92,6 +92,9 @@ enum Request {
         repo_id: String,
         id: String,
     },
+    Thumb {
+        spec: String,
+    },
     InstallBase {
         uid: String,
     },
@@ -154,6 +157,7 @@ fn run(request: Request) -> Result<Value, Error> {
         Request::RemoveRepo { repo_id } => return repos::remove(&repo_id),
         Request::Browse { query } => return repos::browse(&query),
         Request::Install { repo_id, id } => return repos::install(&repo_id, &id),
+        Request::Thumb { spec } => return repos::preview::thumb(&spec),
         Request::InstallBase { uid } => return crate::kin::install_base(&uid),
         Request::Votes { ids } => return votes::counts(&ids),
         Request::Vote { id, vote } => return votes::cast(&id, &vote),

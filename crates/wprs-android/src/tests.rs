@@ -22,6 +22,7 @@ mod looks;
 mod paced;
 mod pages;
 mod played;
+mod previewed;
 mod records;
 mod reeled;
 mod refused;
