@@ -19,7 +19,7 @@ PlasmoidItem {
     }
     Component.onCompleted: daemon.refresh()
     onExpandedChanged: {
-        if (expanded)
+        if (root.expanded)
             daemon.refresh();
     }
 
