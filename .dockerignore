@@ -13,3 +13,4 @@ deploy
 .claude
 .env
 .env.*
+data
