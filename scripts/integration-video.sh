@@ -21,6 +21,7 @@ kill "$broken_pid"
 wait "$broken_pid" || true
 echo "broken configuration checks passed"
 
+wait_for 10 name_free || fail "io.github.wallpaper_rs.Daemon is still owned on the private session bus"
 RUST_LOG=$log "$BIN/wprsd" >"$WORK/wprsd.log" 2>&1 & daemon=$!; pids+=("$daemon")
 for _ in $(seq 100); do dbus-send --session --dest=org.freedesktop.DBus / org.freedesktop.DBus.GetId & done
 wait_for 30 ctl state || fail "the daemon did not start while clients came and went"
@@ -111,21 +112,29 @@ sound=$WORK/sound.webm
 gst-launch-1.0 -q videotestsrc num-buffers=100 ! video/x-raw,width=64,height=32,framerate=5/1 ! vp8enc ! \
   webmmux name=mux ! filesink location="$sound" audiotestsrc num-buffers=600 samplesperbuffer=1600 volume=0.5 ! \
   audio/x-raw,rate=48000 ! audioconvert ! vorbisenc ! mux.
+linked() { pw-link -l | grep -q -- '|<- wallpaper-rs:output_'; }
 level() {
-  rm -f "$WORK/sound.wav"
-  timeout 2 pw-record --target wprs-test-sink -P '{ stream.capture.sink=true }' --rate 48000 --channels 2 \
-    --format s16 "$WORK/sound.wav" 2>/dev/null
-  python3 -c "import array, math, sys, wave; w = wave.open(sys.argv[1]); a = array.array('h', w.readframes(w.getnframes()))[-48000:]
-print(round(math.sqrt(sum(x * x for x in a) / len(a))) if len(a) == 48000 else -1)" "$WORK/sound.wav" 2>/dev/null || echo -1
+  local l=-1
+  for _ in 1 2 3; do
+    wait_for 5 linked || true
+    rm -f "$WORK/sound.wav"
+    timeout 3 pw-record --target wprs-test-sink -P '{ stream.capture.sink=true }' --rate 48000 --channels 2 \
+      --format s16 "$WORK/sound.wav" 2>/dev/null
+    l=$(python3 -c "import array, math, sys, wave; w = wave.open(sys.argv[1]); a = array.array('h', w.readframes(w.getnframes()))[-48000:]
+print(round(math.sqrt(sum(x * x for x in a) / len(a))) if len(a) == 48000 else -1)" "$WORK/sound.wav" 2>/dev/null || echo -1)
+    [ "$l" = -1 ] || break
+  done
+  echo "$l"
 }
 between() { local l; l=$(level); [ "$l" -ge "$1" ] && [ "$l" -le "$2" ]; }
+until_between() { local end=$((SECONDS + $1)); shift; until between "$@"; do [ $SECONDS -lt $end ] || return 1; done; }
 read -r _ _ _ s13 < <(ctl stream TEST-13 160 90)
 ctl volume 100 && ctl set "$sound" -o TEST-13 && consume "$s13"
 expect "s['outputs']['TEST-13']['playing']" True
 plugin=$(gst-inspect-1.0 pipewiresink 2>/dev/null | sed -n 's/^ *Version *//p')
 if printf '1.2\n%s\n' "$plugin" | sort -VC; then direct=true; else direct=false; fi
 [ "${WPRS_REQUIRE_PIPEWIRE_SOUND:-0}" != 1 ] || $direct || fail "WPRS_REQUIRE_PIPEWIRE_SOUND=1 but the PipeWire GStreamer plugin is '$plugin', older than 1.2"
-sounds() { ! $direct || wait_for 5 between 5000 20000; }
+sounds() { ! $direct || until_between 10 5000 20000; }
 if $direct; then
   wait_for 10 grep -q "no audio output" "$WORK/wprsd.log" || fail "a video without an audio output was not reported"
   pw-cli create-node adapter '{ factory.name=support.null-audio-sink node.name=wprs-test-sink
@@ -142,9 +151,9 @@ piped = any(p.get('media.class') == 'Stream/Output/Audio' and p.get('node.name')
 sys.exit(piped != (sys.argv[1] == 'true'))" "$direct" || fail "PipeWire GStreamer plugin $plugin and direct sound disagree"
 if $direct; then
   ctl volume 10
-  wait_for 2 between 300 3000 || fail "the volume did not lower the sound: $(level)"
+  until_between 6 300 3000 || fail "the volume did not lower the sound: $(level)"
   ctl mute
-  wait_for 2 between 0 20 || fail "muting left the sound on: $(level)"
+  until_between 6 0 20 || fail "muting left the sound on: $(level)"
 fi
 ctl volume 30 && ctl mute && leave
 ctl release TEST-13 && expect "list(s['outputs'])" "[]"

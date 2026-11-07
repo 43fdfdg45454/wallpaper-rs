@@ -28,6 +28,8 @@ wait_for() {
   return 1
 }
 
+name_free() { ! dbus-send --session --print-reply --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+  org.freedesktop.DBus.NameHasOwner string:io.github.wallpaper_rs.Daemon | grep -q "boolean true"; }
 ctl() { "$BIN/wprs-ctl" "$@"; }
 field() { ctl state | python3 -c "import json, sys; s = json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
 expect() {
