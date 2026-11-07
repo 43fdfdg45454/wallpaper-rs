@@ -262,8 +262,12 @@ video), devices without `VK_EXT_external_memory_dma_buf` and `VK_EXT_image_drm_f
 turned by its orientation tag in system memory and uploaded, without opening the video again. A failure switches the video to the copy path once and for good.
 `WPRS_ZERO_COPY=0` in the environment of the daemon forces the copy path. Per driver: Intel (iHD)
 and AMD (radeonsi) VA-API export NV12 DMA-BUFs; with GStreamer 1.24, NVIDIA offers no DMA-BUF from
-NVDEC (CUDA or OpenGL memory) nor from its VA-API driver (system memory), so its videos are copied,
-although its Vulkan driver imports them.
+NVDEC (CUDA or OpenGL memory) nor from its VA-API driver (`nvidia-vaapi-driver`, system memory), so
+its videos are copied, although its Vulkan driver imports them. That driver decodes and can export
+NV12 as two separate layers with an NVIDIA block-linear modifier, but not as composed layers, and the
+`va` plugin of GStreamer 1.24 then offers no DMA-BUF; forcing it (`NVD_BACKEND=direct`,
+`GST_VA_ALL_DRIVERS=1`) measured the same CPU time per frame, memory and GPU power as the copy path
+(table in the README).
 
 Pausing a video only pauses the pipeline: the frame on screen stays and nothing is decoded again.
 If the pause has not settled after 1 s, the player seeks to the nearest key frame to finish it.

@@ -803,12 +803,36 @@ con la CPU por fotograma, frente a tres en la ruta de copia: bajar el fotograma,
 subirlo; con un vídeo 4K a 30 fps decodificado por VA-API en una iGPU de AMD, unos 0,3 ms de CPU
 por fotograma en vez de unos 16 ms). Si el decodificador es por software, si el formato o el modificador no se pueden importar
 o si la importación falla, el vídeo vuelve solo a la ruta de copia. En las GPU de NVIDIA, GStreamer
-1.24 no entrega DMA-BUF (NVDEC da memoria CUDA u OpenGL y el controlador VA-API sobre NVDEC solo
-memoria del sistema), así que allí los vídeos siguen copiándose, aunque la importación funciona; con
-lavapipe y OpenGL no hay importación. `wprs-ctl state` muestra la ruta elegida en `decode`
+1.24 no entrega DMA-BUF (NVDEC da memoria CUDA u OpenGL y el controlador VA-API sobre NVDEC,
+`nvidia-vaapi-driver`, solo memoria del sistema), así que allí los vídeos siguen copiándose, aunque
+la importación funciona; con lavapipe y OpenGL no hay importación. `wprs-ctl state` muestra la ruta elegida en `decode`
 (`zero-copy` o `copy`) y `WPRS_ZERO_COPY=0` en el entorno del daemon fuerza la copia. Pausar un vídeo
 lo detiene donde está, sin volver a decodificar desde el fotograma clave anterior: en un vídeo 4K
 con fotogramas clave cada 10 s, una pausa pasó de unos 2,3 s de CPU a menos de 20 ms.
+
+Medido en una GPU dedicada de NVIDIA con el controlador propietario 615, GStreamer 1.24, un
+daemon de `--release` en una instancia privada y un vídeo H.264 de 30 s (1080p60) o 20 s (4K60) en
+una pantalla de su mismo tamaño, durante 30 s por prueba (media de dos rondas; la potencia de la GPU
+varía unos 5 W entre rondas, probablemente porque la comparten otros procesos, y en reposo, sin vídeo, midió entre
+17 y 32 W). «Copia» es lo que hace hoy el daemon (NVDEC por `nvh264dec`); «VA-API» fuerza el
+decodificador `varenderD129h264dec` de `nvidia-vaapi-driver` (`NVD_BACKEND=direct`,
+`GST_VA_ALL_DRIVERS=1`):
+
+| Prueba | Fotogramas por segundo | CPU por fotograma | CPU del daemon | Memoria (RSS) | Potencia de la GPU | Uso de la GPU / NVDEC |
+|--------|------------------------|-------------------|----------------|---------------|--------------------|-----------------------|
+| 1080p60, copia | 59,8 | 4,7 ms | 28 % de un núcleo | 673 MiB | 45,7 W | 3 % / 2 % |
+| 1080p60, VA-API | 59,8 | 4,5 ms | 27 % de un núcleo | 730 MiB | 46,3 W | 3 % / 2 % |
+| 4K60, copia | 59,7 | 18,9 ms | 113 % de un núcleo | 1124 MiB | 48,4 W | 8 % / 10 % |
+| 4K60, VA-API | 59,5 | 19,0 ms | 113 % de un núcleo | 1112 MiB | 48,0 W | 8 % / 8 % |
+
+El VA-API de NVIDIA decodifica bien (NV12, a todos los fotogramas por segundo), pero no cambia nada
+medible: sus fotogramas llegan igual en memoria del sistema y siguen la misma ruta de copia, con unos
+50 MiB más de memoria y cerca de 1 GiB más de memoria de vídeo. El controlador sí sabe exportar NV12
+como DMA-BUF (dos capas separadas, una por plano, con el modificador de bloques de NVIDIA
+`0x0300000000606014`), pero no capas compuestas, y el plugin `va` de GStreamer 1.24 no consigue
+exportar (`vaExportSurfaceHandle: an unsupported memory type was supplied`), así que no ofrece
+DMA-BUF. Por eso el daemon no lo prefiere ni lo detecta: darle cero copias en NVIDIA exigiría
+decodificar con NVDEC o `libva` directamente, o un GStreamer que acepte capas separadas.
 
 La configuración vive en `~/.config/wallpaper-rs/config.toml` y solo la puede leer su usuario.
 Si se edita a mano, los valores fuera de rango se corrigen al leerla. Si tiene un error de
