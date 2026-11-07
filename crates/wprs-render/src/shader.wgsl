@@ -7,6 +7,7 @@ struct Params {
     focus: f32,
     steps: f32,
     grade: Grade,
+    levels: array<vec4<f32>, 2>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;

@@ -15,18 +15,23 @@ struct Params {
     focus: f32,
     steps: f32,
     grade: [[f32; 4]; 5],
+    levels: [[f32; 4]; 2],
 }
 
 pub(crate) struct Slot {
     uniform: wgpu::Buffer,
     params: Params,
     pub(crate) group: wgpu::BindGroup,
-    key: (u64, bool, Option<u64>),
+    key: (u64, bool, Option<u64>, bool),
 }
 
 impl Slot {
     pub(crate) fn deep(&self) -> bool {
-        self.key.2.is_some()
+        self.key.2.is_some() && !self.key.3
+    }
+
+    pub(crate) fn decked(&self) -> bool {
+        self.key.3
     }
 }
 
@@ -47,15 +52,16 @@ impl Renderer {
                 uv.repeat as u32,
                 layer.image.is_some() as u32,
                 layer.image.is_some_and(opaque) as u32,
-                0,
+                relief.and_then(|r| r.depth.levels()).map_or(0, |l| l.len().min(8) as u32),
             ],
             shift: relief.map_or([0.0; 2], |r| turned(r.shift)),
             focus: relief.map_or(0.0, |r| r.focus),
             steps: relief.map_or(1, |r| r.steps.max(1)) as f32,
             grade: layer.grade.map_or([[0.0; 4]; 5], |g| g.uniform()),
+            levels: relief.and_then(|r| r.depth.levels()).map_or([[0.0; 4]; 2], spread),
         };
         let (image, depth) = (layer.image.unwrap_or(&self.placeholder), relief.map(|r| r.depth));
-        let key = (image.id, uv.repeat, depth.map(|d| d.id));
+        let key = (image.id, uv.repeat, depth.map(|d| d.id), depth.is_some_and(|d| d.levels.is_some()));
         let Some(slot) = slots.get_mut(index) else {
             let usage = wgpu::BufferUsages::UNIFORM;
             let devices = (&self.device, &self.queue);
@@ -82,7 +88,11 @@ impl Renderer {
         depth: Option<&GpuImage>,
     ) -> wgpu::BindGroup {
         let sampler = if repeat && depth.is_none() { &self.repeat } else { &self.clamp };
-        let layout = if depth.is_some() { &self.reliefs().layout } else { &self.layers.layout };
+        let layout = match depth {
+            Some(d) if d.levels.is_some() => &self.decks().layout,
+            Some(_) => &self.reliefs().layout,
+            None => &self.layers.layout,
+        };
         let views = std::iter::once(image).chain(depth).map(|i| wgpu::BindingResource::TextureView(&i.view));
         let resources = std::iter::once(uniform.as_entire_binding())
             .chain(views)
@@ -97,6 +107,12 @@ impl Renderer {
             entries: &entries,
         })
     }
+}
+
+fn spread(levels: &[f32]) -> [[f32; 4]; 2] {
+    let mut out = [[0.0; 4]; 2];
+    levels.iter().take(8).enumerate().for_each(|(i, l)| out[i / 4][i % 4] = *l);
+    out
 }
 
 fn flipped(mut uv: UvRect, flip: [bool; 2]) -> UvRect {

@@ -1,6 +1,14 @@
 use std::sync::{Mutex, PoisonError};
 
 pub(crate) fn bind_group_layout(device: &wgpu::Device, textures: u32) -> wgpu::BindGroupLayout {
+    layout_of(device, &vec![wgpu::TextureViewDimension::D2; textures as usize])
+}
+
+pub(crate) fn layout_of(
+    device: &wgpu::Device,
+    dimensions: &[wgpu::TextureViewDimension],
+) -> wgpu::BindGroupLayout {
+    let textures = dimensions.len() as u32;
     let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
         binding,
         visibility: wgpu::ShaderStages::FRAGMENT,
@@ -12,14 +20,14 @@ pub(crate) fn bind_group_layout(device: &wgpu::Device, textures: u32) -> wgpu::B
         has_dynamic_offset: false,
         min_binding_size: None,
     };
-    let texture = wgpu::BindingType::Texture {
+    let texture = |view_dimension| wgpu::BindingType::Texture {
         sample_type: wgpu::TextureSampleType::Float { filterable: true },
-        view_dimension: wgpu::TextureViewDimension::D2,
+        view_dimension,
         multisampled: false,
     };
     let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
     let entries: Vec<_> = std::iter::once(entry(0, uniform))
-        .chain((1..=textures).map(|binding| entry(binding, texture)))
+        .chain(dimensions.iter().enumerate().map(|(i, d)| entry(i as u32 + 1, texture(*d))))
         .chain([entry(textures + 1, sampler)])
         .collect();
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {

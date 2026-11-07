@@ -11,6 +11,7 @@ mod choose;
 mod coded;
 mod color;
 mod damaged;
+mod deck;
 mod decode;
 mod deep;
 mod develop;

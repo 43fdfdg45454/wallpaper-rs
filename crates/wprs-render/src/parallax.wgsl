@@ -1,4 +1,4 @@
-struct Parallax { offset: vec2<f32>, scale: vec2<f32>, background: vec4<f32>, flags: vec4<u32>, shift: vec2<f32>, focus: f32, steps: f32, grade: Grade };
+struct Parallax { offset: vec2<f32>, scale: vec2<f32>, background: vec4<f32>, flags: vec4<u32>, shift: vec2<f32>, focus: f32, steps: f32, grade: Grade, levels: array<vec4<f32>, 2> };
 struct VertexOut { @builtin(position) position: vec4<f32>, @location(0) uv: vec2<f32> };
 
 @group(0) @binding(0) var<uniform> p: Parallax;

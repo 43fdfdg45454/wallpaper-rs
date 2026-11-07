@@ -11,6 +11,7 @@ pub struct GpuImage {
     pub(crate) id: u64,
     pub(crate) format: wgpu::TextureFormat,
     pub(crate) crop: [f32; 2],
+    pub(crate) levels: Option<std::sync::Arc<[f32]>>,
 }
 
 impl GpuImage {
@@ -24,6 +25,10 @@ impl GpuImage {
 
     pub fn same(&self, other: &GpuImage) -> bool {
         self.id == other.id
+    }
+
+    pub fn levels(&self) -> Option<&[f32]> {
+        self.levels.as_deref()
     }
 }
 
@@ -135,7 +140,14 @@ pub(crate) fn gpu_image(texture: wgpu::Texture) -> GpuImage {
 
 pub(crate) fn cropped(texture: wgpu::Texture, crop: [f32; 2]) -> GpuImage {
     let format = texture.format();
-    GpuImage { view: texture.create_view(&Default::default()), texture, id: next_id(), format, crop }
+    GpuImage {
+        view: texture.create_view(&Default::default()),
+        texture,
+        id: next_id(),
+        format,
+        crop,
+        levels: None,
+    }
 }
 
 pub(crate) fn within(rect: [f32; 4], crop: [f32; 2]) -> [f32; 4] {
