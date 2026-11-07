@@ -502,7 +502,14 @@ clase del teléfono (básica con poca memoria o sin sombreadores de cálculo, al
 declara una clase de rendimiento de Android 13 o posterior, media en el resto, ajustada con la misma
 medida corta que en el escritorio y guardada en los archivos de la app) y de la batería: con
 batería baja un nivel, y con calor baja más; si los fotogramas tardan demasiado en la GPU baja otro,
-y solo vuelve a subir con el cargador puesto y el teléfono frío. El motor de la escena sigue vivo
+y solo vuelve a subir con el cargador puesto y el teléfono frío. En las GPU de teselas de los teléfonos cada
+pasada de render cuesta cerca de un milisegundo por sí sola, más que sus píxeles, así que allí la
+escena dibuja menos pasadas: el primer efecto de una imagen, un vídeo o una malla lee la imagen donde
+está en lugar de una copia de la capa, una malla oculta que da su máscara a otra del mismo lugar y
+tamaño se lee sin dibujarla aparte, y los efectos que se funden en una pasada siguen fundidos cuando
+el nivel quita uno de en medio. En el teléfono de pruebas (60 Hz, pantalla apagada) una escena con
+una imagen y dos olas bajó de 15,5 a 9,9 ms por fotograma en Q0 y otra con una malla animada de 16,9
+a 15,1 ms en Q2. El motor de la escena sigue vivo
 cuando el sistema cambia la superficie del fondo, así que no se vuelve a cargar ni compilar. Las capas con
 paralaje de una escena siguen la inclinación del teléfono con los mismos sensores que el paralaje de
 las fotos, aunque la escena no lo pida con `gyro`, y sin sensores, el paso de páginas del lanzador;

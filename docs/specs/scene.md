@@ -344,6 +344,20 @@ it as it draws instead of in a pass of its own, and an adjustment layer reads wh
 directly instead of a copy. `wprs-ctl scene bench` prints these notes after its
 numbers.
 
+On GPUs that draw in tiles, as those of phones do, every render pass costs a fixed share of the
+frame on its own, about a millisecond on a phone at 60 Hz, more than its pixels or the size of its
+texels do, so the engine draws fewer of them there. The first effect of an image, video or mesh
+layer reads the picture where it lies, through the mapping between its target and the layer, instead
+of a copy of the layer drawn first into a target of its own; it does so when that effect is a single
+pass that reads only the previous result (a fused chain of built-in effects, or an effect without a
+state, render targets, a copy, a blend of its own or a mix by its mask), no effect of the layer
+reads `input` or `source`, and the layer has no mask, light, tint or brightness of its own, is not
+turned in 3D, shows its whole picture without tiling and blends in linear space. A hidden mesh layer
+placed and sized like the layer whose effect it masks or feeds is read from its posed mesh instead
+of being drawn into a target for that effect. The picture is then resampled once instead of twice,
+which changes only the softness of its edges. Effects that fuse into one pass (`fs_chain`) stay
+fused when the quality level leaves out an effect between them, on every GPU.
+
 On battery the level drops one step, which lowers resolution and effects, not the rate: the rate
 follows the display up to 60 frames per second unless the user chose a rate (`playback.max_fps`,
 on the phone its rate on battery, 60 by default), which then holds as on mains power; power saving
