@@ -734,6 +734,20 @@ msgstr ""
 "título, el artista y la carátula de lo que suena podrían salir de este "
 "equipo. Permítelo solo si le confías esos datos."
 
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid "Follow the sound even though it can reach the network"
+msgstr "Seguir el sonido aunque pueda salir a internet"
+
+#: apps/wprs-app/qml/Consent.qml apps/wprs-app/qml/SceneControls.qml
+msgid ""
+"This web wallpaper may also reach the sites it names, so what it hears, the "
+"sound that plays or the microphone, could leave this computer. Allow it only "
+"if you trust it with that."
+msgstr ""
+"Este fondo web también puede conectarse a los sitios que nombra, así que lo "
+"que oye, el sonido que suena o el micrófono, podría salir de este equipo. "
+"Permítelo solo si le confías eso."
+
 #: apps/wprs-app/qml/Consent.qml
 msgid "Send its colors to the RGB lighting"
 msgstr "Mandar sus colores a la iluminación RGB"
@@ -7261,8 +7275,8 @@ msgstr "Cada copia sigue %1 de %2"
 msgid ""
 "Copies of this template may follow a bone or point of a mesh of the scene"
 msgstr ""
-"Las copias de esta plantilla pueden seguir un hueso o punto de una malla "
-"de la escena"
+"Las copias de esta plantilla pueden seguir un hueso o punto de una malla de "
+"la escena"
 
 #: apps/wprs-app/qml/SceneTemplateFollow.qml
 #: apps/wprs-app/qml/facade/SceneTerms.qml
@@ -8058,6 +8072,10 @@ msgstr "lo que suena en el reproductor"
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "what the media player plays, even with the network"
 msgstr "lo que suena en el reproductor, aun con acceso a internet"
+
+#: apps/wprs-app/qml/facade/LabelWords.qml
+msgid "the sound, even with the network"
+msgstr "el sonido, aun con acceso a internet"
 
 #: apps/wprs-app/qml/facade/LabelWords.qml
 msgid "the network"

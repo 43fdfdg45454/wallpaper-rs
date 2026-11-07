@@ -75,6 +75,8 @@ pub enum Kind {
     Media,
     #[value(name = "media_network")]
     MediaNetwork,
+    #[value(name = "audio_network")]
+    AudioNetwork,
 }
 
 #[derive(ValueEnum, Clone, Copy, Debug)]
@@ -93,6 +95,7 @@ impl Kind {
             Kind::Rgb => Input::Rgb.as_str(),
             Kind::Media => Input::Media.as_str(),
             Kind::MediaNetwork => Input::MediaNetwork.as_str(),
+            Kind::AudioNetwork => Input::AudioNetwork.as_str(),
         }
     }
 }

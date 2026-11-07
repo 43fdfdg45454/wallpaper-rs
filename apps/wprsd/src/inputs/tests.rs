@@ -149,3 +149,21 @@ fn a_page_that_reaches_the_network_hears_the_player_only_after_a_second_confirma
     assert!(control.allows("A", Input::Media) && !control.allows("A", Input::MediaNetwork));
     assert_eq!(Input::parse("media_network"), Some(Input::MediaNetwork));
 }
+
+#[test]
+fn a_page_that_reaches_the_network_hears_only_after_a_second_confirmation() {
+    let mut control = Control::default();
+    let page = |network| SceneInputs { network, ..scene(SEA, "k", true, false) };
+    control.shown.insert("A".into(), page(true));
+    control.grants = bound("k", &[Input::Audio]);
+    assert!(!control.allows("A", Input::Audio), "audio alone does not reach a page with the network");
+    assert!(!control.allows("A", Input::AudioNetwork));
+    control.grants = bound("k", &[Input::Audio, Input::AudioNetwork]);
+    assert!(control.allows("A", Input::Audio) && control.allows("A", Input::AudioNetwork));
+    control.grants = bound("k", &[Input::AudioNetwork]);
+    assert!(!control.allows("A", Input::Audio), "the second confirmation never stands alone");
+    control.shown.insert("A".into(), page(false));
+    control.grants = bound("k", &[Input::Audio]);
+    assert!(control.allows("A", Input::Audio) && !control.allows("A", Input::AudioNetwork));
+    assert_eq!(Input::parse("audio_network"), Some(Input::AudioNetwork));
+}

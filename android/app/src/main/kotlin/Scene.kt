@@ -69,6 +69,7 @@ fun Scene(main: Main, uid: String, modifier: Modifier = Modifier) {
         if (uses?.optBoolean("audio") == true) Toggle(stringResource(R.string.react_sound), granted?.optBoolean("audio") == true) { on ->
             if (on && main.checkSelfPermission(RECORD_AUDIO) != PERMISSION_GRANTED) microphone.launch(RECORD_AUDIO) else grant("audio", on)
         }
+        SoundNetworkGrants(form) { input, on -> grant(input, on) }
         if (uses?.optBoolean("touch") == true) {
             Toggle(stringResource(R.string.react_touch), granted?.optBoolean("touch") == true) { grant("touch", it) }
         }

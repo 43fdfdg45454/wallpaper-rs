@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 model! {
     #[derive(Copy, Eq, Hash, PartialOrd, Ord)]
-    pub enum Input { Audio, Pointer, Clicks, Network, Rgb, Media, MediaNetwork }
+    pub enum Input { Audio, Pointer, Clicks, Network, Rgb, Media, MediaNetwork, AudioNetwork }
 
     pub struct SceneInputs {
         pub scene: String,
@@ -63,7 +63,7 @@ model! {
 }
 
 impl Input {
-    pub const ALL: [Input; 7] = [
+    pub const ALL: [Input; 8] = [
         Input::Audio,
         Input::Pointer,
         Input::Clicks,
@@ -71,6 +71,7 @@ impl Input {
         Input::Rgb,
         Input::Media,
         Input::MediaNetwork,
+        Input::AudioNetwork,
     ];
 
     pub fn parse(name: &str) -> Option<Input> {
@@ -86,6 +87,7 @@ impl Input {
             Input::Rgb => "rgb",
             Input::Media => "media",
             Input::MediaNetwork => "media_network",
+            Input::AudioNetwork => "audio_network",
         }
     }
 }

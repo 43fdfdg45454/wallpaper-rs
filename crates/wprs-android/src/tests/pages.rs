@@ -112,6 +112,8 @@ fn values_reach_the_running_page(uid: &str, path: &Path, url: &str) {
     assert!(page::spec(HANDLE, uid, path, false, None).unwrap()["tell"].is_null());
     assert!(!page::hearing(HANDLE) && script::heard(HANDLE, r#"{"audio":true}"#).is_none());
     ask(json!({ "op": "grant", "uid": uid, "input": "audio", "on": true }));
+    assert!(!page::hearing(HANDLE), "audio alone does not reach a page with network origins");
+    ask(json!({ "op": "grant", "uid": uid, "input": "audio_network", "on": true }));
     assert!(page::hearing(HANDLE) && script::listen(HANDLE).unwrap().contains("\"audio\":[["));
 }
 

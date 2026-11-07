@@ -1795,6 +1795,11 @@ confirmación aparte (`wprs-ctl input grant ID media_network`, el segundo aviso 
 bandeja, que también lo dejan quitar en los controles de la escena, o en el teléfono un diálogo
 propio al encender el segundo interruptor), porque el título y la carátula podrían salir por la red.
 
+Lo mismo vale para el sonido: un fondo web que declara `audio` y orígenes de red no oye nada hasta
+que se permiten `audio` y también `audio_network` (`wprs-ctl input grant ID audio_network`, el
+segundo aviso de la app y la bandeja, o en el teléfono un diálogo propio al encender el segundo
+interruptor), porque lo que oye, el sonido que suena o el micrófono, podría salir por la red.
+
 ## Servidor propio
 
 `wprs-server` publica un repositorio firmado de paquetes, un catálogo web sin JavaScript, cuentas

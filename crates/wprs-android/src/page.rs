@@ -135,7 +135,7 @@ pub(crate) fn spec(
     Ok(json!({
         "key": key, "url": format!("https://{}/", view.host), "origin": format!("https://{}", view.host),
         "background": web.background, "network": privacy.network, "storage": privacy.storage,
-        "fps": fps(&pack, preview), "audio": audio && granted[0] && view.audio,
+        "fps": fps(&pack, preview), "audio": audio && props::hears(&pack) && view.audio,
         "pointer": pointer && granted[1], "clicks": clicks && granted[2], "tell": tell,
         "guard": script::started(view),
     }))
@@ -153,7 +153,7 @@ pub(crate) fn heeds(handle: i64) -> bool {
 pub(crate) fn hearing(handle: i64) -> bool {
     let views = views();
     let Some(v) = views.get(&handle) else { return false };
-    v.audio && v.pack.web.as_ref().is_some_and(|w| w.uses[0]) && props::granted(&v.pack.id)[0]
+    v.audio && v.pack.web.as_ref().is_some_and(|w| w.uses[0]) && props::hears(&v.pack)
 }
 
 pub(crate) fn touched(handle: i64) -> bool {

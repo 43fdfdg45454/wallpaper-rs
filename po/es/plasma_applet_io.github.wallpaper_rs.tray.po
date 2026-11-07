@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: wallpaper-rs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-05 00:00+0000\n"
+"POT-Creation-Date: 2026-11-06 00:00+0000\n"
 "PO-Revision-Date: 2026-10-22 00:00+0000\n"
 "Last-Translator: wallpaper-rs contributors\n"
 "Language-Team: wallpaper-rs contributors\n"
@@ -77,6 +77,20 @@ msgstr ""
 "Este fondo web también puede conectarse a los sitios que nombra, así que el "
 "título, el artista y la carátula de lo que suena podrían salir de este "
 "equipo. Permítelo solo si le confías esos datos."
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid "Follow the sound even though it can reach the network"
+msgstr "Seguir el sonido aunque pueda salir a internet"
+
+#: integrations/plasma-tray/contents/ui/Consent.qml
+msgid ""
+"This web wallpaper may also reach the sites it names, so what it hears, the "
+"sound that plays or the microphone, could leave this computer. Allow it only "
+"if you trust it with that."
+msgstr ""
+"Este fondo web también puede conectarse a los sitios que nombra, así que lo "
+"que oye, el sonido que suena o el micrófono, podría salir de este equipo. "
+"Permítelo solo si le confías eso."
 
 #: integrations/plasma-tray/contents/ui/Consent.qml
 msgid "Send its colors to the RGB lighting"

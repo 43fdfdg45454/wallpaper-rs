@@ -10,6 +10,9 @@
     <string name="media_network_note">Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir del teléfono.</string>
     <string name="media_network_why">Este fondo web también puede conectarse a los sitios que nombra, así que el título, el artista y la carátula de lo que suena podrían salir del teléfono. Permítelo solo si le confías esos datos; puedes quitarlo aquí cuando quieras.</string>
     <string name="media_network_allow">Permitir</string>
+    <string name="audio_network_title">Oír el sonido aunque pueda salir a internet</string>
+    <string name="audio_network_note">Este fondo web también puede conectarse a los sitios que nombra, así que lo que oye, el sonido que suena o el micrófono, podría salir del teléfono.</string>
+    <string name="audio_network_why">Este fondo web también puede conectarse a los sitios que nombra, así que lo que oye, el sonido que suena o el micrófono, podría salir del teléfono. Permítelo solo si le confías eso; puedes quitarlo aquí cuando quieras.</string>
     <string name="media_status_off">Ningún fondo lee ahora lo que suena; empieza mientras se muestra uno permitido.</string>
     <string name="media_status">Se lee ahora. Reproductores encontrados: %1$d. Pista: %2$s, sonando: %3$s, carátula: %4$s.</string>
     <string name="media_yes">sí</string>

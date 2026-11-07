@@ -19,7 +19,11 @@ impl Control {
         still
             || self.shown.get(output).is_some_and(|need| {
                 let declared = match input {
-                    Input::Audio => need.audio && !self.blocked,
+                    Input::Audio => {
+                        need.audio
+                            && !self.blocked
+                            && (!need.network || self.has(&need.scene, &need.key, Input::AudioNetwork))
+                    }
                     Input::Pointer => need.pointer,
                     Input::Clicks => need.clicks && self.views.get(output).is_some_and(|v| v.clicks),
                     Input::Network => need.network,
@@ -28,6 +32,7 @@ impl Control {
                         need.media && (!need.network || self.has(&need.scene, &need.key, Input::MediaNetwork))
                     }
                     Input::MediaNetwork => need.media && need.network,
+                    Input::AudioNetwork => need.audio && need.network,
                 };
                 declared && self.has(&need.scene, &need.key, input)
             })

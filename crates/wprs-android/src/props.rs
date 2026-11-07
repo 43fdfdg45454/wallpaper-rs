@@ -101,6 +101,11 @@ pub(crate) fn allows(id: &str, input: Input) -> bool {
     grants().get(id).is_some_and(|g| g.contains(&input))
 }
 
+pub(crate) fn hears(pack: &Pack) -> bool {
+    let network = pack.web.as_ref().is_some_and(|w| !w.network.is_empty());
+    allows(&pack.id, Input::Audio) && (!network || allows(&pack.id, Input::AudioNetwork))
+}
+
 fn form(pack: &Pack, languages: &[String], uid: &str) -> Result<Value, Error> {
     let values = values(pack);
     let sounds = pack.scene.sounds().next().is_some();
@@ -125,7 +130,8 @@ fn form(pack: &Pack, languages: &[String], uid: &str) -> Result<Value, Error> {
         "saved": saved::listed(pack)?, "web": crate::page::form(pack),
         "uses": { "audio": uses[0], "touch": uses[1], "taps": uses[2], "media": media, "network": network },
         "granted": { "audio": audio, "touch": touch, "taps": taps, "media": allows(&pack.id, Input::Media),
-            "media_network": allows(&pack.id, Input::MediaNetwork) },
+            "media_network": allows(&pack.id, Input::MediaNetwork),
+            "audio_network": allows(&pack.id, Input::AudioNetwork) },
         "access": crate::playing::access(), "video": pack.video.is_some(),
     }))
 }
@@ -170,6 +176,7 @@ fn grant(pack: &Pack, input: &str, on: bool) -> Result<(), Error> {
         "taps" => Input::Clicks,
         "network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::Network,
         "media" => Input::Media,
+        "audio_network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::AudioNetwork,
         "media_network" if pack.web.as_ref().is_some_and(|w| !w.network.is_empty()) => Input::MediaNetwork,
         _ => {
             return Err(said("android.audio_touch_taps", "%1 is not audio, touch, taps or media", &[&input]));

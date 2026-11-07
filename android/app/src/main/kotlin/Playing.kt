@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import org.json.JSONObject
 
 internal object MediaConsent {
-    fun asks(input: String, wanted: Boolean): Boolean = wanted && input == "media_network"
+    fun asks(input: String, wanted: Boolean): Boolean = wanted && (input == "media_network" || input == "audio_network")
 }
 
 @Composable

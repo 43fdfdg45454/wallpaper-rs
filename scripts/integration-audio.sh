@@ -54,8 +54,13 @@ sleep 1
 [ "$(inputs "r['capturing']")" = False ] || fail "audio was captured without permission"
 if analysing; then fail "an audio stream exists without permission"; fi
 denied "nothing can ask the user\\|is asked in a notification" Inputs1.Grant string:"$sea" string:audio
+denied "only the app, the tray and wprs-ctl give wallpapers the network or lights" Inputs1.Grant string:"$sea" string:audio_network
 [ "$(inputs "r['grants']")" = "{}" ] || fail "another program granted an input: $(ctl input status --json)"
 ctl input grant "$sea" audio && ctl input grant "$sea" pointer && ctl input grant "$sea" audio
+ctl input grant "$sea" audio_network
+ctl input status | grep -q "^TEST-12 shows .* (allowed: audio, pointer, audio_network)" ||
+  fail "the second confirmation of the sound was not kept: $(ctl input status)"
+ctl input revoke "$sea" audio_network
 [ "$(inputs "r['grants'], r['shown']['TEST-12']['granted']")" = "({'$sea': ['audio', 'pointer']}, ['audio', 'pointer'])" ] ||
   fail "grants: $(ctl input status --json)"
 dbus-send --session --print-reply --dest=io.github.wallpaper_rs.Daemon /io/github/wallpaper_rs/Daemon \
