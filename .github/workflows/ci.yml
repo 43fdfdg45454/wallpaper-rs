@@ -635,6 +635,8 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       WPRS_VERSION: ${{ needs.version.outputs.informational }}
+      WPRS_PUBLIC_URL: http://127.0.0.1:8080
+      COMPOSE_FILE: compose.yaml:deploy/compose.build.yaml
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -642,7 +644,9 @@ jobs:
           persist-credentials: false
 
       - name: Build and start with compose
-        run: docker compose up -d --build --wait --wait-timeout 180
+        run: |
+          sudo install -d -o 65532 -g 65532 -m 0700 data
+          docker compose up -d --build --wait --wait-timeout 180
 
       - name: Health, setup, repository, backup and restore
         run: scripts/server-smoke.sh

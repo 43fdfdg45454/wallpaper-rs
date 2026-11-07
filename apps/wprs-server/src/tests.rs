@@ -33,6 +33,12 @@ fn configuration_defaults_and_errors() {
         (Registration::Invite, Clients::Off, 7, "wprs")
     );
     assert_eq!(cfg.licenses, ["CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"]);
+    let private = |text: &str| cfg.trusted_proxies.iter().any(|net| within(net, text.parse().unwrap()));
+    assert_eq!(cfg.trusted_proxies.len(), 6);
+    assert!(
+        ["127.0.0.1", "::1", "10.1.2.3", "172.18.0.1", "192.168.1.5", "fd12::1"].into_iter().all(private)
+    );
+    assert!(!["192.0.2.1", "172.32.0.1", "2001:db8::1"].into_iter().any(private));
     let secure = config(&[
         ("WPRS_PUBLIC_URL", "https://example.org/"),
         ("WPRS_TRUSTED_PROXIES", "172.16.0.0/12, ::1"),

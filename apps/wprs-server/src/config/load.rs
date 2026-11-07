@@ -5,6 +5,8 @@ use std::fs;
 use std::net::IpAddr;
 use std::path::PathBuf;
 
+const PRIVATE_NETWORKS: &str = "127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7";
+
 impl Config {
     pub fn from_env() -> Result<Config> {
         let mut vars = HashMap::new();
@@ -40,7 +42,7 @@ impl Config {
         let public_url = text("PUBLIC_URL", "http://localhost:8080").trim_end_matches('/').to_string();
         let scheme = public_url.starts_with("https://") || public_url.starts_with("http://");
         ensure!(scheme, "WPRS_PUBLIC_URL must start with https:// or http://");
-        let proxies = text("TRUSTED_PROXIES", "");
+        let proxies = text("TRUSTED_PROXIES", PRIVATE_NETWORKS);
         let oidc = get("OIDC_ISSUER").map(|issuer| -> Result<Oidc> {
             ensure!(cfg!(feature = "oidc"), "WPRS_OIDC_ISSUER is set but this build has no OIDC support");
             Ok(Oidc {

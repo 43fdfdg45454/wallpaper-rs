@@ -1,4 +1,0 @@
-{$WPRS_DOMAIN} {
-	encode zstd gzip
-	reverse_proxy wprs:8080
-}

@@ -1,29 +1,41 @@
-name: wprs
-
 services:
   wprs:
-    build:
-      context: .
-      dockerfile: apps/wprs-server/Dockerfile
-      args: [WPRS_VERSION]
-    image: wprs-server:local
-    pull_policy: build
+    image: ghcr.io/wallpaper-rs/wprs-server:${WPRS_VERSION:-latest}
+    restart: unless-stopped
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
-    env_file:
-      - path: .env
-        required: false
+    environment:
+      WPRS_PUBLIC_URL: ${WPRS_PUBLIC_URL:?falta WPRS_PUBLIC_URL en .env}
+      WPRS_NAME: ${WPRS_NAME:-wallpaper-rs}
+      WPRS_REGISTRATION: ${WPRS_REGISTRATION:-invite}
+      WPRS_AUTO_PUBLISH: ${WPRS_AUTO_PUBLISH:-trusted}
+      WPRS_LICENSES: ${WPRS_LICENSES:-CC0-1.0,CC-BY-4.0,CC-BY-SA-4.0}
+      WPRS_PACKAGE_MAX_MIB: ${WPRS_PACKAGE_MAX_MIB:-256}
+      WPRS_USER_QUOTA_MIB: ${WPRS_USER_QUOTA_MIB:-2048}
+      WPRS_UPLOADS_PER_DAY: ${WPRS_UPLOADS_PER_DAY:-20}
+      WPRS_SYNC_QUOTA_MIB: ${WPRS_SYNC_QUOTA_MIB:-64}
+      WPRS_FILES_QUOTA_MIB: ${WPRS_FILES_QUOTA_MIB:-1024}
+      WPRS_ENTRY_DAYS: ${WPRS_ENTRY_DAYS:-7}
+      WPRS_RESIGN_HOURS: ${WPRS_RESIGN_HOURS:-24}
+      WPRS_PUBLISH_DELAY_SECS: ${WPRS_PUBLISH_DELAY_SECS:-30}
+      WPRS_LEGAL_OPERATOR: ${WPRS_LEGAL_OPERATOR:-}
+      WPRS_LEGAL_CONTACT: ${WPRS_LEGAL_CONTACT:-}
+      WPRS_LEGAL_JURISDICTION: ${WPRS_LEGAL_JURISDICTION:-}
+      WPRS_LEGAL_DMCA_AGENT: ${WPRS_LEGAL_DMCA_AGENT:-}
+      WPRS_OIDC_ISSUER: ${WPRS_OIDC_ISSUER:-}
+      WPRS_OIDC_CLIENT_ID: ${WPRS_OIDC_CLIENT_ID:-}
+      WPRS_OIDC_CLIENT_SECRET: ${WPRS_OIDC_CLIENT_SECRET:-}
+      WPRS_OIDC_AUTO_PROVISION: ${WPRS_OIDC_AUTO_PROVISION:-false}
+      WPRS_LOG_CLIENTS: ${WPRS_LOG_CLIENTS:-off}
+      WPRS_LOG_CLIENTS_DAYS: ${WPRS_LOG_CLIENTS_DAYS:-7}
+      WPRS_NOTICE_DAYS: ${WPRS_NOTICE_DAYS:-180}
+      WPRS_TAKEDOWN_DAYS: ${WPRS_TAKEDOWN_DAYS:-90}
+      WPRS_RATE_LIMITS: ${WPRS_RATE_LIMITS:-true}
+      WPRS_TLS: ${WPRS_TLS:-off}
+      WPRS_ADVERTISE: ${WPRS_ADVERTISE:-false}
+      WPRS_LOG: ${WPRS_LOG:-info}
     ports:
       - "${WPRS_BIND:-127.0.0.1:8080}:8080"
     volumes:
-      - wprs-data:/data
-    restart: unless-stopped
-    logging:
-      driver: local
-      options:
-        max-size: 10m
-        max-file: "3"
-
-volumes:
-  wprs-data: {}
+      - ./data:/data
