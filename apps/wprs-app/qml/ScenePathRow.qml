@@ -8,7 +8,11 @@ ColumnLayout {
     id: row
 
     required property var flight
-    required property var modelData
+    required property int index
+    readonly property var modelData: flight.info?.paths?.[index] ?? ({
+            "id": "",
+            "keys": []
+        })
     readonly property string id_: modelData.id
 
     RowLayout {

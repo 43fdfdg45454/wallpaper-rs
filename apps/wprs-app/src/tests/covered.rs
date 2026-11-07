@@ -116,3 +116,10 @@ fn a_tap_on_a_canvas_handle_does_not_also_select_the_canvas() {
         assert_eq!(taps, text.matches("gesturePolicy: TapHandler.ReleaseWithinBounds").count(), "{name}");
     }
 }
+
+#[test]
+fn a_camera_path_row_reads_its_path_by_position() {
+    let files = qml_files();
+    let row = files.iter().find(|(n, _)| n == "ScenePathRow.qml").map(|(_, t)| t.clone()).unwrap();
+    assert!(row.contains("required property int index") && !row.contains("required property var modelData"));
+}
