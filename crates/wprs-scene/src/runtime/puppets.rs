@@ -119,7 +119,7 @@ impl Runtime {
             let at = self.puppets.iter().take(64).position(|p| p.layer == layer);
             seen |= at.map_or(0, |i| 1 << i);
         };
-        for d in frame.draws.iter().filter(|d| !d.hidden) {
+        for d in &frame.draws {
             match &d.content {
                 Content::Mesh { layer, .. } => see(layer),
                 Content::Model { stage, .. } => {

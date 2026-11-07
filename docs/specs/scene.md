@@ -633,7 +633,8 @@ trilinear filtering, so the edges of a character stay smooth at the lowest quali
 showing steps, and draws that picture like
 any other layer, with its transform, effects, masks and blend mode; it draws it again only when the
 pose, the blend shapes, the order of the parts or a video texture changed, and a still or settled
-skeleton asks for no frames. Parts moved out of the box are cut at its edge, so `size` leaves them
+skeleton asks for no frames. A hidden `mesh` layer that masks or feeds an effect of another layer is
+posed and drawn every frame like a shown one, so a mask that is a mesh follows its clips. Parts moved out of the box are cut at its edge, so `size` leaves them
 room.
 
 Files are refused that have a bone cycle or a node with two parents, a vertex whose weights do not
