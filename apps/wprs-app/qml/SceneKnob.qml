@@ -12,6 +12,7 @@ Rectangle {
     property bool square
     property color tint: Kirigami.Theme.highlightColor
     property var grabbed: null
+    property var reached: null
 
     signal moved(var to, bool done)
 
@@ -40,6 +41,10 @@ Rectangle {
         id: hover
     }
 
+    TapHandler {
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+    }
+
     DragHandler {
         id: drag
 
@@ -47,15 +52,18 @@ Rectangle {
         onActiveChanged: {
             if (active) {
                 knob.grabbed = knob.at.slice();
+                knob.reached = knob.grabbed;
                 return;
             }
             if (knob.grabbed)
-                knob.moved([knob.grabbed[0] + translation.x / knob.ratio, knob.grabbed[1] + translation.y / knob.ratio], true);
+                knob.moved(knob.reached, true);
             knob.grabbed = null;
         }
         onTranslationChanged: {
-            if (active && knob.grabbed)
-                knob.moved([knob.grabbed[0] + translation.x / knob.ratio, knob.grabbed[1] + translation.y / knob.ratio], false);
+            if (!active || !knob.grabbed)
+                return;
+            knob.reached = [knob.grabbed[0] + translation.x / knob.ratio, knob.grabbed[1] + translation.y / knob.ratio];
+            knob.moved(knob.reached, false);
         }
     }
 }

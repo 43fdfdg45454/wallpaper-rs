@@ -80,3 +80,11 @@ fn a_choice_that_waits_for_a_restart_offers_one() {
         assert!(text.contains(r#"onClicked: App.act("Restart", [], "Daemon1")"#), "{name} offers no restart");
     }
 }
+
+#[test]
+fn a_dragged_knob_commits_where_the_drag_ended_not_the_translation_after_release() {
+    let files = qml_files();
+    let knob = files.iter().find(|(n, _)| n == "SceneKnob.qml").map(|(_, t)| t.clone()).unwrap();
+    assert!(knob.contains("knob.moved(knob.reached, true)"));
+    assert_eq!(knob.matches("translation.").count(), 2, "only the change of the translation reads it");
+}
