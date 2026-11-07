@@ -10,7 +10,7 @@ Item {
     readonly property var page: bones.stage.page
     readonly property var mesh: page.mesh
     readonly property var picked: bones.list.find(b => b.name === mesh.bone) ?? null
-    readonly property string clip: mesh.layer === bones.model.id && mesh.clip !== "" ? mesh.clip : (bones.model.clips[0] ?? "")
+    readonly property string clip: mesh.layer === bones.model.id && mesh.clip !== "" ? mesh.clip : (bones.model.clips?.[0] ?? "")
     readonly property real reach: Kirigami.Units.gridUnit * 3
     property var start: null
     property string kind

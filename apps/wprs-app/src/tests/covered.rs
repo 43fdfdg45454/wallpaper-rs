@@ -88,3 +88,12 @@ fn a_dragged_knob_commits_where_the_drag_ended_not_the_translation_after_release
     assert!(knob.contains("knob.moved(knob.reached, true)"));
     assert_eq!(knob.matches("translation.").count(), 2, "only the change of the translation reads it");
 }
+
+#[test]
+fn the_3d_stage_reads_its_models_and_draws_the_bones_over_their_boxes() {
+    let files = qml_files();
+    let file = |wanted: &str| files.iter().find(|(n, _)| n == wanted).map(|(_, t)| t.clone()).unwrap();
+    assert!(file("SceneStageBones.qml").contains("stage.selected === model.pointer"));
+    let stage = file("SceneStage3d.qml");
+    assert!(stage.find("delegate: SceneModelGizmo") < stage.find("delegate: SceneStageBones"));
+}

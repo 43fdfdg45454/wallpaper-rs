@@ -10,7 +10,7 @@ Item {
     required property var model
     readonly property var list: model.bones ?? []
     readonly property var path: model.path ?? []
-    readonly property bool shown: stage.selected === model.id
+    readonly property bool shown: stage.selected === model.pointer
 
     visible: list.length > 0 && shown
 
@@ -64,6 +64,7 @@ Item {
             }
 
             TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
                 onTapped: {
                     bones.stage.page.mesh.layer = bones.model.id;
                     bones.stage.page.mesh.bone = parent.modelData.name;
