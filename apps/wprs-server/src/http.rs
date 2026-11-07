@@ -77,8 +77,8 @@ fn csrf_ok(req: &Request) -> bool {
     {
         return true;
     }
-    if h.get("sec-fetch-site").is_some_and(|s| s != "same-origin" && s != "none") {
-        return false;
+    if let Some(site) = h.get("sec-fetch-site") {
+        return site == "same-origin" || site == "none";
     }
     let host = h.get(header::HOST).and_then(|v| v.to_str().ok());
     h.get(header::ORIGIN)

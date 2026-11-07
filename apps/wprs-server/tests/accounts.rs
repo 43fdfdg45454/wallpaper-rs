@@ -163,7 +163,12 @@ async fn csrf_rate_limits_and_password_changes() {
         .unwrap();
     assert_eq!(fetch.status(), StatusCode::FORBIDDEN);
     let change = [("current", "a long enough password"), ("new", "another long password")];
-    assert_eq!(server.form("/api/v1/me/password", &ana, &change).await.status(), StatusCode::OK);
+    let own = server
+        .call(Method::POST, "/api/v1/me/password", &ana)
+        .header("origin", "null")
+        .header("sec-fetch-site", "same-origin")
+        .form(&change);
+    assert_eq!(own.send().await.unwrap().status(), StatusCode::OK);
     let mut statuses = Vec::new();
     for _ in 0..6 {
         let response = server
