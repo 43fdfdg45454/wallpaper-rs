@@ -9,7 +9,7 @@ pub use crate::budget::{Budget, Heat};
 pub use crate::calendar::format as format_time;
 pub use crate::canvas::{BlendSpace, Canvas, Clock};
 pub use crate::catalog::{described, drawn, newer_params, reserved, undrawn};
-pub use crate::chain::{CHAIN_ENTRY, effect_source, fusion};
+pub use crate::chain::{CHAIN_ENTRY, cut_at, effect_source, fused_at, fusion};
 pub use crate::clip::{
     Clip, MAX_CLIPS, MAX_SOUND_BYTES, MAX_SOUND_SECONDS, MAX_SOUND_TOTAL, MAX_STREAM_BYTES,
     MAX_STREAM_SECONDS, MAX_STREAM_TOTAL, playable,

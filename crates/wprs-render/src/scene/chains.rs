@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use wgpu::{ShaderModule, TextureFormat};
-use wprs_scene::{CHAIN_ENTRY, Descriptor, Output, Scene, descriptor, effect_source, fusion, straightened};
+use wprs_scene::{
+    CHAIN_ENTRY, Descriptor, Output, Quality, Scene, descriptor, effect_source, fused_at, fusion,
+    straightened,
+};
 
 #[derive(Default)]
 pub(crate) struct Shelf {
@@ -90,6 +93,12 @@ impl Pipes {
                 let chain = layer.effects[run].iter().filter_map(|e| descriptor(&e.effect));
                 let key = self.chain(device, chain, Some(&mut lease));
                 let _ = self.get(device, Shader::Fx(key, CHAIN_ENTRY), Mode::Replace, format);
+            }
+            for q in [Quality::Q0, Quality::Q1, Quality::Q2] {
+                for chain in fused_at(scene, &layer.effects, q) {
+                    let key = self.chain(device, chain.into_iter(), Some(&mut lease));
+                    let _ = self.get(device, Shader::Fx(key, CHAIN_ENTRY), Mode::Replace, format);
+                }
             }
         }
         lease

@@ -38,3 +38,19 @@ fn masked_effects_that_mix_by_their_mask_fuse_only_when_they_keep_their_place() 
     assert!(mix.contains("mix(c0, color_color_adjust(c, q1), mask_at(q1))"), "{mix}");
     assert!(mix.contains("c = color_tint(c, q2);"), "{mix}");
 }
+
+#[test]
+fn waves_fuse_across_an_effect_their_level_leaves_out() {
+    let a = json!({ "texture": "b", "channel": "r" });
+    let s = scene(json!([waves(a.clone()), { "effect": "blur", "params": { "radius": 4 } }, waves(a)]));
+    let ids = |q| {
+        let runs = fused_at(&s, &s.layers[0].effects, q);
+        runs.map(|run| run.iter().map(|d| d.id.clone()).collect::<Vec<_>>()).collect::<Vec<_>>()
+    };
+    assert_eq!(ids(Quality::Q0), [["waves", "waves"]]);
+    assert!(ids(Quality::Q3).is_empty());
+    let rt = Runtime::new(std::sync::Arc::new(s.clone()), Values::new());
+    let chains = |q| rt.frame(VIEW, q).effects.iter().map(|e| e.chain).collect::<Vec<_>>();
+    assert_eq!(chains(Quality::Q0), [2, 1]);
+    assert_eq!(chains(Quality::Q3), [1, 1, 1]);
+}

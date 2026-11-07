@@ -1,12 +1,14 @@
-use crate::{Descriptor, Layer, PointerState};
+use crate::{Descriptor, Layer, PointerState, Quality, Scene};
 
 pub(super) fn chain(
-    layer: &Layer,
+    (scene, layer, quality): (&Scene, &Layer, Quality),
     i: usize,
     (d, slots): (&Descriptor, &[[f32; 4]]),
     pointer: &PointerState,
 ) -> Option<usize> {
-    let chain = crate::chain::runs(&layer.effects).find(|r| r.start == i).map_or(1, |r| r.len());
+    let cut = |e: &crate::EffectUse| crate::chain::cut_at(scene, e, quality);
+    let found = crate::chain::runs_by(&layer.effects, cut).find(|r| r.start == i);
+    let chain = found.map_or(1, |r| layer.effects[r].iter().filter(|e| !cut(e)).count());
     (!resting(d, slots, pointer, chain)).then_some(chain)
 }
 

@@ -83,11 +83,26 @@ fn fusable(e: &EffectUse) -> Option<(&'static Descriptor, Source<'_>)> {
 }
 
 pub fn runs(effects: &[EffectUse]) -> impl Iterator<Item = Range<usize>> + '_ {
+    runs_by(effects, |_| false)
+}
+
+pub fn runs_by<'a>(
+    effects: &'a [EffectUse],
+    skip: impl Fn(&EffectUse) -> bool + 'a,
+) -> impl Iterator<Item = Range<usize>> + 'a {
     let mut k = 0;
     std::iter::from_fn(move || {
         while k < effects.len() {
-            let (mut n, mut slots, mut seen) = (0, 0, [None; MASK_SLOTS]);
-            while let Some((d, mask)) = effects.get(k + n).and_then(fusable) {
+            let (mut n, mut at, mut end, mut slots, mut seen) = (0, k, k, 0, [None; MASK_SLOTS]);
+            while at < effects.len() {
+                if skip(&effects[at]) {
+                    if n == 0 {
+                        break;
+                    }
+                    at += 1;
+                    continue;
+                }
+                let Some((d, mask)) = fusable(&effects[at]) else { break };
                 slots += d.params.len() + MASK_SLOTS;
                 let fresh = mask.filter(|m| !seen.contains(&Some(*m)));
                 let room = seen.iter().position(Option::is_none);
@@ -97,16 +112,31 @@ pub fn runs(effects: &[EffectUse]) -> impl Iterator<Item = Range<usize>> + '_ {
                 if let (Some(m), Some(at)) = (fresh, room) {
                     seen[at] = Some(m);
                 }
-                n += 1;
+                (n, at, end) = (n + 1, at + 1, at + 1);
             }
             let start = k;
-            k += n.max(1);
+            k = if n > 1 { end } else { k + 1 };
             if n > 1 {
-                return Some(start..start + n);
+                return Some(start..end);
             }
         }
         None
     })
+}
+
+pub fn cut_at(scene: &crate::Scene, e: &EffectUse, quality: crate::Quality) -> bool {
+    let shader = scene.shader(&e.effect);
+    shader.is_some_and(|d| quality.effect_scale(d.class(), e.optional).is_none() && !d.frozen(quality))
+}
+
+pub fn fused_at<'a>(
+    scene: &'a crate::Scene,
+    effects: &'a [EffectUse],
+    quality: crate::Quality,
+) -> impl Iterator<Item = Vec<&'static Descriptor>> + 'a {
+    let cut = move |e: &EffectUse| cut_at(scene, e, quality);
+    runs_by(effects, cut)
+        .map(move |r| effects[r].iter().filter(|e| !cut(e)).filter_map(|e| descriptor(&e.effect)).collect())
 }
 
 pub fn fusion(effects: &[EffectUse]) -> Vec<Range<usize>> {

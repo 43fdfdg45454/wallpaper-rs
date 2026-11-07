@@ -101,7 +101,9 @@ fn emit<'a>(
         (paced, _) = (paced || matches!(wake, Wake::At(_)), cx.paced(wake, d.min_fps));
         let reach = d.reach.as_ref().and_then(|r| d.param(r)).map_or(0.0, |i| slots[i][0].abs());
         let (mask, scale) = (effect.mask.as_ref(), scale * d.scale_at(quality));
-        let Some(chain) = rest::chain(layer, i, (d, &slots), cx.pointer) else { continue };
+        let Some(chain) = rest::chain((cx.scene, layer, quality), i, (d, &slots), cx.pointer) else {
+            continue;
+        };
         let (textures, emitters) = drawn::inputs(cx, d, effect, &found);
         let mask_texture = masked(cx, mask);
         let mask_strength = strength(cx, mask);
