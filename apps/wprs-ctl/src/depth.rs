@@ -47,6 +47,12 @@ pub enum Maps {
         #[arg(long, help = "In false colour, red near and blue far, as an 8-bit PNG")]
         colour: bool,
     },
+    #[command(
+        about = "Build, list or delete the depth layers that parallax moves; each fills what a near object hides"
+    )]
+    Layers(crate::stacking::Make),
+    #[command(about = "Save one depth layer of an image as a PNG to inspect it")]
+    Show(crate::stacking::Peek),
 }
 
 #[derive(clap::Args, Debug)]
@@ -111,16 +117,23 @@ pub fn map(path: &Path, edit: &Edit) -> Result<Option<wprs_depth::Map>> {
 }
 
 pub fn run(command: Maps) -> Result<()> {
+    let command = match command {
+        Maps::Layers(args) => return crate::stacking::make(args),
+        Maps::Show(args) => return crate::stacking::peek(args),
+        other => other,
+    };
     let places = Places::default();
     let (path, edit) = match &command {
         Maps::Generate { path, .. }
         | Maps::Import { path, .. }
         | Maps::Export { path, .. }
         | Maps::Remove { path } => (path, open(path)?),
+        Maps::Layers(_) | Maps::Show(_) => return Ok(()),
     };
     let (sha, depth) = (key(path, &edit)?, edit.depth.clone().unwrap_or_default());
     let found = places.find(path, &sha, &depth);
     let shown = match command {
+        Maps::Layers(_) | Maps::Show(_) => return Ok(()),
         Maps::Generate { path, device, bench: Some(runs), .. } => {
             return bench(&places, &path, &depth, &device, runs);
         }

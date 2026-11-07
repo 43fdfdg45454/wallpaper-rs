@@ -907,7 +907,7 @@ msgid "Remove the expression"
 msgstr "Quitar la expresión"
 
 #: apps/wprs-ctl/src/cropping.rs apps/wprs-ctl/src/depth.rs
-#: apps/wprs-ctl/src/edit.rs
+#: apps/wprs-ctl/src/edit.rs apps/wprs-ctl/src/stacking.rs
 msgid "Image file"
 msgstr "Archivo de imagen"
 
@@ -1005,6 +1005,19 @@ msgstr ""
 #: apps/wprs-ctl/src/depth.rs
 msgid "In false colour, red near and blue far, as an 8-bit PNG"
 msgstr "En falso color, rojo cerca y azul lejos, como PNG de 8 bits"
+
+#: apps/wprs-ctl/src/depth.rs
+msgid ""
+"Build, list or delete the depth layers that parallax moves; each fills what "
+"a near object hides"
+msgstr ""
+"Construir, listar o borrar las capas de profundidad que mueve el paralaje; "
+"cada una rellena lo que oculta un objeto cercano"
+
+#: apps/wprs-ctl/src/depth.rs
+msgid "Save one depth layer of an image as a PNG to inspect it"
+msgstr ""
+"Guardar una capa de profundidad de una imagen como PNG para inspeccionarla"
 
 #: apps/wprs-ctl/src/depth.rs
 msgid "Level of the nearest point, 0 to 1, 1 by default"
@@ -6001,6 +6014,44 @@ msgstr ""
 #: apps/wprs-ctl/src/spanning.rs
 msgid "the time is a finite number of seconds up to %1, not %2"
 msgstr "el tiempo es un número finito de segundos hasta %1, no %2"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid ""
+"How the background behind near objects is filled; the setting parallax.fill "
+"by default"
+msgstr ""
+"Cómo se rellena el fondo detrás de los objetos cercanos; por defecto, el "
+"ajuste parallax.fill"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Number of depth layers, 4 to 6; the setting parallax.layers by default"
+msgstr ""
+"Número de capas de profundidad, de 4 a 6; por defecto, el ajuste parallax."
+"layers"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Build them again even when the set exists"
+msgstr "Construirlas de nuevo aunque el conjunto ya exista"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "List the layer sets of the image instead of building one"
+msgstr "Listar los conjuntos de capas de la imagen en vez de construir uno"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Delete the layer sets of the image"
+msgstr "Borrar los conjuntos de capas de la imagen"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Where LaMa runs: cuda needs an ONNX Runtime built with CUDA"
+msgstr "Dónde corre LaMa: cuda necesita un ONNX Runtime construido con CUDA"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "Layer to save, 0 for the farthest"
+msgstr "Capa que guardar, 0 para la más lejana"
+
+#: apps/wprs-ctl/src/stacking.rs
+msgid "PNG file to write, with the transparency of the layer"
+msgstr "Archivo PNG que escribir, con la transparencia de la capa"
 
 #: apps/wprs-ctl/src/staging.rs
 msgid "%1 is not K=X,Y"

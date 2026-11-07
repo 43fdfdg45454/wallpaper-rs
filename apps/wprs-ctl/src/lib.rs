@@ -76,6 +76,7 @@ pub mod show;
 mod sowed;
 mod sowing;
 pub mod spanning;
+mod stacking;
 mod staging;
 mod steps;
 mod swarmed;
