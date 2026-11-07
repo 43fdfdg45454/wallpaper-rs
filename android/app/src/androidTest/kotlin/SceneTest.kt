@@ -43,14 +43,16 @@ class SceneTest : SceneBase() {
     fun soundScenesRestWhileTheMicrophoneHearsNothing() = runBlocking {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
         automation.grantRuntimePermission(context.packageName, Manifest.permission.RECORD_AUDIO)
-        val uid = show("Pulse")
-        try {
-            ask("grant", "uid" to uid, "input" to "audio", "on" to true)
-            Render.call { painter.refresh() }
-            assertTrue(waitFor { frames.get() > 0 })
-            assertEquals(settled(frames), quiet(frames))
-        } finally {
-            ask("grant", "uid" to uid, "input" to "audio", "on" to false)
+        hush().use {
+            val uid = show("Pulse")
+            try {
+                ask("grant", "uid" to uid, "input" to "audio", "on" to true)
+                Render.call { painter.refresh() }
+                assertTrue(waitFor { frames.get() > 0 })
+                assertEquals(settled(frames), quiet(frames))
+            } finally {
+                ask("grant", "uid" to uid, "input" to "audio", "on" to false)
+            }
         }
     }
 

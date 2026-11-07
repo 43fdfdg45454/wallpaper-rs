@@ -1,5 +1,6 @@
 package io.github.wallpaper_rs
 
+import android.app.NotificationManager
 import android.graphics.Bitmap
 import android.os.ParcelFileDescriptor
 import androidx.test.platform.app.InstrumentationRegistry
@@ -63,4 +64,27 @@ fun <T> zoned(zone: String, body: () -> T): T {
         alarms.setTimeZone(before)
         instrumentation.uiAutomation.dropShellPermissionIdentity()
     }
+}
+
+private val FILTERS = mapOf(
+    NotificationManager.INTERRUPTION_FILTER_ALL to "all",
+    NotificationManager.INTERRUPTION_FILTER_PRIORITY to "priority",
+    NotificationManager.INTERRUPTION_FILTER_ALARMS to "alarms",
+    NotificationManager.INTERRUPTION_FILTER_NONE to "none",
+)
+
+private const val NOTIFICATION_SOUND_MS = 2_500L
+
+fun hush(): AutoCloseable {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    val manager = instrumentation.targetContext.getSystemService(NotificationManager::class.java)
+    val before = FILTERS[manager.currentInterruptionFilter] ?: "all"
+    val set = { filter: String ->
+        ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("cmd notification set_dnd $filter"))
+            .use { it.readBytes() }
+        org.junit.Assert.assertTrue("the phone follows $filter", waitFor { FILTERS[manager.currentInterruptionFilter] == filter })
+    }
+    set("none")
+    Thread.sleep(NOTIFICATION_SOUND_MS)
+    return AutoCloseable { set(before) }
 }
