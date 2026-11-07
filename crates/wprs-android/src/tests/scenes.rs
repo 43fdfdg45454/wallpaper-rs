@@ -97,6 +97,9 @@ pub(super) fn scenes() {
         assert_eq!(draw(&mut stage, 1_000_000, 60, false).map(|shot| shot.2), Some(2_000));
         hearing::playback(false);
     }
+    if let Some(r) = r.as_ref() {
+        super::hushed::silence_and_pace_changes_let_a_sound_scene_rest(&mut stage, r, charging);
+    }
     fft[46] = 100;
     hearing::hear(&fft, 44_100);
     assert!(hearing::live());

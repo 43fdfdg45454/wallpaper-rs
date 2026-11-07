@@ -15,6 +15,7 @@ mod flight;
 mod frames;
 mod graded;
 mod guarded;
+mod hushed;
 mod kept;
 mod listed;
 mod lit;
