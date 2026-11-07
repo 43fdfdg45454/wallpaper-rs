@@ -8,7 +8,9 @@ operator configures, and sends no telemetry.
 ## Running
 
 ```sh
-docker compose up -d                         # builds the image from this checkout
+cp .env.sample .env                          # set WPRS_PUBLIC_URL, the only required variable
+mkdir data && sudo chown 65532:65532 data    # the container writes as user 65532
+docker compose up -d                         # pulls the published image
 docker compose logs wprs | grep setup        # one-time token for the first administrator
 docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 ```
@@ -27,11 +29,16 @@ docker compose exec wprs wprs-server repo init --name "Example wallpapers"
 | `restore DIR [--force] [--advance N]` | Check every checksum and `PRAGMA integrity_check`, restore with the server stopped, then publish `N` (default 1) new index versions. Signed root and index files newer than the snapshot stay, so index numbers are never reused; after losing the data directory, pass an `N` that goes past the last version clients saw. Sync heads jump to the restore time in milliseconds, so every device downloads its records again (`410 resync`), and unfinished private files start again from the first byte |
 
 The image builds from base images pinned by digest and runs as user 65532 on a read-only root
-file system without a shell; `/data` is the only writable path. `deploy/compose.caddy.yaml` adds Caddy with automatic TLS:
-`WPRS_DOMAIN=wallpapers.example.org docker compose -f compose.yaml -f deploy/compose.caddy.yaml up -d`.
-Caddy is pinned by the digest of its multi-platform index too; to update it, take the
-`Docker-Content-Digest` of `docker buildx imagetools inspect docker.io/library/caddy:<tag>` (the
-index, not one platform) and replace the tag and digest in that file.
+file system without a shell; `/data` (bind-mounted from `./data`) is the only writable path.
+`compose.yaml` pulls `ghcr.io/wallpaper-rs/wprs-server:${WPRS_VERSION:-latest}`; to build from the
+checkout instead, add the override: `docker compose -f compose.yaml -f deploy/compose.build.yaml up -d --build`.
+
+TLS is left to a reverse proxy of the operator's choice. It must pass `Host`, `X-Forwarded-For` and
+`X-Forwarded-Proto`; the server believes `X-Forwarded-For` from loopback and private networks by
+default, which is where a reverse proxy of the same host or compose network sits. `deploy/nginx/wprs.conf` is an Nginx example: it allows
+bodies up to the default `WPRS_PACKAGE_MAX_MIB`, uses HTTP/1.1 upstream, streams uploads, and serves
+`/api/v1/sync/events` (server-sent events) unbuffered with a long read timeout. The server uses no
+WebSockets.
 
 Each release also pushes the image to `ghcr.io/<owner>/wprs-server` (`linux/amd64`, tags
 `<version>` and `latest`) with BuildKit SPDX SBOMs of the image and of the build stage and a
@@ -40,12 +47,13 @@ provenance attestation, signs its digest with cosign keyless from the release wo
 the Rust dependencies in the sources it was built from. Check both with `cosign verify` and
 `cosign verify-attestation --type spdxjson` against the identity
 `https://github.com/<owner>/wallpaper-rs/.github/workflows/ci.yml@refs/heads/master` and the
-issuer `https://token.actions.githubusercontent.com`, then run that digest without building:
-`WPRS_IMAGE=ghcr.io/<owner>/wprs-server@sha256:<digest> docker compose -f compose.yaml -f deploy/compose.image.yaml up -d`.
+issuer `https://token.actions.githubusercontent.com`, then pin that digest in `compose.yaml` in place of the tag
+(`image: ghcr.io/<owner>/wprs-server@sha256:<digest>`).
 
 ### Configuration
 
-Every setting is an environment variable (`.env` next to `compose.yaml` is read). `NAME_FILE`
+Every setting is an environment variable (`.env` next to `compose.yaml` is read, and `.env.sample` lists
+them all; `WPRS_VERSION` and `WPRS_BIND` only select the image tag and the published address). `NAME_FILE`
 reads the value of `NAME` from a file, for secrets.
 
 | Variable | Default | Meaning |
@@ -53,7 +61,7 @@ reads the value of `NAME` from a file, for secrets.
 | `WPRS_PUBLIC_URL` | `http://localhost:8080` | External URL; `https://` enables HSTS and the `__Host-wprs` cookie |
 | `WPRS_LISTEN` | `0.0.0.0:8080` | Listen address |
 | `WPRS_DATA` | `/data` | Data directory |
-| `WPRS_TRUSTED_PROXIES` | empty | CIDRs whose `X-Forwarded-For` is believed, read right to left |
+| `WPRS_TRUSTED_PROXIES` | `127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7` | Advanced: CIDRs whose `X-Forwarded-For` is believed, read right to left; setting it replaces the list, so a proxy outside the private networks must be added |
 | `WPRS_NAME` | `wallpaper-rs` | Instance name |
 | `WPRS_REGISTRATION` | `invite` | `closed`, `invite` or `open` |
 | `WPRS_AUTO_PUBLISH` | `trusted` | Publish uploads without review: `never`, `trusted` (role trusted and above) or `all` |

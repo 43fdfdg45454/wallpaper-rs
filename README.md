@@ -1917,12 +1917,15 @@ shell, con un usuario sin privilegios y la raíz de solo lectura; todos los dato
 volumen `/data`. No envía telemetría ni se conecta a terceros.
 
 ```sh
-docker compose up -d                          # construye la imagen desde este repositorio
+cp .env.sample .env                           # editar WPRS_PUBLIC_URL, la única variable obligatoria
+mkdir data && sudo chown 65532:65532 data     # el contenedor escribe como el usuario 65532
+docker compose up -d                          # baja la imagen publicada y la arranca
 docker compose logs wprs | grep setup         # token de un solo uso del primer administrador
 docker compose exec wprs wprs-server repo init --name "Fondos de casa"
 ```
 
-En `http://localhost:8080/setup` se pega el token y se crea el administrador (si el registro ya
+Los datos quedan en `./data`. En `<WPRS_PUBLIC_URL>/setup` (con `http://localhost:8080` si pruebas en
+el mismo equipo) se pega el token y se crea el administrador (si el registro ya
 no lo muestra, `docker compose exec wprs wprs-server setup-token` da otro). `repo init` crea las
 claves del repositorio y muestra una sola vez la clave raíz, que hay que guardar fuera del
 servidor; el servidor solo conserva la clave en línea, con la que vuelve a firmar el índice cada
@@ -1948,19 +1951,13 @@ vieja.key nueva.pub --author u<id>` firma ese traspaso, que se guarda en *Cuenta
 clave en línea del servidor puede añadir autores y paquetes nuevos, pero no actualizar un paquete
 ya instalado. Los autores que lista la raíz tienen prioridad.
 
-El servidor construido así se identifica con la versión de `Cargo.toml` y el sufijo `-local`. Para
-que muestre la de una versión publicada, se construye desde su etiqueta:
-
-```sh
-WPRS_VERSION=$(git describe --tags --exact-match --match 'v[0-9]*' | cut -c2-) docker compose up -d --build
-```
-
-Cada versión publica también la imagen en `ghcr.io/wallpaper-rs/wprs-server` (`linux/amd64`, con las
-etiquetas `<versión>` y `latest`), firmada con cosign sin clave propia como los archivos de
-*Releases*. Lleva adjuntos los SBOM SPDX de BuildKit (los paquetes de la imagen y de la etapa de
-compilación) y su procedencia, y una atestación SPDX firmada con las dependencias de Rust de las
-fuentes con las que se construyó. Para usarla en lugar de construirla se fija su resumen, se
-comprueban la firma y la atestación y se arranca con `deploy/compose.image.yaml`:
+`compose.yaml` baja `ghcr.io/wallpaper-rs/wprs-server` con la etiqueta de `WPRS_VERSION` (`latest` si no
+se fija). Cada versión publica esa imagen (`linux/amd64`, con las etiquetas `<versión>` y `latest`),
+firmada con cosign sin clave propia como los archivos de *Releases*. Lleva adjuntos los SBOM SPDX de
+BuildKit (los paquetes de la imagen y de la etapa de compilación) y su procedencia, y una atestación
+SPDX firmada con las dependencias de Rust de las fuentes con las que se construyó. Para fijar una
+imagen concreta se toma su resumen, se comprueban la firma y la atestación y se pone el resumen
+en lugar de la etiqueta (`image: ghcr.io/wallpaper-rs/wprs-server@sha256:<resumen>`):
 
 ```sh
 IMAGE=ghcr.io/wallpaper-rs/wprs-server
@@ -1971,17 +1968,25 @@ cosign verify "$IMAGE@$DIGEST" --certificate-identity "$ID" --certificate-oidc-i
 cosign verify-attestation "$IMAGE@$DIGEST" --type spdxjson \
   --certificate-identity "$ID" --certificate-oidc-issuer "$ISSUER" > wprs-server.sources.spdx.dsse
 docker buildx imagetools inspect "$IMAGE@$DIGEST" --format '{{ json .SBOM }}' > wprs-server.sbom.json
-WPRS_IMAGE=$IMAGE@$DIGEST docker compose -f compose.yaml -f deploy/compose.image.yaml up -d
 ```
 
-La configuración va en variables de entorno, en un `.env` junto a `compose.yaml`; `VARIABLE_FILE`
-lee el valor de un archivo, para los secretos:
+Para construir la imagen desde este repositorio en lugar de bajarla, se suma el archivo de
+construcción; el servidor así construido se identifica con la versión de `Cargo.toml` y el sufijo
+`-local`, y con `WPRS_VERSION` en el entorno muestra la de una versión publicada:
+
+```sh
+docker compose -f compose.yaml -f deploy/compose.build.yaml up -d --build
+```
+
+La configuración va en variables de entorno, en el `.env` junto a `compose.yaml` (`.env.sample` las
+lista todas con su valor por defecto); `VARIABLE_FILE` lee el valor de un archivo, para los secretos.
+`WPRS_VERSION` y `WPRS_BIND` son solo de compose:
 
 | Variable | Por defecto | Uso |
 |----------|-------------|-----|
-| `WPRS_PUBLIC_URL` | `http://localhost:8080` | URL pública del servidor |
+| `WPRS_PUBLIC_URL` | obligatoria en compose | URL pública del servidor |
+| `WPRS_VERSION` | `latest` | Etiqueta de la imagen que baja compose |
 | `WPRS_BIND` | `127.0.0.1:8080` | Dirección y puerto que publica compose |
-| `WPRS_TRUSTED_PROXIES` | vacía | Redes del proxy inverso cuyo `X-Forwarded-For` se cree; sin ellas, los límites de peticiones ven a todos los clientes del proxy como uno solo |
 | `WPRS_REGISTRATION` | `invite` | `closed`, `invite` u `open` |
 | `WPRS_AUTO_PUBLISH` | `trusted` | Publicar sin revisión: `never`, `trusted` o `all` |
 | `WPRS_LICENSES` | `CC0-1.0,CC-BY-4.0,CC-BY-SA-4.0` | Licencias aceptadas |
@@ -2125,8 +2130,7 @@ paquetes, miniaturas y archivos privados que nombra, las claves y el repositorio
 restaurar, con el servidor parado:
 
 ```sh
-docker compose cp wprs:/data/backups ./backups             # sacar las copias del volumen
-docker compose stop wprs
+docker compose stop wprs                                   # las copias están en ./data/backups
 docker compose run --rm wprs restore /data/backups/<fecha> --force
 docker compose up -d
 ```
@@ -2154,14 +2158,23 @@ cambia en cada arranque, y nada de la cuenta ni de los equipos. Es la misma sinc
 mismo cifrado de extremo a extremo que con un servidor público, solo que sin salir de la red de
 casa.
 
-Con dominio propio y certificado automático, Caddy delante:
+Con dominio propio, cualquier proxy inverso con TLS sirve: el servidor escucha en `WPRS_BIND`
+(`127.0.0.1:8080` por defecto), el proxy termina el HTTPS y reenvía las peticiones, y `WPRS_PUBLIC_URL`
+lleva la dirección pública con `https://`. El servidor toma la dirección del cliente de
+`X-Forwarded-For` cuando el proxy corre en el mismo equipo o en la misma red privada.
+[`deploy/nginx/wprs.conf`](deploy/nginx/wprs.conf) es un ejemplo para Nginx:
 
 ```sh
-WPRS_DOMAIN=fondos.example.org docker compose -f compose.yaml -f deploy/compose.caddy.yaml up -d
+sudo cp deploy/nginx/wprs.conf /etc/nginx/conf.d/fondos.conf   # cambiar el nombre y los certificados
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Caddy obtiene el certificado y reenvía las peticiones; el servidor solo cree `X-Forwarded-For`
-cuando llega desde la red de los contenedores.
+El ejemplo atiende `fondos.example.org` en el 443 (y redirige el 80), con las rutas de los
+certificados como marcadores, `client_max_body_size 256m` (el tamaño máximo de paquete por defecto,
+`WPRS_PACKAGE_MAX_MIB`: súbelo a la par si cambias esa variable), HTTP/1.1 con
+`Connection ""` hacia el servidor y sin guardar las subidas en disco. Los avisos en vivo de la
+sincronización (`/api/v1/sync/events`, eventos del servidor, no WebSockets) van en un bloque aparte
+sin búfer y con un tiempo de espera largo.
 
 Los paquetes de escena (`docs/specs/scene.md`) se importan y se aplican como cualquier otro
 elemento de la biblioteca. El daemon los dibuja en la GPU solo cuando algo visible cambia, con
@@ -3079,7 +3092,7 @@ misma pausa.
 | `integrations/kwin-pointer` | Script de KWin que envía la posición del puntero mientras una escena o un paralaje la usa |
 | `po` | Traducciones gettext de los paquetes de Plasma y de la app |
 | `packaging` | Servicio systemd, activación D-Bus, lanzador e icono, scripts de instalación, Flatpak |
-| `deploy` | Despliegue de referencia del servidor con Caddy y con la imagen publicada |
+| `deploy` | Ejemplo de Nginx delante del servidor y variante de `compose.yaml` que construye la imagen desde las fuentes |
 | `docs` | Especificaciones de la interfaz D-Bus, los paquetes y sus escenas, el editor de escenas, los repositorios firmados y el servidor |
 
 ## Privacidad
