@@ -15,6 +15,7 @@ impl Renderer {
         videos: &[(&str, &GpuImage)],
         scale: f32,
     ) -> Result<(), RenderError> {
+        let mut wave = super::wave::Wave::default();
         for d in &frame.draws {
             let Content::Mesh { layer, size, pose, texture, relief } = &d.content else { continue };
             let Some(p) = runtime.puppet(layer) else { continue };
@@ -52,21 +53,43 @@ impl Renderer {
                 continue;
             }
             self.bind_skin(skin, (picture.0, &picture.1, padded.as_ref()));
+            (skin.generation, skin.relief) = (*pose, *relief);
+            let clips = p.posed().draws.iter().any(|d| d.clip.is_some());
+            let plain = relief.is_none() && video.is_none() && padded.is_none() && !clips;
+            if plain && wave.joins(p, *size, fits) {
+                wave.add(layer, picture);
+                continue;
+            }
+            if wave.waiting()
+                && let Some(done) = self.scoped(|| self.wave(&mut view.skins, &mut wave))?
+            {
+                view.pool.defer(done);
+            }
+            if plain {
+                wave.start(p, *size, fits);
+                wave.add(layer, picture);
+                continue;
+            }
+            let skin = view.skins.get_mut(*layer).expect("made above");
             let done = self.scoped(|| self.paint_skin(skin, (&p.rig, p.posed()), *size, *relief))?;
             view.pool.defer(done);
-            (skin.generation, skin.relief) = (*pose, *relief);
+        }
+        if wave.waiting()
+            && let Some(done) = self.scoped(|| self.wave(&mut view.skins, &mut wave))?
+        {
+            view.pool.defer(done);
         }
         view.skins.retain(|k, _| runtime.puppet(k).is_some());
         Ok(())
     }
 
-    fn paint_skin(
+    pub(super) fn pose_skin(
         &self,
         skin: &mut Skin,
         (rig, posed): (&Rigged, &Posed),
         [w, h]: [f32; 2],
         relief: Option<Relief>,
-    ) -> wgpu::CommandBuffer {
+    ) {
         self.queue.write_buffer(&skin.bones, 0, bytemuck::cast_slice(&posed.palette));
         skin.scratch.clear();
         skin.scratch.push([w, h, if relief.is_some() { DEEP } else { 0.0 }, 0.0]);
@@ -80,6 +103,16 @@ impl Renderer {
         }
         skin.scratch.truncate(PIECES);
         self.queue.write_buffer(&skin.pieces, 0, bytemuck::cast_slice(&skin.scratch));
+    }
+
+    pub(super) fn paint_skin(
+        &self,
+        skin: &mut Skin,
+        (rig, posed): (&Rigged, &Posed),
+        size: [f32; 2],
+        relief: Option<Relief>,
+    ) -> wgpu::CommandBuffer {
+        self.pose_skin(skin, (rig, posed), size, relief);
         let mut encoder = self.device.create_command_encoder(&Default::default());
         let color = wgpu::RenderPassColorAttachment {
             view: &skin.image.view,
@@ -90,21 +123,10 @@ impl Renderer {
                 store: wgpu::StoreOp::Store,
             },
         };
-        let depth = wgpu::RenderPassDepthStencilAttachment {
-            view: &skin.depth,
-            depth_ops: Some(wgpu::Operations {
-                load: wgpu::LoadOp::Clear(1.0),
-                store: wgpu::StoreOp::Discard,
-            }),
-            stencil_ops: Some(wgpu::Operations {
-                load: wgpu::LoadOp::Clear(0),
-                store: wgpu::StoreOp::Discard,
-            }),
-        };
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("wprs-render skin"),
             color_attachments: &[Some(color)],
-            depth_stencil_attachment: Some(depth),
+            depth_stencil_attachment: Some(cleared(&skin.depth)),
             ..Default::default()
         });
         let skinner = self.skinner();
@@ -129,4 +151,11 @@ impl Renderer {
         drop(pass);
         encoder.finish()
     }
+}
+
+pub(super) fn cleared(view: &wgpu::TextureView) -> wgpu::RenderPassDepthStencilAttachment<'_> {
+    let store = wgpu::StoreOp::Discard;
+    let depth_ops = Some(wgpu::Operations { load: wgpu::LoadOp::Clear(1.0), store });
+    let stencil_ops = Some(wgpu::Operations { load: wgpu::LoadOp::Clear(0), store });
+    wgpu::RenderPassDepthStencilAttachment { view, depth_ops, stencil_ops }
 }

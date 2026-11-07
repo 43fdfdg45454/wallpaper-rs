@@ -9,6 +9,9 @@ mod sharp;
 mod size;
 #[cfg(test)]
 mod steady;
+mod wave;
+#[cfg(test)]
+mod waved;
 
 pub(crate) use make::Skin;
 
@@ -20,9 +23,11 @@ pub(crate) const PIECES: usize = 2 + 384;
 pub(crate) struct Skinner {
     pub(crate) layout: wgpu::BindGroupLayout,
     pub(crate) pipes: [wgpu::RenderPipeline; 10],
+    pub(crate) wave: wgpu::BindGroupLayout,
+    pub(crate) waves: [wgpu::RenderPipeline; wave::WAVE - 1],
 }
 
-fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+fn layout(device: &wgpu::Device, more: u32) -> wgpu::BindGroupLayout {
     let entry = |binding, visibility, ty| wgpu::BindGroupLayoutEntry { binding, visibility, ty, count: None };
     let (vertex, fragment) = (wgpu::ShaderStages::VERTEX, wgpu::ShaderStages::FRAGMENT);
     let uniform = wgpu::BindingType::Buffer {
@@ -36,22 +41,32 @@ fn layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         multisampled: false,
     };
     let sampler = wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering);
-    let entries = [
+    let entries: Vec<_> = [
         entry(0, vertex, uniform),
         entry(1, vertex, uniform),
         entry(2, vertex, texture(false)),
         entry(3, fragment, texture(true)),
         entry(4, fragment, sampler),
-    ];
+    ]
+    .into_iter()
+    .chain((5..5 + more).map(|b| entry(b, fragment, texture(true))))
+    .collect();
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("wprs-render skins"),
         entries: &entries,
     })
 }
 
-fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> wgpu::RenderPipeline {
+fn pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    k: usize,
+    n: usize,
+) -> wgpu::RenderPipeline {
     let (clipped, deep, cull, edge) = (k % 2 == 1, k >= 2, matches!(k, 4 | 5 | 8 | 9), k >= 6);
-    let entry = if edge {
+    let entry = if n > 1 {
+        ["fs_skins2", "fs_skins3", "fs_skins4"][n - 2]
+    } else if edge {
         "fs_edge"
     } else if deep {
         "fs_solid"
@@ -102,7 +117,7 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> 
             module: &shader,
             entry_point: Some(entry),
             compilation_options: Default::default(),
-            targets: &[Some(wgpu::ColorTargetState { blend, ..FORMAT.into() })],
+            targets: &vec![Some(wgpu::ColorTargetState { blend, ..FORMAT.into() }); n],
         }),
         primitive: wgpu::PrimitiveState { cull_mode: cull.then_some(wgpu::Face::Back), ..Default::default() },
         depth_stencil,
@@ -113,7 +128,8 @@ fn pipeline(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, k: usize) -> 
 }
 
 pub(crate) fn skinner(device: &wgpu::Device) -> Skinner {
-    let layout = layout(device);
-    let pipes = std::array::from_fn(|k| pipeline(device, &layout, k));
-    Skinner { layout, pipes }
+    let (layout, wave) = (layout(device, 0), layout(device, wave::WAVE as u32 - 1));
+    let pipes = std::array::from_fn(|k| pipeline(device, &layout, k, 1));
+    let waves = std::array::from_fn(|n| pipeline(device, &wave, 0, n + 2));
+    Skinner { layout, pipes, wave, waves }
 }

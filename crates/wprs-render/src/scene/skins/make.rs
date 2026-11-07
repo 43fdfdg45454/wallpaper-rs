@@ -17,6 +17,7 @@ pub(crate) struct Skin {
     pub(crate) morphs: wgpu::TextureView,
     pub(crate) own: Option<GpuImage>,
     pub(crate) group: Option<(u64, wgpu::BindGroup)>,
+    pub(crate) merged: Option<([u64; super::wave::WAVE], wgpu::BindGroup)>,
     pub(crate) scratch: Vec<[f32; 4]>,
 }
 
@@ -85,6 +86,7 @@ impl Renderer {
                 morphs: view(&morphs),
                 own: embedded(self, rig),
                 group: None,
+                merged: None,
                 scratch: Vec::with_capacity(PIECES),
             }
         })

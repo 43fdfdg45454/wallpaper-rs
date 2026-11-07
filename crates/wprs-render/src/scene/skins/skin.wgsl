@@ -19,6 +19,9 @@ const ORDER: f32 = 2.384185791e-7;
 @group(0) @binding(2) var morphs: texture_2d<f32>;
 @group(0) @binding(3) var picture: texture_2d<f32>;
 @group(0) @binding(4) var smp: sampler;
+@group(0) @binding(5) var picture1: texture_2d<f32>;
+@group(0) @binding(6) var picture2: texture_2d<f32>;
+@group(0) @binding(7) var picture3: texture_2d<f32>;
 
 fn delta(at: u32) -> vec3<f32> {
     return textureLoad(morphs, vec2<i32>(i32(at % 2048u), i32(at / 2048u)), 0).xyz;
@@ -78,4 +81,28 @@ fn fs_edge(in: Out) -> @location(0) vec4<f32> {
         discard;
     }
     return vec4<f32>(c.rgb * c.a, c.a);
+}
+
+struct Two { @location(0) a: vec4<f32>, @location(1) b: vec4<f32> };
+struct Three { @location(0) a: vec4<f32>, @location(1) b: vec4<f32>, @location(2) c: vec4<f32> };
+struct Four { @location(0) a: vec4<f32>, @location(1) b: vec4<f32>, @location(2) c: vec4<f32>, @location(3) d: vec4<f32> };
+
+fn painted(t: texture_2d<f32>, in: Out) -> vec4<f32> {
+    let c = textureSample(t, smp, in.uv) * in.color;
+    return select(vec4<f32>(c.rgb * c.a, c.a), vec4<f32>(0.0), c.a < 0.001);
+}
+
+@fragment
+fn fs_skins2(in: Out) -> Two {
+    return Two(painted(picture, in), painted(picture1, in));
+}
+
+@fragment
+fn fs_skins3(in: Out) -> Three {
+    return Three(painted(picture, in), painted(picture1, in), painted(picture2, in));
+}
+
+@fragment
+fn fs_skins4(in: Out) -> Four {
+    return Four(painted(picture, in), painted(picture1, in), painted(picture2, in), painted(picture3, in));
 }
